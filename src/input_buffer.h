@@ -33,7 +33,7 @@ class InputBufferException : public std::exception
 {
 public:
     InputBufferException(const char* reason = "") : r(reason){}
-    virtual const char* what() const _NOEXCEPT {return r;}
+    virtual const char* what() const noexcept {return r;}
 
 private:
     const char* r;

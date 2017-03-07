@@ -98,7 +98,7 @@ typedef std::set<SovokArchiveEntry> ArchiveList;
 class SovokExceptionBase : public std::exception
 {
 public:
-    const char* what() const _NOEXCEPT {return reason.c_str();}
+    const char* what() const noexcept {return reason.c_str();}
     const std::string reason;
     SovokExceptionBase(const std::string& r) : reason(r) {}
     SovokExceptionBase(const char* r = "") : reason(r) {}

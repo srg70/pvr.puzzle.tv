@@ -560,7 +560,7 @@
 			buildPhases = (
 			);
 			buildToolPath = /usr/bin/make;
-			buildWorkingDirectory = /Code/Other/pvr.puzzle.tv/build;
+			buildWorkingDirectory = build;
 			dependencies = (
 			);
 			name = pvr..puzzle.tv;
