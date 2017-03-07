@@ -1,0 +1,35 @@
+# Kodi Media Center language file
+# Addon Name: PVR Puzzle TV
+# Addon id: pvr.puzzle.tv
+# Addon Provider: srg70
+msgid ""
+msgstr ""
+"Report-Msgid-Bugs-To: sergey.shramchenko@gmail.com\n"
+"POT-Creation-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: srg70\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: en_US\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgctxt "#30000"
+msgid "Login"
+msgstr "Login"
+
+msgctxt "#30001"
+msgid "Password"
+msgstr "Password"
+
+msgctxt "#30002"
+msgid "Add Favorites Group"
+msgstr "Add Favorites Group"
+
+msgctxt "#30003"
+msgid "Enable Timeshift"
+msgstr "Enable Timeshift"
+
+msgctxt "#30010"
+msgid "Sovok TV"
+msgstr "Sovok TV"

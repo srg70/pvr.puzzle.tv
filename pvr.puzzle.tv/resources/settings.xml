@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<settings>
+  <!-- Sovok TV -->
+  <category label="30010">
+      <setting id="sep1" label="30010" type="lsep"/>
+      <setting id="login" type="text" label="30000" default="" />
+      <setting id="password" type="text" label="30001" option="hidden" default="" />
+      <setting id="add_favorites_group" type="bool" label="30002" default="true" />
+      <setting id="enable_timeshift" type="bool" label="30003" default="false" />
+      <setting id="streamer" type="fileenum" values="resources/streamers"/>
+  </category>
+
+</settings>
