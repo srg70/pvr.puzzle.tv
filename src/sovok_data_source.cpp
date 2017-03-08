@@ -83,6 +83,10 @@ ADDON_STATUS SovokTvDataSource::Init(void *callbacks, void* props)
     try
     {
         CreateCore();
+ 
+        m_client->SetTimeshiftEnabled(m_isTimeshiftEnabled);
+        m_client->SetAddFavoritesGroup(m_shouldAddFavoritesGroup);
+
         std::string streamer;
         if (m_xbmc->GetSetting("streamer", &buffer))
             streamer = buffer;
@@ -92,25 +96,18 @@ ADDON_STATUS SovokTvDataSource::Init(void *callbacks, void* props)
         if (current != streamer)
         {
             m_xbmc->QueueNotification(QUEUE_WARNING, "Streamer setting mismatch.");
-            return ADDON_STATUS_NEED_SETTINGS;
+            return ADDON_STATUS_OK;
         }
-        m_client->SetTimeshiftEnabled(m_isTimeshiftEnabled);
-        m_client->SetAddFavoritesGroup(m_shouldAddFavoritesGroup);
-
+ 
     }
     catch (AuthFailedException &)
     {
         m_xbmc->QueueNotification(QUEUE_ERROR, "Login to Sovok.TV failed.");
-
-//        SAFE_DELETE(m_pvr);
-//        SAFE_DELETE(m_xbmc);
-        return ADDON_STATUS_NEED_SETTINGS;// ADDON_STATUS_PERMANENT_FAILURE;
     }
 
     catch(MissingApiException & ex)
     {
         m_xbmc->QueueNotification(QUEUE_WARNING, (std::string("Missing Sovok API: ") + ex.reason).c_str());
-        return ADDON_STATUS_OK;
     }
     
 //    PVR_MENUHOOK hook = {1, 30020, PVR_MENUHOOK_EPG};
@@ -144,7 +141,7 @@ void SovokTvDataSource::CreateCore()
 
 ADDON_STATUS SovokTvDataSource::GetStatus()
 {
-    return (m_client == NULL) ? ADDON_STATUS_NEED_RESTART : ADDON_STATUS_OK;
+    return  ADDON_STATUS_OK;
 }
 
 void SovokTvDataSource::Destroy()
@@ -204,40 +201,27 @@ int SovokTvDataSource::GetSettings(ADDON_StructSetting ***sSet)
 
 ADDON_STATUS SovokTvDataSource::SetSetting(const char *settingName, const void *settingValue)
 {
-    if (!settingName || !settingValue)
-        return ADDON_STATUS_UNKNOWN;
-
     if (strcmp(settingName, "login") == 0 && strcmp((const char*) settingValue, m_login.c_str()) != 0)
     {
         m_login = (const char*) settingValue;
-        if(m_login.empty())
-            return ADDON_STATUS_NEED_RESTART;
-
-        if (!m_login.empty() && !m_password.empty() && m_client == NULL)
+       if (!m_login.empty() && !m_password.empty() && m_client == NULL)
         {
             try {
                 CreateCore();
-            }catch (AuthFailedException &)
-            {
+            }catch (AuthFailedException &) {
                 m_xbmc->QueueNotification(QUEUE_ERROR, "Login to Sovok.TV failed.");
-                return ADDON_STATUS_NEED_RESTART;
             }
         }
     }
     else if (strcmp(settingName, "password") == 0  && strcmp((const char*) settingValue, m_password.c_str()) != 0)
     {
         m_password = (const char*) settingValue;
-
-        if(m_password.empty())
-            return ADDON_STATUS_NEED_RESTART;
         if (!m_login.empty() && !m_password.empty() && m_client == NULL)
         {
             try {
                 CreateCore();
-            }catch (AuthFailedException &)
-            {
+            }catch (AuthFailedException &) {
                 m_xbmc->QueueNotification(QUEUE_ERROR, "Login to Sovok.TV failed.");
-                return ADDON_STATUS_NEED_RESTART;
             }
         }
     }
@@ -246,7 +230,6 @@ ADDON_STATUS SovokTvDataSource::SetSetting(const char *settingName, const void *
         m_isTimeshiftEnabled = *((const bool*)settingValue);
         if(m_client)
             m_client->SetTimeshiftEnabled(*(bool *)(settingValue));
-        return ADDON_STATUS_NEED_RESTART;
     }
  
     else if (strcmp(settingName, "add_favorites_group") == 0)
@@ -272,13 +255,12 @@ ADDON_STATUS SovokTvDataSource::SetSetting(const char *settingName, const void *
             if(currentId == streamersList.size() )
             {
                 m_xbmc->QueueNotification(QUEUE_WARNING, "Streamer setting mismatch.");
-                //return ADDON_STATUS_NEED_RESTART;
             }
             m_client->SetStreamerId(currentId);
         }
     }
 
-    return ADDON_STATUS_OK;
+    return ADDON_STATUS_NEED_RESTART;
 }
 
 void SovokTvDataSource::FreeSettings()
@@ -320,7 +302,7 @@ PVR_ERROR SovokTvDataSource::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
 
 PVR_ERROR SovokTvDataSource::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL& channel, time_t iStart, time_t iEnd)
 {
-    return (m_client == NULL)? PVR_ERROR_FAILED : m_client->GetEPGForChannel(handle, channel, iStart, iEnd);
+    return (m_client == NULL)? PVR_ERROR_SERVER_ERROR : m_client->GetEPGForChannel(handle, channel, iStart, iEnd);
 }
 
 int SovokTvDataSource::GetChannelGroupsAmount()
@@ -330,12 +312,12 @@ int SovokTvDataSource::GetChannelGroupsAmount()
 
 PVR_ERROR SovokTvDataSource::GetChannelGroups(ADDON_HANDLE handle, bool bRadio)
 {
-    return (m_client == NULL)? PVR_ERROR_FAILED : m_client->GetChannelGroups(handle, bRadio);
+    return (m_client == NULL)? PVR_ERROR_SERVER_ERROR : m_client->GetChannelGroups(handle, bRadio);
 }
 
 PVR_ERROR SovokTvDataSource::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_CHANNEL_GROUP& group)
 {
-    return (m_client == NULL)? PVR_ERROR_FAILED : m_client->GetChannelGroupMembers(handle, group);
+    return (m_client == NULL)? PVR_ERROR_SERVER_ERROR : m_client->GetChannelGroupMembers(handle, group);
 }
 
 int SovokTvDataSource::GetChannelsAmount()
@@ -345,7 +327,7 @@ int SovokTvDataSource::GetChannelsAmount()
 
 PVR_ERROR SovokTvDataSource::GetChannels(ADDON_HANDLE handle, bool bRadio)
 {
-    return (m_client == NULL)? PVR_ERROR_FAILED : m_client->GetChannels(handle, bRadio);
+    return (m_client == NULL)? PVR_ERROR_SERVER_ERROR : m_client->GetChannels(handle, bRadio);
 }
 
 bool SovokTvDataSource::OpenLiveStream(const PVR_CHANNEL& channel)
@@ -400,7 +382,7 @@ int SovokTvDataSource::GetRecordingsAmount(bool deleted)
 }
 PVR_ERROR SovokTvDataSource::GetRecordings(ADDON_HANDLE handle, bool deleted)
 {
-    return (m_client == NULL)? PVR_ERROR_FAILED : m_client->GetRecordings(handle, deleted);
+    return (m_client == NULL)? PVR_ERROR_SERVER_ERROR : m_client->GetRecordings(handle, deleted);
 
 }
 bool SovokTvDataSource::OpenRecordedStream(const PVR_RECORDING &recording)
@@ -440,5 +422,5 @@ long long SovokTvDataSource::LengthRecordedStream(void)
 PVR_ERROR SovokTvDataSource::CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
 {
     m_xbmc->Log(LOG_DEBUG, " >>>> !!!! Menu hook !!!! <<<<<");
-    return (m_client == NULL)? PVR_ERROR_FAILED : m_client->MenuHook(menuhook, item);
+    return (m_client == NULL)? PVR_ERROR_SERVER_ERROR : m_client->MenuHook(menuhook, item);
 }
