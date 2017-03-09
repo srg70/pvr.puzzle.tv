@@ -69,7 +69,6 @@ PVR_ERROR SovokPVRClient::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNE
         tag.endTime = itEpgEntry->second.EndTime;
         m_pvrHelper->TransferEpgEntry(handle, &tag);
     }
-
     return PVR_ERROR_NO_ERROR;
 }
 PVR_ERROR  SovokPVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
@@ -265,7 +264,7 @@ int SovokPVRClient::GetRecordingsAmount(bool deleted)
 //        m_sovokTV.Apply(f);
 //        if(size != 0)
 //            action();
-
+    
     }
     return size;
     

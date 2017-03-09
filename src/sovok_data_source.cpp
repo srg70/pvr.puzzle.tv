@@ -96,7 +96,6 @@ ADDON_STATUS SovokTvDataSource::Init(void *callbacks, void* props)
         if (current != streamer)
         {
             m_xbmc->QueueNotification(QUEUE_WARNING, "Streamer setting mismatch.");
-            return ADDON_STATUS_OK;
         }
  
     }
@@ -141,7 +140,7 @@ void SovokTvDataSource::CreateCore()
 
 ADDON_STATUS SovokTvDataSource::GetStatus()
 {
-    return  ADDON_STATUS_OK;
+    return  /*(m_client == NULL)? ADDON_STATUS_LOST_CONNECTION : */ADDON_STATUS_OK;
 }
 
 void SovokTvDataSource::Destroy()
@@ -293,7 +292,7 @@ PVR_ERROR SovokTvDataSource::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapab
 PVR_ERROR SovokTvDataSource::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
 {
     snprintf(signalStatus.strAdapterName, sizeof(signalStatus.strAdapterName), "IPTV Sovok TV Adapter 1");
-    snprintf(signalStatus.strAdapterStatus, sizeof(signalStatus.strAdapterStatus), "OK");
+    snprintf(signalStatus.strAdapterStatus, sizeof(signalStatus.strAdapterStatus), (m_client == NULL) ? "Not connected" :"OK");
     
     return PVR_ERROR_NO_ERROR;
 

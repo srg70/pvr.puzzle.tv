@@ -161,7 +161,7 @@ public:
     const StreamerNamesList& GetStreamersList() const;
     
     void Apply(std::function<void(const ArchiveList&)>& action) const;
-    void LoadArchiveListWithCompletion(std::function<void(void)> action);
+    bool LoadArchiveListWithCompletion(std::function<void(void)> action);
 
     
     //EpgEntryList GetEpg(int channelId, time_t day);
@@ -181,7 +181,6 @@ private:
     typedef std::vector<std::string> StreamerIdsList;
 
     struct ApiFunctionData;
-    
     class HelperThread;
     
     std::string GetArchive(int channelId, time_t startTime);
@@ -234,7 +233,7 @@ private:
     CActionQueue* m_apiCalls;
     CActionQueue* m_apiCallCompletions;
     P8PLATFORM::CMutex m_epgAccessMutex;
-
+    HelperThread* m_archiveLoader;
 };
 
 #endif //sovok_tv_h

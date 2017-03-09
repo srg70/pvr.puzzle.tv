@@ -32,6 +32,8 @@
 #include <sstream>
 #include <ctime>
 #include "p8-platform/threads/mutex.h"
+#include "p8-platform/util/timeutils.h"
+#include "p8-platform/util/util.h"
 #include "helpers.h"
 #include "sovok_tv.h"
 
@@ -75,23 +77,34 @@ struct SovokTV::ApiFunctionData
 class SovokTV::HelperThread : public P8PLATFORM::CThread
 {
 public:
-    HelperThread(SovokTV* sovokTV, std::function<void(void)> action) : m_sovokTV(sovokTV), m_action(action){}
+    HelperThread(SovokTV* sovokTV, std::function<void(void)> action) : m_sovokTV(sovokTV), m_action(action), m_epgActivityCounter(0)
+    {}
+    void EpgActivityStarted() {++m_epgActivityCounter;}
+    void EpgActivityDone() {}
     void* Process()
     {
+        unsigned int oldEpgActivity = m_epgActivityCounter;
         m_sovokTV->LoadArchiveList();
+        
+        while(oldEpgActivity != m_epgActivityCounter){
+            oldEpgActivity = m_epgActivityCounter;
+            Sleep(5000);// 5sec
+        }
+        
         P8PLATFORM::CThread* pThis = this;
         m_sovokTV->m_apiCallCompletions->PerformAsync([=]() {
-            m_action();
             if(!pThis->IsStopped())
                 pThis->StopThread();
-            delete pThis;
-        }, [&](const CActionQueue::ActionResult& s) {});
+            m_action();
+        }, [](const CActionQueue::ActionResult& s) {});
         return NULL;
         
     }
 private:
     SovokTV* m_sovokTV;
     std::function<void(void)> m_action;
+    unsigned int m_epgActivityCounter;
+    P8PLATFORM::CEvent event;
 };
 
 
@@ -105,7 +118,8 @@ SovokTV::SovokTV(ADDON::CHelper_libXBMC_addon *addonHelper, const string &login,
     m_lastEpgRequestEndTime(0),
     m_lastUniqueBroadcastId(0),
     m_apiCalls(new CActionQueue()),
-    m_apiCallCompletions(new CActionQueue())
+    m_apiCallCompletions(new CActionQueue()),
+    m_archiveLoader(NULL)
 {
     m_apiCalls->CreateThread();
     m_apiCallCompletions->CreateThread();
@@ -206,11 +220,20 @@ void SovokTV::LoadEpgCache()
     
 }
 
-void SovokTV::LoadArchiveListWithCompletion(std::function<void(void)> action)
+bool SovokTV::LoadArchiveListWithCompletion(std::function<void(void)> action)
 {
-   // LoadArchiveList();
-    auto archiveLoader = new SovokTV::HelperThread(this, action);
-    archiveLoader->CreateThread(false);
+    if(m_archiveLoader)
+        return false;
+    
+    SovokTV* pThis = this;
+    std::function<void(void)> destroyer = [=](void)
+    {
+        SAFE_DELETE(pThis->m_archiveLoader);
+        action();
+    };
+    m_archiveLoader = new SovokTV::HelperThread(this, destroyer);
+    m_archiveLoader->CreateThread(false);
+    return true;
 }
 
 const ChannelList &SovokTV::GetChannelList()
@@ -355,6 +378,9 @@ void SovokTV::Log(const char* massage) const
 void SovokTV::GetEpg(int channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries)
 {
     P8PLATFORM::CLockObject lock(m_epgAccessMutex);
+    if(m_archiveLoader)
+        m_archiveLoader->EpgActivityStarted();
+    
     if (m_lastEpgRequestStartTime == 0)
     {
         m_lastEpgRequestStartTime = startTime;
@@ -376,6 +402,9 @@ void SovokTV::GetEpg(int channelId, time_t startTime, time_t endTime, EpgEntryLi
         if (itEpgEntry->second.ChannelId == channelId)
             epgEntries.insert(*itEpgEntry);
     }
+    if(m_archiveLoader)
+        m_archiveLoader->EpgActivityDone();
+
 }
 
 
@@ -530,6 +559,7 @@ bool SovokTV::Login(bool wait)
             CallApiFunction(apiParams, parser);
         } catch (ServerErrorException& ex) {
             m_addonHelper->QueueNotification(QUEUE_ERROR, "Sovok TV error: %s", ex.reason.c_str() );
+            return false;
         } catch (...) {
             Log(" >>>>  FAILED to LOGIN!!! <<<<<");
             return false;
@@ -596,9 +626,10 @@ void SovokTV::CallApiAsync(std::shared_ptr<const ApiFunctionData> data, TParser 
         strRequest += (data->api_ver == ApiFunctionData::API_2_2) ? "v2.2" : "v2.3";
         strRequest += "/json/";
         strRequest += data->name + query;
-        time_t start = time(nullptr);
+        auto start = P8PLATFORM::GetTimeMs();
+        const bool isLoginCommand = data->name == "login";
         SendHttpRequest(strRequest, m_sessionCookie, [=](std::string& response) {
-            m_addonHelper->Log(LOG_DEBUG, "Calling '%s'. Response in %d sec.",  data->name.c_str(), time(nullptr) - start);
+            m_addonHelper->Log(LOG_DEBUG, "Calling '%s'. Response in %d ms.",  data->name.c_str(), P8PLATFORM::GetTimeMs() - start);
 
             ParseJson(response, [&] (Document& jsonRoot)
             {
@@ -615,7 +646,8 @@ void SovokTV::CallApiAsync(std::shared_ptr<const ApiFunctionData> data, TParser 
                 throw ServerErrorException(err,code);
             });
         },[=](const CActionQueue::ActionResult& s) {
-            if(s.status == CActionQueue::kActionCompleted) {
+            // Do not re-login within login command.
+            if(s.status == CActionQueue::kActionCompleted || isLoginCommand) {
                 completion(s);
                 return;
             }
@@ -637,7 +669,9 @@ void SovokTV::CallApiAsync(std::shared_ptr<const ApiFunctionData> data, TParser 
                   m_addonHelper->Log(LOG_ERROR, err);
                   throw ServerErrorException(err,code);
                 });
-            }, [&](const CActionQueue::ActionResult& ss){completion(ss);});
+            }, [&](const CActionQueue::ActionResult& ss){
+                completion(ss);
+            });
 
         });
     },[=](const CActionQueue::ActionResult& s) {
@@ -871,7 +905,7 @@ void SovokTV::BuildRecordingsFor(int channelId, time_t from, time_t to)
          const SovokEpgEntry& epgTag = i.second;
          if(epgTag.ChannelId == channelId
             && epgTag.StartTime >= from
-            && epgTag.EndTime < to
+            && epgTag.StartTime < to
             && m_archiveList.count(i.first) == 0)
          {
              ++cnt;
