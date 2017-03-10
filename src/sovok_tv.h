@@ -161,7 +161,7 @@ public:
     const StreamerNamesList& GetStreamersList() const;
     
     void Apply(std::function<void(const ArchiveList&)>& action) const;
-    bool LoadArchiveListWithCompletion(std::function<void(void)> action);
+    bool StartArchivePollingWithCompletion(std::function<void(void)> action);
 
     
     //EpgEntryList GetEpg(int channelId, time_t day);

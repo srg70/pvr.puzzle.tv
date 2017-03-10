@@ -83,8 +83,6 @@ private:
     std::string m_login;
     std::string m_password;
     std::string m_strimmer;
-    bool m_isTimeshiftEnabled;
-    bool m_shouldAddFavoritesGroup;
     std::string m_clientPath;
     std::string m_userPath;
     SovokPVRClient *m_client = NULL;

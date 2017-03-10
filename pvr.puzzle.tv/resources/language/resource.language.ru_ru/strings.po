@@ -30,6 +30,10 @@ msgctxt "#30003"
 msgid "Enable Timeshift"
 msgstr "Включить Timeshift"
 
+msgctxt "#30004"
+msgid "Timeshift Path"
+msgstr "Timeshift папка"
+
 msgctxt "#30010"
 msgid "Sovok TV"
-msgstr "Sovok TV"
+msgstr "Совок ТВ"

@@ -42,9 +42,10 @@ SovokPVRClient::SovokPVRClient(CHelper_libXBMC_addon *addonHelper, CHelper_libXB
     m_sovokTV(addonHelper, sovokLogin, sovokPassword),
     m_inputBuffer(NULL),
     m_isTimeshiftEnabled(false),
-    m_shouldAddFavoritesGroup(true)
+    m_shouldAddFavoritesGroup(true),
+    m_CacheDir(s_DefaultCacheDir)
 {
-    if(!m_addonHelper->RemoveDirectory(s_DefaultCacheDir))
+    if(!m_addonHelper->RemoveDirectory(m_CacheDir.c_str()))
         m_addonHelper->Log(LOG_ERROR, "Failed to remove cache folder");
 }
 
@@ -186,8 +187,7 @@ bool SovokPVRClient::OpenLiveStream(const PVR_CHANNEL& channel)
     {
         if (m_isTimeshiftEnabled)
         {
-            std::string strFile = s_DefaultCacheDir;
-            m_inputBuffer = new TimeshiftBuffer(m_addonHelper, url, strFile);
+            m_inputBuffer = new TimeshiftBuffer(m_addonHelper, url, m_CacheDir);
         }
         else
             m_inputBuffer = new DirectBuffer(m_addonHelper, url);
@@ -260,7 +260,7 @@ int SovokPVRClient::GetRecordingsAmount(bool deleted)
         std::function<void(void)> action = [=](){
             m_pvrHelper->TriggerRecordingUpdate();
         };
-        m_sovokTV.LoadArchiveListWithCompletion(action);
+        m_sovokTV.StartArchivePollingWithCompletion(action);
 //        m_sovokTV.Apply(f);
 //        if(size != 0)
 //            action();
@@ -334,11 +334,10 @@ bool SovokPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     {
         if (m_isTimeshiftEnabled)
         {
-            std::string strFile = s_DefaultCacheDir;
-            m_recordBuffer = new TimeshiftBuffer(m_addonHelper, url, strFile);
+            m_recordBuffer = new TimeshiftBuffer(m_addonHelper, url, m_CacheDir);
         }
         else
-            m_recordBuffer = new DirectBuffer(m_addonHelper, url);
+            m_recordBuffer = new ArchiveBuffer(m_addonHelper, url);
     }
     catch (InputBufferException & ex)
     {

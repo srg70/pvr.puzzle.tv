@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <addon
   id="pvr.puzzle.tv"
-  version="0.0.3"
+  version="0.0.5"
   name="PVR Puzzle TV"
   provider-name="srg70">
   <requires>
@@ -12,10 +12,10 @@
     point="xbmc.pvrclient"
     library_@PLATFORM@="@LIBRARY_FILENAME@"/>
   <extension point="xbmc.addon.metadata">
-    <summary lang="en_US">Kodi PVR addon for IPTV support.</summary>
-    <summary lang="ru_RU">Kodi PVR аддон для поддержки IPTV.</summary>
-    <description lang="en_US">IPTV Simple PVR Client support m3u playlists, streaming of Live TV for multicast/unicast sources, listening to Radio channels and EPG.</description>
-    <description lang="ru_RU">Интерфейс для IPTV. Поддерживает просмотр потокового ТВ для юникаст/мультикаст источников, прослушивание радиоканалов и работу с электронным телегидом.</description>
+    <summary lang="en_US">Kodi PVR addon for IPTV support. Designed to agregate IPTV servise from different providers.</summary>
+    <summary lang="ru_RU">Kodi PVR аддон для поддержки IPTV. Позволяет интегрировать IPTV-услуги разных провайдеров</summary>
+    <description lang="en_US">Puzzle TV PVR Client supports streaming of Live TV, listening to Radio channels and EPG from service providers using dedicated API. Addon designed to be extandable. Currenly only Sovok TV provider is supported. </description>
+    <description lang="ru_RU">Интерфейс для IPTV. Поддерживает просмотр потокового ТВ, прослушивание радиоканалов и работу с электронным телегидом от поствщиков услуг, используя специализированный интерфейс. Есть возможность расширения. Пока поддерживается только Sovok TV провайдер.</description>
     <disclaimer lang="en_US">This is unstable software! The authors are in no way responsible for failed playings, incorrect EPG times, wasted hours, or any other undesirable effects.</disclaimer>
     <disclaimer lang="ru_RU">Это нестабильная программа! Авторы не несут ответственности за неудачные воспроизведение, неверные время EPG, потраченное время и прочие нежелательные эффекты.</disclaimer>
      <platform>@PLATFORM@</platform>

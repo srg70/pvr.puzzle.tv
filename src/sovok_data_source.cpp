@@ -77,16 +77,23 @@ ADDON_STATUS SovokTvDataSource::Init(void *callbacks, void* props)
         m_login = buffer;
     if (m_xbmc->GetSetting("password", &buffer))
         m_password = buffer;
-    m_xbmc->GetSetting("enable_timeshift", &m_isTimeshiftEnabled);
-    m_xbmc->GetSetting("add_favorites_group", &m_shouldAddFavoritesGroup);
+    bool isTimeshiftEnabled;
+    m_xbmc->GetSetting("enable_timeshift", &isTimeshiftEnabled);
+    bool shouldAddFavoritesGroup;
+    m_xbmc->GetSetting("add_favorites_group", &shouldAddFavoritesGroup);
+    string timeshiftPath;
+    if (m_xbmc->GetSetting("timeshift_path", &buffer))
+        timeshiftPath = buffer;
 
+    
     try
     {
         CreateCore();
  
-        m_client->SetTimeshiftEnabled(m_isTimeshiftEnabled);
-        m_client->SetAddFavoritesGroup(m_shouldAddFavoritesGroup);
-
+        m_client->SetTimeshiftEnabled(isTimeshiftEnabled);
+        m_client->SetAddFavoritesGroup(shouldAddFavoritesGroup);
+        m_client->SetTimeshiftPath(timeshiftPath);
+        
         std::string streamer;
         if (m_xbmc->GetSetting("streamer", &buffer))
             streamer = buffer;
@@ -226,16 +233,19 @@ ADDON_STATUS SovokTvDataSource::SetSetting(const char *settingName, const void *
     }
     else if (strcmp(settingName, "enable_timeshift") == 0)
     {
-        m_isTimeshiftEnabled = *((const bool*)settingValue);
         if(m_client)
             m_client->SetTimeshiftEnabled(*(bool *)(settingValue));
     }
  
     else if (strcmp(settingName, "add_favorites_group") == 0)
     {
-        m_shouldAddFavoritesGroup = *((bool*)settingValue);
         if(m_client)
             m_client->SetAddFavoritesGroup(*(bool *)(settingValue));
+    }
+    else if (strcmp(settingName, "timeshift_path") == 0)
+    {
+        if(m_client)
+            m_client->SetTimeshiftPath((const char *)(settingValue));
     }
 
     else if (strcmp(settingName, "streamer") == 0)

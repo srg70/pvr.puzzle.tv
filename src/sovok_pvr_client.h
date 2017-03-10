@@ -56,6 +56,10 @@ public:
 
     void SetTimeshiftEnabled(bool enable);
     bool IsTimeshiftEnabled() { return m_isTimeshiftEnabled; }
+    void SetTimeshiftPath(const std::string& path){
+        if(m_addonHelper->DirectoryExists(path.c_str()))
+           m_CacheDir = path;
+    }
 
     void SetAddFavoritesGroup(bool shouldAddFavoritesGroup);
     bool ShouldAddFavoritesGroup() { return m_shouldAddFavoritesGroup; }
@@ -83,4 +87,5 @@ private:
     InputBuffer *m_recordBuffer;
     bool m_isTimeshiftEnabled;
     bool m_shouldAddFavoritesGroup;
+    std::string m_CacheDir;
 };

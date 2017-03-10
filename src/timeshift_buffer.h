@@ -138,6 +138,7 @@ private:
     
     long long m_length;
     long long m_position;
+    std::string m_streamUrl;
 };
 
 #endif //timeshift_buffer_h

@@ -24,9 +24,9 @@
  *
  */
 
+#include "p8-platform/posix/os-types.h"
 #include "libXBMC_addon.h"
 #include "timeshift_buffer.h"
-#include "p8-platform/posix/os-types.h"
 #include "helpers.h"
 #include <sstream>
 
@@ -48,9 +48,10 @@ TimeshiftBuffer::TimeshiftBuffer(CHelper_libXBMC_addon *addonHelper, const strin
     m_PopulatedChunks(1000),
     m_CurrentReadChunk(NULL),
     m_length(0),
-    m_position(0)
+    m_position(0),
+    m_streamUrl(streamUrl)
 {
-    m_streamHandle = m_addonHelper->OpenFile(streamUrl.c_str(), 0);
+    m_streamHandle = m_addonHelper->OpenFile(m_streamUrl.c_str(), 0);
     if (!m_streamHandle)
         throw InputBufferException("Failed to open source stream.");
 
@@ -58,22 +59,6 @@ TimeshiftBuffer::TimeshiftBuffer(CHelper_libXBMC_addon *addonHelper, const strin
        if(!m_addonHelper->CreateDirectory(m_bufferDir.c_str()))
           throw InputBufferException("Failed to create cahche directory for timeshift buffer.");
 
-/*    m_bufferWriteHandle = m_addonHelper->OpenFileForWrite(m_bufferPath.c_str(), true);
-    if (!m_bufferWriteHandle)
-    {
-        m_addonHelper->CloseFile(m_streamHandle);
-        throw InputBufferException();
-    }
-
-    m_bufferReadHandle = m_addonHelper->OpenFile(m_bufferPath.c_str(), 0);
-    if (!m_bufferReadHandle)
-    {
-        m_addonHelper->CloseFile(m_streamHandle);
-        m_addonHelper->CloseFile(m_bufferWriteHandle);
-        m_addonHelper->DeleteFile(m_bufferPath.c_str());
-        throw InputBufferException();
-    }
-*/
     CreateThread();
 }
 
@@ -134,9 +119,15 @@ void *TimeshiftBuffer::Process()
 
 int64_t TimeshiftBuffer::GetLength() const
 {
-//    int64_t length = 0;
-//    std::for_each(m_ReadCache.begin(), m_ReadCache.end(), [&]  (ReadCache::const_iterator i){ length += (*i)->Length(); });
-//   return length;
+//    struct __stat64 statData;
+//    m_addonHelper->StatFile(m_streamUrl.c_str(), &statData);
+//    int64_t length = statData.st_size;
+//    if(length) {
+//        DebugLog(std::string(">>> GetLength(StatFile): ") + n_to_string(length));
+//        return length;
+//    }
+    
+    
     auto chunk = GetCurrentReadChunk(1);
     auto length = (NULL == chunk) ? 0 : m_CurrentReadChunk->m_reader.Length();
     DebugLog(std::string(">>> GetLength(): ") + n_to_string(length));

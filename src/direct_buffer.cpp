@@ -74,3 +74,33 @@ bool DirectBuffer::SwitchStream(const std::string &newUrl)
 
     return m_streamHandle != NULL;
 }
+
+
+ArchiveBuffer::ArchiveBuffer(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &streamUrl)
+    :DirectBuffer(addonHelper, streamUrl)
+{}
+ArchiveBuffer::~ArchiveBuffer()
+{}
+
+int64_t ArchiveBuffer::GetLength() const
+{
+    CLockObject lock(m_mutex);
+    auto retVal =  m_addonHelper->GetFileLength(m_streamHandle);
+    m_addonHelper->Log(ADDON::LOG_DEBUG, "ArchiveBuffer: length = %d", retVal);
+    return retVal;
+}
+int64_t ArchiveBuffer::GetPosition() const
+{
+    CLockObject lock(m_mutex);
+    auto retVal =  m_addonHelper->GetFilePosition(m_streamHandle);
+    m_addonHelper->Log(ADDON::LOG_DEBUG, "ArchiveBuffer: position = %d", retVal);
+    return retVal;
+}
+int64_t ArchiveBuffer::Seek(int64_t iPosition, int iWhence) const
+{
+    CLockObject lock(m_mutex);
+    auto retVal =  m_addonHelper->SeekFile(m_streamHandle, iPosition, iWhence);
+    m_addonHelper->Log(ADDON::LOG_DEBUG, "ArchiveBuffer: Seek = %d(requested %d from %d)", retVal, iPosition, iWhence);
+    return retVal;
+    
+}

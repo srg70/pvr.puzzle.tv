@@ -48,10 +48,20 @@ public:
     ssize_t Read(unsigned char *buffer, size_t bufferSize);
     bool SwitchStream(const std::string &newUrl);
 
-private:
+protected:
     ADDON::CHelper_libXBMC_addon *m_addonHelper;
     void *m_streamHandle;
-    P8PLATFORM::CMutex m_mutex;
+    mutable P8PLATFORM::CMutex m_mutex;
 };
 
+class ArchiveBuffer : public DirectBuffer
+{
+public:
+    ArchiveBuffer(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &streamUrl);
+    ~ArchiveBuffer();
+
+    int64_t GetLength() const;
+    int64_t GetPosition() const;
+    int64_t Seek(int64_t iPosition, int iWhence) const;
+};
 #endif //direct_buffer_h

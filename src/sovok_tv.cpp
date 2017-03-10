@@ -83,20 +83,23 @@ public:
     void EpgActivityDone() {}
     void* Process()
     {
-        unsigned int oldEpgActivity = m_epgActivityCounter;
-        m_sovokTV->LoadArchiveList();
-        
-        while(oldEpgActivity != m_epgActivityCounter){
-            oldEpgActivity = m_epgActivityCounter;
-            Sleep(5000);// 5sec
+        while (!IsStopped())
+        {
+            unsigned int oldEpgActivity = m_epgActivityCounter;
+            m_sovokTV->LoadArchiveList();
+            
+            while(!IsStopped() && oldEpgActivity != m_epgActivityCounter){
+                oldEpgActivity = m_epgActivityCounter;
+                Sleep(2000);// 2sec
+            }
+            
+            HelperThread* pThis = this;
+            m_sovokTV->m_apiCallCompletions->PerformAsync([pThis]() {
+                pThis->m_action();
+            },
+            [](const CActionQueue::ActionResult& s) {});
+            Sleep(10*60*1000); //10 min
         }
-        
-        P8PLATFORM::CThread* pThis = this;
-        m_sovokTV->m_apiCallCompletions->PerformAsync([=]() {
-            if(!pThis->IsStopped())
-                pThis->StopThread();
-            m_action();
-        }, [](const CActionQueue::ActionResult& s) {});
         return NULL;
         
     }
@@ -220,18 +223,12 @@ void SovokTV::LoadEpgCache()
     
 }
 
-bool SovokTV::LoadArchiveListWithCompletion(std::function<void(void)> action)
+bool SovokTV::StartArchivePollingWithCompletion(std::function<void(void)> action)
 {
     if(m_archiveLoader)
         return false;
     
-    SovokTV* pThis = this;
-    std::function<void(void)> destroyer = [=](void)
-    {
-        SAFE_DELETE(pThis->m_archiveLoader);
-        action();
-    };
-    m_archiveLoader = new SovokTV::HelperThread(this, destroyer);
+    m_archiveLoader = new SovokTV::HelperThread(this, action);
     m_archiveLoader->CreateThread(false);
     return true;
 }
@@ -487,6 +484,7 @@ string SovokTV::GetUrl(int channelId)
 
     ParamList params;
     params["cid"] = n_to_string(channelId);
+    params["protect_code"] = "0000";
     try {
         std::shared_ptr<const ApiFunctionData> apiParams(new ApiFunctionData("get_url", params));
         CallApiFunction(apiParams, [&] (Document& jsonRoot)
@@ -519,7 +517,7 @@ FavoriteList SovokTV::GetFavorites()
             const Value &jsonFavorites = jsonRoot["favorites"];
             Value::ConstValueIterator itFavorite = jsonFavorites.Begin();
             for(; itFavorite != jsonFavorites.End(); ++itFavorite)
-                favorites.insert(strtoi((*itFavorite)["channel_id"].GetString()));
+                favorites.insert((*itFavorite)["channel_id"].GetInt());
         });
     } catch (ServerErrorException& ex) {
         m_addonHelper->QueueNotification(QUEUE_ERROR, "Sovok TV error: %s", ex.reason.c_str() );
@@ -919,17 +917,6 @@ void SovokTV::BuildRecordingsFor(int channelId, time_t from, time_t to)
 void SovokTV::Apply(std::function<void(const ArchiveList&)>& action ) const {
     action(m_archiveList);
     return;
-//    P8PLATFORM::CEvent event;
-//    std::exception_ptr ex = nullptr;
-//    m_apiCallCompletions->PerformAsync([=]() {
-//        action(m_archiveList);
-//    }, [&](const CActionQueue::ActionResult& s) {
-//        ex = s.exception;
-//        event.Signal();
-//    });
-//    event.Wait();
-//    if(ex)
-//        std::rethrow_exception(ex);
 }
 
 

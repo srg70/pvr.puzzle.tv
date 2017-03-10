@@ -30,6 +30,10 @@ msgctxt "#30003"
 msgid "Enable Timeshift"
 msgstr "Enable Timeshift"
 
+msgctxt "#30004"
+msgid "Timeshift Path"
+msgstr "Timeshift Path"
+
 msgctxt "#30010"
 msgid "Sovok TV"
 msgstr "Sovok TV"
