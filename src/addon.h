@@ -73,9 +73,8 @@ public:
     virtual long long PositionRecordedStream(void) = 0;
     virtual long long LengthRecordedStream(void) = 0;
 
-
-
     virtual PVR_ERROR CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item) = 0;
+    virtual ~IPvrIptvDataSource(){}
 };
 
 #endif /* __Iptv_Pvr_Addoin_h__ */
