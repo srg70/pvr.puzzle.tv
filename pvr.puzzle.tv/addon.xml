@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<addon id="pvr.puzzle.tv" version="0.0.10" name="PVR Puzzle TV" provider-name="srg70">
+<addon id="pvr.puzzle.tv" version="0.0.11" name="PVR Puzzle TV" provider-name="srg70">
   <requires>
     <c-pluff version="0.1"/>
     <import addon="xbmc.pvr" version="5.2.1"/>
   </requires>
   <extension
     point="xbmc.pvrclient"
-    library_osx="pvr.puzzle.tv.0.0.10.dylib"/>
+    library_osx="pvr.puzzle.tv.0.0.11.dylib"/>
   <extension point="xbmc.addon.metadata">
     <summary lang="en_US">Kodi PVR addon for IPTV support. Designed to agregate IPTV servise from different providers.</summary>
     <summary lang="ru_RU">Kodi PVR аддон для поддержки IPTV. Позволяет интегрировать IPTV-услуги разных провайдеров</summary>
