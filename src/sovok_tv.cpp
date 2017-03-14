@@ -77,37 +77,48 @@ struct SovokTV::ApiFunctionData
 class SovokTV::HelperThread : public P8PLATFORM::CThread
 {
 public:
-    HelperThread(SovokTV* sovokTV, std::function<void(void)> action) : m_sovokTV(sovokTV), m_action(action), m_epgActivityCounter(0)
+    HelperThread(SovokTV* sovokTV, std::function<void(void)> action)
+    : m_sovokTV(sovokTV), m_action(action)
+    , m_epgActivityCounter(0), m_stopEvent(false) /*Manual event*/
     {}
     void EpgActivityStarted() {++m_epgActivityCounter;}
     void EpgActivityDone() {}
     void* Process()
     {
-        while (!IsStopped())
+        do
         {
             unsigned int oldEpgActivity = m_epgActivityCounter;
             m_sovokTV->LoadArchiveList();
             
-            while(!IsStopped() && oldEpgActivity != m_epgActivityCounter){
+            // Wait for epg done before announce archives
+            bool isStopped = IsStopped();
+            while(!isStopped && oldEpgActivity != m_epgActivityCounter){
                 oldEpgActivity = m_epgActivityCounter;
-                Sleep(2000);// 2sec
+                isStopped = m_stopEvent.Wait(2000);// 2sec
             }
+            if(isStopped)
+                break;
             
             HelperThread* pThis = this;
             m_sovokTV->m_apiCallCompletions->PerformAsync([pThis]() {
                 pThis->m_action();
-            },
-            [](const CActionQueue::ActionResult& s) {});
-            Sleep(10*60*1000); //10 min
-        }
+            },  [](const CActionQueue::ActionResult& s) {});
+            
+        }while (!IsStopped() && !m_stopEvent.Wait(10*60*1000)); //10 min
+
         return NULL;
         
+    }
+    bool StopThread(int iWaitMs = 5000)
+    {
+        m_stopEvent.Broadcast();
+        return this->P8PLATFORM::CThread::StopThread(iWaitMs);
     }
 private:
     SovokTV* m_sovokTV;
     std::function<void(void)> m_action;
     unsigned int m_epgActivityCounter;
-    P8PLATFORM::CEvent event;
+    P8PLATFORM::CEvent m_stopEvent;
 };
 
 
@@ -145,9 +156,19 @@ SovokTV::~SovokTV()
 }
 void SovokTV::Cleanup()
 {
+    if(m_archiveLoader) {
+        m_archiveLoader->StopThread();
+        delete m_archiveLoader; m_archiveLoader = NULL;
+    }
     Logout();
-    if(m_apiCalls) {delete m_apiCalls; m_apiCalls = NULL;}
-    if(m_apiCallCompletions) {delete m_apiCallCompletions; m_apiCallCompletions = NULL;}
+    if(m_apiCalls) {
+        m_apiCalls->StopThread();
+        delete m_apiCalls; m_apiCalls = NULL;
+    }
+    if(m_apiCallCompletions) {
+        m_apiCallCompletions->StopThread();
+        delete m_apiCallCompletions; m_apiCallCompletions = NULL;
+    }
 }
 
 void SovokTV::SaveEpgCache()

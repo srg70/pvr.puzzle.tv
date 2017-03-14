@@ -22,12 +22,14 @@
 
 #include "ActionQueue.hpp"
 
+static const int32_t INFINITE_QUEUE_TIMEOUT = 0x7FFFFFFF;
+
 void* CActionQueue::Process()
 {
     while (!IsStopped())
     {
         IActionQueueItem* action = NULL;
-        _actions.Pop(action, 1000*10);
+        _actions.Pop(action, INFINITE_QUEUE_TIMEOUT);
         if(NULL != action)
         {
             if(_willStop)
@@ -43,6 +45,10 @@ void* CActionQueue::Process()
 
 bool CActionQueue::StopThread(int iWaitMs)
 {
+    // In case of no active tasks unlocks .Pop() waiting
+    PerformAsync([this] {
+        _willStop = true;
+    }, [](const CActionQueue::ActionResult& s) {});
     _willStop = true;
     return this->CThread::StopThread(iWaitMs);
 }

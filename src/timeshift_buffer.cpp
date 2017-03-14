@@ -89,29 +89,32 @@ void *TimeshiftBuffer::Process()
     ssize_t chunkSize = 0;
     ChunkFilePtr currentChunkFile = NULL;
     bool isEof = false;
-    
-    while (!isEof && m_streamHandle != NULL && !IsStopped())
-    {
-        if(NULL == currentChunkFile)
-        {
-            currentChunkFile  = GetFreeChunk();
-//            currentChunkFile->m_reader.Seek(0, SEEK_SET);
-//            currentChunkFile->m_reader.Truncate(0);
-//            currentChunkFile->m_writer.Seek(0, SEEK_SET);
-//            currentChunkFile->m_writer.Truncate(0);
-            m_PopulatedChunks.Push(currentChunkFile);
-            chunkSize = 0;
-            DebugLog(std::string(">>> New current chunk (for write): ") + currentChunkFile->Path());
+    try {
+        while (!isEof && m_streamHandle != NULL && !IsStopped()) {
+            if(NULL == currentChunkFile)
+            {
+                currentChunkFile  = GetFreeChunk();
+                //            currentChunkFile->m_reader.Seek(0, SEEK_SET);
+                //            currentChunkFile->m_reader.Truncate(0);
+                //            currentChunkFile->m_writer.Seek(0, SEEK_SET);
+                //            currentChunkFile->m_writer.Truncate(0);
+                m_PopulatedChunks.Push(currentChunkFile);
+                chunkSize = 0;
+                DebugLog(std::string(">>> New current chunk (for write): ") + currentChunkFile->Path());
+            }
+            ssize_t bytesRead = m_addonHelper->ReadFile(m_streamHandle, buffer, sizeof(buffer));
+            isEof = bytesRead <= 0;
+            DebugLog(std::string(">>> Write: ") + n_to_string(bytesRead));
+            ssize_t bytesWritten = currentChunkFile->m_writer.Write(buffer, bytesRead);
+            isEof |= bytesWritten != bytesRead;
+            chunkSize += bytesWritten;
+            if(chunkSize >= CHUNK_FILE_SIZE_LIMIT)
+                currentChunkFile = NULL;
+            m_writeEvent.Broadcast();
         }
-        ssize_t bytesRead = m_addonHelper->ReadFile(m_streamHandle, buffer, sizeof(buffer));
-        isEof = bytesRead <= 0;
-        DebugLog(std::string(">>> Write: ") + n_to_string(bytesRead));
-        ssize_t bytesWritten = currentChunkFile->m_writer.Write(buffer, bytesRead);
-        isEof |= bytesWritten != bytesRead;
-        chunkSize += bytesWritten;
-        if(chunkSize >= CHUNK_FILE_SIZE_LIMIT)
-            currentChunkFile = NULL;
-        m_writeEvent.Broadcast();
+
+    } catch (InputBufferException& ex ) {
+        m_addonHelper->Log(LOG_ERROR, "Failed to create timeshift chunkfile in directory %s", m_bufferDir.c_str());
     }
 
     return NULL;
@@ -257,7 +260,7 @@ TimeshiftBuffer::CGenericFile::CGenericFile(ADDON::CHelper_libXBMC_addon *addonH
     , m_helper(addonHelper)
 {
     if(NULL == m_handler)
-        throw InputBufferException("Failed to open tmishift buffer chunk file.");
+        throw InputBufferException("Failed to open timeshift buffer chunk file.");
 }
 int64_t TimeshiftBuffer::CGenericFile::Seek(int64_t iFilePosition, int iWhence)
 {
