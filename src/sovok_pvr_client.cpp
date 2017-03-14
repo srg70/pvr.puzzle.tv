@@ -33,7 +33,8 @@
 using namespace std;
 using namespace ADDON;
 
-const char* s_DefaultCacheDir = "special://temp/pvr.puzzle.tv";
+// NOTE: avoid '.' (dot) char in path. Causes to deadlock in Kodi code.
+const char* s_DefaultCacheDir = "special://temp/pvr-puzzle-tv";
 
 SovokPVRClient::SovokPVRClient(CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,
                                const std::string &sovokLogin, const std::string &sovokPassword) :
@@ -339,11 +340,11 @@ bool SovokPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     
     try
     {
-        if (m_isTimeshiftEnabled)
-        {
-            m_recordBuffer = new TimeshiftBuffer(m_addonHelper, url, m_CacheDir);
-        }
-        else
+//        if (m_isTimeshiftEnabled)
+//        {
+//            m_recordBuffer = new TimeshiftBuffer(m_addonHelper, url, m_CacheDir);
+//        }
+//        else
             m_recordBuffer = new ArchiveBuffer(m_addonHelper, url);
     }
     catch (InputBufferException & ex)

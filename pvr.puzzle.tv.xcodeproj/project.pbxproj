@@ -240,19 +240,15 @@
 			children = (
 				4C08C7FD1D8290F6004CAAE3 /* addon.cpp */,
 				4C08C7FF1D829449004CAAE3 /* addon.h */,
-				4C08C7EF1D81E2A8004CAAE3 /* direct_buffer.cpp */,
-				4C08C7F01D81E2A8004CAAE3 /* direct_buffer.h */,
 				4C08C7F71D81E34A004CAAE3 /* helpers.cpp */,
 				4C08C7F81D81E34A004CAAE3 /* helpers.h */,
-				4C08C7F91D81E34A004CAAE3 /* input_buffer.h */,
+				4C4FBFA41E77C0590027911E /* Buffers */,
 				4C08C8021D82AD5A004CAAE3 /* sovok_data_source.cpp */,
 				4C08C8041D82AD67004CAAE3 /* sovok_data_source.h */,
 				4C08C7D71D81D1B2004CAAE3 /* sovok_pvr_client.cpp */,
 				4C08C7D81D81D1B2004CAAE3 /* sovok_pvr_client.h */,
 				4C08C7D91D81D1B2004CAAE3 /* sovok_tv.cpp */,
 				4C08C7DA1D81D1B2004CAAE3 /* sovok_tv.h */,
-				4C08C7F11D81E2A8004CAAE3 /* timeshift_buffer.cpp */,
-				4C08C7F21D81E2A8004CAAE3 /* timeshift_buffer.h */,
 				4CFEAA8D1E4DA81A002C2BA4 /* ActionQueue.cpp */,
 				4CFEAA8E1E4DA81A002C2BA4 /* ActionQueue.hpp */,
 			);
@@ -446,6 +442,18 @@
 				4C49D1E51E27C4BF0026F43E /* stdint.h */,
 			);
 			path = msinttypes;
+			sourceTree = "<group>";
+		};
+		4C4FBFA41E77C0590027911E /* Buffers */ = {
+			isa = PBXGroup;
+			children = (
+				4C08C7F91D81E34A004CAAE3 /* input_buffer.h */,
+				4C08C7EF1D81E2A8004CAAE3 /* direct_buffer.cpp */,
+				4C08C7F01D81E2A8004CAAE3 /* direct_buffer.h */,
+				4C08C7F11D81E2A8004CAAE3 /* timeshift_buffer.cpp */,
+				4C08C7F21D81E2A8004CAAE3 /* timeshift_buffer.h */,
+			);
+			name = Buffers;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */

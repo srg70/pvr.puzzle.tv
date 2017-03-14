@@ -52,6 +52,8 @@ protected:
     ADDON::CHelper_libXBMC_addon *m_addonHelper;
     void *m_streamHandle;
     mutable P8PLATFORM::CMutex m_mutex;
+private:
+    void Open(const char* path);
 };
 
 class ArchiveBuffer : public DirectBuffer

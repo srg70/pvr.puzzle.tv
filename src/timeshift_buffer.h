@@ -120,12 +120,9 @@ private:
     ADDON::CHelper_libXBMC_addon *m_addonHelper;
     std::string m_bufferDir;
     void *m_streamHandle;
-    //void *m_bufferReadHandle;
-    //ReadCache m_ReadCache;
     mutable ChunkFilePtr m_CurrentReadChunk;
     ChunkFilePtr GetCurrentReadChunk(int32_t timeout) const;
     void FreeCurrentChunk() const;
-    //P8PLATFORM::CMutex m_mutex;
     
     typedef P8PLATFORM::SyncedBuffer <ChunkFilePtr> ChunkFileBuffer;
     mutable ChunkFileBuffer m_FreeChunks;

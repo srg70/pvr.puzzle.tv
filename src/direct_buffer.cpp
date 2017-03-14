@@ -33,7 +33,7 @@ using namespace P8PLATFORM;
 DirectBuffer::DirectBuffer(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &streamUrl) :
     m_addonHelper(addonHelper)
 {
-    m_streamHandle = m_addonHelper->OpenFile(streamUrl.c_str(), 0);
+    Open(streamUrl.c_str());
     if (!m_streamHandle)
         throw InputBufferException();
 }
@@ -42,6 +42,12 @@ DirectBuffer::~DirectBuffer()
 {
     m_addonHelper->CloseFile(m_streamHandle);
 }
+
+void DirectBuffer::Open(const char* path)
+{
+    m_streamHandle = m_addonHelper->OpenFile(path, XFILE::READ_AUDIO_VIDEO | XFILE::READ_AFTER_WRITE);
+}
+
 
 int64_t DirectBuffer::GetLength() const
 {
@@ -70,7 +76,7 @@ bool DirectBuffer::SwitchStream(const std::string &newUrl)
     CLockObject lock(m_mutex);
 
     m_addonHelper->CloseFile(m_streamHandle);
-    m_streamHandle = m_addonHelper->OpenFile(newUrl.c_str(), 0);
+    Open(newUrl.c_str());
 
     return m_streamHandle != NULL;
 }
