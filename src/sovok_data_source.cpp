@@ -25,6 +25,7 @@
  */
 
 #include <stdio.h>
+#include <algorithm>
 #include "kodi/xbmc_addon_cpp_dll.h"
 #include "kodi/libXBMC_addon.h"
 #include "kodi/libXBMC_pvr.h"

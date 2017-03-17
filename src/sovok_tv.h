@@ -34,6 +34,7 @@
 #include <vector>
 #include <functional>
 #include <list>
+#include <memory>
 #include "ActionQueue.hpp"
 
 struct SovokChannel

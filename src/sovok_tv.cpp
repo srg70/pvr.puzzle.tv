@@ -431,11 +431,12 @@ void SovokTV::GetEpgForAllChannels(time_t startTime, time_t endTime, EpgEntryLis
 
     int64_t totalNumberOfHours = (endTime - startTime) / secondsPerHour;
     int64_t hoursRemaining = totalNumberOfHours;
-
+    const int64_t hours24 = 24;
+    
     while (hoursRemaining > 0)
     {
         // Query EPG for max 24 hours per single request.
-        int64_t requestNumberOfHours = min(24ll, hoursRemaining);
+        int64_t requestNumberOfHours = min(hours24, hoursRemaining);
 
         //EpgEntryList epgEntries24Hours;
         GetEpgForAllChannelsForNHours(startTime, requestNumberOfHours, [&](EpgEntryList::key_type key, const EpgEntryList::mapped_type& val) {epgEntries[key] = val; });

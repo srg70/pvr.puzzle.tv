@@ -200,7 +200,7 @@ ssize_t TimeshiftBuffer::Read(unsigned char *buffer, size_t bufferSize)
     return IsStopped() ? -1 :totalBytesRead;
 }
 
-long long TimeshiftBuffer::Seek(long long iPosition, int iWhence) const
+int64_t TimeshiftBuffer::Seek(int64_t iPosition, int iWhence) const
 {
     auto chunk = GetCurrentReadChunk(1);
     auto pos =  (NULL == chunk) ? -1 : m_CurrentReadChunk->m_reader.Seek(iPosition, iWhence);
