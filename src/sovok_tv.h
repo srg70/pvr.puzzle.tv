@@ -177,6 +177,8 @@ public:
 
     int GetSreamerId() const { return m_streammerId; }
     void SetStreamerId(int streamerId);
+    
+    void SetPinCode(const std::string& code) {m_pinCode = code;}
 
 private:
     typedef std::vector<std::string> StreamerIdsList;
@@ -235,6 +237,7 @@ private:
     CActionQueue* m_apiCallCompletions;
     P8PLATFORM::CMutex m_epgAccessMutex;
     HelperThread* m_archiveLoader;
+    std::string m_pinCode;
 };
 
 #endif //sovok_tv_h

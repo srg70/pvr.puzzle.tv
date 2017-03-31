@@ -45,7 +45,7 @@ using namespace std;
 
 
 SovokTvDataSource::SovokTvDataSource()
-: m_client(NULL), m_xbmc(NULL), m_pvr(NULL)
+: m_client(NULL), m_xbmc(NULL), m_pvr(NULL), m_enableAdult(false)
 {
 }
 ADDON_STATUS SovokTvDataSource::Init(void *callbacks, void* props)
@@ -105,7 +105,10 @@ ADDON_STATUS SovokTvDataSource::Init(void *callbacks, void* props)
         {
             m_xbmc->QueueNotification(QUEUE_WARNING, "Streamer setting mismatch.");
         }
- 
+        m_xbmc->GetSetting("enable_adult", &m_enableAdult);
+        if(m_enableAdult && m_xbmc->GetSetting("pin_code", &buffer))
+            m_client->SetPinCode(buffer);
+        
     }
     catch (AuthFailedException &)
     {
@@ -269,7 +272,16 @@ ADDON_STATUS SovokTvDataSource::SetSetting(const char *settingName, const void *
             m_client->SetStreamerId(currentId);
         }
     }
-
+    else if (strcmp(settingName, "enable_adult") == 0)
+    {
+        m_enableAdult = *(bool*)settingValue;
+    }
+    else if (strcmp(settingName, "pin_code") == 0)
+    {
+        if(m_enableAdult && m_client != NULL)
+            m_client->SetPinCode((const char*) settingValue);
+            
+    }
     return ADDON_STATUS_NEED_RESTART;
 }
 

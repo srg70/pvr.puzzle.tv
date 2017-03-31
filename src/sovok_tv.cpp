@@ -506,7 +506,7 @@ string SovokTV::GetUrl(int channelId)
 
     ParamList params;
     params["cid"] = n_to_string(channelId);
-    params["protect_code"] = "0000";
+    params["protect_code"] = m_pinCode.c_str();
     try {
         std::shared_ptr<const ApiFunctionData> apiParams(new ApiFunctionData("get_url", params));
         CallApiFunction(apiParams, [&] (Document& jsonRoot)

@@ -65,6 +65,7 @@ public:
     int GetStreamerId() { return m_sovokTV.GetSreamerId(); }
     const StreamerNamesList& GetStreamersList() { return m_sovokTV.GetStreamersList(); }
 
+    void SetPinCode(const std::string& code) {m_sovokTV.SetPinCode(code);}
     int GetRecordingsAmount(bool deleted);
     PVR_ERROR GetRecordings(ADDON_HANDLE handle, bool deleted);
     bool OpenRecordedStream(const PVR_RECORDING &recording);

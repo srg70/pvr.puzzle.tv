@@ -85,6 +85,7 @@ private:
     std::string m_strimmer;
     std::string m_clientPath;
     std::string m_userPath;
+    bool m_enableAdult;
     SovokPVRClient *m_client = NULL;
 
     ADDON::CHelper_libXBMC_addon *m_xbmc;

@@ -34,6 +34,14 @@ msgctxt "#30004"
 msgid "Timeshift Path"
 msgstr "Timeshift Path"
 
+msgctxt "#30005"
+msgid "Enable Adult Content"
+msgstr "Enable Adult Content"
+
+msgctxt "#30006"
+msgid "PIN Code"
+msgstr "PIN Code"
+
 msgctxt "#30010"
 msgid "Sovok TV"
 msgstr "Sovok TV"
