@@ -177,7 +177,7 @@ TimeshiftBuffer::ChunkFilePtr TimeshiftBuffer::CreateChunk()
 unsigned int TimeshiftBuffer::GetChunkIndexFor(int64_t pos) {
     return pos / CHUNK_FILE_SIZE_LIMIT;
 }
-long long TimeshiftBuffer::GetPositionInChunkFor(int64_t pos) {
+int64_t TimeshiftBuffer::GetPositionInChunkFor(int64_t pos) {
     return pos % CHUNK_FILE_SIZE_LIMIT;
 }
 
