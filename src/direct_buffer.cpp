@@ -66,7 +66,7 @@ ssize_t DirectBuffer::Read(unsigned char *buffer, size_t bufferSize)
     return m_addonHelper->ReadFile(m_streamHandle, buffer, bufferSize);
 }
 
-int64_t DirectBuffer::Seek(int64_t iPosition, int iWhence) const
+int64_t DirectBuffer::Seek(int64_t iPosition, int iWhence)
 {
     return -1;
 }
@@ -102,7 +102,7 @@ int64_t ArchiveBuffer::GetPosition() const
     m_addonHelper->Log(ADDON::LOG_DEBUG, "ArchiveBuffer: position = %d", retVal);
     return retVal;
 }
-int64_t ArchiveBuffer::Seek(int64_t iPosition, int iWhence) const
+int64_t ArchiveBuffer::Seek(int64_t iPosition, int iWhence)
 {
     CLockObject lock(m_mutex);
     auto retVal =  m_addonHelper->SeekFile(m_streamHandle, iPosition, iWhence);

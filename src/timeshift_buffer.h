@@ -49,7 +49,7 @@ public:
     int64_t GetLength() const;
     int64_t GetPosition() const;
     ssize_t Read(unsigned char *buffer, size_t bufferSize);
-    int64_t Seek(int64_t iPosition, int iWhence) const;
+    int64_t Seek(int64_t iPosition, int iWhence);
     bool SwitchStream(const std::string &newUrl);
 
 private:
@@ -110,32 +110,27 @@ private:
 
     };
     
-    P8PLATFORM::CEvent m_writeEvent;
     typedef CAddonFile* ChunkFilePtr;
+    typedef std::vector<ChunkFilePtr > FileChunks;
+    typedef std::vector<std::unique_ptr<CAddonFile> > ChunkFileSwarm;
 
-    ChunkFilePtr GetFreeChunk();
-    std::string UniqueFilename(const std::string& dir);
+    ChunkFilePtr CreateChunk();
 
-    typedef std::vector<ChunkFilePtr> ReadCache;
+    static unsigned int GetChunkIndexFor(int64_t position);
+    static int64_t GetPositionInChunkFor(int64_t position);
+    void DebugLog(const std::string& message) const;
+    static std::string UniqueFilename(const std::string& dir, ADDON::CHelper_libXBMC_addon*  helper);
+ 
+    mutable P8PLATFORM::CMutex m_SyncAccess;
+    P8PLATFORM::CEvent m_writeEvent;
+    int64_t m_length;
+    int64_t m_position;
     ADDON::CHelper_libXBMC_addon *m_addonHelper;
     std::string m_bufferDir;
     void *m_streamHandle;
-    mutable ChunkFilePtr m_CurrentReadChunk;
-    ChunkFilePtr GetCurrentReadChunk(int32_t timeout) const;
-    void FreeCurrentChunk() const;
-    
-    typedef P8PLATFORM::SyncedBuffer <ChunkFilePtr> ChunkFileBuffer;
-    mutable ChunkFileBuffer m_FreeChunks;
-    mutable ChunkFileBuffer m_PopulatedChunks;
-    
-    typedef std::vector<std::unique_ptr<CAddonFile> > ChunkFileSwarm;
+    mutable FileChunks m_ReadChunks;    
     ChunkFileSwarm m_ChunkFileSwarm;
     
-    void DebugLog(const std::string& message) const;
-    
-    long long m_length;
-    long long m_position;
-    std::string m_streamUrl;
 };
 
 #endif //timeshift_buffer_h

@@ -38,20 +38,16 @@ using namespace P8PLATFORM;
 #undef DeleteFile
 #endif
 
-static const int STREAM_READ_BUFFER_SIZE = 8192;
-static const  unsigned int CHUNK_FILE_SIZE_LIMIT = (unsigned int)(STREAM_READ_BUFFER_SIZE * 1024) * 256; // 2GB chunk (temporary, pending completion of chunck factory)
+static const int STREAM_READ_BUFFER_SIZE = 1024 * 32; // 32K input read buffer
+static const  unsigned int CHUNK_FILE_SIZE_LIMIT = (unsigned int)(STREAM_READ_BUFFER_SIZE * 1024) * 32; // 1GB chunk (temporary, pending completion of chunck factory)
 
 TimeshiftBuffer::TimeshiftBuffer(CHelper_libXBMC_addon *addonHelper, const string &streamUrl, const string &bufferCacheDir) :
     m_addonHelper(addonHelper),
     m_bufferDir(bufferCacheDir),
-    m_FreeChunks(1000),
-    m_PopulatedChunks(1000),
-    m_CurrentReadChunk(NULL),
     m_length(0),
-    m_position(0),
-    m_streamUrl(streamUrl)
+    m_position(0)
 {
-    m_streamHandle = m_addonHelper->OpenFile(m_streamUrl.c_str(), 0);
+    m_streamHandle = m_addonHelper->OpenFile(streamUrl.c_str(), XFILE::READ_AUDIO_VIDEO | XFILE::READ_AFTER_WRITE);
     if (!m_streamHandle)
         throw InputBufferException("Failed to open source stream.");
 
@@ -74,42 +70,45 @@ TimeshiftBuffer::~TimeshiftBuffer()
     StopThread();
 
     m_addonHelper->CloseFile(m_streamHandle);
-    m_PopulatedChunks.Clear();
-    m_FreeChunks.Clear();
-    m_CurrentReadChunk = NULL;
-//    m_addonHelper->CloseFile(m_bufferWriteHandle);
-//    m_addonHelper->CloseFile(m_bufferReadHandle);
-
-//    m_addonHelper->DeleteFile(m_bufferPath.c_str());
+    m_ReadChunks.clear();
 }
 
 void *TimeshiftBuffer::Process()
 {
     unsigned char buffer[STREAM_READ_BUFFER_SIZE];
     ssize_t chunkSize = 0;
-    ChunkFilePtr currentChunkFile = NULL;
+    ChunkFilePtr chunk = NULL;
     bool isEof = false;
     try {
         while (!isEof && m_streamHandle != NULL && !IsStopped()) {
-            if(NULL == currentChunkFile)
+            // Create new chunk if nesessary
+            if(NULL == chunk)
             {
-                currentChunkFile  = GetFreeChunk();
-                //            currentChunkFile->m_reader.Seek(0, SEEK_SET);
-                //            currentChunkFile->m_reader.Truncate(0);
-                //            currentChunkFile->m_writer.Seek(0, SEEK_SET);
-                //            currentChunkFile->m_writer.Truncate(0);
-                m_PopulatedChunks.Push(currentChunkFile);
+                chunk  = CreateChunk();
+                {
+                    CLockObject lock(m_SyncAccess);
+                    m_ReadChunks.push_back(chunk);
+                }
                 chunkSize = 0;
-                DebugLog(std::string(">>> New current chunk (for write): ") + currentChunkFile->Path());
+                DebugLog(std::string(">>> New current chunk (for write): ") + chunk->Path());
             }
-            ssize_t bytesRead = m_addonHelper->ReadFile(m_streamHandle, buffer, sizeof(buffer));
-            isEof = bytesRead <= 0;
+            // Fill read buffer
+            ssize_t bytesRead = 0;
+            do{
+                bytesRead += m_addonHelper->ReadFile(m_streamHandle, buffer + bytesRead, sizeof(buffer) - bytesRead);
+                isEof = bytesRead <= 0;
+            }while (!isEof && bytesRead < sizeof(buffer));
+            // Write to local chunk
             DebugLog(std::string(">>> Write: ") + n_to_string(bytesRead));
-            ssize_t bytesWritten = currentChunkFile->m_writer.Write(buffer, bytesRead);
+            ssize_t bytesWritten = chunk->m_writer.Write(buffer, bytesRead);
+            {
+                CLockObject lock(m_SyncAccess);
+                m_length += bytesWritten;
+            }
             isEof |= bytesWritten != bytesRead;
             chunkSize += bytesWritten;
             if(chunkSize >= CHUNK_FILE_SIZE_LIMIT)
-                currentChunkFile = NULL;
+                chunk = NULL;
             m_writeEvent.Broadcast();
         }
 
@@ -120,70 +119,38 @@ void *TimeshiftBuffer::Process()
     return NULL;
 }
 
-int64_t TimeshiftBuffer::GetLength() const
-{
-//    struct __stat64 statData;
-//    m_addonHelper->StatFile(m_streamUrl.c_str(), &statData);
-//    int64_t length = statData.st_size;
-//    if(length) {
-//        DebugLog(std::string(">>> GetLength(StatFile): ") + n_to_string(length));
-//        return length;
-//    }
-    
-    
-    auto chunk = GetCurrentReadChunk(1);
-    auto length = (NULL == chunk) ? 0 : m_CurrentReadChunk->m_reader.Length();
-    DebugLog(std::string(">>> GetLength(): ") + n_to_string(length));
-    return length;
-}
-
-int64_t TimeshiftBuffer::GetPosition() const
-{
-    auto chunk = GetCurrentReadChunk(1);
-    auto pos =  (NULL == chunk) ? 0 : m_CurrentReadChunk->m_reader.Position();
-    DebugLog(std::string(">>> GetPosition(): ") + n_to_string(pos));
-    return pos;
-}
-
-TimeshiftBuffer::ChunkFilePtr TimeshiftBuffer::GetCurrentReadChunk(int32_t timeout) const
-{
-    if(NULL == m_CurrentReadChunk)
-    {
-        m_PopulatedChunks.Pop(m_CurrentReadChunk, timeout);
-        DebugLog(std::string(">>> New current chunk: ") + ((m_CurrentReadChunk) ? m_CurrentReadChunk->Path() : std::string("NULL !!!")));
-    }
-    return m_CurrentReadChunk;
-}
-
-void TimeshiftBuffer::FreeCurrentChunk() const
-{
-
-    if(NULL == m_CurrentReadChunk)
-        return;
-    DebugLog(std::string(">>> Free chunk: ") + m_CurrentReadChunk->Path());
-    m_FreeChunks.Push(m_CurrentReadChunk);
-    m_CurrentReadChunk = NULL;
-}
-
 ssize_t TimeshiftBuffer::Read(unsigned char *buffer, size_t bufferSize)
 {
 
     size_t totalBytesRead = 0;
-    int32_t timeout = 10000; //10 sec
+    int32_t timeout = 5000; //5 sec
 
     while (totalBytesRead < bufferSize && !IsStopped())
     {
-        auto chunk = GetCurrentReadChunk(timeout);
+        unsigned int idx = GetChunkIndexFor(m_position);
+        ChunkFilePtr chunk = NULL;
+        {
+            CLockObject lock(m_SyncAccess);
+            chunk = (idx >= m_ReadChunks.size()) ? NULL : m_ReadChunks[idx];
+        }
+        // Retry 1 time after write operation
+        if(NULL == chunk && m_writeEvent.Wait(timeout))
+        {
+            idx = GetChunkIndexFor(m_position);
+            CLockObject lock(m_SyncAccess);
+            chunk = (idx >= m_ReadChunks.size()) ? NULL : m_ReadChunks[idx];
+        }
         if(NULL == chunk)
         {
-                StopThread();
-                break;
+            StopThread();
+            break;
         }
 
         ssize_t bytesRead = 0;
         do
         {
-            bytesRead = chunk->m_reader.Read( buffer, bufferSize - totalBytesRead);
+            size_t bytesToRead = bufferSize - totalBytesRead;
+            bytesRead = chunk->m_reader.Read( buffer + totalBytesRead, bytesToRead);
             if(bytesRead == 0 && !m_writeEvent.Wait(timeout)) //timeout
             {
                 StopThread();
@@ -191,40 +158,90 @@ ssize_t TimeshiftBuffer::Read(unsigned char *buffer, size_t bufferSize)
             }
             DebugLog(std::string(">>> Read: ") + n_to_string(bytesRead));
             totalBytesRead += bytesRead;
-            buffer += bytesRead;
+            m_position += bytesRead;
             if(chunk->m_reader.Length() >= CHUNK_FILE_SIZE_LIMIT && chunk->m_reader.Position() == chunk->m_reader.Length())
-                FreeCurrentChunk();
-        }while(0 == bytesRead && !IsStopped());
+                chunk = NULL;
+        }while(bytesRead == 0 && NULL != chunk && !IsStopped());
     }
 
     return IsStopped() ? -1 :totalBytesRead;
 }
 
-int64_t TimeshiftBuffer::Seek(int64_t iPosition, int iWhence) const
+TimeshiftBuffer::ChunkFilePtr TimeshiftBuffer::CreateChunk()
 {
-    auto chunk = GetCurrentReadChunk(1);
-    auto pos =  (NULL == chunk) ? -1 : m_CurrentReadChunk->m_reader.Seek(iPosition, iWhence);
-    DebugLog(std::string(">>> SEEK: ") + n_to_string(pos));
+    ChunkFilePtr newChunk = new CAddonFile(m_addonHelper, UniqueFilename(m_bufferDir, m_addonHelper).c_str());
+    m_ChunkFileSwarm.push_back(ChunkFileSwarm::value_type(newChunk));
+    return newChunk;
+}
+
+unsigned int TimeshiftBuffer::GetChunkIndexFor(int64_t pos) {
+    return pos / CHUNK_FILE_SIZE_LIMIT;
+}
+long long TimeshiftBuffer::GetPositionInChunkFor(int64_t pos) {
+    return pos % CHUNK_FILE_SIZE_LIMIT;
+}
+
+int64_t TimeshiftBuffer::GetLength() const
+{
+    int64_t length = -1;
+    {
+        CLockObject lock(m_SyncAccess);
+        length = m_length;
+    }
+    DebugLog(std::string(">>> GetLength(): ") + n_to_string(length));
+    return length;
+}
+
+int64_t TimeshiftBuffer::GetPosition() const
+{
+    int64_t pos = m_position;
+    DebugLog(std::string(">>> GetPosition(): ") + n_to_string(pos));
     return pos;
+}
+
+
+int64_t TimeshiftBuffer::Seek(int64_t iPosition, int iWhence)
+{
+    unsigned int idx = -1;
+    ChunkFilePtr chunk = NULL;
+    {
+        CLockObject lock(m_SyncAccess);
+        if(iWhence == SEEK_CUR)
+            iPosition = m_position + iPosition;
+        else if(iWhence == SEEK_END)
+            iPosition = m_length + iPosition;
+
+        if(iPosition > m_length)
+            iPosition = m_length;
+        
+        idx = GetChunkIndexFor(iPosition);
+        if(idx >= m_ReadChunks.size())
+            return -1;
+        chunk = m_ReadChunks[idx];
+    }
+    auto inPos = GetPositionInChunkFor(iPosition);
+    auto pos =  chunk->m_reader.Seek(inPos, iWhence);
+    if(pos != inPos)
+        iPosition -= inPos - pos;
+    m_position = iPosition;
+    return iPosition;
 }
 
 bool TimeshiftBuffer::SwitchStream(const string &newUrl)
 {
 
     StopThread();
-    FreeCurrentChunk();
     ChunkFilePtr chunk;
-    while(m_PopulatedChunks.Pop(chunk))
-        m_FreeChunks.Push(chunk);
     m_addonHelper->CloseFile(m_streamHandle);
 
-    m_streamHandle = m_addonHelper->OpenFile(newUrl.c_str(), 0);
-    CreateThread();
+    bool succeeded = NULL != (m_streamHandle = m_addonHelper->OpenFile(newUrl.c_str(), 0));
+    if(succeeded)
+        CreateThread();
 
-    return m_streamHandle != NULL;
+    return succeeded;
 }
 
-std::string TimeshiftBuffer::UniqueFilename(const std::string& dir)
+std::string TimeshiftBuffer::UniqueFilename(const std::string& dir, ADDON::CHelper_libXBMC_addon*  helper)
 {
     int cnt = 0;
     std::string candidate;
@@ -235,23 +252,9 @@ std::string TimeshiftBuffer::UniqueFilename(const std::string& dir)
         candidate +="TimeshiftBuffer-";
         candidate +=n_to_string(cnt++);
         candidate += ".bin";
-    }while(m_addonHelper->FileExists(candidate.c_str(), false));
+    }while(helper->FileExists(candidate.c_str(), false));
     return candidate;
 }
-
-TimeshiftBuffer::ChunkFilePtr TimeshiftBuffer::GetFreeChunk()
-{
-    ChunkFilePtr newChunk;
-    if(m_FreeChunks.Pop(newChunk))
-    {
-        newChunk->Reopen();
-        return newChunk;
-    }
-    newChunk = new CAddonFile(m_addonHelper, UniqueFilename(m_bufferDir).c_str());
-    m_ChunkFileSwarm.push_back(ChunkFileSwarm::value_type(newChunk));
-    return newChunk;
-}
-
 
 #pragma mark - CGenericFile
 

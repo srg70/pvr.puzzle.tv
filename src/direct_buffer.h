@@ -44,7 +44,7 @@ public:
 
     int64_t GetLength() const;
     int64_t GetPosition() const;
-    int64_t Seek(int64_t iPosition, int iWhence) const;
+    int64_t Seek(int64_t iPosition, int iWhence);
     ssize_t Read(unsigned char *buffer, size_t bufferSize);
     bool SwitchStream(const std::string &newUrl);
 
@@ -64,6 +64,6 @@ public:
 
     int64_t GetLength() const;
     int64_t GetPosition() const;
-    int64_t Seek(int64_t iPosition, int iWhence) const;
+    int64_t Seek(int64_t iPosition, int iWhence);
 };
 #endif //direct_buffer_h

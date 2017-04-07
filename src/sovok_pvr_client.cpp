@@ -54,12 +54,11 @@ SovokPVRClient::~SovokPVRClient()
 }
 
 void SovokPVRClient::SetTimeshiftPath(const std::string& path){
-    const char* nonEmptyPAth = (path.empty()) ? s_DefaultCacheDir : path.c_str();
-    if(m_addonHelper->DirectoryExists(path.c_str())) {
-        m_CacheDir = path;
-        if(!m_addonHelper->RemoveDirectory(m_CacheDir.c_str()))
-            m_addonHelper->Log(LOG_ERROR, "Failed to remove cache folder");
-            }
+    const char* nonEmptyPath = (path.empty()) ? s_DefaultCacheDir : path.c_str();
+    if(!m_addonHelper->DirectoryExists(nonEmptyPath))
+        if(!m_addonHelper->CreateDirectory(nonEmptyPath))
+            m_addonHelper->Log(LOG_ERROR, "Failed to create cache folder");
+    m_CacheDir = nonEmptyPath;
 }
 
 PVR_ERROR SovokPVRClient::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL& channel, time_t iStart, time_t iEnd)
