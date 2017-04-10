@@ -1,1 +1,1 @@
-rapidjson https://github.com/miloyip/rapidjson/archive/v1.0.2.zip
+rapidjson https://github.com/miloyip/rapidjson/archive/v1.1.0.zip
