@@ -44,20 +44,32 @@ static const  unsigned int CHUNK_FILE_SIZE_LIMIT = (unsigned int)(STREAM_READ_BU
 TimeshiftBuffer::TimeshiftBuffer(CHelper_libXBMC_addon *addonHelper, const string &streamUrl, const string &bufferCacheDir) :
     m_addonHelper(addonHelper),
     m_bufferDir(bufferCacheDir),
+m_streamHandle(NULL),
     m_length(0),
     m_position(0)
 {
-    m_streamHandle = m_addonHelper->OpenFile(streamUrl.c_str(), XFILE::READ_AUDIO_VIDEO | XFILE::READ_AFTER_WRITE);
-    if (!m_streamHandle)
-        throw InputBufferException("Failed to open source stream.");
-
     if(!m_addonHelper->DirectoryExists(m_bufferDir.c_str()))
        if(!m_addonHelper->CreateDirectory(m_bufferDir.c_str()))
           throw InputBufferException("Failed to create cahche directory for timeshift buffer.");
-
-    CreateThread();
+    Init(streamUrl);
 }
 
+void TimeshiftBuffer::Init(const string &streamUrl) {
+    StopThread();
+    
+    if(m_streamHandle) {
+        m_addonHelper->CloseFile(m_streamHandle);
+        m_streamHandle = NULL;
+    }
+    m_length = 0;
+    m_position = 0;
+    m_ReadChunks.clear();
+    m_ChunkFileSwarm.clear();
+    m_streamHandle = m_addonHelper->OpenFile(streamUrl.c_str(), XFILE::READ_AUDIO_VIDEO | XFILE::READ_AFTER_WRITE);
+    if (!m_streamHandle)
+        throw InputBufferException("Failed to open source stream.");
+    CreateThread();
+}
 void TimeshiftBuffer::DebugLog(const std::string& message ) const
 {
     char* msg = m_addonHelper->UnknownToUTF8(message.c_str());
@@ -143,6 +155,7 @@ ssize_t TimeshiftBuffer::Read(unsigned char *buffer, size_t bufferSize)
         if(NULL == chunk)
         {
             StopThread();
+            DebugLog("TimeshiftBuffer: failed to obtain chunk for read.");
             break;
         }
 
@@ -215,28 +228,27 @@ int64_t TimeshiftBuffer::Seek(int64_t iPosition, int iWhence)
             iPosition = m_length;
         
         idx = GetChunkIndexFor(iPosition);
-        if(idx >= m_ReadChunks.size())
+        if(idx >= m_ReadChunks.size()) {
+            m_addonHelper->Log(LOG_ERROR, "TimeshiftBuffer: seek failed. Wrong chunk index %d", idx);
             return -1;
+        }
         chunk = m_ReadChunks[idx];
     }
     auto inPos = GetPositionInChunkFor(iPosition);
     auto pos =  chunk->m_reader.Seek(inPos, iWhence);
-    if(pos != inPos)
-        iPosition -= inPos - pos;
-    m_position = iPosition;
+    m_position = iPosition -  (inPos - pos);
     return iPosition;
 }
 
 bool TimeshiftBuffer::SwitchStream(const string &newUrl)
 {
-
-    StopThread();
-    ChunkFilePtr chunk;
-    m_addonHelper->CloseFile(m_streamHandle);
-
-    bool succeeded = NULL != (m_streamHandle = m_addonHelper->OpenFile(newUrl.c_str(), 0));
-    if(succeeded)
-        CreateThread();
+    bool succeeded = false;
+    try {
+        Init(newUrl);
+        succeeded = true;
+    } catch (const InputBufferException& ex) {
+        m_addonHelper->Log(LOG_ERROR, "Failed to switch streams. Error: %s", ex.what());
+    }
 
     return succeeded;
 }

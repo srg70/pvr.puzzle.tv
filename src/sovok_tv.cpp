@@ -169,6 +169,7 @@ void SovokTV::Cleanup()
         m_apiCallCompletions->StopThread();
         delete m_apiCallCompletions; m_apiCallCompletions = NULL;
     }
+    m_addonHelper->Log(LOG_NOTICE, "SovokTV stopped.");
 }
 
 void SovokTV::SaveEpgCache()

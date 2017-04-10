@@ -114,8 +114,8 @@ private:
     typedef std::vector<ChunkFilePtr > FileChunks;
     typedef std::vector<std::unique_ptr<CAddonFile> > ChunkFileSwarm;
 
+    void Init(const std::string &streamUrl);
     ChunkFilePtr CreateChunk();
-
     static unsigned int GetChunkIndexFor(int64_t position);
     static int64_t GetPositionInChunkFor(int64_t position);
     void DebugLog(const std::string& message) const;

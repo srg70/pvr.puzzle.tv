@@ -209,8 +209,10 @@ bool SovokPVRClient::OpenLiveStream(const PVR_CHANNEL& channel)
 
 void SovokPVRClient::CloseLiveStream()
 {
+    m_addonHelper->Log(LOG_NOTICE, "SovokPVRClient: closing input sream...");
     delete m_inputBuffer;
     m_inputBuffer = NULL;
+    m_addonHelper->Log(LOG_NOTICE, "SovokPVRClient: input sream closed.");
 }
 
 int SovokPVRClient::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize)
