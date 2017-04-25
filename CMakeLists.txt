@@ -3,6 +3,9 @@ project(pvr.puzzle.tv)
 cmake_minimum_required(VERSION 2.6)
 
 enable_language(CXX)
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+
+message(CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH})
 
 find_package(Kodi REQUIRED)
 find_package(kodiplatform REQUIRED)
@@ -24,6 +27,13 @@ set(DEPLIBS ${p8-platform_LIBRARIES}
 message(STATUS "ZLIB_LIBRARIES: ${ZLIB_LIBRARIES}")
 message(STATUS "CURL_INCLUDE_DIRS: ${CURL_INCLUDE_DIRS}")
 message(STATUS "CURL_INCLUDE_DIRS: ${CURL_INCLUDE_DIRS}")
+
+if(ANDROID)
+    set(ANDROID_CPP_FEATURES exceptions)
+    set(ANDROID_STL c++_static)
+endif(ANDROID)
+
+message(STATUS "ANDROID_CPP_FEATURES: ${ANDROID_CPP_FEATURES}")
 
 set(IPTV_SOURCES
 src/addon.cpp
