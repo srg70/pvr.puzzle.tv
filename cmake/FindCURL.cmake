@@ -18,10 +18,19 @@ if(PKG_CONFIG_FOUND)
   pkg_check_modules(PC_CURL libcurl QUIET)
 endif()
 
-find_path(CURL_INCLUDE_DIR NAMES curl/curl.h NO_CMAKE_FIND_ROOT_PATH
-                           PATHS ${PC_CURL_INCLUDEDIR})
-find_library(CURL_LIBRARY NAMES curl libcurl NO_CMAKE_FIND_ROOT_PATH
-                          PATHS ${PC_CURL_LIBDIR})
+if(CORE_SYSTEM_NAME STREQUAL osx)
+    find_path(CURL_INCLUDE_DIR NAMES curl/curl.h
+                               PATHS ${PC_CURL_INCLUDEDIR})
+    find_library(CURL_LIBRARY NAMES curl libcurl
+                              PATHS ${PC_CURL_LIBDIR})
+else()
+    find_path(CURL_INCLUDE_DIR NAMES curl/curl.h NO_CMAKE_FIND_ROOT_PATH
+                    PATHS ${PC_CURL_INCLUDEDIR})
+    find_library(CURL_LIBRARY NAMES curl libcurl NO_CMAKE_FIND_ROOT_PATH
+                    PATHS ${PC_CURL_LIBDIR})
+
+endif()
+
 
 set(CURL_VERSION ${PC_CURL_VERSION})
 
