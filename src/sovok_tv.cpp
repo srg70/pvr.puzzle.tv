@@ -92,7 +92,7 @@ public:
             
             // Wait for epg done before announce archives
             bool isStopped = IsStopped();
-            while(!isStopped && oldEpgActivity != m_epgActivityCounter){
+            while(!isStopped && (oldEpgActivity != m_epgActivityCounter)){
                 oldEpgActivity = m_epgActivityCounter;
                 isStopped = m_stopEvent.Wait(2000);// 2sec
             }
@@ -396,6 +396,7 @@ void SovokTV::Log(const char* massage) const
 
 void SovokTV::GetEpg(int channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries)
 {
+     m_addonHelper->Log(LOG_DEBUG, "Get EPG for channel %d [%d - %d]", channelId, startTime, endTime);
     P8PLATFORM::CLockObject lock(m_epgAccessMutex);
     if(m_archiveLoader)
         m_archiveLoader->EpgActivityStarted();
