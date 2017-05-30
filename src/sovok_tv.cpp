@@ -708,6 +708,8 @@ void SovokTV::SendHttpRequest(const std::string &url, const ParamList &cookie,  
     CURL *curl = curl_easy_init();
     if (curl)
     {
+        auto start = P8PLATFORM::GetTimeMs();
+        m_addonHelper->Log(LOG_INFO, "Sending request: %s", url.c_str());
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
         curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errorMessage);
@@ -741,8 +743,11 @@ void SovokTV::SendHttpRequest(const std::string &url, const ParamList &cookie,  
             if (httpCode != 503) // temporarily unavailable
                 break;
 
+            m_addonHelper->Log(LOG_INFO, "%s: %s", __FUNCTION__, "HTTP error 503 (temporarily unavailable)");
+
             P8PLATFORM::CEvent::Sleep(1000);
         }
+        m_addonHelper->Log(LOG_INFO, "Got HTTP response in %d ms", P8PLATFORM::GetTimeMs() - start);
 
         if (httpCode != 200)
             *response = "";
