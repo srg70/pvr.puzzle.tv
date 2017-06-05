@@ -21,12 +21,12 @@ endif()
 if(CORE_SYSTEM_NAME STREQUAL osx)
     find_path(CURL_INCLUDE_DIRS NAMES curl/curl.h
                                PATHS ${PC_CURL_INCLUDEDIR})
-    find_library(CURL_LIBRARIES NAMES curl libcurl
+    find_library(CURL_LIBRARIES NAMES curl libcurl 
                               PATHS ${PC_CURL_LIBDIR})
 else()
     find_path(CURL_INCLUDE_DIRS NAMES curl/curl.h NO_CMAKE_FIND_ROOT_PATH
                     PATHS ${PC_CURL_INCLUDEDIR})
-    find_library(CURL_LIBRARIES NAMES curl libcurl NO_CMAKE_FIND_ROOT_PATH
+    find_library(CURL_LIBRARIES NAMES curl libcurl libcurl_a NO_CMAKE_FIND_ROOT_PATH
                     PATHS ${PC_CURL_LIBDIR})
 
 endif()
