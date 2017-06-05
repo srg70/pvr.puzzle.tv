@@ -24,11 +24,11 @@
  *
  */
 
+#if defined (__WIN32__)
+#include <windows.h>
+#endif
 
 #include "direct_buffer.h"
-#ifdef CreateDirectory
-#undef CreateDirectory
-#endif
 #include "libXBMC_addon.h"
 
 using namespace P8PLATFORM;

@@ -24,15 +24,16 @@
  *
  */
 
+#if defined (__WIN32__)
+#include <windows.h>
+#endif
+
 #include "libXBMC_pvr.h"
 #include "timeshift_buffer.h"
 #include "direct_buffer.h"
 #include "sovok_pvr_client.h"
 #include "helpers.h"
 
-#ifdef CreateDirectory
-#undef CreateDirectory
-#endif
 
 using namespace std;
 using namespace ADDON;

@@ -24,6 +24,11 @@
  *
  */
 
+#if defined (__WIN32__)
+#include <windows.h>
+#endif
+
+
 #include <curl/curl.h>
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
@@ -36,10 +41,6 @@
 #include "p8-platform/util/util.h"
 #include "helpers.h"
 #include "sovok_tv.h"
-
-#ifdef CreateDirectory
-#undef CreateDirectory
-#endif
 
 using namespace std;
 using namespace ADDON;

@@ -23,6 +23,9 @@
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
+#if defined (__WIN32__)
+#include <windows.h>
+#endif
 
 #include <stdio.h>
 #include <algorithm>
@@ -39,9 +42,6 @@
 
 #include "p8-platform/util/util.h"
 
-#ifdef CreateDirectory
-#undef CreateDirectory
-#endif
 #include "kodi/libXBMC_addon.h"
 
 using namespace ADDON;

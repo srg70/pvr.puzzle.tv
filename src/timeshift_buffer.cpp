@@ -24,14 +24,15 @@
  *
  */
 
+#if defined (__WIN32__)
+#include <windows.h>
+#endif
+
 #include "p8-platform/posix/os-types.h"
 #include "timeshift_buffer.h"
 #include "helpers.h"
 #include <sstream>
 
-#ifdef CreateDirectory
-#undef CreateDirectory
-#endif
 #include "libXBMC_addon.h"
 
 using namespace std;
