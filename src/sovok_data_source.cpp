@@ -40,6 +40,10 @@
 
 #include "p8-platform/util/util.h"
 
+#ifdef CreateDirectory
+#undef CreateDirectory
+#endif
+
 using namespace ADDON;
 using namespace std;
 

@@ -30,6 +30,10 @@
 #include "helpers.h"
 #include <sstream>
 
+#ifdef CreateDirectory
+#undef CreateDirectory
+#endif
+
 using namespace std;
 using namespace ADDON;
 using namespace P8PLATFORM;

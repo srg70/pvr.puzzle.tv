@@ -37,6 +37,10 @@
 #include "helpers.h"
 #include "sovok_tv.h"
 
+#ifdef CreateDirectory
+#undef CreateDirectory
+#endif
+
 using namespace std;
 using namespace ADDON;
 using namespace rapidjson;

@@ -30,6 +30,10 @@
 #include "sovok_pvr_client.h"
 #include "helpers.h"
 
+#ifdef CreateDirectory
+#undef CreateDirectory
+#endif
+
 using namespace std;
 using namespace ADDON;
 
