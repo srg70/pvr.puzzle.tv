@@ -41,10 +41,6 @@ using namespace std;
 using namespace ADDON;
 using namespace P8PLATFORM;
 
-#ifdef DeleteFile
-#undef DeleteFile
-#endif
-
 static const int STREAM_READ_BUFFER_SIZE = 1024 * 32; // 32K input read buffer
 static const  unsigned int CHUNK_FILE_SIZE_LIMIT = (unsigned int)(STREAM_READ_BUFFER_SIZE * 1024) * 32; // 1GB chunk (temporary, pending completion of chunck factory)
 
