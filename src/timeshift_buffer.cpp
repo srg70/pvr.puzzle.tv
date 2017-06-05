@@ -26,9 +26,11 @@
 
 #if (defined(_WIN32) || defined(__WIN32__))
 #include <windows.h>
+#include "p8-platform/windows/os-types.h"
+#else
+#include "p8-platform/posix/os-types.h"
 #endif
 
-#include "p8-platform/posix/os-types.h"
 #include "timeshift_buffer.h"
 #include "helpers.h"
 #include <sstream>
