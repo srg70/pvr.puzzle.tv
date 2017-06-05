@@ -28,6 +28,7 @@
 #include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#define CURL_STATICLIB 1
 #endif
 
 
