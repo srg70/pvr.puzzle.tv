@@ -24,7 +24,7 @@
  *
  */
 
-#if defined (__WIN32__)
+#if (defined(_WIN32) || defined(__WIN32__))
 #include <windows.h>
 #endif
 
