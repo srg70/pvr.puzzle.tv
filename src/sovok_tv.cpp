@@ -26,6 +26,7 @@
 
 #if defined (__WIN32__)
 #include <windows.h>
+#include <winsock2.h>
 #endif
 
 
