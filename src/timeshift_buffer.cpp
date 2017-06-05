@@ -25,7 +25,6 @@
  */
 
 #include "p8-platform/posix/os-types.h"
-#include "libXBMC_addon.h"
 #include "timeshift_buffer.h"
 #include "helpers.h"
 #include <sstream>
@@ -33,6 +32,7 @@
 #ifdef CreateDirectory
 #undef CreateDirectory
 #endif
+#include "libXBMC_addon.h"
 
 using namespace std;
 using namespace ADDON;

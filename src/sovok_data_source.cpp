@@ -27,7 +27,6 @@
 #include <stdio.h>
 #include <algorithm>
 #include "kodi/xbmc_addon_cpp_dll.h"
-#include "kodi/libXBMC_addon.h"
 #include "kodi/libXBMC_pvr.h"
 #include "p8-platform/util/util.h"
 //#include <xbmc_pvr_dll.h>
@@ -43,6 +42,7 @@
 #ifdef CreateDirectory
 #undef CreateDirectory
 #endif
+#include "kodi/libXBMC_addon.h"
 
 using namespace ADDON;
 using namespace std;
