@@ -10,7 +10,7 @@
       <setting id="timeshift_path" type="folder" label="30004" default="" visible="eq(-1,true)"/>
       <setting id="enable_adult" type="bool" label="30005" default="false" />
       <setting id="pin_code" type="text" label="30006" default="0000" visible="eq(-1,true)"/>
-      <setting id="streamer" type="fileenum" values="resources/streamers"/>
+      <setting id="streamer" type="fileenum" label="30007" values="resources/streamers"/>
   </category>
 
 </settings>

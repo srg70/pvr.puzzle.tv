@@ -88,6 +88,20 @@ TimeshiftBuffer::~TimeshiftBuffer()
     m_ReadChunks.clear();
 }
 
+bool TimeshiftBuffer::StopThread(int iWaitMs)
+{
+    int stopCounter = 0;
+    bool retVal = false;
+    while(!(retVal = this->CThread::StopThread(iWaitMs))){
+        if(++stopCounter > 3)
+            break;
+        m_addonHelper->Log(LOG_NOTICE, "TimeshiftBuffer: can't stop thread in %d ms", iWaitMs);
+    }
+    if(!retVal)
+        m_addonHelper->Log(LOG_ERROR, "TimeshiftBuffer: can't stop thread in %d ms", stopCounter*iWaitMs);
+
+    return retVal;
+}
 void *TimeshiftBuffer::Process()
 {
     unsigned char buffer[STREAM_READ_BUFFER_SIZE];
@@ -114,7 +128,7 @@ void *TimeshiftBuffer::Process()
                 isEof = bytesRead <= 0;
             }while (!isEof && bytesRead < sizeof(buffer));
             // Write to local chunk
-            DebugLog(std::string(">>> Write: ") + n_to_string(bytesRead));
+            //DebugLog(std::string(">>> Write: ") + n_to_string(bytesRead));
             ssize_t bytesWritten = chunk->m_writer.Write(buffer, bytesRead);
             {
                 CLockObject lock(m_SyncAccess);
@@ -172,7 +186,7 @@ ssize_t TimeshiftBuffer::Read(unsigned char *buffer, size_t bufferSize)
                 StopThread();
                 break;
             }
-            DebugLog(std::string(">>> Read: ") + n_to_string(bytesRead));
+            //DebugLog(std::string(">>> Read: ") + n_to_string(bytesRead));
             totalBytesRead += bytesRead;
             m_position += bytesRead;
             if(chunk->m_reader.Length() >= CHUNK_FILE_SIZE_LIMIT && chunk->m_reader.Position() == chunk->m_reader.Length())
@@ -204,14 +218,14 @@ int64_t TimeshiftBuffer::GetLength() const
         CLockObject lock(m_SyncAccess);
         length = m_length;
     }
-    DebugLog(std::string(">>> GetLength(): ") + n_to_string(length));
+    //DebugLog(std::string(">>> GetLength(): ") + n_to_string(length));
     return length;
 }
 
 int64_t TimeshiftBuffer::GetPosition() const
 {
     int64_t pos = m_position;
-    DebugLog(std::string(">>> GetPosition(): ") + n_to_string(pos));
+    //DebugLog(std::string(">>> GetPosition(): ") + n_to_string(pos));
     return pos;
 }
 
@@ -283,26 +297,26 @@ TimeshiftBuffer::CGenericFile::CGenericFile(ADDON::CHelper_libXBMC_addon *addonH
 int64_t TimeshiftBuffer::CGenericFile::Seek(int64_t iFilePosition, int iWhence)
 {
     auto s = m_helper->SeekFile(m_handler, iFilePosition, iWhence);
-    std::stringstream ss;
-    ss <<">>> SEEK to" << iFilePosition << ". Res=" << s ;
-    m_helper->Log(LOG_DEBUG, ss.str().c_str());
+//    std::stringstream ss;
+//    ss <<">>> SEEK to" << iFilePosition << ". Res=" << s ;
+//    m_helper->Log(LOG_DEBUG, ss.str().c_str());
     return s;
 }
 
 int64_t TimeshiftBuffer::CGenericFile::Length()
 {
     auto l = m_helper->GetFileLength(m_handler);
-    std::stringstream ss;
-    ss <<">>> LENGHT=" << l;
-    m_helper->Log(LOG_DEBUG, ss.str().c_str());
+//    std::stringstream ss;
+//    ss <<">>> LENGHT=" << l;
+//    m_helper->Log(LOG_DEBUG, ss.str().c_str());
     return l;
 }
 int64_t TimeshiftBuffer::CGenericFile::Position()
 {
     auto p = m_helper->GetFilePosition(m_handler);
-    std::stringstream ss;
-    ss <<">>> POSITION=" << p;
-    m_helper->Log(LOG_DEBUG, ss.str().c_str());
+//    std::stringstream ss;
+//    ss <<">>> POSITION=" << p;
+//    m_helper->Log(LOG_DEBUG, ss.str().c_str());
 
     return p;
 }

@@ -95,21 +95,21 @@ int64_t ArchiveBuffer::GetLength() const
 {
     CLockObject lock(m_mutex);
     auto retVal =  m_addonHelper->GetFileLength(m_streamHandle);
-    m_addonHelper->Log(ADDON::LOG_DEBUG, "ArchiveBuffer: length = %d", retVal);
+    //m_addonHelper->Log(ADDON::LOG_DEBUG, "ArchiveBuffer: length = %d", retVal);
     return retVal;
 }
 int64_t ArchiveBuffer::GetPosition() const
 {
     CLockObject lock(m_mutex);
     auto retVal =  m_addonHelper->GetFilePosition(m_streamHandle);
-    m_addonHelper->Log(ADDON::LOG_DEBUG, "ArchiveBuffer: position = %d", retVal);
+    //m_addonHelper->Log(ADDON::LOG_DEBUG, "ArchiveBuffer: position = %d", retVal);
     return retVal;
 }
 int64_t ArchiveBuffer::Seek(int64_t iPosition, int iWhence)
 {
     CLockObject lock(m_mutex);
     auto retVal =  m_addonHelper->SeekFile(m_streamHandle, iPosition, iWhence);
-    m_addonHelper->Log(ADDON::LOG_DEBUG, "ArchiveBuffer: Seek = %d(requested %d from %d)", retVal, iPosition, iWhence);
+    //m_addonHelper->Log(ADDON::LOG_DEBUG, "ArchiveBuffer: Seek = %d(requested %d from %d)", retVal, iPosition, iWhence);
     return retVal;
     
 }

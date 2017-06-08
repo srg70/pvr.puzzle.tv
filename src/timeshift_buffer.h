@@ -51,6 +51,11 @@ public:
     ssize_t Read(unsigned char *buffer, size_t bufferSize);
     int64_t Seek(int64_t iPosition, int iWhence);
     bool SwitchStream(const std::string &newUrl);
+    /*!
+     * @brief Stop the thread
+     * @param iWaitMs negative = don't wait, 0 = infinite, or the amount of ms to wait
+     */
+    virtual bool StopThread(int iWaitMs = 5000);
 
 private:
     void *Process();
