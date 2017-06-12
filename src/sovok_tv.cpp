@@ -318,6 +318,9 @@ void SovokTV::BuildChannelAndGroupList()
     m_groupList.clear();
 
     try {
+//        std::shared_ptr<const ApiFunctionData> params2(new ApiFunctionData("channel_list2"));
+//        CallApiFunction(params2, [&] (Document& jsonRoot){});
+        
         std::shared_ptr<const ApiFunctionData> params(new ApiFunctionData("channel_list"));
         CallApiFunction(params, [&] (Document& jsonRoot)
         {
@@ -660,6 +663,9 @@ void SovokTV::CallApiAsync(std::shared_ptr<const ApiFunctionData> data, TParser 
         const bool isLoginCommand = data->name == "login";
         SendHttpRequest(strRequest, m_sessionCookie, [=](std::string& response) {
             m_addonHelper->Log(LOG_DEBUG, "Calling '%s'. Response in %d ms.",  data->name.c_str(), P8PLATFORM::GetTimeMs() - start);
+            
+//            if(data->name.compare( "get_url") == 0)
+//                m_addonHelper->Log(LOG_DEBUG, response.substr(0, 16380).c_str());
 
             ParseJson(response, [&] (Document& jsonRoot)
             {
