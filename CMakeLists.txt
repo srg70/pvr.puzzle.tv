@@ -42,7 +42,6 @@ set(IPTV_SOURCES
 src/addon.cpp
 src/direct_buffer.cpp
 src/helpers.cpp
-src/sovok_data_source.cpp
 src/sovok_pvr_client.cpp
 src/sovok_tv.cpp
 src/timeshift_buffer.cpp

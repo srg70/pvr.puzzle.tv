@@ -27,9 +27,12 @@
 
 
 #include "addon.h"
-#include "sovok_data_source.h"
+#include "sovok_pvr_client.h"
 #include "xbmc_pvr_dll.h"
 #include "p8-platform/util/util.h"
+#include "kodi/xbmc_addon_cpp_dll.h"
+#include "kodi/libXBMC_pvr.h"
+#include "kodi/libXBMC_addon.h"
 
 
 #ifdef TARGET_WINDOWS
@@ -37,15 +40,35 @@
 #endif
 
 static IPvrIptvDataSource* m_DataSource = NULL;
+static ADDON::CHelper_libXBMC_addon *m_xbmc = NULL;
+static CHelper_libXBMC_pvr *m_pvr = NULL;
 
 
 extern "C" {
 
 ADDON_STATUS ADDON_Create(void* hdl, void* props)
 {
+    using namespace ADDON;
+
+    m_xbmc = new CHelper_libXBMC_addon();
+    if (!m_xbmc->RegisterMe(hdl))
+    {
+        SAFE_DELETE(m_xbmc);
+        return ADDON_STATUS_PERMANENT_FAILURE;
+    }
+    
+    m_pvr = new CHelper_libXBMC_pvr();
+    if (!m_pvr->RegisterMe(hdl))
+    {
+        SAFE_DELETE(m_pvr);
+        SAFE_DELETE(m_xbmc);
+        return ADDON_STATUS_PERMANENT_FAILURE;
+    }
+    PVR_PROPERTIES* pvrprops = (PVR_PROPERTIES*)props;
+    
     //m_DataSource = new IptvSimple();
-    m_DataSource = new SovokTvDataSource();
-    return m_DataSource->Init(hdl, props);
+    m_DataSource = new SovokPVRClient();
+    return m_DataSource->Init(m_xbmc, m_pvr, pvrprops);
 }
 
 ADDON_STATUS ADDON_GetStatus()
@@ -55,8 +78,11 @@ ADDON_STATUS ADDON_GetStatus()
 
 void ADDON_Destroy()
 {
-    m_DataSource->Destroy();
     SAFE_DELETE(m_DataSource);
+    if(m_xbmc)
+        SAFE_DELETE(m_xbmc);
+    if(m_pvr)
+        SAFE_DELETE(m_pvr);
 }
 
 bool ADDON_HasSettings()

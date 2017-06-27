@@ -33,7 +33,7 @@ class SovokPVRClient: public IPvrIptvDataSource
 public:
     ADDON_STATUS Init(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,  PVR_PROPERTIES* pvrprops);
     ~SovokPVRClient();
-
+    
     int GetSettings(ADDON_StructSetting ***sSet);
     ADDON_STATUS SetSetting(const char *settingName, const void *settingValue);
     void FreeSettings();
@@ -42,20 +42,20 @@ public:
     PVR_ERROR GetAddonCapabilities(PVR_ADDON_CAPABILITIES* pCapabilities);
     bool CanPauseStream();
     bool CanSeekStream();
-
+    
     PVR_ERROR SignalStatus(PVR_SIGNAL_STATUS &signalStatus);
     ADDON_STATUS GetStatus();
-
+    
     
     PVR_ERROR GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL& channel, time_t iStart, time_t iEnd);
-
+    
     int GetChannelGroupsAmount();
     PVR_ERROR GetChannelGroups(ADDON_HANDLE handle, bool bRadio);
     PVR_ERROR GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_CHANNEL_GROUP& group);
-
+    
     int GetChannelsAmount();
     PVR_ERROR GetChannels(ADDON_HANDLE handle, bool bRadio);
-
+    
     PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
     
     bool OpenLiveStream(const PVR_CHANNEL& channel);
@@ -64,20 +64,20 @@ public:
     long long SeekLiveStream(long long iPosition, int iWhence);
     long long PositionLiveStream();
     long long LengthLiveStream();
-
+    
     bool SwitchChannel(const PVR_CHANNEL& channel);
-
+    
     void SetTimeshiftEnabled(bool enable);
     bool IsTimeshiftEnabled() { return m_isTimeshiftEnabled; }
     void SetTimeshiftPath(const std::string& path);
-
+    
     void SetAddFavoritesGroup(bool shouldAddFavoritesGroup);
     bool ShouldAddFavoritesGroup() { return m_shouldAddFavoritesGroup; }
-
+    
     void SetStreamerId(int streamerIdx);
     int GetStreamerId();
-//    const StreamerNamesList& GetStreamersList();
-
+    //    const StreamerNamesList& GetStreamersList();
+    
     void SetPinCode(const std::string& code);
     int GetRecordingsAmount(bool deleted);
     PVR_ERROR GetRecordings(ADDON_HANDLE handle, bool deleted);
@@ -87,10 +87,10 @@ public:
     long long SeekRecordedStream(long long iPosition, int iWhence);
     long long PositionRecordedStream(void);
     long long LengthRecordedStream(void);
-
+    
     PVR_ERROR CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
-
-
+    
+    
 private:
     void CreateCore();
     

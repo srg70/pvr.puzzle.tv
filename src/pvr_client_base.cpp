@@ -34,9 +34,9 @@
 #include "libXBMC_pvr.h"
 #include "timeshift_buffer.h"
 #include "direct_buffer.h"
-#include "sovok_pvr_client.h"
+//#include "sovok_pvr_client.h"
 #include "helpers.h"
-#include "sovok_tv.h"
+//#include "sovok_tv.h"
 
 
 using namespace std;
@@ -46,17 +46,17 @@ using namespace ADDON;
 const char* s_DefaultCacheDir = "special://temp/pvr-puzzle-tv";
 
 ADDON_STATUS SovokPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,
-                               PVR_PROPERTIES* pvrprops)
+                                  PVR_PROPERTIES* pvrprops)
 {
     
-
+    
     m_addonHelper = addonHelper;
     m_pvrHelper = pvrHelper;
     m_inputBuffer = NULL;
     m_isTimeshiftEnabled = false;
     m_shouldAddFavoritesGroup = true;
     SetTimeshiftPath(s_DefaultCacheDir);
-
+    
     m_addonHelper->Log(LOG_DEBUG, "User path: %s", pvrprops->strUserPath);
     m_addonHelper->Log(LOG_DEBUG, "Client path: %s", pvrprops->strClientPath);
     //auto g_strUserPath   = pvrprops->strUserPath;
@@ -114,7 +114,7 @@ ADDON_STATUS SovokPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_li
     //    PVR_MENUHOOK hook = {1, 30020, PVR_MENUHOOK_EPG};
     //    m_pvr->AddMenuHook(&hook);
     return ADDON_STATUS_OK;
-
+    
 }
 
 SovokPVRClient::~SovokPVRClient()
@@ -122,7 +122,7 @@ SovokPVRClient::~SovokPVRClient()
     CloseLiveStream();
     if(m_sovokTV != NULL)
         SAFE_DELETE(m_sovokTV);
-
+    
 }
 
 void SovokPVRClient::CreateCore()
@@ -355,8 +355,8 @@ PVR_ERROR SovokPVRClient::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNE
 }
 PVR_ERROR  SovokPVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
 {
-//    SovokEpgEntry epgEntry;
-//    m_sovokTV->FindEpg(item.data.iEpgUid, epgEntry);
+    //    SovokEpgEntry epgEntry;
+    //    m_sovokTV->FindEpg(item.data.iEpgUid, epgEntry);
     return PVR_ERROR_NOT_IMPLEMENTED;
     
 }
@@ -374,13 +374,13 @@ PVR_ERROR SovokPVRClient::GetChannelGroups(ADDON_HANDLE handle, bool bRadio)
     {
         PVR_CHANNEL_GROUP pvrGroup = { 0 };
         pvrGroup.bIsRadio = false;
-
+        
         if (m_shouldAddFavoritesGroup)
         {
             strncpy(pvrGroup.strGroupName, "Избранное", sizeof(pvrGroup.strGroupName));
             m_pvrHelper->TransferChannelGroup(handle, &pvrGroup);
         }
-
+        
         GroupList groups = m_sovokTV->GetGroupList();
         GroupList::const_iterator itGroup = groups.begin();
         for (; itGroup != groups.end(); ++itGroup)
@@ -389,7 +389,7 @@ PVR_ERROR SovokPVRClient::GetChannelGroups(ADDON_HANDLE handle, bool bRadio)
             m_pvrHelper->TransferChannelGroup(handle, &pvrGroup);
         }
     }
-
+    
     return PVR_ERROR_NO_ERROR;
 }
 
@@ -407,7 +407,7 @@ PVR_ERROR SovokPVRClient::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_
             m_pvrHelper->TransferChannelGroupMember(handle, &pvrGroupMember);
         }
     }
-
+    
     const GroupList &groups = m_sovokTV->GetGroupList();
     GroupList::const_iterator itGroup = groups.find(group.strGroupName);
     if (itGroup != groups.end())
@@ -424,7 +424,7 @@ PVR_ERROR SovokPVRClient::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_
             }
         }
     }
-
+    
     return PVR_ERROR_NO_ERROR;
 }
 
@@ -447,14 +447,14 @@ PVR_ERROR SovokPVRClient::GetChannels(ADDON_HANDLE handle, bool bRadio)
             pvrChannel.iChannelNumber = sovokChannel.Id;
             pvrChannel.bIsRadio = sovokChannel.IsRadio;
             strncpy(pvrChannel.strChannelName, sovokChannel.Name.c_str(), sizeof(pvrChannel.strChannelName));
-
+            
             string iconUrl = "http://sovok.tv" + sovokChannel.IconPath;
             strncpy(pvrChannel.strIconPath, iconUrl.c_str(), sizeof(pvrChannel.strIconPath));;
-
+            
             m_pvrHelper->TransferChannelEntry(handle, &pvrChannel);
         }
     }
-
+    
     return PVR_ERROR_NO_ERROR;
 }
 
@@ -463,7 +463,7 @@ bool SovokPVRClient::OpenLiveStream(const PVR_CHANNEL& channel)
     string url = m_sovokTV->GetUrl(channel.iUniqueId);
     if (url.empty())
         return false;
-
+    
     try
     {
         if (m_isTimeshiftEnabled)
@@ -477,7 +477,7 @@ bool SovokPVRClient::OpenLiveStream(const PVR_CHANNEL& channel)
     {
         return false;
     }
-
+    
     return true;
 }
 
@@ -544,10 +544,10 @@ int SovokPVRClient::GetRecordingsAmount(bool deleted)
             m_pvrHelper->TriggerRecordingUpdate();
         };
         m_sovokTV->StartArchivePollingWithCompletion(action);
-//        m_sovokTV->Apply(f);
-//        if(size != 0)
-//            action();
-    
+        //        m_sovokTV->Apply(f);
+        //        if(size != 0)
+        //            action();
+        
     }
     return size;
     
@@ -565,26 +565,26 @@ PVR_ERROR SovokPVRClient::GetRecordings(ADDON_HANDLE handle, bool deleted)
         for(const auto &  i :  list) {
             try {
                 const SovokEpgEntry& epgTag = sTV.GetEpgList().at(i);
-
+                
                 PVR_RECORDING tag = { 0 };
-    //            memset(&tag, 0, sizeof(PVR_RECORDING));
+                //            memset(&tag, 0, sizeof(PVR_RECORDING));
                 sprintf(tag.strRecordingId, "%d",  i);
                 strncpy(tag.strTitle, epgTag.Title.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
                 strncpy(tag.strPlot, epgTag.Description.c_str(), PVR_ADDON_DESC_STRING_LENGTH - 1);
                 strncpy(tag.strChannelName, sTV.GetChannelList().at(epgTag.ChannelId).Name.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
                 tag.recordingTime = epgTag.StartTime;
                 tag.iLifetime = 0; /* not implemented */
-
+                
                 tag.iDuration = epgTag.EndTime - epgTag.StartTime;
                 tag.iEpgEventId = i;
                 tag.iChannelUid = epgTag.ChannelId;
-
+                
                 string dirName = tag.strChannelName;
                 char buff[20];
                 strftime(buff, sizeof(buff), "/%d-%m-%y", localtime(&epgTag.StartTime));
                 dirName += buff;
                 strncpy(tag.strDirectory, dirName.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
-
+                
                 pvrHelper->TransferRecordingEntry(handle, &tag);
                 
             }
@@ -592,7 +592,7 @@ PVR_ERROR SovokPVRClient::GetRecordings(ADDON_HANDLE handle, bool deleted)
                 addonHelper->Log(LOG_ERROR, "%s: failed.", __FUNCTION__);
                 result = PVR_ERROR_FAILED;
             }
-
+            
         }
     };
     m_sovokTV->Apply(f);
@@ -615,12 +615,12 @@ bool SovokPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     
     try
     {
-//        if (m_isTimeshiftEnabled)
-//        {
-//            m_recordBuffer = new TimeshiftBuffer(m_addonHelper, url, m_CacheDir);
-//        }
-//        else
-            m_recordBuffer = new ArchiveBuffer(m_addonHelper, url);
+        //        if (m_isTimeshiftEnabled)
+        //        {
+        //            m_recordBuffer = new TimeshiftBuffer(m_addonHelper, url, m_CacheDir);
+        //        }
+        //        else
+        m_recordBuffer = new ArchiveBuffer(m_addonHelper, url);
     }
     catch (InputBufferException & ex)
     {
@@ -629,13 +629,13 @@ bool SovokPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     }
     
     return true;
-
+    
 }
 void SovokPVRClient::CloseRecordedStream(void)
 {
     delete m_recordBuffer;
     m_recordBuffer = NULL;
-
+    
 }
 int SovokPVRClient::ReadRecordedStream(unsigned char *pBuffer, unsigned int iBufferSize)
 {

@@ -31,12 +31,16 @@
 #include "xbmc_addon_types.h"
 #include "xbmc_pvr_types.h"
 
+class CHelper_libXBMC_pvr;
+namespace ADDON {
+    class CHelper_libXBMC_addon;
+}
 class IPvrIptvDataSource
 {
 public:
-    virtual ADDON_STATUS Init(void* hdl, void* props) = 0;
+    virtual ADDON_STATUS Init(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper, PVR_PROPERTIES* pvrprops) = 0;
     virtual ADDON_STATUS GetStatus() = 0;
-    virtual void Destroy() = 0;
+    //virtual void Destroy() = 0;
 
     virtual int GetSettings(ADDON_StructSetting ***sSet) = 0;
     virtual ADDON_STATUS SetSetting(const char *settingName, const void *settingValue) = 0;
