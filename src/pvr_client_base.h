@@ -20,6 +20,10 @@
  *
  */
 
+#ifndef pvr_client_base_h
+#define pvr_client_base_h
+
+
 #include "xbmc_pvr_types.h"
 #include <string>
 #include "addon.h"
@@ -37,75 +41,50 @@ public:
     ADDON_STATUS SetSetting(const char *settingName, const void *settingValue);
     void FreeSettings();
     
-    //    virtual const char *GetBackendName(void);
     PVR_ERROR GetAddonCapabilities(PVR_ADDON_CAPABILITIES* pCapabilities);
     bool CanPauseStream();
     bool CanSeekStream();
     
-    PVR_ERROR SignalStatus(PVR_SIGNAL_STATUS &signalStatus);
     ADDON_STATUS GetStatus();
-    
-    
-    PVR_ERROR GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL& channel, time_t iStart, time_t iEnd);
-    
-    int GetChannelGroupsAmount();
-    PVR_ERROR GetChannelGroups(ADDON_HANDLE handle, bool bRadio);
-    PVR_ERROR GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_CHANNEL_GROUP& group);
-    
-    int GetChannelsAmount();
-    PVR_ERROR GetChannels(ADDON_HANDLE handle, bool bRadio);
     
     PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
     
-    bool OpenLiveStream(const PVR_CHANNEL& channel);
     void CloseLiveStream();
     int ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize);
     long long SeekLiveStream(long long iPosition, int iWhence);
     long long PositionLiveStream();
     long long LengthLiveStream();
     
-    bool SwitchChannel(const PVR_CHANNEL& channel);
     
     void SetTimeshiftEnabled(bool enable);
     bool IsTimeshiftEnabled() { return m_isTimeshiftEnabled; }
     void SetTimeshiftPath(const std::string& path);
     
-    void SetAddFavoritesGroup(bool shouldAddFavoritesGroup);
-    bool ShouldAddFavoritesGroup() { return m_shouldAddFavoritesGroup; }
-    
-    void SetStreamerId(int streamerIdx);
-    int GetStreamerId();
-    //    const StreamerNamesList& GetStreamersList();
-    
-    void SetPinCode(const std::string& code);
-    int GetRecordingsAmount(bool deleted);
-    PVR_ERROR GetRecordings(ADDON_HANDLE handle, bool deleted);
-    bool OpenRecordedStream(const PVR_RECORDING &recording);
     void CloseRecordedStream(void);
     int ReadRecordedStream(unsigned char *pBuffer, unsigned int iBufferSize);
     long long SeekRecordedStream(long long iPosition, int iWhence);
     long long PositionRecordedStream(void);
     long long LengthRecordedStream(void);
-    
+   
     PVR_ERROR CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
     
-    
-private:
-    void CreateCore();
-    
-    SovokTV* m_sovokTV;
+protected:
     ADDON::CHelper_libXBMC_addon *m_addonHelper;
     CHelper_libXBMC_pvr *m_pvrHelper;
-    std::string m_currentURL;
+
+
+    bool OpenLiveStream(const std::string& url );
+    bool OpenRecordedStream(const std::string& url);
+    bool SwitchChannel(const std::string& url);
+    const std::string& GetClientPath() const { return m_clientPath;}
+    const std::string& GetUserPath() const { return m_userPath;}
+private:
     InputBuffer *m_inputBuffer;
     InputBuffer *m_recordBuffer;
     bool m_isTimeshiftEnabled;
-    bool m_shouldAddFavoritesGroup;
     std::string m_CacheDir;
-    std::string m_login;
-    std::string m_password;
-    std::string m_strimmer;
     std::string m_clientPath;
     std::string m_userPath;
-    bool m_enableAdult;
 };
+
+#endif //pvr_client_base_h

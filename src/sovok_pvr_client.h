@@ -23,25 +23,21 @@
 #include "xbmc_pvr_types.h"
 #include <string>
 #include "addon.h"
+#include "pvr_client_base.h"
 
 class CHelper_libXBMC_pvr;
 class InputBuffer;
 class SovokTV;
 
-class SovokPVRClient: public IPvrIptvDataSource
+class SovokPVRClient: public PVRClientBase
 {
 public:
     ADDON_STATUS Init(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,  PVR_PROPERTIES* pvrprops);
     ~SovokPVRClient();
 
-    int GetSettings(ADDON_StructSetting ***sSet);
     ADDON_STATUS SetSetting(const char *settingName, const void *settingValue);
-    void FreeSettings();
     
-    //    virtual const char *GetBackendName(void);
     PVR_ERROR GetAddonCapabilities(PVR_ADDON_CAPABILITIES* pCapabilities);
-    bool CanPauseStream();
-    bool CanSeekStream();
 
     PVR_ERROR SignalStatus(PVR_SIGNAL_STATUS &signalStatus);
     ADDON_STATUS GetStatus();
@@ -59,34 +55,18 @@ public:
     PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
     
     bool OpenLiveStream(const PVR_CHANNEL& channel);
-    void CloseLiveStream();
-    int ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize);
-    long long SeekLiveStream(long long iPosition, int iWhence);
-    long long PositionLiveStream();
-    long long LengthLiveStream();
-
     bool SwitchChannel(const PVR_CHANNEL& channel);
-
-    void SetTimeshiftEnabled(bool enable);
-    bool IsTimeshiftEnabled() { return m_isTimeshiftEnabled; }
-    void SetTimeshiftPath(const std::string& path);
 
     void SetAddFavoritesGroup(bool shouldAddFavoritesGroup);
     bool ShouldAddFavoritesGroup() { return m_shouldAddFavoritesGroup; }
 
     void SetStreamerId(int streamerIdx);
     int GetStreamerId();
-//    const StreamerNamesList& GetStreamersList();
 
     void SetPinCode(const std::string& code);
     int GetRecordingsAmount(bool deleted);
     PVR_ERROR GetRecordings(ADDON_HANDLE handle, bool deleted);
     bool OpenRecordedStream(const PVR_RECORDING &recording);
-    void CloseRecordedStream(void);
-    int ReadRecordedStream(unsigned char *pBuffer, unsigned int iBufferSize);
-    long long SeekRecordedStream(long long iPosition, int iWhence);
-    long long PositionRecordedStream(void);
-    long long LengthRecordedStream(void);
 
     PVR_ERROR CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
 
@@ -95,18 +75,9 @@ private:
     void CreateCore();
     
     SovokTV* m_sovokTV;
-    ADDON::CHelper_libXBMC_addon *m_addonHelper;
-    CHelper_libXBMC_pvr *m_pvrHelper;
-    std::string m_currentURL;
-    InputBuffer *m_inputBuffer;
-    InputBuffer *m_recordBuffer;
-    bool m_isTimeshiftEnabled;
     bool m_shouldAddFavoritesGroup;
-    std::string m_CacheDir;
     std::string m_login;
     std::string m_password;
     std::string m_strimmer;
-    std::string m_clientPath;
-    std::string m_userPath;
     bool m_enableAdult;
 };
