@@ -395,14 +395,16 @@ PVR_ERROR SovokPVRClient::GetChannelGroups(ADDON_HANDLE handle, bool bRadio)
 
 PVR_ERROR SovokPVRClient::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_CHANNEL_GROUP& group)
 {
-    if (m_shouldAddFavoritesGroup && group.strGroupName == std::string("Избранное"))
+    const std::string favoriteGroupName("Избранное");
+    if (m_shouldAddFavoritesGroup && group.strGroupName == favoriteGroupName)
     {
+        const char* c_GroupName = favoriteGroupName.c_str();
         FavoriteList favorites = m_sovokTV->GetFavorites();
         FavoriteList::const_iterator itFavorite = favorites.begin();
         for (; itFavorite != favorites.end(); ++itFavorite)
         {
             PVR_CHANNEL_GROUP_MEMBER pvrGroupMember = { 0 };
-            strncpy(pvrGroupMember.strGroupName, "Избранное", sizeof(pvrGroupMember.strGroupName));
+            strncpy(pvrGroupMember.strGroupName, c_GroupName, sizeof(pvrGroupMember.strGroupName));
             pvrGroupMember.iChannelUniqueId = *itFavorite;
             m_pvrHelper->TransferChannelGroupMember(handle, &pvrGroupMember);
         }

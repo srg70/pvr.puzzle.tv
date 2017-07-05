@@ -34,9 +34,9 @@
 #include "libXBMC_pvr.h"
 #include "timeshift_buffer.h"
 #include "direct_buffer.h"
-//#include "sovok_pvr_client.h"
+#include "sovok_pvr_client.h"
 #include "helpers.h"
-//#include "sovok_tv.h"
+#include "sovok_tv.h"
 
 
 using namespace std;
@@ -45,7 +45,7 @@ using namespace ADDON;
 // NOTE: avoid '.' (dot) char in path. Causes to deadlock in Kodi code.
 const char* s_DefaultCacheDir = "special://temp/pvr-puzzle-tv";
 
-ADDON_STATUS SovokPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,
+ADDON_STATUS PVRClientBase::Init(CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,
                                   PVR_PROPERTIES* pvrprops)
 {
     
@@ -117,7 +117,7 @@ ADDON_STATUS SovokPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_li
     
 }
 
-SovokPVRClient::~SovokPVRClient()
+PVRClientBase::~PVRClientBase()
 {
     CloseLiveStream();
     if(m_sovokTV != NULL)
@@ -125,7 +125,7 @@ SovokPVRClient::~SovokPVRClient()
     
 }
 
-void SovokPVRClient::CreateCore()
+void PVRClientBase::CreateCore()
 {
     if(m_sovokTV != NULL)
         SAFE_DELETE(m_sovokTV);
@@ -152,7 +152,7 @@ void SovokPVRClient::CreateCore()
 static ADDON_StructSetting ** g_sovokSettings = NULL;
 static int g_sovokSettingsSize = 0;
 
-int SovokPVRClient::GetSettings(ADDON_StructSetting ***sSet)
+int PVRClientBase::GetSettings(ADDON_StructSetting ***sSet)
 {
     return 0;
     /*
@@ -193,7 +193,7 @@ int SovokPVRClient::GetSettings(ADDON_StructSetting ***sSet)
      */
 }
 
-ADDON_STATUS SovokPVRClient::SetSetting(const char *settingName, const void *settingValue)
+ADDON_STATUS PVRClientBase::SetSetting(const char *settingName, const void *settingValue)
 {
     if (strcmp(settingName, "login") == 0 && strcmp((const char*) settingValue, m_login.c_str()) != 0)
     {
@@ -269,7 +269,7 @@ ADDON_STATUS SovokPVRClient::SetSetting(const char *settingName, const void *set
     return ADDON_STATUS_NEED_RESTART;
 }
 
-void SovokPVRClient::FreeSettings()
+void PVRClientBase::FreeSettings()
 {
     if(g_sovokSettings && g_sovokSettingsSize)
         DllUtils::FreeStruct(g_sovokSettingsSize, &g_sovokSettings);
@@ -277,7 +277,7 @@ void SovokPVRClient::FreeSettings()
     g_sovokSettings = NULL;
 }
 
-PVR_ERROR SovokPVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabilities)
+PVR_ERROR PVRClientBase::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabilities)
 {
     pCapabilities->bSupportsEPG = true;
     pCapabilities->bSupportsTV = true;
@@ -296,18 +296,18 @@ PVR_ERROR SovokPVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabili
     return PVR_ERROR_NO_ERROR;
 }
 
-bool SovokPVRClient::CanPauseStream()
+bool PVRClientBase::CanPauseStream()
 {
     return IsTimeshiftEnabled();
 }
 
-bool SovokPVRClient::CanSeekStream()
+bool PVRClientBase::CanSeekStream()
 {
     return IsTimeshiftEnabled();
 }
 
 
-PVR_ERROR SovokPVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
+PVR_ERROR PVRClientBase::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
 {
     snprintf(signalStatus.strAdapterName, sizeof(signalStatus.strAdapterName), "IPTV Sovok TV Adapter 1");
     snprintf(signalStatus.strAdapterStatus, sizeof(signalStatus.strAdapterStatus), (m_sovokTV == NULL) ? "Not connected" :"OK");
@@ -316,18 +316,18 @@ PVR_ERROR SovokPVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
     
 }
 
-ADDON_STATUS SovokPVRClient::GetStatus()
+ADDON_STATUS PVRClientBase::GetStatus()
 {
     return  /*(m_sovokTV == NULL)? ADDON_STATUS_LOST_CONNECTION : */ADDON_STATUS_OK;
 }
 
-void SovokPVRClient::SetStreamerId(int streamerIdx) { m_sovokTV->SetStreamerId(streamerIdx); }
-int SovokPVRClient::GetStreamerId() { return m_sovokTV->GetSreamerId(); }
-//const StreamerNamesList& SovokPVRClient::GetStreamersList() { return m_sovokTV->GetStreamersList(); }
+void PVRClientBase::SetStreamerId(int streamerIdx) { m_sovokTV->SetStreamerId(streamerIdx); }
+int PVRClientBase::GetStreamerId() { return m_sovokTV->GetSreamerId(); }
+//const StreamerNamesList& PVRClientBase::GetStreamersList() { return m_sovokTV->GetStreamersList(); }
 
-void SovokPVRClient::SetPinCode(const std::string& code) {m_sovokTV->SetPinCode(code);}
+void PVRClientBase::SetPinCode(const std::string& code) {m_sovokTV->SetPinCode(code);}
 
-void SovokPVRClient::SetTimeshiftPath(const std::string& path){
+void PVRClientBase::SetTimeshiftPath(const std::string& path){
     const char* nonEmptyPath = (path.empty()) ? s_DefaultCacheDir : path.c_str();
     if(!m_addonHelper->DirectoryExists(nonEmptyPath))
         if(!m_addonHelper->CreateDirectory(nonEmptyPath))
@@ -335,7 +335,7 @@ void SovokPVRClient::SetTimeshiftPath(const std::string& path){
     m_CacheDir = nonEmptyPath;
 }
 
-PVR_ERROR SovokPVRClient::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL& channel, time_t iStart, time_t iEnd)
+PVR_ERROR PVRClientBase::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL& channel, time_t iStart, time_t iEnd)
 {
     EpgEntryList epgEntries;
     m_sovokTV->GetEpg(channel.iUniqueId, iStart, iEnd, epgEntries);
@@ -353,14 +353,14 @@ PVR_ERROR SovokPVRClient::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNE
     }
     return PVR_ERROR_NO_ERROR;
 }
-PVR_ERROR  SovokPVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
+PVR_ERROR  PVRClientBase::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
 {
     //    SovokEpgEntry epgEntry;
     //    m_sovokTV->FindEpg(item.data.iEpgUid, epgEntry);
     return PVR_ERROR_NOT_IMPLEMENTED;
     
 }
-int SovokPVRClient::GetChannelGroupsAmount()
+int PVRClientBase::GetChannelGroupsAmount()
 {
     size_t numberOfGroups = m_sovokTV->GetGroupList().size();
     if (m_shouldAddFavoritesGroup)
@@ -368,7 +368,7 @@ int SovokPVRClient::GetChannelGroupsAmount()
     return numberOfGroups;
 }
 
-PVR_ERROR SovokPVRClient::GetChannelGroups(ADDON_HANDLE handle, bool bRadio)
+PVR_ERROR PVRClientBase::GetChannelGroups(ADDON_HANDLE handle, bool bRadio)
 {
     if (!bRadio)
     {
@@ -393,16 +393,18 @@ PVR_ERROR SovokPVRClient::GetChannelGroups(ADDON_HANDLE handle, bool bRadio)
     return PVR_ERROR_NO_ERROR;
 }
 
-PVR_ERROR SovokPVRClient::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_CHANNEL_GROUP& group)
+PVR_ERROR PVRClientBase::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_CHANNEL_GROUP& group)
 {
-    if (m_shouldAddFavoritesGroup && group.strGroupName == std::string("Избранное"))
+    const std::string favoriteGroupName("Избранное");
+    if (m_shouldAddFavoritesGroup && group.strGroupName == favoriteGroupName)
     {
+        const char* c_GroupName = favoriteGroupName.c_str();
         FavoriteList favorites = m_sovokTV->GetFavorites();
         FavoriteList::const_iterator itFavorite = favorites.begin();
         for (; itFavorite != favorites.end(); ++itFavorite)
         {
             PVR_CHANNEL_GROUP_MEMBER pvrGroupMember = { 0 };
-            strncpy(pvrGroupMember.strGroupName, "Избранное", sizeof(pvrGroupMember.strGroupName));
+            strncpy(pvrGroupMember.strGroupName, c_GroupName, sizeof(pvrGroupMember.strGroupName));
             pvrGroupMember.iChannelUniqueId = *itFavorite;
             m_pvrHelper->TransferChannelGroupMember(handle, &pvrGroupMember);
         }
@@ -428,12 +430,12 @@ PVR_ERROR SovokPVRClient::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_
     return PVR_ERROR_NO_ERROR;
 }
 
-int SovokPVRClient::GetChannelsAmount()
+int PVRClientBase::GetChannelsAmount()
 {
     return m_sovokTV->GetChannelList().size();
 }
 
-PVR_ERROR SovokPVRClient::GetChannels(ADDON_HANDLE handle, bool bRadio)
+PVR_ERROR PVRClientBase::GetChannels(ADDON_HANDLE handle, bool bRadio)
 {
     const ChannelList &channels = m_sovokTV->GetChannelList();
     ChannelList::const_iterator itChannel = channels.begin();
@@ -458,7 +460,7 @@ PVR_ERROR SovokPVRClient::GetChannels(ADDON_HANDLE handle, bool bRadio)
     return PVR_ERROR_NO_ERROR;
 }
 
-bool SovokPVRClient::OpenLiveStream(const PVR_CHANNEL& channel)
+bool PVRClientBase::OpenLiveStream(const PVR_CHANNEL& channel)
 {
     string url = m_sovokTV->GetUrl(channel.iUniqueId);
     if (url.empty())
@@ -481,46 +483,46 @@ bool SovokPVRClient::OpenLiveStream(const PVR_CHANNEL& channel)
     return true;
 }
 
-void SovokPVRClient::CloseLiveStream()
+void PVRClientBase::CloseLiveStream()
 {
-    m_addonHelper->Log(LOG_NOTICE, "SovokPVRClient: closing input sream...");
+    m_addonHelper->Log(LOG_NOTICE, "PVRClientBase: closing input sream...");
     delete m_inputBuffer;
     m_inputBuffer = NULL;
-    m_addonHelper->Log(LOG_NOTICE, "SovokPVRClient: input sream closed.");
+    m_addonHelper->Log(LOG_NOTICE, "PVRClientBase: input sream closed.");
 }
 
-int SovokPVRClient::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize)
+int PVRClientBase::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize)
 {
     return m_inputBuffer->Read(pBuffer, iBufferSize);
 }
 
-long long SovokPVRClient::SeekLiveStream(long long iPosition, int iWhence)
+long long PVRClientBase::SeekLiveStream(long long iPosition, int iWhence)
 {
     return m_inputBuffer->Seek(iPosition, iWhence);
 }
 
-long long SovokPVRClient::PositionLiveStream()
+long long PVRClientBase::PositionLiveStream()
 {
     return m_inputBuffer->GetPosition();
 }
 
-long long SovokPVRClient::LengthLiveStream()
+long long PVRClientBase::LengthLiveStream()
 {
     return m_inputBuffer->GetLength();
 }
 
-bool SovokPVRClient::SwitchChannel(const PVR_CHANNEL& channel)
+bool PVRClientBase::SwitchChannel(const PVR_CHANNEL& channel)
 {
     string url = m_sovokTV->GetUrl(channel.iUniqueId);
     return m_inputBuffer->SwitchStream(url);
 }
 
-void SovokPVRClient::SetTimeshiftEnabled(bool enable)
+void PVRClientBase::SetTimeshiftEnabled(bool enable)
 {
     m_isTimeshiftEnabled = enable;
 }
 
-void SovokPVRClient::SetAddFavoritesGroup(bool shouldAddFavoritesGroup)
+void PVRClientBase::SetAddFavoritesGroup(bool shouldAddFavoritesGroup)
 {
     if (shouldAddFavoritesGroup != m_shouldAddFavoritesGroup)
     {
@@ -530,7 +532,7 @@ void SovokPVRClient::SetAddFavoritesGroup(bool shouldAddFavoritesGroup)
 }
 
 
-int SovokPVRClient::GetRecordingsAmount(bool deleted)
+int PVRClientBase::GetRecordingsAmount(bool deleted)
 {
     if(deleted)
         return -1;
@@ -552,7 +554,7 @@ int SovokPVRClient::GetRecordingsAmount(bool deleted)
     return size;
     
 }
-PVR_ERROR SovokPVRClient::GetRecordings(ADDON_HANDLE handle, bool deleted)
+PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
 {
     if(deleted)
         return PVR_ERROR_NOT_IMPLEMENTED;
@@ -599,7 +601,7 @@ PVR_ERROR SovokPVRClient::GetRecordings(ADDON_HANDLE handle, bool deleted)
     return result;
 }
 
-bool SovokPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
+bool PVRClientBase::OpenRecordedStream(const PVR_RECORDING &recording)
 {
     SovokEpgEntry epgTag;
     
@@ -631,32 +633,32 @@ bool SovokPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     return true;
     
 }
-void SovokPVRClient::CloseRecordedStream(void)
+void PVRClientBase::CloseRecordedStream(void)
 {
     delete m_recordBuffer;
     m_recordBuffer = NULL;
     
 }
-int SovokPVRClient::ReadRecordedStream(unsigned char *pBuffer, unsigned int iBufferSize)
+int PVRClientBase::ReadRecordedStream(unsigned char *pBuffer, unsigned int iBufferSize)
 {
     return (m_recordBuffer == NULL) ? -1 : m_recordBuffer->Read(pBuffer, iBufferSize);
 }
 
-long long SovokPVRClient::SeekRecordedStream(long long iPosition, int iWhence)
+long long PVRClientBase::SeekRecordedStream(long long iPosition, int iWhence)
 {
     return (m_recordBuffer == NULL) ? -1 : m_recordBuffer->Seek(iPosition, iWhence);
 }
 
-long long SovokPVRClient::PositionRecordedStream(void)
+long long PVRClientBase::PositionRecordedStream(void)
 {
     return (m_recordBuffer == NULL) ? -1 : m_recordBuffer->GetPosition();
 }
-long long SovokPVRClient::LengthRecordedStream(void)
+long long PVRClientBase::LengthRecordedStream(void)
 {
     return (m_recordBuffer == NULL) ? -1 : m_recordBuffer->GetLength();
 }
 
-PVR_ERROR SovokPVRClient::CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
+PVR_ERROR PVRClientBase::CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
 {
     m_addonHelper->Log(LOG_DEBUG, " >>>> !!!! Menu hook !!!! <<<<<");
     return MenuHook(menuhook, item);

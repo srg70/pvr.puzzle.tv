@@ -18,8 +18,6 @@
 		4C08C7FC1D81E34A004CAAE3 /* input_buffer.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C08C7F91D81E34A004CAAE3 /* input_buffer.h */; };
 		4C08C7FE1D8290F6004CAAE3 /* addon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C08C7FD1D8290F6004CAAE3 /* addon.cpp */; };
 		4C08C8001D829449004CAAE3 /* addon.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C08C7FF1D829449004CAAE3 /* addon.h */; };
-		4C08C8031D82AD5A004CAAE3 /* sovok_data_source.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C08C8021D82AD5A004CAAE3 /* sovok_data_source.cpp */; };
-		4C08C8051D82AD67004CAAE3 /* sovok_data_source.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C08C8041D82AD67004CAAE3 /* sovok_data_source.h */; };
 		4C49D1EF1E27C4BF0026F43E /* AEChannelData.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1901E27C4BF0026F43E /* AEChannelData.h */; };
 		4C49D1F01E27C4BF0026F43E /* DVDDemuxPacket.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1911E27C4BF0026F43E /* DVDDemuxPacket.h */; };
 		4C49D1F11E27C4BF0026F43E /* IFileTypes.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1921E27C4BF0026F43E /* IFileTypes.h */; };
@@ -126,8 +124,6 @@
 		4C08C7F91D81E34A004CAAE3 /* input_buffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = input_buffer.h; sourceTree = "<group>"; };
 		4C08C7FD1D8290F6004CAAE3 /* addon.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = addon.cpp; sourceTree = "<group>"; };
 		4C08C7FF1D829449004CAAE3 /* addon.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = addon.h; sourceTree = "<group>"; };
-		4C08C8021D82AD5A004CAAE3 /* sovok_data_source.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = sovok_data_source.cpp; sourceTree = "<group>"; };
-		4C08C8041D82AD67004CAAE3 /* sovok_data_source.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sovok_data_source.h; sourceTree = "<group>"; };
 		4C49D1901E27C4BF0026F43E /* AEChannelData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AEChannelData.h; sourceTree = "<group>"; };
 		4C49D1911E27C4BF0026F43E /* DVDDemuxPacket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DVDDemuxPacket.h; sourceTree = "<group>"; };
 		4C49D1921E27C4BF0026F43E /* IFileTypes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IFileTypes.h; sourceTree = "<group>"; };
@@ -247,8 +243,6 @@
 				4C08C7F71D81E34A004CAAE3 /* helpers.cpp */,
 				4C08C7F81D81E34A004CAAE3 /* helpers.h */,
 				4C4FBFA41E77C0590027911E /* Buffers */,
-				4C08C8021D82AD5A004CAAE3 /* sovok_data_source.cpp */,
-				4C08C8041D82AD67004CAAE3 /* sovok_data_source.h */,
 				4C8506E21EF478A000213131 /* pvr_client_base.cpp */,
 				4C8506E31EF478A000213131 /* pvr_client_base.h */,
 				4C08C7D71D81D1B2004CAAE3 /* sovok_pvr_client.cpp */,
@@ -524,7 +518,6 @@
 				4C49D2261E27C4BF0026F43E /* document.h in Headers */,
 				4C49D22B1E27C4BF0026F43E /* filereadstream.h in Headers */,
 				4C49D1F21E27C4BF0026F43E /* kodi_adsp_dll.h in Headers */,
-				4C08C8051D82AD67004CAAE3 /* sovok_data_source.h in Headers */,
 				4C49D2201E27C4BF0026F43E /* buffer.h in Headers */,
 				4C49D21F1E27C4BF0026F43E /* atomic.h in Headers */,
 				4C49D21A1E27C4BF0026F43E /* socket.h in Headers */,
@@ -649,7 +642,6 @@
 				4CFEAA8F1E4DA81A002C2BA4 /* ActionQueue.cpp in Sources */,
 				4C08C7EE1D81D295004CAAE3 /* sovok_tv.cpp in Sources */,
 				4C08C7F31D81E2A8004CAAE3 /* direct_buffer.cpp in Sources */,
-				4C08C8031D82AD5A004CAAE3 /* sovok_data_source.cpp in Sources */,
 				4C08C7F51D81E2A8004CAAE3 /* timeshift_buffer.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

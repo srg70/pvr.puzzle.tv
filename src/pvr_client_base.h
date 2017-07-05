@@ -26,13 +26,12 @@
 
 class CHelper_libXBMC_pvr;
 class InputBuffer;
-class SovokTV;
 
-class SovokPVRClient: public IPvrIptvDataSource
+class PVRClientBase: public IPvrIptvDataSource
 {
 public:
     ADDON_STATUS Init(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,  PVR_PROPERTIES* pvrprops);
-    ~SovokPVRClient();
+    virtual ~PVRClientBase();
     
     int GetSettings(ADDON_StructSetting ***sSet);
     ADDON_STATUS SetSetting(const char *settingName, const void *settingValue);
