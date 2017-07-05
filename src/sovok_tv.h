@@ -195,9 +195,11 @@ private:
     void Cleanup();
     
     template <typename TParser>
-    void CallApiFunction(std::shared_ptr<const ApiFunctionData> data, TParser parser);
+    void CallApiFunction(const ApiFunctionData& data, TParser parser);
     template <typename TParser, typename TCompletion>
-    void CallApiAsync(std::shared_ptr<const ApiFunctionData> data, TParser parser, TCompletion completion);
+    void CallApiAsync(const ApiFunctionData& data, TParser parser, TCompletion completion);
+    template <typename TParser, typename TCompletion>
+    void CallApiAsync(const std::string& request, const std::string& name, TParser parser, TCompletion completion);
     template <typename TResultCallback, typename TCompletion>
     void SendHttpRequest(const std::string &url,const ParamList &cookie, TResultCallback result, TCompletion completion) const;
     

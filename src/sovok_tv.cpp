@@ -164,18 +164,20 @@ SovokTV::~SovokTV()
 }
 void SovokTV::Cleanup()
 {
+    m_addonHelper->Log(LOG_NOTICE, "SovokTV stopping...");
+
     if(m_archiveLoader) {
         m_archiveLoader->StopThread();
-        delete m_archiveLoader; m_archiveLoader = NULL;
+        SAFE_DELETE(m_archiveLoader);
     }
     Logout();
     if(m_apiCalls) {
         m_apiCalls->StopThread();
-        delete m_apiCalls; m_apiCalls = NULL;
+        SAFE_DELETE(m_apiCalls);
     }
     if(m_apiCallCompletions) {
         m_apiCallCompletions->StopThread();
-        delete m_apiCallCompletions; m_apiCallCompletions = NULL;
+        SAFE_DELETE(m_apiCallCompletions);
     }
     m_addonHelper->Log(LOG_NOTICE, "SovokTV stopped.");
 }
@@ -318,10 +320,10 @@ void SovokTV::BuildChannelAndGroupList()
     m_groupList.clear();
 
     try {
-//        std::shared_ptr<const ApiFunctionData> params2(new ApiFunctionData("channel_list2"));
+//        ApiFunctionData params2("channel_list2");
 //        CallApiFunction(params2, [&] (Document& jsonRoot){});
         
-        std::shared_ptr<const ApiFunctionData> params(new ApiFunctionData("channel_list"));
+        ApiFunctionData params("channel_list");
         CallApiFunction(params, [&] (Document& jsonRoot)
         {
             const Value &groups = jsonRoot["groups"];
@@ -380,7 +382,7 @@ std::string SovokTV::GetArchive(    int channelId, time_t startTime)
     params["cid"] = n_to_string(channelId);
     params["time"] = n_to_string(startTime);
      try {
-         std::shared_ptr<const ApiFunctionData> apiParams(new ApiFunctionData("archive_next", params));
+         ApiFunctionData apiParams("archive_next", params);
          CallApiFunction(apiParams, [&] (Document& jsonRoot)
         {
             const Value & archive = jsonRoot["archive"];
@@ -470,7 +472,7 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
     params["dtime"] = n_to_string(startTime + m_serverTimeShift);
     params["period"] = n_to_string(numberOfHours);
     try {
-        std::shared_ptr<const ApiFunctionData> apiParams(new ApiFunctionData("epg3", params));
+        ApiFunctionData apiParams("epg3", params);
 
         CallApiFunction(apiParams, [&] (Document& jsonRoot)
         {
@@ -521,7 +523,7 @@ string SovokTV::GetUrl(int channelId)
     params["cid"] = n_to_string(channelId);
     params["protect_code"] = m_pinCode.c_str();
     try {
-        std::shared_ptr<const ApiFunctionData> apiParams(new ApiFunctionData("get_url", params));
+        ApiFunctionData apiParams("get_url", params);
         CallApiFunction(apiParams, [&] (Document& jsonRoot)
        {
             url = jsonRoot["url"].GetString();
@@ -546,7 +548,7 @@ FavoriteList SovokTV::GetFavorites()
 {
     FavoriteList favorites;
     try {
-        std::shared_ptr<const ApiFunctionData> apiParams(new ApiFunctionData("favorites"));
+        ApiFunctionData apiParams("favorites");
         CallApiFunction(apiParams, [&] (Document& jsonRoot)
         {
             const Value &jsonFavorites = jsonRoot["favorites"];
@@ -588,7 +590,7 @@ bool SovokTV::Login(bool wait)
     
     if(wait) {
         try {
-            std::shared_ptr<const ApiFunctionData> apiParams(new ApiFunctionData("login", params));
+            ApiFunctionData apiParams("login", params);
             CallApiFunction(apiParams, parser);
         } catch (ServerErrorException& ex) {
             m_addonHelper->QueueNotification(QUEUE_ERROR, "Sovok TV error: %s", ex.reason.c_str() );
@@ -600,7 +602,7 @@ bool SovokTV::Login(bool wait)
         }
         return true;
     } else {
-        std::shared_ptr<ApiFunctionData> apiParams(new ApiFunctionData("login", params));
+        ApiFunctionData apiParams("login", params);
         CallApiAsync(apiParams, parser, [=] (const CActionQueue::ActionResult& s){
             if(s.exception) {
                 try {
@@ -620,13 +622,13 @@ bool SovokTV::Login(bool wait)
 
 void SovokTV::Logout()
 {
-    std::shared_ptr<const ApiFunctionData> apiParams(new ApiFunctionData("logout"));
+    ApiFunctionData apiParams("logout");
 
     try {CallApiFunction(apiParams, [&] (Document& jsonRoot){});}catch (...) {}
 }
 
 template <typename TParser>
-void SovokTV::CallApiFunction(std::shared_ptr<const ApiFunctionData> data, TParser parser)
+void SovokTV::CallApiFunction(const ApiFunctionData& data, TParser parser)
 {
     P8PLATFORM::CEvent event;
     std::exception_ptr ex = nullptr;
@@ -640,31 +642,42 @@ void SovokTV::CallApiFunction(std::shared_ptr<const ApiFunctionData> data, TPars
 }
 
 template <typename TParser, typename TCompletion>
-void SovokTV::CallApiAsync(std::shared_ptr<const ApiFunctionData> data, TParser parser, TCompletion completion)
+void SovokTV::CallApiAsync(const ApiFunctionData& data, TParser parser, TCompletion completion)
+{
+    
+    // Build HTTP request
+    string query;
+    ParamList::const_iterator runner = data.params.begin();
+    ParamList::const_iterator first = runner;
+    ParamList::const_iterator end = data.params.end();
+    
+    for (; runner != end; ++runner)
+    {
+        query += runner == first ? "?" : "&";
+        query += runner->first + '=' + runner->second;
+    }
+    std::string strRequest = "http://api.sovok.tv/";
+    strRequest += (data.api_ver == ApiFunctionData::API_2_2) ? "v2.2" : "v2.3";
+    strRequest += "/json/";
+    strRequest += data.name + query;
+    CallApiAsync(strRequest, data.name, parser, completion);
+}
+
+template <typename TParser, typename TCompletion>
+void SovokTV::CallApiAsync(const std::string& request, const std::string& name, TParser parser, TCompletion completion)
 {
     if(!m_apiCalls->IsRunning())
         throw QueueNotRunningException("API request queue in not running.");
+
+    auto start = P8PLATFORM::GetTimeMs();
+    const bool isLoginCommand = name == "login";
+    m_addonHelper->Log(LOG_DEBUG, "Calling '%s'.",  name.c_str());
+
     m_apiCalls->PerformAsync([=](){
-        string query;
-        ParamList::const_iterator runner = data->params.begin();
-        ParamList::const_iterator first = runner;
-        ParamList::const_iterator end = data->params.end();
-        
-        for (; runner != end; ++runner)
-        {
-            query += runner == first ? "?" : "&";
-            query += runner->first + '=' + runner->second;
-        }
-        std::string strRequest = "http://api.sovok.tv/";
-        strRequest += (data->api_ver == ApiFunctionData::API_2_2) ? "v2.2" : "v2.3";
-        strRequest += "/json/";
-        strRequest += data->name + query;
-        auto start = P8PLATFORM::GetTimeMs();
-        const bool isLoginCommand = data->name == "login";
-        SendHttpRequest(strRequest, m_sessionCookie, [=](std::string& response) {
-            m_addonHelper->Log(LOG_DEBUG, "Calling '%s'. Response in %d ms.",  data->name.c_str(), P8PLATFORM::GetTimeMs() - start);
+        SendHttpRequest(request, m_sessionCookie, [=](std::string& response) {
+            m_addonHelper->Log(LOG_DEBUG, "Response in %d ms.",  P8PLATFORM::GetTimeMs() - start);
             
-//            if(data->name.compare( "get_url") == 0)
+//            if(data.name.compare( "get_url") == 0)
 //                m_addonHelper->Log(LOG_DEBUG, response.substr(0, 16380).c_str());
 
             ParseJson(response, [&] (Document& jsonRoot)
@@ -689,7 +702,7 @@ void SovokTV::CallApiAsync(std::shared_ptr<const ApiFunctionData> data, TParser 
             }
             // In case of error try to re-login and repeat the API call.
             Login(false);
-            SendHttpRequest(strRequest, m_sessionCookie,[&](std::string& response) {
+            SendHttpRequest(request, m_sessionCookie,[&](std::string& response) {
                 ParseJson(response, [&] (Document& jsonRoot)
                 {
                   if (!jsonRoot.HasMember("error"))
@@ -744,7 +757,7 @@ void SovokTV::SendHttpRequest(const std::string &url, const ParamList &cookie,  
 
         long httpCode = 0;
         int retries = 5;
-        while (retries > 0)
+        while (retries-- > 0)
         {
             CURLcode curlCode = curl_easy_perform(curl);
             if (curlCode != CURLE_OK)
@@ -790,7 +803,7 @@ size_t SovokTV::CurlWriteData(void *buffer, size_t size, size_t nmemb, void *use
 bool SovokTV::LoadStreamers()
 {
     try {
-        std::shared_ptr<const ApiFunctionData> apiParams(new ApiFunctionData("streamers"));
+        ApiFunctionData apiParams("streamers");
 
         CallApiFunction(apiParams, [&] (Document& jsonRoot)
         {
@@ -824,7 +837,7 @@ void SovokTV::LoadSettings()
 {
     // Load streamers
     try {
-        std::shared_ptr<const ApiFunctionData> apiParams(new ApiFunctionData("settings"));
+        ApiFunctionData apiParams("settings");
 
         CallApiFunction(apiParams, [&] (Document& jsonRoot)
         {
@@ -871,7 +884,7 @@ void SovokTV::SetStreamerId(int streamerId)
     ParamList params;
     params["streamer"] = *it;
     try {
-        std::shared_ptr<const ApiFunctionData> apiParams(new ApiFunctionData("settings_set", params));
+        ApiFunctionData apiParams("settings_set", params);
 
         CallApiFunction(apiParams, [&] (Document& jsonRoot){});
     } catch (ServerErrorException& ex) {
@@ -901,7 +914,7 @@ void SovokTV::LoadArchiveList()
     ResetArchiveList();
     try {
         
-        std::shared_ptr<const ApiFunctionData> apiParams(new ApiFunctionData("archive_channels_list", ApiFunctionData::s_EmptyParams, ApiFunctionData::API_2_3));
+        ApiFunctionData apiParams("archive_channels_list", ApiFunctionData::s_EmptyParams, ApiFunctionData::API_2_3);
 
         std::vector<SovokChannelArchive> archives;
         CallApiFunction(apiParams, [&] (Document& jsonRoot)
