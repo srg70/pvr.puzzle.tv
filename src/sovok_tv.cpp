@@ -660,7 +660,30 @@ void SovokTV::CallApiAsync(const ApiFunctionData& data, TParser parser, TComplet
     strRequest += (data.api_ver == ApiFunctionData::API_2_2) ? "v2.2" : "v2.3";
     strRequest += "/json/";
     strRequest += data.name + query;
-    CallApiAsync(strRequest, data.name, parser, completion);
+    auto start = P8PLATFORM::GetTimeMs();
+    m_addonHelper->Log(LOG_DEBUG, "Calling '%s'.",  data.name.c_str());
+
+    CallApiAsync(strRequest, data.name, [=](const std::string& response) {
+        m_addonHelper->Log(LOG_DEBUG, "Response in %d ms.",  P8PLATFORM::GetTimeMs() - start);
+        
+        //            if(data.name.compare( "get_url") == 0)
+        //                m_addonHelper->Log(LOG_DEBUG, response.substr(0, 16380).c_str());
+        
+        ParseJson(response, [&] (Document& jsonRoot)
+                  {
+                      if (!jsonRoot.HasMember("error"))
+                      {
+                          parser(jsonRoot);
+                          return;
+                      }
+                      const Value & errObj = jsonRoot["error"];
+                      auto err = errObj["message"].GetString();
+                      auto code = errObj["code"].GetInt();
+                      m_addonHelper->Log(LOG_ERROR, "Sovok TV server responses error:");
+                      m_addonHelper->Log(LOG_ERROR, err);
+                      throw ServerErrorException(err,code);
+                  });
+    }, completion);
 }
 
 template <typename TParser, typename TCompletion>
@@ -669,32 +692,11 @@ void SovokTV::CallApiAsync(const std::string& request, const std::string& name, 
     if(!m_apiCalls->IsRunning())
         throw QueueNotRunningException("API request queue in not running.");
 
-    auto start = P8PLATFORM::GetTimeMs();
     const bool isLoginCommand = name == "login";
-    m_addonHelper->Log(LOG_DEBUG, "Calling '%s'.",  name.c_str());
-
     m_apiCalls->PerformAsync([=](){
-        SendHttpRequest(request, m_sessionCookie, [=](std::string& response) {
-            m_addonHelper->Log(LOG_DEBUG, "Response in %d ms.",  P8PLATFORM::GetTimeMs() - start);
-            
-//            if(data.name.compare( "get_url") == 0)
-//                m_addonHelper->Log(LOG_DEBUG, response.substr(0, 16380).c_str());
-
-            ParseJson(response, [&] (Document& jsonRoot)
-            {
-                if (!jsonRoot.HasMember("error"))
-                {
-                    parser(jsonRoot);
-                    return;
-                }
-                const Value & errObj = jsonRoot["error"];
-                auto err = errObj["message"].GetString();
-                auto code = errObj["code"].GetInt();
-                m_addonHelper->Log(LOG_ERROR, "Sovok TV server responses error:");
-                m_addonHelper->Log(LOG_ERROR, err);
-                throw ServerErrorException(err,code);
-            });
-        },[=](const CActionQueue::ActionResult& s) {
+        SendHttpRequest(request, m_sessionCookie, parser,
+                        [=](const CActionQueue::ActionResult& s)
+        {
             // Do not re-login within login command.
             if(s.status == CActionQueue::kActionCompleted || isLoginCommand) {
                 completion(s);
@@ -702,23 +704,8 @@ void SovokTV::CallApiAsync(const std::string& request, const std::string& name, 
             }
             // In case of error try to re-login and repeat the API call.
             Login(false);
-            SendHttpRequest(request, m_sessionCookie,[&](std::string& response) {
-                ParseJson(response, [&] (Document& jsonRoot)
-                {
-                  if (!jsonRoot.HasMember("error"))
-                  {
-                      parser(jsonRoot);
-                      return;
-                      
-                  }
-                  const Value & errObj = jsonRoot["error"];
-                  auto err = errObj["message"].GetString();
-                  auto code = errObj["code"].GetInt();
-                  m_addonHelper->Log(LOG_ERROR, "Sovok TV server responses error:");
-                  m_addonHelper->Log(LOG_ERROR, err);
-                  throw ServerErrorException(err,code);
-                });
-            }, [&](const CActionQueue::ActionResult& ss){
+            SendHttpRequest(request, m_sessionCookie, parser,
+                            [=](const CActionQueue::ActionResult& ss){
                 completion(ss);
             });
 
