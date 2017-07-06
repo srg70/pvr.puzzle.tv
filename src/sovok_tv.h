@@ -199,7 +199,7 @@ private:
     template <typename TParser, typename TCompletion>
     void CallApiAsync(const ApiFunctionData& data, TParser parser, TCompletion completion);
     template <typename TParser, typename TCompletion>
-    void CallApiAsync(const std::string& request, const std::string& name, TParser parser, TCompletion completion);
+    void CallApiAsync(const std::string& request, TParser parser, TCompletion completion);
     template <typename TResultCallback, typename TCompletion>
     void SendHttpRequest(const std::string &url,const ParamList &cookie, TResultCallback result, TCompletion completion) const;
     

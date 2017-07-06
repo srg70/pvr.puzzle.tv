@@ -661,9 +661,10 @@ void SovokTV::CallApiAsync(const ApiFunctionData& data, TParser parser, TComplet
     strRequest += "/json/";
     strRequest += data.name + query;
     auto start = P8PLATFORM::GetTimeMs();
+    const bool isLoginCommand = data.name == "login";
     m_addonHelper->Log(LOG_DEBUG, "Calling '%s'.",  data.name.c_str());
 
-    CallApiAsync(strRequest, data.name, [=](const std::string& response) {
+    std::function<void(const std::string&)> parserWrapper = [=](const std::string& response) {
         m_addonHelper->Log(LOG_DEBUG, "Response in %d ms.",  P8PLATFORM::GetTimeMs() - start);
         
         //            if(data.name.compare( "get_url") == 0)
@@ -683,33 +684,31 @@ void SovokTV::CallApiAsync(const ApiFunctionData& data, TParser parser, TComplet
                       m_addonHelper->Log(LOG_ERROR, err);
                       throw ServerErrorException(err,code);
                   });
-    }, completion);
+    };
+    CallApiAsync(strRequest, parserWrapper, [=](const CActionQueue::ActionResult& s)
+                 {
+                     // Do not re-login within login command.
+                     if(s.status == CActionQueue::kActionCompleted || isLoginCommand) {
+                         completion(s);
+                         return;
+                     }
+                     // In case of error try to re-login and repeat the API call.
+                     Login(false);
+                    CallApiAsync(strRequest, parserWrapper,  [=](const CActionQueue::ActionResult& ss){
+                                     completion(ss);
+                                 });
+                 });
 }
 
 template <typename TParser, typename TCompletion>
-void SovokTV::CallApiAsync(const std::string& request, const std::string& name, TParser parser, TCompletion completion)
+void SovokTV::CallApiAsync(const std::string& request, TParser parser, TCompletion completion)
 {
     if(!m_apiCalls->IsRunning())
         throw QueueNotRunningException("API request queue in not running.");
 
-    const bool isLoginCommand = name == "login";
     m_apiCalls->PerformAsync([=](){
         SendHttpRequest(request, m_sessionCookie, parser,
-                        [=](const CActionQueue::ActionResult& s)
-        {
-            // Do not re-login within login command.
-            if(s.status == CActionQueue::kActionCompleted || isLoginCommand) {
-                completion(s);
-                return;
-            }
-            // In case of error try to re-login and repeat the API call.
-            Login(false);
-            SendHttpRequest(request, m_sessionCookie, parser,
-                            [=](const CActionQueue::ActionResult& ss){
-                completion(ss);
-            });
-
-        });
+                        [=](const CActionQueue::ActionResult& s) { completion(s);});
     },[=](const CActionQueue::ActionResult& s) {
         if(s.status != CActionQueue::kActionCompleted)
             completion(s);
