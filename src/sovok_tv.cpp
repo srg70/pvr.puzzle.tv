@@ -24,15 +24,6 @@
  *
  */
 
-#if (defined(_WIN32) || defined(__WIN32__))
-#include <windows.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#define CURL_STATICLIB 1
-#endif
-
-
-#include <curl/curl.h>
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
 #include <assert.h>
@@ -44,6 +35,7 @@
 #include "p8-platform/util/util.h"
 #include "helpers.h"
 #include "sovok_tv.h"
+#include "HttpEngine.hpp"
 
 using namespace std;
 using namespace ADDON;
@@ -108,7 +100,7 @@ public:
                 break;
             
             HelperThread* pThis = this;
-            m_sovokTV->m_apiCallCompletions->PerformAsync([pThis]() {
+            m_sovokTV->m_httpEngine->RunOnCompletionQueueAsync([pThis]() {
                 pThis->m_action();
             },  [](const CActionQueue::ActionResult& s) {});
             
@@ -139,13 +131,10 @@ SovokTV::SovokTV(ADDON::CHelper_libXBMC_addon *addonHelper, const string &login,
     m_lastEpgRequestStartTime(0),
     m_lastEpgRequestEndTime(0),
     m_lastUniqueBroadcastId(0),
-    m_apiCalls(new CActionQueue()),
-    m_apiCallCompletions(new CActionQueue()),
     m_archiveLoader(NULL)
 {
-    m_apiCalls->CreateThread();
-    m_apiCallCompletions->CreateThread();
-
+    m_httpEngine = new HttpEngine(m_addonHelper);
+    
     if (!Login(true)) {
         Cleanup();
         throw AuthFailedException();
@@ -171,14 +160,9 @@ void SovokTV::Cleanup()
         SAFE_DELETE(m_archiveLoader);
     }
     Logout();
-    if(m_apiCalls) {
-        m_apiCalls->StopThread();
-        SAFE_DELETE(m_apiCalls);
-    }
-    if(m_apiCallCompletions) {
-        m_apiCallCompletions->StopThread();
-        SAFE_DELETE(m_apiCallCompletions);
-    }
+    if(m_httpEngine)
+        SAFE_DELETE(m_httpEngine);
+    
     m_addonHelper->Log(LOG_NOTICE, "SovokTV stopped.");
 }
 
@@ -578,14 +562,14 @@ bool SovokTV::Login(bool wait)
 
     auto parser = [=] (Document& jsonRoot)
     {
-        m_sessionCookie.clear();
+        m_httpEngine->m_sessionCookie.clear();
         
         string sid = jsonRoot["sid"].GetString();
         string sidName = jsonRoot["sid_name"].GetString();
         
         if (sid.empty() || sidName.empty())
             throw BadSessionIdException();
-        m_sessionCookie[sidName] = sid;
+        m_httpEngine->m_sessionCookie[sidName] = sid;
     };
     
     if(wait) {
@@ -685,7 +669,7 @@ void SovokTV::CallApiAsync(const ApiFunctionData& data, TParser parser, TComplet
                       throw ServerErrorException(err,code);
                   });
     };
-    CallApiAsync(strRequest, parserWrapper, [=](const CActionQueue::ActionResult& s)
+    m_httpEngine->CallApiAsync(strRequest, parserWrapper, [=](const CActionQueue::ActionResult& s)
                  {
                      // Do not re-login within login command.
                      if(s.status == CActionQueue::kActionCompleted || isLoginCommand) {
@@ -694,96 +678,10 @@ void SovokTV::CallApiAsync(const ApiFunctionData& data, TParser parser, TComplet
                      }
                      // In case of error try to re-login and repeat the API call.
                      Login(false);
-                    CallApiAsync(strRequest, parserWrapper,  [=](const CActionQueue::ActionResult& ss){
+                    m_httpEngine->CallApiAsync(strRequest, parserWrapper,  [=](const CActionQueue::ActionResult& ss){
                                      completion(ss);
                                  });
                  });
-}
-
-template <typename TParser, typename TCompletion>
-void SovokTV::CallApiAsync(const std::string& request, TParser parser, TCompletion completion)
-{
-    if(!m_apiCalls->IsRunning())
-        throw QueueNotRunningException("API request queue in not running.");
-
-    m_apiCalls->PerformAsync([=](){
-        SendHttpRequest(request, m_sessionCookie, parser,
-                        [=](const CActionQueue::ActionResult& s) { completion(s);});
-    },[=](const CActionQueue::ActionResult& s) {
-        if(s.status != CActionQueue::kActionCompleted)
-            completion(s);
-    });
-}
-template <typename TResultCallback, typename TCompletion>
-void SovokTV::SendHttpRequest(const std::string &url, const ParamList &cookie,  TResultCallback result, TCompletion completion) const
-{
-    char *errorMessage[CURL_ERROR_SIZE];
-    std::string* response = new std::string();
-    CURL *curl = curl_easy_init();
-    if (curl)
-    {
-        auto start = P8PLATFORM::GetTimeMs();
-        m_addonHelper->Log(LOG_INFO, "Sending request: %s", url.c_str());
-        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
-        curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errorMessage);
-
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlWriteData);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, response);
-
-        string cookieStr;
-        ParamList::const_iterator itCookie = cookie.begin();
-        for(; itCookie != cookie.end(); ++itCookie)
-        {
-            if (itCookie != cookie.begin())
-                cookieStr += "; ";
-            cookieStr += itCookie->first + "=" + itCookie->second;
-        }
-        curl_easy_setopt(curl, CURLOPT_COOKIE, cookieStr.c_str());
-
-        long httpCode = 0;
-        int retries = 5;
-        while (retries-- > 0)
-        {
-            CURLcode curlCode = curl_easy_perform(curl);
-            if (curlCode != CURLE_OK)
-            {
-                m_addonHelper->Log(LOG_ERROR, "%s: %s", __FUNCTION__, errorMessage);
-                break;
-            }
-
-            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
-
-            if (httpCode != 503) // temporarily unavailable
-                break;
-
-            m_addonHelper->Log(LOG_INFO, "%s: %s", __FUNCTION__, "HTTP error 503 (temporarily unavailable)");
-
-            P8PLATFORM::CEvent::Sleep(1000);
-        }
-        m_addonHelper->Log(LOG_INFO, "Got HTTP response in %d ms", P8PLATFORM::GetTimeMs() - start);
-
-        if (httpCode != 200)
-            *response = "";
-
-        curl_easy_cleanup(curl);
-        if(!m_apiCallCompletions->IsRunning())
-            throw QueueNotRunningException("API call completion queue in not running.");
-
-        m_apiCallCompletions->PerformAsync([=]() {
-            result(*response);
-        }, [=](const CActionQueue::ActionResult& s) {
-            delete response;
-            completion(s);
-        });
-    }
-}
-
-size_t SovokTV::CurlWriteData(void *buffer, size_t size, size_t nmemb, void *userp)
-{
-    string *response = (string *)userp;
-    response->append((char *)buffer, size * nmemb);
-    return size * nmemb;
 }
 
 bool SovokTV::LoadStreamers()

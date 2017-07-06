@@ -35,7 +35,8 @@
 #include <functional>
 #include <list>
 #include <memory>
-#include "ActionQueue.hpp"
+
+class HttpEngine;
 
 struct SovokChannel
 {
@@ -142,14 +143,7 @@ public:
     const int code;
 };
 
-class QueueNotRunningException : public SovokExceptionBase
-{
-public:
-    QueueNotRunningException(const char* r) : SovokExceptionBase(r) {}
-};
 
-
-class CActionQueue;
 
 class SovokTV
 {
@@ -198,12 +192,7 @@ private:
     void CallApiFunction(const ApiFunctionData& data, TParser parser);
     template <typename TParser, typename TCompletion>
     void CallApiAsync(const ApiFunctionData& data, TParser parser, TCompletion completion);
-    template <typename TParser, typename TCompletion>
-    void CallApiAsync(const std::string& request, TParser parser, TCompletion completion);
-    template <typename TResultCallback, typename TCompletion>
-    void SendHttpRequest(const std::string &url,const ParamList &cookie, TResultCallback result, TCompletion completion) const;
     
-    static size_t CurlWriteData(void *buffer, size_t size, size_t nmemb, void *userp);
     void BuildChannelAndGroupList();
     void LoadSettings();
     void LoadArchiveList();
@@ -223,7 +212,6 @@ private:
     ADDON::CHelper_libXBMC_addon *m_addonHelper;
     std::string m_login;
     std::string m_password;
-    ParamList m_sessionCookie;
     ChannelList m_channelList;
     ArchiveList m_archiveList;
     GroupList m_groupList;
@@ -235,11 +223,10 @@ private:
     long m_serverTimeShift;
     StreamerNamesList m_streamerNames;
     StreamerIdsList m_streamerIds;
-    CActionQueue* m_apiCalls;
-    CActionQueue* m_apiCallCompletions;
     P8PLATFORM::CMutex m_epgAccessMutex;
     HelperThread* m_archiveLoader;
     std::string m_pinCode;
+    HttpEngine* m_httpEngine;
 };
 
 #endif //sovok_tv_h

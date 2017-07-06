@@ -47,6 +47,7 @@ src/sovok_pvr_client.cpp
 src/sovok_tv.cpp
 src/timeshift_buffer.cpp
 src/ActionQueue.cpp
+src/HttpEngine.cpp
 )
 
 build_addon(pvr.puzzle.tv IPTV DEPLIBS)

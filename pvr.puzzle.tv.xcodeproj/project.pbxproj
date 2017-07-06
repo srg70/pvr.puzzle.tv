@@ -105,6 +105,8 @@
 		4C49D2431E27C4BF0026F43E /* zlib.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1EE1E27C4BF0026F43E /* zlib.h */; };
 		4C8506E41EF478A000213131 /* pvr_client_base.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C8506E21EF478A000213131 /* pvr_client_base.cpp */; };
 		4C8506E51EF478A000213131 /* pvr_client_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C8506E31EF478A000213131 /* pvr_client_base.h */; };
+		4C8506E81F0E25DF00213131 /* HttpEngine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C8506E61F0E25DF00213131 /* HttpEngine.cpp */; };
+		4C8506E91F0E25DF00213131 /* HttpEngine.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4C8506E71F0E25DF00213131 /* HttpEngine.hpp */; };
 		4CFEAA8F1E4DA81A002C2BA4 /* ActionQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CFEAA8D1E4DA81A002C2BA4 /* ActionQueue.cpp */; };
 		4CFEAA901E4DA81A002C2BA4 /* ActionQueue.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4CFEAA8E1E4DA81A002C2BA4 /* ActionQueue.hpp */; };
 /* End PBXBuildFile section */
@@ -211,6 +213,8 @@
 		4C49D1EE1E27C4BF0026F43E /* zlib.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = zlib.h; sourceTree = "<group>"; };
 		4C8506E21EF478A000213131 /* pvr_client_base.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = pvr_client_base.cpp; sourceTree = "<group>"; };
 		4C8506E31EF478A000213131 /* pvr_client_base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pvr_client_base.h; sourceTree = "<group>"; };
+		4C8506E61F0E25DF00213131 /* HttpEngine.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HttpEngine.cpp; sourceTree = "<group>"; };
+		4C8506E71F0E25DF00213131 /* HttpEngine.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = HttpEngine.hpp; sourceTree = "<group>"; };
 		4CFEAA8D1E4DA81A002C2BA4 /* ActionQueue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ActionQueue.cpp; sourceTree = "<group>"; };
 		4CFEAA8E1E4DA81A002C2BA4 /* ActionQueue.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ActionQueue.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -251,6 +255,8 @@
 				4C08C7DA1D81D1B2004CAAE3 /* sovok_tv.h */,
 				4CFEAA8D1E4DA81A002C2BA4 /* ActionQueue.cpp */,
 				4CFEAA8E1E4DA81A002C2BA4 /* ActionQueue.hpp */,
+				4C8506E61F0E25DF00213131 /* HttpEngine.cpp */,
+				4C8506E71F0E25DF00213131 /* HttpEngine.hpp */,
 			);
 			path = src;
 			sourceTree = "<group>";
@@ -542,6 +548,7 @@
 				4C49D20E1E27C4BF0026F43E /* xbmc_epg_types.h in Headers */,
 				4C49D2011E27C4BF0026F43E /* libKODI_guilib.h in Headers */,
 				4C49D1F71E27C4BF0026F43E /* kodi_inputstream_dll.h in Headers */,
+				4C8506E91F0E25DF00213131 /* HttpEngine.hpp in Headers */,
 				4C49D22A1E27C4BF0026F43E /* error.h in Headers */,
 				4C49D2361E27C4BF0026F43E /* strtod.h in Headers */,
 				4C49D2101E27C4BF0026F43E /* xbmc_pvr_types.h in Headers */,
@@ -641,6 +648,7 @@
 				4C08C7FA1D81E34A004CAAE3 /* helpers.cpp in Sources */,
 				4CFEAA8F1E4DA81A002C2BA4 /* ActionQueue.cpp in Sources */,
 				4C08C7EE1D81D295004CAAE3 /* sovok_tv.cpp in Sources */,
+				4C8506E81F0E25DF00213131 /* HttpEngine.cpp in Sources */,
 				4C08C7F31D81E2A8004CAAE3 /* direct_buffer.cpp in Sources */,
 				4C08C7F51D81E2A8004CAAE3 /* timeshift_buffer.cpp in Sources */,
 			);
