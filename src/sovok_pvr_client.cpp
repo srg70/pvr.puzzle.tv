@@ -28,6 +28,7 @@
 #include <windows.h>
 #endif
 
+#include <algorithm>
 #include "p8-platform/util/util.h"
 #include "kodi/xbmc_addon_cpp_dll.h"
 
