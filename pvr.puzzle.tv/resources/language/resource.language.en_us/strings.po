@@ -14,6 +14,31 @@ msgstr ""
 "Language: en_US\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+
+msgctxt "#10010"
+msgid "Common"
+msgstr "Common"
+
+msgctxt "#10000"
+msgid "Provider"
+msgstr "Provider"
+
+msgctxt "#10001"
+msgid "Enable Timeshift"
+msgstr "Enable Timeshift"
+
+msgctxt "#10002"
+msgid "Timeshift Path"
+msgstr "Timeshift Path"
+
+msgctxt "#20000"
+msgid "PuzzlePort"
+msgstr "Port"
+
+msgctxt "#20010"
+msgid "Puzzle TV"
+msgstr "Puzzle TV"
+
 msgctxt "#30000"
 msgid "Login"
 msgstr "Login"
@@ -27,22 +52,14 @@ msgid "Add Favorites Group"
 msgstr "Add Favorites Group"
 
 msgctxt "#30003"
-msgid "Enable Timeshift"
-msgstr "Enable Timeshift"
-
-msgctxt "#30004"
-msgid "Timeshift Path"
-msgstr "Timeshift Path"
-
-msgctxt "#30005"
 msgid "Enable Adult Content"
 msgstr "Enable Adult Content"
 
-msgctxt "#30006"
+msgctxt "#30004"
 msgid "PIN Code"
 msgstr "PIN Code"
 
-msgctxt "#30007"
+msgctxt "#30005"
 msgid "Streamer"
 msgstr "Streamer"
 

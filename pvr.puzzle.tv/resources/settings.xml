@@ -1,16 +1,27 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <settings>
-  <!-- Sovok TV -->
+
+<!-- Common -->
+<category label="10010">
+    <setting id="provider_type" type="enum" label="10000" lvalues="20010|30010" default="1" />
+    <setting id="enable_timeshift" type="bool" label="10001" default="false" />
+    <setting id="timeshift_path" type="folder" label="10002" default="" visible="eq(-1,true)"/>
+</category>
+
+<!-- Puzzle TV -->
+  <category label="20010">
+      <setting id="puzzle_server_port"  type="number"    label="20000" default="8089"/>
+  </category>
+
+<!-- Sovok TV -->
   <category label="30010">
-      <setting id="sep1" label="30010" type="lsep"/>
+<!--      <setting id="sep1" label="30010" type="lsep"/>-->
       <setting id="login" type="text" label="30000" default="" />
       <setting id="password" type="text" label="30001" option="hidden" default="" />
       <setting id="add_favorites_group" type="bool" label="30002" default="true" />
-      <setting id="enable_timeshift" type="bool" label="30003" default="false" />
-      <setting id="timeshift_path" type="folder" label="30004" default="" visible="eq(-1,true)"/>
-      <setting id="enable_adult" type="bool" label="30005" default="false" />
-      <setting id="pin_code" type="text" label="30006" default="0000" visible="eq(-1,true)"/>
-      <setting id="streamer" type="fileenum" label="30007" values="resources/streamers"/>
+      <setting id="enable_adult" type="bool" label="30003" default="false" />
+      <setting id="pin_code" type="text" label="30004" default="0000" visible="eq(-1,true)"/>
+      <setting id="streamer" type="fileenum" label="30005" values="resources/streamers"/>
   </category>
 
 </settings>
