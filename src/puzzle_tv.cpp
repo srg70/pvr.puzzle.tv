@@ -465,6 +465,8 @@ const GroupList &PuzzleTV::GetGroupList()
 
 string PuzzleTV::GetUrl(ChannelId channelId)
 {
+    if(m_channelList.count( channelId ) != 1)
+        return string();
     return m_channelList[channelId].Urls[0];
 //    string url;
 //

@@ -66,10 +66,25 @@ ADDON_STATUS ADDON_Create(void* hdl, void* props)
         return ADDON_STATUS_PERMANENT_FAILURE;
     }
     PVR_PROPERTIES* pvrprops = (PVR_PROPERTIES*)props;
-    
+  
+    int clientType = 1;
+    m_xbmc->GetSetting("provider_type", &clientType);
+
+    switch (clientType) {
+        case 0:
+            m_DataSource = new PuzzlePVRClient();
+            break;
+        case 1:
+            m_DataSource = new SovokPVRClient();
+            break;
+            
+        default:
+            m_DataSource = NULL;
+            m_xbmc->QueueNotification(QUEUE_ERROR, "PVR Puzzle TV error: unknown provider");
+            break;
+    }
     //m_DataSource = new SovokPVRClient();
-    m_DataSource = new PuzzlePVRClient();
-    return m_DataSource->Init(m_xbmc, m_pvr, pvrprops);
+    return (NULL == m_DataSource) ? ADDON_STATUS_NEED_SETTINGS: m_DataSource->Init(m_xbmc, m_pvr, pvrprops);
 }
 
 ADDON_STATUS ADDON_GetStatus()
@@ -98,6 +113,9 @@ unsigned int ADDON_GetSettings(ADDON_StructSetting ***sSet)
 
 ADDON_STATUS ADDON_SetSetting(const char *settingName, const void *settingValue)
 {
+    if (strcmp(settingName, "provider_type") == 0)
+        return ADDON_STATUS_NEED_RESTART;
+    
     return m_DataSource->SetSetting(settingName, settingValue);
 }
 

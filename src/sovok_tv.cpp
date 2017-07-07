@@ -26,6 +26,9 @@
 
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
+
 #include <assert.h>
 #include <algorithm>
 #include <sstream>
@@ -46,11 +49,10 @@ static const int secondsPerHour = 60 * 60;
 const bool ASYNC_API = true;
 const bool SYNC_API = true;
 
-//static const char c_EpgCacheDelimeter = '\n';
 //
-//static const char* c_EpgCacheDirPath = "special://temp/pvr.sovok.tv";
-//
-//static const char* c_EpgCacheFilePath = "special://temp/pvr.sovok.tv/EpgCache.txt";
+static const char* c_EpgCacheDirPath = "special://temp/pvr-puzzle-tv";
+
+static const char* c_EpgCacheFilePath = "special://temp/pvr-puzzle-tv/epg_cache.txt";
 
 static void BeutifyUrl(string& url);
 struct SovokTV::ApiFunctionData
@@ -130,7 +132,6 @@ SovokTV::SovokTV(ADDON::CHelper_libXBMC_addon *addonHelper, const string &login,
     m_password(password),
     m_lastEpgRequestStartTime(0),
     m_lastEpgRequestEndTime(0),
-    m_lastUniqueBroadcastId(0),
     m_archiveLoader(NULL)
 {
     m_httpEngine = new HttpEngine(m_addonHelper);
@@ -166,77 +167,92 @@ void SovokTV::Cleanup()
     m_addonHelper->Log(LOG_NOTICE, "SovokTV stopped.");
 }
 
+template< typename ContainerT, typename PredicateT >
+void erase_if( ContainerT& items, const PredicateT& predicate ) {
+    for( auto it = items.begin(); it != items.end(); ) {
+        if( predicate(*it) ) it = items.erase(it);
+        else ++it;
+    }
+};
 void SovokTV::SaveEpgCache()
 {
-//    // Leave epg entries not older then 2 weeks from now
-//    time_t now = time(nullptr);
-//    m_lastEpgRequestStartTime = max(m_lastEpgRequestStartTime, now - 14*24*60*60);
-//    m_epgEntries.erase(remove_if(m_epgEntries.begin(), m_epgEntries.end(), [=] (EpgEntryList::value_type i)
-//            {
-//                return i.StartTime < m_lastEpgRequestStartTime;
-//            }),
-//            m_epgEntries.end());
-//    
-//    ostringstream ss;
-//    ss << m_lastEpgRequestStartTime << c_EpgCacheDelimeter;
-//    ss << m_lastEpgRequestEndTime << c_EpgCacheDelimeter;
-//    ss << m_lastUniqueBroadcastId << c_EpgCacheDelimeter;
-//    ss << m_epgEntries.size() << c_EpgCacheDelimeter;
-//    for_each(m_epgEntries.begin(), m_epgEntries.end(),[&](EpgEntryList::value_type i)
-//    {
-//        const SovokEpgCaheEntry& cacheItem = i;
-//        ss << cacheItem.ChannelId << c_EpgCacheDelimeter;
-//        ss << cacheItem.UniqueBroadcastId << c_EpgCacheDelimeter;
-//        ss << cacheItem.StartTime << c_EpgCacheDelimeter;
-//        ss << cacheItem.EndTime << c_EpgCacheDelimeter;
-//        ss << c_EpgCacheDelimeter;
-//    });
-//    
-//    m_addonHelper->CreateDirectory(c_EpgCacheDirPath);
-//    
-//    void* file = m_addonHelper->OpenFileForWrite(c_EpgCacheFilePath, true);
-//    if(NULL == file)
-//        return;
-//    string buf = ss.rdbuf()->str();
-//    m_addonHelper->WriteFile(file, buf.c_str(), buf.size());
-//    m_addonHelper->CloseFile(file);
-//    
+    // Leave epg entries not older then 2 weeks from now
+    time_t now = time(nullptr);
+    auto oldest = m_lastEpgRequestStartTime = max(m_lastEpgRequestStartTime, now - 14*24*60*60);
+    erase_if(m_epgEntries,  [oldest] (const EpgEntryList::value_type& i)
+             {
+                 return i.second.StartTime < oldest;
+             });
+
+    StringBuffer s;
+    Writer<StringBuffer> writer(s);
+    
+    writer.StartObject();               // Between StartObject()/EndObject(),
+    writer.Key("m_lastEpgRequestStartTime");
+    writer.Int64(m_lastEpgRequestStartTime);
+    writer.Key("m_lastEpgRequestEndTime");
+    writer.Int64(m_lastEpgRequestEndTime);
+    
+    writer.Key("m_epgEntries");
+    writer.StartArray();                // Between StartArray()/EndArray(),
+    for_each(m_epgEntries.begin(), m_epgEntries.end(),[&](const EpgEntryList::value_type& i) {
+        writer.StartObject();               // Between StartObject()/EndObject(),
+        writer.Key("k");
+        writer.Int64(i.first);
+        writer.Key("v");
+        i.second.Serialize(writer);
+        writer.EndObject();
+    });
+    writer.EndArray();
+             
+    writer.EndObject();
+
+    m_addonHelper->CreateDirectory(c_EpgCacheDirPath);
+    
+    void* file = m_addonHelper->OpenFileForWrite(c_EpgCacheFilePath, true);
+    if(NULL == file)
+        return;
+    auto buf = s.GetString();
+    m_addonHelper->WriteFile(file, buf, s.GetSize());
+    m_addonHelper->CloseFile(file);
+    
 }
 void SovokTV::LoadEpgCache()
 {
-//    void* file = m_addonHelper->OpenFile(c_EpgCacheFilePath, 0);
-//    if(NULL == file)
-//        return;
-//    int64_t fSize = m_addonHelper->GetFileLength(file);
-//    
-//    char* rawBuf = new char[fSize];
-//    if(0 == rawBuf)
-//        return;
-//    m_addonHelper->ReadFile(file, rawBuf, fSize);
-//    
-//    istringstream ss(rawBuf);
-//    delete[] rawBuf;
-//    
-//    char delimeter;
-//    size_t entriesSize;
-//    
-//    ss >> m_lastEpgRequestStartTime;
-//    ss >> m_lastEpgRequestEndTime;
-//    ss >> m_lastUniqueBroadcastId;
-//    ss >> entriesSize;
-//    
-//    while(!ss.eof() && entriesSize-- > 0)
-//    {
-//        SovokEpgEntry cacheItem;
-//        cacheItem.Title = "Cached item";
-//        ss >> cacheItem.ChannelId;
-//        ss >> cacheItem.UniqueBroadcastId;
-//        ss >> cacheItem.StartTime;
-//        ss >> cacheItem.EndTime;
-////        ss >> delimeter;
-//        m_epgEntries.push_back(cacheItem);
-//    }
+    void* file = m_addonHelper->OpenFile(c_EpgCacheFilePath, 0);
+    if(NULL == file)
+        return;
+    int64_t fSize = m_addonHelper->GetFileLength(file);
     
+    char* rawBuf = new char[fSize + 1];
+    if(0 == rawBuf)
+        return;
+    m_addonHelper->ReadFile(file, rawBuf, fSize);
+    rawBuf[fSize] = 0;
+    
+    string ss(rawBuf);
+    delete[] rawBuf;
+    try {
+        ParseJson(ss, [&] (Document& jsonRoot) {
+            m_lastEpgRequestStartTime = jsonRoot["m_lastEpgRequestStartTime"].GetInt();
+            m_lastEpgRequestEndTime = jsonRoot["m_lastEpgRequestEndTime"].GetInt();
+            
+            const Value& v = jsonRoot["m_epgEntries"];
+            Value::ConstValueIterator it = v.Begin();
+            for(; it != v.End(); ++it)
+            {
+                EpgEntryList::key_type k = (*it)["k"].GetInt64();
+                EpgEntryList::mapped_type e;
+                e.Deserialize((*it)["v"]);
+                m_epgEntries[k] = e;
+            }
+        });
+
+    } catch (...) {
+        Log(" >>>>  FAILED load EPG cache <<<<<");
+        m_epgEntries.clear();
+        m_lastEpgRequestStartTime = m_lastEpgRequestEndTime = 0;
+    }
 }
 
 bool SovokTV::StartArchivePollingWithCompletion(std::function<void(void)> action)

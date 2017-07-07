@@ -74,6 +74,32 @@ struct SovokEpgEntry
 
     std::string Title;
     std::string Description;
+    
+    template <class T>
+    void Serialize(T& writer) const
+    {
+        writer.StartObject();               // Between StartObject()/EndObject(),
+        writer.Key("ChannelId");
+        writer.Uint(ChannelId);
+        writer.Key("StartTime");
+        writer.Int64(StartTime);
+        writer.Key("EndTime");
+        writer.Int64(EndTime);
+        writer.Key("Title");
+        writer.String(Title.c_str());
+        writer.Key("Description");
+        writer.String(Description.c_str());
+        writer.EndObject();
+    }
+    template <class T>
+    void Deserialize(T& reader)
+    {
+        ChannelId = reader["ChannelId"].GetUint();
+        StartTime = reader["StartTime"].GetInt64();
+        EndTime = reader["EndTime"].GetInt64();
+        Title = reader["Title"].GetString();
+        Description = reader["Description"].GetString();
+    }
 };
 
 typedef unsigned int UniqueBroadcastIdType;
@@ -220,7 +246,6 @@ private:
     EpgEntryList m_epgEntries;
     time_t m_lastEpgRequestStartTime;
     time_t m_lastEpgRequestEndTime;
-    UniqueBroadcastIdType m_lastUniqueBroadcastId;
     int m_streammerId;
     long m_serverTimeShift;
     StreamerNamesList m_streamerNames;
