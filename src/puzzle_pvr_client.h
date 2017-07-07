@@ -20,8 +20,9 @@
  *
  */
 
-#ifndef __sovok_pvr_client_h__
-#define __sovok_pvr_client_h__
+#ifndef __puzzle_pvr_client_h__
+#define __puzzle_pvr_client_h__
+
 
 #include "xbmc_pvr_types.h"
 #include <string>
@@ -30,58 +31,49 @@
 
 class CHelper_libXBMC_pvr;
 class InputBuffer;
-class SovokTV;
+namespace PuzzleEngine {
+class PuzzleTV;
+}
 
-class SovokPVRClient: public PVRClientBase
+class PuzzlePVRClient: public PVRClientBase
 {
 public:
     ADDON_STATUS Init(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,  PVR_PROPERTIES* pvrprops);
-    ~SovokPVRClient();
+    ~PuzzlePVRClient();
 
     ADDON_STATUS SetSetting(const char *settingName, const void *settingValue);
     
     PVR_ERROR GetAddonCapabilities(PVR_ADDON_CAPABILITIES* pCapabilities);
-
+    
     PVR_ERROR SignalStatus(PVR_SIGNAL_STATUS &signalStatus);
     ADDON_STATUS GetStatus();
-
+    
     
     PVR_ERROR GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL& channel, time_t iStart, time_t iEnd);
-
+    
     int GetChannelGroupsAmount();
     PVR_ERROR GetChannelGroups(ADDON_HANDLE handle, bool bRadio);
     PVR_ERROR GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_CHANNEL_GROUP& group);
-
+    
     int GetChannelsAmount();
     PVR_ERROR GetChannels(ADDON_HANDLE handle, bool bRadio);
-
+    
     PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
     
     bool OpenLiveStream(const PVR_CHANNEL& channel);
     bool SwitchChannel(const PVR_CHANNEL& channel);
-
+    
     int GetRecordingsAmount(bool deleted);
     PVR_ERROR GetRecordings(ADDON_HANDLE handle, bool deleted);
     bool OpenRecordedStream(const PVR_RECORDING &recording);
-
+    
     PVR_ERROR CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
-
 
 private:
     void CreateCore();
-    void SetAddFavoritesGroup(bool shouldAddFavoritesGroup);
-    bool ShouldAddFavoritesGroup() { return m_shouldAddFavoritesGroup; }
-    void SetStreamerId(int streamerIdx);
-    int GetStreamerId();
     
-    void SetPinCode(const std::string& code);
-
-    SovokTV* m_sovokTV;
-    bool m_shouldAddFavoritesGroup;
-    std::string m_login;
-    std::string m_password;
-    std::string m_strimmer;
-    bool m_enableAdult;
+    PuzzleEngine::PuzzleTV* m_puzzleTV;
+//    bool m_shouldAddFavoritesGroup;
 };
 
-#endif //__sovok_pvr_client_h__
+#endif //__puzzle_pvr_client_h__

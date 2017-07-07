@@ -297,7 +297,7 @@ PVR_ERROR SovokPVRClient::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_
     GroupList::const_iterator itGroup = groups.find(group.strGroupName);
     if (itGroup != groups.end())
     {
-        std::set<int>::const_iterator itChannel = itGroup->second.Channels.begin();
+        std::set<SovokChannelId>::const_iterator itChannel = itGroup->second.Channels.begin();
         for (; itChannel != itGroup->second.Channels.end(); ++itChannel)
         {
             if (group.strGroupName == itGroup->first)

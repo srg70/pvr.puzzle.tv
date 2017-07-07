@@ -28,6 +28,7 @@
 
 #include "addon.h"
 #include "sovok_pvr_client.h"
+#include "puzzle_pvr_client.h"
 #include "xbmc_pvr_dll.h"
 #include "p8-platform/util/util.h"
 #include "kodi/xbmc_addon_cpp_dll.h"
@@ -66,8 +67,8 @@ ADDON_STATUS ADDON_Create(void* hdl, void* props)
     }
     PVR_PROPERTIES* pvrprops = (PVR_PROPERTIES*)props;
     
-    //m_DataSource = new IptvSimple();
-    m_DataSource = new SovokPVRClient();
+    //m_DataSource = new SovokPVRClient();
+    m_DataSource = new PuzzlePVRClient();
     return m_DataSource->Init(m_xbmc, m_pvr, pvrprops);
 }
 

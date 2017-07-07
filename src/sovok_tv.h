@@ -38,9 +38,11 @@
 
 class HttpEngine;
 
+typedef unsigned int SovokChannelId;
+
 struct SovokChannel
 {
-    int Id;
+    SovokChannelId Id;
     std::string Name;
     std::string IconPath;
     bool IsRadio;
@@ -54,7 +56,7 @@ struct SovokChannel
 
 struct SovokGroup
 {
-    std::set<int> Channels;
+    std::set<SovokChannelId> Channels;
 };
 
 //struct SovokEpgCaheEntry
@@ -66,7 +68,7 @@ struct SovokGroup
 //};
 struct SovokEpgEntry
 {
-    int ChannelId;
+    SovokChannelId ChannelId;
     time_t StartTime;
     time_t EndTime;
 
@@ -84,16 +86,16 @@ struct SovokEpgCaheEntry
         , StartTime(startTime)
     {}
 
-    const int ChannelId;
+    const SovokChannelId ChannelId;
     const time_t StartTime;
 };
 
-typedef std::map<int, SovokChannel> ChannelList;
+typedef std::map<SovokChannelId, SovokChannel> ChannelList;
 typedef std::map<std::string, SovokGroup> GroupList;
 typedef std::map<UniqueBroadcastIdType, SovokEpgEntry> EpgEntryList;
 //typedef std::vector<SovokEpgCaheEntry> EpgCache;
 typedef std::map<std::string, std::string> ParamList;
-typedef std::set<int> FavoriteList;
+typedef std::set<SovokChannelId> FavoriteList;
 typedef std::vector<std::string> StreamerNamesList;
 typedef std::set<SovokArchiveEntry> ArchiveList;
 
@@ -160,13 +162,13 @@ public:
 
     
     //EpgEntryList GetEpg(int channelId, time_t day);
-    void  GetEpg(int channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries);
+    void  GetEpg(SovokChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries);
     void GetEpgForAllChannels(time_t startTime, time_t endTime, EpgEntryList& epgEntries);
-    bool FindEpg(unsigned int brodcastId, SovokEpgEntry& epgEntry);
+    bool FindEpg(SovokChannelId brodcastId, SovokEpgEntry& epgEntry);
     std::string GetArchiveForEpg(const SovokEpgEntry& epgEntry);
 
     const GroupList &GetGroupList();
-    std::string GetUrl(int channelId);
+    std::string GetUrl(SovokChannelId channelId);
     FavoriteList GetFavorites();
 
     int GetSreamerId() const { return m_streammerId; }
@@ -180,7 +182,7 @@ private:
     struct ApiFunctionData;
     class HelperThread;
     
-    std::string GetArchive(int channelId, time_t startTime);
+    std::string GetArchive(SovokChannelId channelId, time_t startTime);
     
     template<class TFunc>
     void  GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHours, TFunc func);
@@ -203,7 +205,7 @@ private:
     void LoadEpgCache();
     void SaveEpgCache();
 
-    void BuildRecordingsFor(int channelId, time_t from, time_t to);
+    void BuildRecordingsFor(SovokChannelId channelId, time_t from, time_t to);
 
     template <typename TParser>
     void ParseJson(const std::string& response, TParser parser);
@@ -218,7 +220,7 @@ private:
     EpgEntryList m_epgEntries;
     time_t m_lastEpgRequestStartTime;
     time_t m_lastEpgRequestEndTime;
-    unsigned int m_lastUniqueBroadcastId;
+    UniqueBroadcastIdType m_lastUniqueBroadcastId;
     int m_streammerId;
     long m_serverTimeShift;
     StreamerNamesList m_streamerNames;

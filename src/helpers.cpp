@@ -36,6 +36,15 @@ std::string n_to_string(int64_t n)
     return buffer;
 }
 
+std::string n_to_string_hex(uint64_t n)
+{
+    char buffer[9];
+    snprintf(buffer, sizeof(buffer), "%x", n);
+    
+    return buffer;
+}
+
+
 int strtoi(const std::string &str)
 {
     return atoi(str.c_str());

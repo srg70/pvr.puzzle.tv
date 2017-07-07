@@ -107,6 +107,10 @@
 		4C8506E51EF478A000213131 /* pvr_client_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C8506E31EF478A000213131 /* pvr_client_base.h */; };
 		4C8506E81F0E25DF00213131 /* HttpEngine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C8506E61F0E25DF00213131 /* HttpEngine.cpp */; };
 		4C8506E91F0E25DF00213131 /* HttpEngine.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4C8506E71F0E25DF00213131 /* HttpEngine.hpp */; };
+		4C8506EC1F0E49F400213131 /* puzzle_pvr_client.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C8506EA1F0E49F400213131 /* puzzle_pvr_client.cpp */; };
+		4C8506ED1F0E49F400213131 /* puzzle_pvr_client.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C8506EB1F0E49F400213131 /* puzzle_pvr_client.h */; };
+		4C8506F11F0E541100213131 /* puzzle_tv.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C8506EF1F0E541100213131 /* puzzle_tv.cpp */; };
+		4C8506F21F0E541100213131 /* puzzle_tv.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C8506F01F0E541100213131 /* puzzle_tv.h */; };
 		4CFEAA8F1E4DA81A002C2BA4 /* ActionQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CFEAA8D1E4DA81A002C2BA4 /* ActionQueue.cpp */; };
 		4CFEAA901E4DA81A002C2BA4 /* ActionQueue.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4CFEAA8E1E4DA81A002C2BA4 /* ActionQueue.hpp */; };
 /* End PBXBuildFile section */
@@ -215,6 +219,10 @@
 		4C8506E31EF478A000213131 /* pvr_client_base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pvr_client_base.h; sourceTree = "<group>"; };
 		4C8506E61F0E25DF00213131 /* HttpEngine.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HttpEngine.cpp; sourceTree = "<group>"; };
 		4C8506E71F0E25DF00213131 /* HttpEngine.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = HttpEngine.hpp; sourceTree = "<group>"; };
+		4C8506EA1F0E49F400213131 /* puzzle_pvr_client.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = puzzle_pvr_client.cpp; sourceTree = "<group>"; };
+		4C8506EB1F0E49F400213131 /* puzzle_pvr_client.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = puzzle_pvr_client.h; sourceTree = "<group>"; };
+		4C8506EF1F0E541100213131 /* puzzle_tv.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = puzzle_tv.cpp; sourceTree = "<group>"; };
+		4C8506F01F0E541100213131 /* puzzle_tv.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = puzzle_tv.h; sourceTree = "<group>"; };
 		4CFEAA8D1E4DA81A002C2BA4 /* ActionQueue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ActionQueue.cpp; sourceTree = "<group>"; };
 		4CFEAA8E1E4DA81A002C2BA4 /* ActionQueue.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ActionQueue.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -249,10 +257,8 @@
 				4C4FBFA41E77C0590027911E /* Buffers */,
 				4C8506E21EF478A000213131 /* pvr_client_base.cpp */,
 				4C8506E31EF478A000213131 /* pvr_client_base.h */,
-				4C08C7D71D81D1B2004CAAE3 /* sovok_pvr_client.cpp */,
-				4C08C7D81D81D1B2004CAAE3 /* sovok_pvr_client.h */,
-				4C08C7D91D81D1B2004CAAE3 /* sovok_tv.cpp */,
-				4C08C7DA1D81D1B2004CAAE3 /* sovok_tv.h */,
+				4C8506F31F0E541700213131 /* Puzzle TV */,
+				4C8506EE1F0E53B400213131 /* Sovok TV */,
 				4CFEAA8D1E4DA81A002C2BA4 /* ActionQueue.cpp */,
 				4CFEAA8E1E4DA81A002C2BA4 /* ActionQueue.hpp */,
 				4C8506E61F0E25DF00213131 /* HttpEngine.cpp */,
@@ -462,6 +468,28 @@
 			name = Buffers;
 			sourceTree = "<group>";
 		};
+		4C8506EE1F0E53B400213131 /* Sovok TV */ = {
+			isa = PBXGroup;
+			children = (
+				4C08C7D71D81D1B2004CAAE3 /* sovok_pvr_client.cpp */,
+				4C08C7D81D81D1B2004CAAE3 /* sovok_pvr_client.h */,
+				4C08C7D91D81D1B2004CAAE3 /* sovok_tv.cpp */,
+				4C08C7DA1D81D1B2004CAAE3 /* sovok_tv.h */,
+			);
+			name = "Sovok TV";
+			sourceTree = "<group>";
+		};
+		4C8506F31F0E541700213131 /* Puzzle TV */ = {
+			isa = PBXGroup;
+			children = (
+				4C8506EA1F0E49F400213131 /* puzzle_pvr_client.cpp */,
+				4C8506EB1F0E49F400213131 /* puzzle_pvr_client.h */,
+				4C8506EF1F0E541100213131 /* puzzle_tv.cpp */,
+				4C8506F01F0E541100213131 /* puzzle_tv.h */,
+			);
+			name = "Puzzle TV";
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -513,6 +541,7 @@
 				4C49D2131E27C4BF0026F43E /* xbmc_vis_dll.h in Headers */,
 				4C49D2421E27C4BF0026F43E /* zconf.h in Headers */,
 				4C49D23E1E27C4BF0026F43E /* stringbuffer.h in Headers */,
+				4C8506ED1F0E49F400213131 /* puzzle_pvr_client.h in Headers */,
 				4C49D2141E27C4BF0026F43E /* xbmc_vis_types.h in Headers */,
 				4C49D23A1E27C4BF0026F43E /* stdint.h in Headers */,
 				4C49D22D1E27C4BF0026F43E /* biginteger.h in Headers */,
@@ -520,6 +549,7 @@
 				4C49D2071E27C4BF0026F43E /* XMLUtils.h in Headers */,
 				4C49D2241E27C4BF0026F43E /* util.h in Headers */,
 				4C49D2121E27C4BF0026F43E /* xbmc_scr_types.h in Headers */,
+				4C8506F21F0E541100213131 /* puzzle_tv.h in Headers */,
 				4C49D2351E27C4BF0026F43E /* strfunc.h in Headers */,
 				4C49D2261E27C4BF0026F43E /* document.h in Headers */,
 				4C49D22B1E27C4BF0026F43E /* filereadstream.h in Headers */,
@@ -643,6 +673,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4C08C7FE1D8290F6004CAAE3 /* addon.cpp in Sources */,
+				4C8506EC1F0E49F400213131 /* puzzle_pvr_client.cpp in Sources */,
 				4C08C7ED1D81D295004CAAE3 /* sovok_pvr_client.cpp in Sources */,
 				4C8506E41EF478A000213131 /* pvr_client_base.cpp in Sources */,
 				4C08C7FA1D81E34A004CAAE3 /* helpers.cpp in Sources */,
@@ -651,6 +682,7 @@
 				4C8506E81F0E25DF00213131 /* HttpEngine.cpp in Sources */,
 				4C08C7F31D81E2A8004CAAE3 /* direct_buffer.cpp in Sources */,
 				4C08C7F51D81E2A8004CAAE3 /* timeshift_buffer.cpp in Sources */,
+				4C8506F11F0E541100213131 /* puzzle_tv.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

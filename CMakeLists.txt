@@ -45,6 +45,8 @@ src/helpers.cpp
 src/pvr_client_base.cpp
 src/sovok_pvr_client.cpp
 src/sovok_tv.cpp
+src/puzzle_pvr_client.cpp
+src/puzzle_tv.cpp
 src/timeshift_buffer.cpp
 src/ActionQueue.cpp
 src/HttpEngine.cpp
