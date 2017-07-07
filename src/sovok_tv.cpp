@@ -228,6 +228,9 @@ void SovokTV::LoadEpgCache()
     if(0 == rawBuf)
         return;
     m_addonHelper->ReadFile(file, rawBuf, fSize);
+    m_addonHelper->CloseFile(file);
+    file = NULL;
+    
     rawBuf[fSize] = 0;
     
     string ss(rawBuf);
