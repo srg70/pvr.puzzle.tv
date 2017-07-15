@@ -1,12 +1,16 @@
-0.0.3
-- Initial version
-- Supports Sovok.tv site API
-
-0.0.28
-- Last stable version before refactoring for multiple providers support
+0.1.3
+-Fixed crash on default settings
 
 0.1.0
 - Template for Puzzle TV proveder. Does not ready yet due to server issues
 - EPG cache
 - Code structure refactoring
 - General  improvements
+
+0.0.28
+- Last stable version before refactoring for multiple providers support
+
+0.0.3
+- Initial version
+- Supports Sovok.tv site API
+
