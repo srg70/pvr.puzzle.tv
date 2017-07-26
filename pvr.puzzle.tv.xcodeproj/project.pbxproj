@@ -111,6 +111,8 @@
 		4C8506ED1F0E49F400213131 /* puzzle_pvr_client.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C8506EB1F0E49F400213131 /* puzzle_pvr_client.h */; };
 		4C8506F11F0E541100213131 /* puzzle_tv.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C8506EF1F0E541100213131 /* puzzle_tv.cpp */; };
 		4C8506F21F0E541100213131 /* puzzle_tv.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C8506F01F0E541100213131 /* puzzle_tv.h */; };
+		4CD394B61F2258610073E2DF /* plist_buffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD394B41F2258610073E2DF /* plist_buffer.cpp */; };
+		4CD394B71F2258610073E2DF /* plist_buffer.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CD394B51F2258610073E2DF /* plist_buffer.h */; };
 		4CFEAA8F1E4DA81A002C2BA4 /* ActionQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CFEAA8D1E4DA81A002C2BA4 /* ActionQueue.cpp */; };
 		4CFEAA901E4DA81A002C2BA4 /* ActionQueue.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4CFEAA8E1E4DA81A002C2BA4 /* ActionQueue.hpp */; };
 /* End PBXBuildFile section */
@@ -215,10 +217,10 @@
 		4C49D1EC1E27C4BF0026F43E /* tinyxml.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tinyxml.h; sourceTree = "<group>"; };
 		4C49D1ED1E27C4BF0026F43E /* zconf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = zconf.h; sourceTree = "<group>"; };
 		4C49D1EE1E27C4BF0026F43E /* zlib.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = zlib.h; sourceTree = "<group>"; };
-		4C5BF35D1F18DAEE00437252 /* ott_player.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ott_player.cpp; sourceTree = "<group>"; };
 		4C5BF35E1F18DAEE00437252 /* ott_player.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ott_player.h; sourceTree = "<group>"; };
 		4C5BF35F1F18DAEE00437252 /* ott_pvr_client.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ott_pvr_client.h; sourceTree = "<group>"; };
 		4C5BF3601F18DAEE00437252 /* ott_pvr_client.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ott_pvr_client.cpp; sourceTree = "<group>"; };
+		4C5BF3611F1A310D00437252 /* ott_player.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ott_player.cpp; sourceTree = "<group>"; };
 		4C8506E21EF478A000213131 /* pvr_client_base.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = pvr_client_base.cpp; sourceTree = "<group>"; };
 		4C8506E31EF478A000213131 /* pvr_client_base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pvr_client_base.h; sourceTree = "<group>"; };
 		4C8506E61F0E25DF00213131 /* HttpEngine.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HttpEngine.cpp; sourceTree = "<group>"; };
@@ -227,6 +229,8 @@
 		4C8506EB1F0E49F400213131 /* puzzle_pvr_client.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = puzzle_pvr_client.h; sourceTree = "<group>"; };
 		4C8506EF1F0E541100213131 /* puzzle_tv.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = puzzle_tv.cpp; sourceTree = "<group>"; };
 		4C8506F01F0E541100213131 /* puzzle_tv.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = puzzle_tv.h; sourceTree = "<group>"; };
+		4CD394B41F2258610073E2DF /* plist_buffer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = plist_buffer.cpp; sourceTree = "<group>"; };
+		4CD394B51F2258610073E2DF /* plist_buffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = plist_buffer.h; sourceTree = "<group>"; };
 		4CFEAA8D1E4DA81A002C2BA4 /* ActionQueue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ActionQueue.cpp; sourceTree = "<group>"; };
 		4CFEAA8E1E4DA81A002C2BA4 /* ActionQueue.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ActionQueue.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -467,6 +471,8 @@
 				4C08C7F91D81E34A004CAAE3 /* input_buffer.h */,
 				4C08C7EF1D81E2A8004CAAE3 /* direct_buffer.cpp */,
 				4C08C7F01D81E2A8004CAAE3 /* direct_buffer.h */,
+				4CD394B41F2258610073E2DF /* plist_buffer.cpp */,
+				4CD394B51F2258610073E2DF /* plist_buffer.h */,
 				4C08C7F11D81E2A8004CAAE3 /* timeshift_buffer.cpp */,
 				4C08C7F21D81E2A8004CAAE3 /* timeshift_buffer.h */,
 			);
@@ -478,7 +484,7 @@
 			children = (
 				4C5BF3601F18DAEE00437252 /* ott_pvr_client.cpp */,
 				4C5BF35F1F18DAEE00437252 /* ott_pvr_client.h */,
-				4C5BF35D1F18DAEE00437252 /* ott_player.cpp */,
+				4C5BF3611F1A310D00437252 /* ott_player.cpp */,
 				4C5BF35E1F18DAEE00437252 /* ott_player.h */,
 			);
 			name = OTT;
@@ -586,6 +592,7 @@
 				4C49D2271E27C4BF0026F43E /* encodedstream.h in Headers */,
 				4C49D2291E27C4BF0026F43E /* en.h in Headers */,
 				4C49D20F1E27C4BF0026F43E /* xbmc_pvr_dll.h in Headers */,
+				4CD394B71F2258610073E2DF /* plist_buffer.h in Headers */,
 				4C49D2391E27C4BF0026F43E /* inttypes.h in Headers */,
 				4C49D2061E27C4BF0026F43E /* libXBMC_pvr.h in Headers */,
 				4C49D1F51E27C4BF0026F43E /* kodi_audiodec_types.h in Headers */,
@@ -690,6 +697,7 @@
 			files = (
 				4C08C7FE1D8290F6004CAAE3 /* addon.cpp in Sources */,
 				4C8506EC1F0E49F400213131 /* puzzle_pvr_client.cpp in Sources */,
+				4CD394B61F2258610073E2DF /* plist_buffer.cpp in Sources */,
 				4C08C7ED1D81D295004CAAE3 /* sovok_pvr_client.cpp in Sources */,
 				4C8506E41EF478A000213131 /* pvr_client_base.cpp in Sources */,
 				4C08C7FA1D81E34A004CAAE3 /* helpers.cpp in Sources */,

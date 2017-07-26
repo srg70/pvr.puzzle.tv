@@ -206,6 +206,7 @@ PVR_ERROR SovokPVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabili
     pCapabilities->bSupportsTV = true;
     pCapabilities->bSupportsRadio = true;
     pCapabilities->bSupportsChannelGroups = true;
+    pCapabilities->bHandlesInputStream = true;
     pCapabilities->bSupportsRecordings = true;
     
     pCapabilities->bSupportsTimers = false;
@@ -295,29 +296,27 @@ PVR_ERROR SovokPVRClient::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_
     if (m_shouldAddFavoritesGroup && group.strGroupName == favoriteGroupName)
     {
         const char* c_GroupName = favoriteGroupName.c_str();
-        FavoriteList favorites = m_sovokTV->GetFavorites();
-        FavoriteList::const_iterator itFavorite = favorites.begin();
-        for (; itFavorite != favorites.end(); ++itFavorite)
+        auto favorites = m_sovokTV->GetFavorites();
+        for (auto it= favorites.begin(),  end = favorites.end() ; it != end; ++it)
         {
             PVR_CHANNEL_GROUP_MEMBER pvrGroupMember = { 0 };
             strncpy(pvrGroupMember.strGroupName, c_GroupName, sizeof(pvrGroupMember.strGroupName));
-            pvrGroupMember.iChannelUniqueId = *itFavorite;
+            pvrGroupMember.iChannelUniqueId = *it;
             m_pvrHelper->TransferChannelGroupMember(handle, &pvrGroupMember);
         }
     }
 
-    const GroupList &groups = m_sovokTV->GetGroupList();
+    auto& groups = m_sovokTV->GetGroupList();
     GroupList::const_iterator itGroup = groups.find(group.strGroupName);
     if (itGroup != groups.end())
     {
-        std::set<SovokChannelId>::const_iterator itChannel = itGroup->second.Channels.begin();
-        for (; itChannel != itGroup->second.Channels.end(); ++itChannel)
+        for (auto it= itGroup->second.Channels.begin(), end = itGroup->second.Channels.end(); it !=end;  ++it)
         {
-            if (group.strGroupName == itGroup->first)
+//            if (group.strGroupName == itGroup->first)
             {
                 PVR_CHANNEL_GROUP_MEMBER pvrGroupMember = { 0 };
                 strncpy(pvrGroupMember.strGroupName, itGroup->first.c_str(), sizeof(pvrGroupMember.strGroupName));
-                pvrGroupMember.iChannelUniqueId = *itChannel;
+                pvrGroupMember.iChannelUniqueId = *it;
                 m_pvrHelper->TransferChannelGroupMember(handle, &pvrGroupMember);
             }
         }

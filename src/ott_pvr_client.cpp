@@ -89,7 +89,7 @@ void OttPVRClient::CreateCore()
 {
     if(m_core != NULL)
         SAFE_DELETE(m_core);
-    m_core = new OttPLayer(m_addonHelper, m_playlistUrl, m_key);
+    m_core = new OttPlayer(m_addonHelper, m_playlistUrl, m_key);
 }
 
 ADDON_STATUS OttPVRClient::SetSetting(const char *settingName, const void *settingValue)
@@ -126,10 +126,11 @@ ADDON_STATUS OttPVRClient::SetSetting(const char *settingName, const void *setti
 
 PVR_ERROR OttPVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabilities)
 {
-    pCapabilities->bSupportsEPG = true;
+    pCapabilities->bSupportsEPG = false;
     pCapabilities->bSupportsTV = true;
     pCapabilities->bSupportsRadio = true;
     pCapabilities->bSupportsChannelGroups = true;
+    pCapabilities->bHandlesInputStream = true;
     pCapabilities->bSupportsRecordings = true;
     
     pCapabilities->bSupportsTimers = false;
@@ -145,6 +146,11 @@ PVR_ERROR OttPVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabiliti
 
 PVR_ERROR OttPVRClient::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL& channel, time_t iStart, time_t iEnd)
 {
+    return PVR_ERROR_NOT_IMPLEMENTED;
+    
+    if(NULL == m_core)
+        return PVR_ERROR_SERVER_ERROR;
+    
     EpgEntryList epgEntries;
     m_core->GetEpg(channel.iUniqueId, iStart, iEnd, epgEntries);
     EpgEntryList::const_iterator itEpgEntry = epgEntries.begin();
@@ -170,24 +176,22 @@ PVR_ERROR  OttPVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHO
 }
 int OttPVRClient::GetChannelGroupsAmount()
 {
+    if(NULL == m_core)
+        return -1;
+
     size_t numberOfGroups = m_core->GetGroupList().size();
-    if (m_shouldAddFavoritesGroup)
-        numberOfGroups++;
     return numberOfGroups;
 }
 
 PVR_ERROR OttPVRClient::GetChannelGroups(ADDON_HANDLE handle, bool bRadio)
 {
+    if(NULL == m_core)
+        return PVR_ERROR_SERVER_ERROR;
+
     if (!bRadio)
     {
         PVR_CHANNEL_GROUP pvrGroup = { 0 };
         pvrGroup.bIsRadio = false;
-
-        if (m_shouldAddFavoritesGroup)
-        {
-            strncpy(pvrGroup.strGroupName, "Избранное", sizeof(pvrGroup.strGroupName));
-            m_pvrHelper->TransferChannelGroup(handle, &pvrGroup);
-        }
 
         GroupList groups = m_core->GetGroupList();
         GroupList::const_iterator itGroup = groups.begin();
@@ -203,26 +207,14 @@ PVR_ERROR OttPVRClient::GetChannelGroups(ADDON_HANDLE handle, bool bRadio)
 
 PVR_ERROR OttPVRClient::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_CHANNEL_GROUP& group)
 {
-    const std::string favoriteGroupName("Избранное");
-    if (m_shouldAddFavoritesGroup && group.strGroupName == favoriteGroupName)
-    {
-        const char* c_GroupName = favoriteGroupName.c_str();
-        FavoriteList favorites = m_core->GetFavorites();
-        FavoriteList::const_iterator itFavorite = favorites.begin();
-        for (; itFavorite != favorites.end(); ++itFavorite)
-        {
-            PVR_CHANNEL_GROUP_MEMBER pvrGroupMember = { 0 };
-            strncpy(pvrGroupMember.strGroupName, c_GroupName, sizeof(pvrGroupMember.strGroupName));
-            pvrGroupMember.iChannelUniqueId = *itFavorite;
-            m_pvrHelper->TransferChannelGroupMember(handle, &pvrGroupMember);
-        }
-    }
+    if(NULL == m_core)
+        return PVR_ERROR_SERVER_ERROR;
 
     const GroupList &groups = m_core->GetGroupList();
     GroupList::const_iterator itGroup = groups.find(group.strGroupName);
     if (itGroup != groups.end())
     {
-        std::set<SovokChannelId>::const_iterator itChannel = itGroup->second.Channels.begin();
+        std::set<OttChannelId>::const_iterator itChannel = itGroup->second.Channels.begin();
         for (; itChannel != itGroup->second.Channels.end(); ++itChannel)
         {
             if (group.strGroupName == itGroup->first)
@@ -240,25 +232,31 @@ PVR_ERROR OttPVRClient::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_CH
 
 int OttPVRClient::GetChannelsAmount()
 {
+    if(NULL == m_core)
+        return -1;
+
     return m_core->GetChannelList().size();
 }
 
 PVR_ERROR OttPVRClient::GetChannels(ADDON_HANDLE handle, bool bRadio)
 {
+    if(NULL == m_core)
+        return PVR_ERROR_SERVER_ERROR;
+
     const ChannelList &channels = m_core->GetChannelList();
     ChannelList::const_iterator itChannel = channels.begin();
     for(; itChannel != channels.end(); ++itChannel)
     {
-        const SovokChannel &sovokChannel = itChannel->second;
-        if (bRadio == sovokChannel.IsRadio)
+        const OttChannel &channel = itChannel->second;
+        if (bRadio == channel.IsRadio)
         {
             PVR_CHANNEL pvrChannel = { 0 };
-            pvrChannel.iUniqueId = sovokChannel.Id;
-            pvrChannel.iChannelNumber = sovokChannel.Id;
-            pvrChannel.bIsRadio = sovokChannel.IsRadio;
-            strncpy(pvrChannel.strChannelName, sovokChannel.Name.c_str(), sizeof(pvrChannel.strChannelName));
+            pvrChannel.iUniqueId = channel.Id;
+            pvrChannel.iChannelNumber = channel.Id;
+            pvrChannel.bIsRadio = channel.IsRadio;
+            strncpy(pvrChannel.strChannelName, channel.Name.c_str(), sizeof(pvrChannel.strChannelName));
 
-            string iconUrl = "http://sovok.tv" + sovokChannel.IconPath;
+            string iconUrl = channel.IconPath;
             strncpy(pvrChannel.strIconPath, iconUrl.c_str(), sizeof(pvrChannel.strIconPath));;
 
             m_pvrHelper->TransferChannelEntry(handle, &pvrChannel);
@@ -270,28 +268,29 @@ PVR_ERROR OttPVRClient::GetChannels(ADDON_HANDLE handle, bool bRadio)
 
 bool OttPVRClient::OpenLiveStream(const PVR_CHANNEL& channel)
 {
+    if(NULL == m_core)
+        return false;
+
     string url = m_core->GetUrl(channel.iUniqueId);
     return PVRClientBase::OpenLiveStream(url);
 }
 
 bool OttPVRClient::SwitchChannel(const PVR_CHANNEL& channel)
 {
+    if(NULL == m_core)
+        return false;
+
     string url = m_core->GetUrl(channel.iUniqueId);
     return PVRClientBase::SwitchChannel(url);
 }
 
-void OttPVRClient::SetAddFavoritesGroup(bool shouldAddFavoritesGroup)
-{
-    if (shouldAddFavoritesGroup != m_shouldAddFavoritesGroup)
-    {
-        m_shouldAddFavoritesGroup = shouldAddFavoritesGroup;
-        m_pvrHelper->TriggerChannelGroupsUpdate();
-    }
-}
 
 
 int OttPVRClient::GetRecordingsAmount(bool deleted)
 {
+    if(NULL == m_core)
+        return -1;
+
     if(deleted)
         return -1;
     
@@ -318,13 +317,13 @@ PVR_ERROR OttPVRClient::GetRecordings(ADDON_HANDLE handle, bool deleted)
         return PVR_ERROR_NOT_IMPLEMENTED;
     
     PVR_ERROR result = PVR_ERROR_NO_ERROR;
-    SovokTV& sTV(*m_core);
+    OttPlayer& sTV(*m_core);
     CHelper_libXBMC_pvr * pvrHelper = m_pvrHelper;
     ADDON::CHelper_libXBMC_addon * addonHelper = m_addonHelper;
     std::function<void(const ArchiveList&)> f = [&sTV, &handle, pvrHelper, addonHelper ,&result](const ArchiveList& list){
         for(const auto &  i :  list) {
             try {
-                const SovokEpgEntry& epgTag = sTV.GetEpgList().at(i);
+                const OttEpgEntry& epgTag = sTV.GetEpgList().at(i);
 
                 PVR_RECORDING tag = { 0 };
     //            memset(&tag, 0, sizeof(PVR_RECORDING));
@@ -361,7 +360,10 @@ PVR_ERROR OttPVRClient::GetRecordings(ADDON_HANDLE handle, bool deleted)
 
 bool OttPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
 {
-    SovokEpgEntry epgTag;
+    if(NULL == m_core)
+        return PVR_ERROR_SERVER_ERROR;
+
+    OttEpgEntry epgTag;
     
     unsigned int epgId = recording.iEpgEventId;
     if( epgId == 0 )
@@ -387,9 +389,6 @@ PVR_ERROR OttPVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
 }
 
 ADDON_STATUS OttPVRClient::GetStatus(){ return  /*(m_core == NULL)? ADDON_STATUS_LOST_CONNECTION : */ADDON_STATUS_OK;}
-void OttPVRClient::SetStreamerId(int streamerIdx) { m_core->SetStreamerId(streamerIdx); }
-int OttPVRClient::GetStreamerId() { return m_core->GetSreamerId(); }
-void OttPVRClient::SetPinCode(const std::string& code) {m_core->SetPinCode(code);}
        
 
 

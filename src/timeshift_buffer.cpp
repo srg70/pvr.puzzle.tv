@@ -68,16 +68,16 @@ void TimeshiftBuffer::Init(const string &streamUrl) {
     m_position = 0;
     m_ReadChunks.clear();
     m_ChunkFileSwarm.clear();
-    m_streamHandle = m_addonHelper->OpenFile(streamUrl.c_str(), XFILE::READ_AUDIO_VIDEO | XFILE::READ_AFTER_WRITE);
+    m_streamHandle = m_addonHelper->OpenFile(streamUrl.c_str(), XFILE::READ_AUDIO_VIDEO | XFILE::READ_AFTER_WRITE | XFILE::READ_CHUNKED);
     if (!m_streamHandle)
         throw InputBufferException("Failed to open source stream.");
     CreateThread();
 }
 void TimeshiftBuffer::DebugLog(const std::string& message ) const
 {
-    char* msg = m_addonHelper->UnknownToUTF8(message.c_str());
-    m_addonHelper->Log(LOG_DEBUG, msg);
-    m_addonHelper->FreeString(msg);
+//    char* msg = m_addonHelper->UnknownToUTF8(message.c_str());
+    m_addonHelper->Log(LOG_DEBUG, message.c_str());
+//    m_addonHelper->FreeString(msg);
 }
 
 TimeshiftBuffer::~TimeshiftBuffer()
@@ -90,10 +90,10 @@ TimeshiftBuffer::~TimeshiftBuffer()
 
 bool TimeshiftBuffer::StopThread(int iWaitMs)
 {
-    int stopCounter = 0;
+    int stopCounter = 1;
     bool retVal = false;
     while(!(retVal = this->CThread::StopThread(iWaitMs))){
-        if(++stopCounter > 3)
+        if(stopCounter++ > 3)
             break;
         m_addonHelper->Log(LOG_NOTICE, "TimeshiftBuffer: can't stop thread in %d ms", iWaitMs);
     }
@@ -123,10 +123,10 @@ void *TimeshiftBuffer::Process()
             }
             // Fill read buffer
             ssize_t bytesRead = 0;
-            do{
+            while (!isEof && bytesRead < sizeof(buffer) && !IsStopped()){
                 bytesRead += m_addonHelper->ReadFile(m_streamHandle, buffer + bytesRead, sizeof(buffer) - bytesRead);
                 isEof = bytesRead <= 0;
-            }while (!isEof && bytesRead < sizeof(buffer));
+            };
             // Write to local chunk
             //DebugLog(std::string(">>> Write: ") + n_to_string(bytesRead));
             ssize_t bytesWritten = chunk->m_writer.Write(buffer, bytesRead);
@@ -172,7 +172,7 @@ ssize_t TimeshiftBuffer::Read(unsigned char *buffer, size_t bufferSize)
         if(NULL == chunk)
         {
             StopThread();
-            DebugLog("TimeshiftBuffer: failed to obtain chunk for read.");
+            m_addonHelper->Log(LOG_ERROR, "TimeshiftBuffer: failed to obtain chunk for read.");
             break;
         }
 
@@ -183,6 +183,7 @@ ssize_t TimeshiftBuffer::Read(unsigned char *buffer, size_t bufferSize)
             bytesRead = chunk->m_reader.Read( buffer + totalBytesRead, bytesToRead);
             if(bytesRead == 0 && !m_writeEvent.Wait(timeout)) //timeout
             {
+                m_addonHelper->Log(LOG_NOTICE, "TimeshiftBuffer: nothing to read within %d sec.", timeout);
                 StopThread();
                 break;
             }
@@ -236,6 +237,8 @@ int64_t TimeshiftBuffer::Seek(int64_t iPosition, int iWhence)
     ChunkFilePtr chunk = NULL;
     {
         CLockObject lock(m_SyncAccess);
+        
+        // Translate position to offset from start of buffer.
         if(iWhence == SEEK_CUR)
             iPosition = m_position + iPosition;
         else if(iWhence == SEEK_END)
@@ -243,6 +246,7 @@ int64_t TimeshiftBuffer::Seek(int64_t iPosition, int iWhence)
 
         if(iPosition > m_length)
             iPosition = m_length;
+        iWhence = SEEK_SET;
         
         idx = GetChunkIndexFor(iPosition);
         if(idx >= m_ReadChunks.size()) {
@@ -360,7 +364,7 @@ ssize_t TimeshiftBuffer::CFileForWrite::Write(const void* lpBuf, size_t uiBufSiz
 
 
 TimeshiftBuffer::CFileForRead::CFileForRead(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &pathToFile)
-: CGenericFile(addonHelper, addonHelper->OpenFile(pathToFile.c_str(), 0))
+: CGenericFile(addonHelper, addonHelper->OpenFile(pathToFile.c_str(), XFILE::READ_AUDIO_VIDEO | XFILE::READ_AFTER_WRITE))
 {
 }
 

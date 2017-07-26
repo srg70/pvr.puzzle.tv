@@ -37,7 +37,7 @@
 #include "p8-platform/util/timeutils.h"
 #include "p8-platform/util/util.h"
 #include "helpers.h"
-#include "sovok_tv.h"
+#include "ott_player.h"
 #include "HttpEngine.hpp"
 
 using namespace std;
@@ -52,17 +52,11 @@ const bool SYNC_API = true;
 //
 static const char* c_EpgCacheDirPath = "special://temp/pvr-puzzle-tv";
 
-static const char* c_EpgCacheFilePath = "special://temp/pvr-puzzle-tv/epg_cache.txt";
+static const char* c_EpgCacheFilePath = "special://temp/pvr-puzzle-tv/ott_epg_cache.txt";
 
 static void BeutifyUrl(string& url);
-struct SovokTV::ApiFunctionData
+struct OttPlayer::ApiFunctionData
 {
-    enum API_Version
-    {
-        API_2_2,
-        API_2_3
-    };
-    
 //    ApiFunctionData(const char* _name)
 //    : name(_name) , params(s_EmptyParams), api_ver (API_2_2)
 //    {}
@@ -76,11 +70,11 @@ struct SovokTV::ApiFunctionData
     static const  ParamList s_EmptyParams;
 };
 
-class SovokTV::HelperThread : public P8PLATFORM::CThread
+class OttPlayer::HelperThread : public P8PLATFORM::CThread
 {
 public:
-    HelperThread(SovokTV* sovokTV, std::function<void(void)> action)
-    : m_sovokTV(sovokTV), m_action(action)
+    HelperThread(OttPlayer* player, std::function<void(void)> action)
+    : m_player(player), m_action(action)
     , m_epgActivityCounter(0), m_stopEvent(false) /*Manual event*/
     {}
     void EpgActivityStarted() {++m_epgActivityCounter;}
@@ -90,7 +84,7 @@ public:
         do
         {
             unsigned int oldEpgActivity = m_epgActivityCounter;
-            m_sovokTV->LoadArchiveList();
+            m_player->LoadArchiveList();
             
             // Wait for epg done before announce archives
             bool isStopped = IsStopped();
@@ -102,7 +96,7 @@ public:
                 break;
             
             HelperThread* pThis = this;
-            m_sovokTV->m_httpEngine->RunOnCompletionQueueAsync([pThis]() {
+            m_player->m_httpEngine->RunOnCompletionQueueAsync([pThis]() {
                 pThis->m_action();
             },  [](const CActionQueue::ActionResult& s) {});
             
@@ -117,54 +111,49 @@ public:
         return this->P8PLATFORM::CThread::StopThread(iWaitMs);
     }
 private:
-    SovokTV* m_sovokTV;
+    OttPlayer* m_player;
     std::function<void(void)> m_action;
     unsigned int m_epgActivityCounter;
     P8PLATFORM::CEvent m_stopEvent;
 };
 
 
-const ParamList SovokTV::ApiFunctionData::s_EmptyParams;
+const ParamList OttPlayer::ApiFunctionData::s_EmptyParams;
 
-SovokTV::SovokTV(ADDON::CHelper_libXBMC_addon *addonHelper, const string &login, const string &password) :
+OttPlayer::OttPlayer(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &playlistUrl, const std::string &key) :
     m_addonHelper(addonHelper),
-    m_login(login),
-    m_password(password),
+    m_playlistUrl(playlistUrl),
+    m_key(key),
     m_lastEpgRequestStartTime(0),
     m_lastEpgRequestEndTime(0),
     m_archiveLoader(NULL)
 {
     m_httpEngine = new HttpEngine(m_addonHelper);
     
-    if (!Login(true)) {
-        Cleanup();
-        throw AuthFailedException();
-    }
-    if(!LoadStreamers()) {
-        Cleanup();
-        throw MissingApiException("streamers");
-    }
+//    if (!Login(true)) {
+//        Cleanup();
+//        throw AuthFailedException();
+//    }
     LoadSettings();
     LoadEpgCache();
 }
 
-SovokTV::~SovokTV()
+OttPlayer::~OttPlayer()
 {
     Cleanup();
 }
-void SovokTV::Cleanup()
+void OttPlayer::Cleanup()
 {
-    m_addonHelper->Log(LOG_NOTICE, "SovokTV stopping...");
+    m_addonHelper->Log(LOG_NOTICE, "OttPlayer stopping...");
 
     if(m_archiveLoader) {
         m_archiveLoader->StopThread();
         SAFE_DELETE(m_archiveLoader);
     }
-    Logout();
     if(m_httpEngine)
         SAFE_DELETE(m_httpEngine);
     
-    m_addonHelper->Log(LOG_NOTICE, "SovokTV stopped.");
+    m_addonHelper->Log(LOG_NOTICE, "OttPlayer stopped.");
 }
 
 template< typename ContainerT, typename PredicateT >
@@ -174,7 +163,7 @@ void erase_if( ContainerT& items, const PredicateT& predicate ) {
         else ++it;
     }
 };
-void SovokTV::SaveEpgCache()
+void OttPlayer::SaveEpgCache()
 {
     // Leave epg entries not older then 2 weeks from now
     time_t now = time(nullptr);
@@ -217,7 +206,7 @@ void SovokTV::SaveEpgCache()
     m_addonHelper->CloseFile(file);
     
 }
-void SovokTV::LoadEpgCache()
+void OttPlayer::LoadEpgCache()
 {
     void* file = m_addonHelper->OpenFile(c_EpgCacheFilePath, 0);
     if(NULL == file)
@@ -258,17 +247,17 @@ void SovokTV::LoadEpgCache()
     }
 }
 
-bool SovokTV::StartArchivePollingWithCompletion(std::function<void(void)> action)
+bool OttPlayer::StartArchivePollingWithCompletion(std::function<void(void)> action)
 {
     if(m_archiveLoader)
         return false;
     
-    m_archiveLoader = new SovokTV::HelperThread(this, action);
+    m_archiveLoader = new OttPlayer::HelperThread(this, action);
     m_archiveLoader->CreateThread(false);
     return true;
 }
 
-const ChannelList &SovokTV::GetChannelList()
+const ChannelList &OttPlayer::GetChannelList()
 {
     if (m_channelList.empty())
     {
@@ -278,16 +267,16 @@ const ChannelList &SovokTV::GetChannelList()
     return m_channelList;
 }
 
-const EpgEntryList& SovokTV::GetEpgList() const
+const EpgEntryList& OttPlayer::GetEpgList() const
 {
     return  m_epgEntries;
 }
-const StreamerNamesList& SovokTV::GetStreamersList() const
+const StreamerNamesList& OttPlayer::GetStreamersList() const
 {
     return  m_streamerNames;
 }
 
-//const ArchiveList& SovokTV::GetArchiveList()
+//const ArchiveList& OttPlayer::GetArchiveList()
 //{
 //    if (m_archiveList.empty())
 //    {
@@ -297,7 +286,7 @@ const StreamerNamesList& SovokTV::GetStreamersList() const
 //}
 
 template <typename TParser>
-void SovokTV::ParseJson(const std::string& response, TParser parser)
+void OttPlayer::ParseJson(const std::string& response, TParser parser)
 {
     Document jsonRoot;
     jsonRoot.Parse(response.c_str());
@@ -317,7 +306,7 @@ void SovokTV::ParseJson(const std::string& response, TParser parser)
 
 }
 
-void SovokTV::BuildChannelAndGroupList()
+void OttPlayer::BuildChannelAndGroupList()
 {
     m_channelList.clear();
     m_groupList.clear();
@@ -360,7 +349,7 @@ void SovokTV::BuildChannelAndGroupList()
 }
 
 
-bool SovokTV::FindEpg(unsigned int brodcastId, OttEpgEntry& epgEntry)
+bool OttPlayer::FindEpg(unsigned int brodcastId, OttEpgEntry& epgEntry)
 {
     if(m_epgEntries.count(brodcastId) == 0)
         return false;
@@ -373,12 +362,12 @@ bool SovokTV::FindEpg(unsigned int brodcastId, OttEpgEntry& epgEntry)
     return true;
 }
 
-std::string SovokTV::GetArchiveForEpg(const OttEpgEntry& epgEntry)
+std::string OttPlayer::GetArchiveForEpg(const OttEpgEntry& epgEntry)
 {
     return  GetArchive(epgEntry.ChannelId, epgEntry.StartTime + m_serverTimeShift);
 }
 
-std::string SovokTV::GetArchive(OttChannelId channelId, time_t startTime)
+std::string OttPlayer::GetArchive(OttChannelId channelId, time_t startTime)
 {
     string url;
     ParamList params;
@@ -402,7 +391,7 @@ std::string SovokTV::GetArchive(OttChannelId channelId, time_t startTime)
     return url;
 }
 
-void SovokTV::Log(const char* massage) const
+void OttPlayer::Log(const char* massage) const
 {
     //char* msg = m_addonHelper->UnknownToUTF8(massage);
     m_addonHelper->Log(LOG_DEBUG, massage);
@@ -410,7 +399,7 @@ void SovokTV::Log(const char* massage) const
     
 }
 
-void SovokTV::GetEpg(OttChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries)
+void OttPlayer::GetEpg(OttChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries)
 {
      m_addonHelper->Log(LOG_DEBUG, "Get EPG for channel %d [%d - %d]", channelId, startTime, endTime);
     P8PLATFORM::CLockObject lock(m_epgAccessMutex);
@@ -444,7 +433,7 @@ void SovokTV::GetEpg(OttChannelId channelId, time_t startTime, time_t endTime, E
 }
 
 
-void SovokTV::GetEpgForAllChannels(time_t startTime, time_t endTime, EpgEntryList& epgEntries)
+void OttPlayer::GetEpgForAllChannels(time_t startTime, time_t endTime, EpgEntryList& epgEntries)
 {
 
     int64_t totalNumberOfHours = (endTime - startTime) / secondsPerHour;
@@ -466,7 +455,7 @@ void SovokTV::GetEpgForAllChannels(time_t startTime, time_t endTime, EpgEntryLis
 }
 
 template<class TFunc>
-void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHours, TFunc func)
+void OttPlayer::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHours, TFunc func)
 {
     // For queries over 24 hours Sovok.TV returns incomplete results.
     assert(numberOfHours > 0 && numberOfHours <= 24);
@@ -510,7 +499,7 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
     }
 }
 
-const GroupList &SovokTV::GetGroupList()
+const GroupList &OttPlayer::GetGroupList()
 {
     if (m_groupList.empty())
         BuildChannelAndGroupList();
@@ -518,7 +507,7 @@ const GroupList &SovokTV::GetGroupList()
     return m_groupList;
 }
 
-string SovokTV::GetUrl(OttChannelId channelId)
+string OttPlayer::GetUrl(OttChannelId channelId)
 {
     string url;
 
@@ -547,7 +536,7 @@ void BeutifyUrl(string& url)
     url = url.substr(0, url.find(" ")); // trim VLC params at the end
 }
 
-FavoriteList SovokTV::GetFavorites()
+FavoriteList OttPlayer::GetFavorites()
 {
     FavoriteList favorites;
     try {
@@ -569,7 +558,7 @@ FavoriteList SovokTV::GetFavorites()
 }
 
 
-bool SovokTV::Login(bool wait)
+bool OttPlayer::Login(bool wait)
 {
 
     if (m_login.empty() || m_password.empty())
@@ -623,15 +612,8 @@ bool SovokTV::Login(bool wait)
     
 }
 
-void SovokTV::Logout()
-{
-    ApiFunctionData apiParams("logout");
-
-    try {CallApiFunction(apiParams, [&] (Document& jsonRoot){});}catch (...) {}
-}
-
 template <typename TParser>
-void SovokTV::CallApiFunction(const ApiFunctionData& data, TParser parser)
+void OttPlayer::CallApiFunction(const ApiFunctionData& data, TParser parser)
 {
     P8PLATFORM::CEvent event;
     std::exception_ptr ex = nullptr;
@@ -645,7 +627,7 @@ void SovokTV::CallApiFunction(const ApiFunctionData& data, TParser parser)
 }
 
 template <typename TParser, typename TCompletion>
-void SovokTV::CallApiAsync(const ApiFunctionData& data, TParser parser, TCompletion completion)
+void OttPlayer::CallApiAsync(const ApiFunctionData& data, TParser parser, TCompletion completion)
 {
     
     // Build HTTP request
@@ -660,7 +642,6 @@ void SovokTV::CallApiAsync(const ApiFunctionData& data, TParser parser, TComplet
         query += runner->first + '=' + runner->second;
     }
     std::string strRequest = "http://api.sovok.tv/";
-    strRequest += (data.api_ver == ApiFunctionData::API_2_2) ? "v2.2" : "v2.3";
     strRequest += "/json/";
     strRequest += data.name + query;
     auto start = P8PLATFORM::GetTimeMs();
@@ -703,7 +684,7 @@ void SovokTV::CallApiAsync(const ApiFunctionData& data, TParser parser, TComplet
                  });
 }
 
-bool SovokTV::LoadStreamers()
+bool OttPlayer::LoadStreamers()
 {
     try {
         ApiFunctionData apiParams("streamers");
@@ -736,7 +717,7 @@ bool SovokTV::LoadStreamers()
 }
 
 
-void SovokTV::LoadSettings()
+void OttPlayer::LoadSettings()
 {
     // Load streamers
     try {
@@ -772,7 +753,7 @@ void SovokTV::LoadSettings()
     }
 }
 
-void SovokTV::SetStreamerId(int streamerId)
+void OttPlayer::SetStreamerId(int streamerId)
 {
     if (streamerId < 0 ||  streamerId >= m_streamerIds.size())
     {
@@ -798,13 +779,13 @@ void SovokTV::SetStreamerId(int streamerId)
 }
 
 
-void SovokTV::ResetArchiveList()
+void OttPlayer::ResetArchiveList()
 {
     m_archiveList.clear();
 }
 
 
-void SovokTV::LoadArchiveList()
+void OttPlayer::LoadArchiveList()
 {
     struct OttChannelArchive
     {
@@ -850,7 +831,7 @@ void SovokTV::LoadArchiveList()
     }
 }
 
-void SovokTV::BuildRecordingsFor(OttChannelId channelId, time_t from, time_t to)
+void OttPlayer::BuildRecordingsFor(OttChannelId channelId, time_t from, time_t to)
 {
     EpgEntryList epgEntries;
     GetEpg(channelId, from, to, epgEntries);
@@ -873,7 +854,7 @@ void SovokTV::BuildRecordingsFor(OttChannelId channelId, time_t from, time_t to)
     //m_addonHelper->Log(LOG_DEBUG, "Found %d EPG records for %d .", cnt, channelId);
 
 }
-void SovokTV::Apply(std::function<void(const ArchiveList&)>& action ) const {
+void OttPlayer::Apply(std::function<void(const ArchiveList&)>& action ) const {
     action(m_archiveList);
     return;
 }

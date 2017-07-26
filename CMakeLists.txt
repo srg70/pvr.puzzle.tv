@@ -50,7 +50,11 @@ src/puzzle_tv.cpp
 src/timeshift_buffer.cpp
 src/ActionQueue.cpp
 src/HttpEngine.cpp
+src/plist_buffer.cpp
 )
+#src/ott_pvr_client.cpp
+#src/ott_player.cpp
+
 
 build_addon(pvr.puzzle.tv IPTV DEPLIBS)
 

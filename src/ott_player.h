@@ -96,81 +96,69 @@ struct OttEpgEntry
 };
 
 typedef unsigned int UniqueBroadcastIdType;
-typedef UniqueBroadcastIdType  SovokArchiveEntry;
-
-struct SovokEpgCaheEntry
-{
-    SovokEpgCaheEntry(int channelId, time_t startTime)
-        : ChannelId(channelId)
-        , StartTime(startTime)
-    {}
-
-    const OttChannelId ChannelId;
-    const time_t StartTime;
-};
+typedef UniqueBroadcastIdType  OttArchiveEntry;
 
 typedef std::map<OttChannelId, OttChannel> ChannelList;
 typedef std::map<std::string, SovokGroup> GroupList;
 typedef std::map<UniqueBroadcastIdType, OttEpgEntry> EpgEntryList;
-//typedef std::vector<SovokEpgCaheEntry> EpgCache;
 typedef std::map<std::string, std::string> ParamList;
 typedef std::set<OttChannelId> FavoriteList;
 typedef std::vector<std::string> StreamerNamesList;
-typedef std::set<SovokArchiveEntry> ArchiveList;
+typedef std::set<OttArchiveEntry> ArchiveList;
 
-class SovokExceptionBase : public std::exception
+class OttExceptionBase : public std::exception
 {
 public:
     const char* what() const noexcept {return reason.c_str();}
     const std::string reason;
-    SovokExceptionBase(const std::string& r) : reason(r) {}
-    SovokExceptionBase(const char* r = "") : reason(r) {}
+    OttExceptionBase(const std::string& r) : reason(r) {}
+    OttExceptionBase(const char* r = "") : reason(r) {}
 
 };
 
-class AuthFailedException : public SovokExceptionBase
+class AuthFailedException : public OttExceptionBase
 {
 };
 
-class BadSessionIdException : public SovokExceptionBase
-{
-public:
-    BadSessionIdException() : SovokExceptionBase("Session ID es empty.") {}
-};
-
-class UnknownStreamerIdException : public SovokExceptionBase
+class BadSessionIdException : public OttExceptionBase
 {
 public:
-    UnknownStreamerIdException() : SovokExceptionBase("Unknown streamer ID.") {}
+    BadSessionIdException() : OttExceptionBase("Session ID es empty.") {}
 };
 
-class MissingApiException : public SovokExceptionBase
+class UnknownStreamerIdException : public OttExceptionBase
 {
 public:
-    MissingApiException(const char* r) : SovokExceptionBase(r) {}
+    UnknownStreamerIdException() : OttExceptionBase("Unknown streamer ID.") {}
 };
 
-class JsonParserException : public SovokExceptionBase
+class MissingApiException : public OttExceptionBase
 {
 public:
-    JsonParserException(const std::string& r) : SovokExceptionBase(r) {}
-    JsonParserException(const char* r) : SovokExceptionBase(r) {}
+    MissingApiException(const char* r) : OttExceptionBase(r) {}
 };
 
-class ServerErrorException : public SovokExceptionBase
+class JsonParserException : public OttExceptionBase
 {
 public:
-    ServerErrorException(const char* r, int c) : SovokExceptionBase(r), code(c) {}
+    JsonParserException(const std::string& r) : OttExceptionBase(r) {}
+    JsonParserException(const char* r) : OttExceptionBase(r) {}
+};
+
+class ServerErrorException : public OttExceptionBase
+{
+public:
+    ServerErrorException(const char* r, int c) : OttExceptionBase(r), code(c) {}
     const int code;
 };
 
 
 
-class SovokTV
+class OttPlayer
 {
 public:
-    SovokTV(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &login, const std::string &password);
-    ~SovokTV();
+    OttPlayer(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &playlistUrl, const std::string &key);
+    ~OttPlayer();
 
     const ChannelList &GetChannelList();
     const EpgEntryList& GetEpgList() const;
@@ -188,25 +176,18 @@ public:
 
     const GroupList &GetGroupList();
     std::string GetUrl(OttChannelId channelId);
-    FavoriteList GetFavorites();
-
-    int GetSreamerId() const { return m_streammerId; }
-    void SetStreamerId(int streamerId);
-    
-    void SetPinCode(const std::string& code) {m_pinCode = code;}
 
 private:
-    typedef std::vector<std::string> StreamerIdsList;
 
     struct ApiFunctionData;
     class HelperThread;
+    
+    
     
     std::string GetArchive(OttChannelId channelId, time_t startTime);
     
     template<class TFunc>
     void  GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHours, TFunc func);
-    bool Login(bool wait);
-    void Logout();
     void Cleanup();
     
     template <typename TParser>
@@ -231,21 +212,18 @@ private:
 
     
     ADDON::CHelper_libXBMC_addon *m_addonHelper;
-    std::string m_login;
-    std::string m_password;
+    std::string m_playlistUrl;
+    std::string m_key;
     ChannelList m_channelList;
     ArchiveList m_archiveList;
     GroupList m_groupList;
     EpgEntryList m_epgEntries;
     time_t m_lastEpgRequestStartTime;
     time_t m_lastEpgRequestEndTime;
-    int m_streammerId;
     long m_serverTimeShift;
     StreamerNamesList m_streamerNames;
-    StreamerIdsList m_streamerIds;
     P8PLATFORM::CMutex m_epgAccessMutex;
     HelperThread* m_archiveLoader;
-    std::string m_pinCode;
     HttpEngine* m_httpEngine;
 };
 

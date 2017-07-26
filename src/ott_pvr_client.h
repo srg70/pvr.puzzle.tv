@@ -70,10 +70,10 @@ public:
 private:
     void CreateCore();
 
-    void SetPlaylistUrl(const std::string& url);
+    void SetPlaylistUrl(const std::string& url) {m_playlistUrl = url;};
 //    const std::sring& GetPlaylistUrl();
     
-    void SetKey(const std::string& key);
+    void SetKey(const std::string& key) {m_key = key;};
 //    const std::string& code SetKey();
 
     OttPlayer* m_core;

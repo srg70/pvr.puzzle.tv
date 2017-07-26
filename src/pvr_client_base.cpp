@@ -33,6 +33,7 @@
 
 #include "libXBMC_pvr.h"
 #include "timeshift_buffer.h"
+#include "plist_buffer.h"
 #include "direct_buffer.h"
 #include "helpers.h"
 #include "pvr_client_base.h"
@@ -155,8 +156,8 @@ PVR_ERROR PVRClientBase::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabilit
     pCapabilities->bSupportsTV = true;
     //pCapabilities->bSupportsRadio = true;
     //pCapabilities->bSupportsChannelGroups = true;
-    pCapabilities->bHandlesInputStream = true;
-    pCapabilities->bSupportsRecordings = true;
+    //pCapabilities->bHandlesInputStream = true;
+    //pCapabilities->bSupportsRecordings = true;
     
 //    pCapabilities->bSupportsTimers = false;
 //    pCapabilities->bSupportsChannelScan = false;
@@ -205,7 +206,13 @@ bool PVRClientBase::OpenLiveStream(const std::string& url )
         return false;
     try
     {
-        if (m_isTimeshiftEnabled)
+        const std::string m3uExt = ".m3u";
+        const std::string m3u8Ext = ".m3u8";
+        if( url.find(m3u8Ext) != std::string::npos || url.find(m3uExt) != std::string::npos)
+        {
+            m_inputBuffer = new PlaylistBuffer(m_addonHelper, url);
+        }
+        else if (m_isTimeshiftEnabled)
         {
             m_inputBuffer = new TimeshiftBuffer(m_addonHelper, url, m_CacheDir);
         }

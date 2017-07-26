@@ -54,11 +54,12 @@ static void BeutifyUrl(string& url);
 struct PuzzleTV::ApiFunctionData
 {
      ApiFunctionData(const char* _name, const ParamList& _params = s_EmptyParams)
-    : name(_name) , params(_params)
+    : name(_name) , params(_params), attempt(0)
     {}
     std::string name;
     const ParamList params;
     static const  ParamList s_EmptyParams;
+    mutable int attempt;
 };
 
 class PuzzleTV::HelperThread : public P8PLATFORM::CThread
@@ -144,75 +145,10 @@ void PuzzleTV::Cleanup()
 
 void PuzzleTV::SaveEpgCache()
 {
-//    // Leave epg entries not older then 2 weeks from now
-//    time_t now = time(nullptr);
-//    m_lastEpgRequestStartTime = max(m_lastEpgRequestStartTime, now - 14*24*60*60);
-//    m_epgEntries.erase(remove_if(m_epgEntries.begin(), m_epgEntries.end(), [=] (EpgEntryList::value_type i)
-//            {
-//                return i.StartTime < m_lastEpgRequestStartTime;
-//            }),
-//            m_epgEntries.end());
-//    
-//    ostringstream ss;
-//    ss << m_lastEpgRequestStartTime << c_EpgCacheDelimeter;
-//    ss << m_lastEpgRequestEndTime << c_EpgCacheDelimeter;
-//    ss << m_lastUniqueBroadcastId << c_EpgCacheDelimeter;
-//    ss << m_epgEntries.size() << c_EpgCacheDelimeter;
-//    for_each(m_epgEntries.begin(), m_epgEntries.end(),[&](EpgEntryList::value_type i)
-//    {
-//        const SovokEpgCaheEntry& cacheItem = i;
-//        ss << cacheItem.ChannelId << c_EpgCacheDelimeter;
-//        ss << cacheItem.UniqueBroadcastId << c_EpgCacheDelimeter;
-//        ss << cacheItem.StartTime << c_EpgCacheDelimeter;
-//        ss << cacheItem.EndTime << c_EpgCacheDelimeter;
-//        ss << c_EpgCacheDelimeter;
-//    });
-//    
-//    m_addonHelper->CreateDirectory(c_EpgCacheDirPath);
-//    
-//    void* file = m_addonHelper->OpenFileForWrite(c_EpgCacheFilePath, true);
-//    if(NULL == file)
-//        return;
-//    string buf = ss.rdbuf()->str();
-//    m_addonHelper->WriteFile(file, buf.c_str(), buf.size());
-//    m_addonHelper->CloseFile(file);
-//    
 }
 void PuzzleTV::LoadEpgCache()
 {
-//    void* file = m_addonHelper->OpenFile(c_EpgCacheFilePath, 0);
-//    if(NULL == file)
-//        return;
-//    int64_t fSize = m_addonHelper->GetFileLength(file);
-//    
-//    char* rawBuf = new char[fSize];
-//    if(0 == rawBuf)
-//        return;
-//    m_addonHelper->ReadFile(file, rawBuf, fSize);
-//    
-//    istringstream ss(rawBuf);
-//    delete[] rawBuf;
-//    
-//    char delimeter;
-//    size_t entriesSize;
-//    
-//    ss >> m_lastEpgRequestStartTime;
-//    ss >> m_lastEpgRequestEndTime;
-//    ss >> m_lastUniqueBroadcastId;
-//    ss >> entriesSize;
-//    
-//    while(!ss.eof() && entriesSize-- > 0)
-//    {
-//        SovokEpgEntry cacheItem;
-//        cacheItem.Title = "Cached item";
-//        ss >> cacheItem.ChannelId;
-//        ss >> cacheItem.UniqueBroadcastId;
-//        ss >> cacheItem.StartTime;
-//        ss >> cacheItem.EndTime;
-////        ss >> delimeter;
-//        m_epgEntries.push_back(cacheItem);
-//    }
-    
+   
 }
 
 bool PuzzleTV::StartArchivePollingWithCompletion(std::function<void(void)> action)
@@ -243,12 +179,6 @@ const EpgEntryList& PuzzleTV::GetEpgList() const
 template <typename TParser>
 void PuzzleTV::ParseJson(const std::string& response, TParser parser)
 {
-//    std::string response = "{\"channels\": [{\"url\": \"http://s4s.privit.pro:8081/rtr/index.m3u8?wmsAuthSign=c2VydmVyX3RpbWU9OS8xNC8yMDE2IDU6MDE6NTgg400d502265722df2321ec924bedb58caT04vYzhuTTArS2Z3PT0mdmFsaWRtaW51dGVzPTIwMA==\", \"icon\": \"/Users/ssh/Library/Application Support/Kodi/addons/plugin.video.pazl2.tv/logo/FD46ABE6.png\", \
-//                 \"group\": \"\u042d\u0444\u0438\u0440\u043d\u044b\u0435\", \
-//                 \"id\": \"FD46ABE6\", \
-//                 \"name\": \"1+1\"}]}";
-//    char sq = '\'',  dq = '\"';
-//    std::replace( response.begin(), response.end(), sq, dq); // replace all ' to "
     Document jsonRoot;
     jsonRoot.Parse(response.c_str());
     if(jsonRoot.HasParseError()) {
@@ -465,9 +395,38 @@ const GroupList &PuzzleTV::GetGroupList()
 
 string PuzzleTV::GetUrl(ChannelId channelId)
 {
-    if(m_channelList.count( channelId ) != 1)
+    auto channelList = GetChannelList();
+    if(channelList.count( channelId ) != 1)
         return string();
-    return m_channelList[channelId].Urls[0];
+    Channel::UrlList& urls = channelList[channelId].Urls;
+    if(urls.size() <2)
+    {
+        urls.clear();
+            try {
+                string cmd = "streams/";
+                cmd += n_to_string_hex(channelId);
+                
+                ApiFunctionData apiParams(cmd.c_str());
+                CallApiFunction(apiParams, [&] (Document& jsonRoot)
+               {
+                    if(!jsonRoot.IsArray())
+                        return;
+                   std::for_each(jsonRoot.Begin(), jsonRoot.End(), [&]  (const Value & i) mutable
+                                {
+                                    auto url = i.GetString();
+                                         urls.push_back(url);
+                                    Log((string(" >>>>  URL: ") + url +  "<<<<<").c_str());
+
+                                });
+               });
+            } catch (ServerErrorException& ex) {
+                m_addonHelper->QueueNotification(QUEUE_ERROR, "Puzzle TV error: %s", ex.reason.c_str() );
+            } catch (...) {
+               Log((string(" >>>>  FAILED to get URL for channel ID=" ) + n_to_string(channelId) + " <<<<<") .c_str());
+           }
+        
+    }
+    return channelList[channelId].Urls[0];
 //    string url;
 //
 //    ParamList params;
@@ -506,7 +465,18 @@ void PuzzleTV::CallApiFunction(const ApiFunctionData& data, TParser parser)
     });
     event.Wait();
     if(ex)
-        std::rethrow_exception(ex);
+        try {
+            std::rethrow_exception(ex);
+        } catch (JsonParserException jex) {
+            if(data.attempt > 0)
+                throw jex;
+            // Probably server doesn'r start yet
+            // Wait and retry
+            P8PLATFORM::CEvent::Sleep(2000);
+           
+             data.attempt += 1;
+            CallApiFunction(data, parser);
+        }
 }
 
 template <typename TParser, typename TCompletion>
@@ -529,7 +499,7 @@ void PuzzleTV::CallApiAsync(const ApiFunctionData& data, TParser parser, TComple
     strRequest +="/get/";
     strRequest += data.name + query;
     auto start = P8PLATFORM::GetTimeMs();
-    const bool isLoginCommand = data.name == "login";
+
     m_addonHelper->Log(LOG_DEBUG, "Calling '%s'.",  data.name.c_str());
 
     std::function<void(const std::string&)> parserWrapper = [=](const std::string& response) {
@@ -540,7 +510,7 @@ void PuzzleTV::CallApiAsync(const ApiFunctionData& data, TParser parser, TComple
         
         ParseJson(response, [&] (Document& jsonRoot)
                   {
-                      if (!jsonRoot.HasMember("error"))
+                      //if (!jsonRoot.HasMember("error"))
                       {
                           parser(jsonRoot);
                           return;

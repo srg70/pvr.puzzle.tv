@@ -39,7 +39,7 @@ std::string n_to_string(int64_t n)
 std::string n_to_string_hex(uint64_t n)
 {
     char buffer[9];
-    snprintf(buffer, sizeof(buffer), "%x", n);
+    snprintf(buffer, sizeof(buffer), "%llX", n);
     
     return buffer;
 }
