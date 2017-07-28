@@ -1,0 +1,74 @@
+# Kodi Media Center language file
+# Addon Name: PVR Puzzle TV
+# Addon id: pvr.puzzle.tv
+# Addon Provider: srg70
+msgid ""
+msgstr ""
+"Report-Msgid-Bugs-To: sergey.shramchenko@gmail.com\n"
+"POT-Creation-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: srg70\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+#"Language: en_US\n"
+"Language: en_GB\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+
+msgctxt "#10010"
+msgid "Common"
+msgstr "Common"
+
+msgctxt "#10000"
+msgid "Provider"
+msgstr "Provider"
+
+msgctxt "#10001"
+msgid "Enable Timeshift"
+msgstr "Enable Timeshift"
+
+msgctxt "#10002"
+msgid "Timeshift Path"
+msgstr "Timeshift Path"
+
+msgctxt "#20000"
+msgid "Puzzle Server"
+msgstr "Puzzle Server"
+
+msgctxt "#20001"
+msgid "Puzzle Port"
+msgstr "Puzzle Port"
+
+msgctxt "#20010"
+msgid "Puzzle TV"
+msgstr "Puzzle TV"
+
+msgctxt "#30000"
+msgid "Login"
+msgstr "Login"
+
+msgctxt "#30001"
+msgid "Password"
+msgstr "Password"
+
+msgctxt "#30002"
+msgid "Add Favorites Group"
+msgstr "Add Favorites Group"
+
+msgctxt "#30003"
+msgid "Enable Adult Content"
+msgstr "Enable Adult Content"
+
+msgctxt "#30004"
+msgid "PIN Code"
+msgstr "PIN Code"
+
+msgctxt "#30005"
+msgid "Streamer"
+msgstr "Streamer"
+
+
+msgctxt "#30010"
+msgid "Sovok TV"
+msgstr "Sovok TV"
