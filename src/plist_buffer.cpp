@@ -83,6 +83,7 @@ PlaylistBuffer::~PlaylistBuffer()
 void PlaylistBuffer::Init(const std::string &playListUrl)
 {
     StopThread();
+    m_writeEvent.Reset();
     m_segmentUrls.clear();
     m_segments.clear();
     SetBestPlaylist(playListUrl);
@@ -189,7 +190,7 @@ void PlaylistBuffer::ParsePlaylist(const std::string& data)
             m_segmentUrls[mediaIndex++]  = TSegmentUrls::mapped_type(duration, url);
         }
     } catch (...) {
-        m_addonHelper->Log(LOG_DEBUG, "Bad M3U : \n %s", data.c_str() );
+        m_addonHelper->Log(LOG_ERROR, "Bad M3U : \n %s", data.c_str() );
         throw;
     }
 }
@@ -213,7 +214,7 @@ void PlaylistBuffer::LoadPlaylist(std::string& data)
 bool PlaylistBuffer::FillSegment(const PlaylistBuffer::TSegmentUrls::mapped_type& segment)
 {
     unsigned char buffer[8196];
-    void* f = m_addonHelper->OpenFile(segment.second.c_str(), XFILE::READ_AUDIO_VIDEO);// XFILE::READ_NO_CACHE | XFILE::READ_CHUNKED);
+    void* f = m_addonHelper->OpenFile(segment.second.c_str(), XFILE::READ_NO_CACHE | XFILE::READ_CHUNKED); //XFILE::READ_AUDIO_VIDEO);
     if(!f)
         throw InputBufferException("Failed to download playlist media segment.");
 
@@ -249,12 +250,12 @@ void *PlaylistBuffer::Process()
             //isEof = m_segmentUrls.size() == 0;
             auto it = m_segmentUrls.begin();
             auto end = m_segmentUrls.end();
-            float sleepInterval = 0;
+//            float sleepInterval = 0;
             while (it != end && !isEof  && !IsStopped()) {
-                isEof = FillSegment(it->second);
-                auto duration = it++->second.first;
+                isEof = FillSegment(it++->second);
+//                auto duration = it++->second.first;
 //                m_addonHelper->Log(LOG_DEBUG, ">>> Segment duration: %f Sleep: %f ", duration, sleepInterval);
-                sleepInterval += duration;
+//                sleepInterval += duration;
                 m_writeEvent.Broadcast();
             }
             m_segmentUrls.clear();
@@ -265,7 +266,7 @@ void *PlaylistBuffer::Process()
 //                sleepInterval -= 1,0;
 //                P8PLATFORM::CEvent::Sleep(1000);
 //            }
-            Sleep(10);
+            Sleep(1000);
         }
         
     } catch (InputBufferException& ex ) {
@@ -279,7 +280,7 @@ ssize_t PlaylistBuffer::Read(unsigned char *buffer, size_t bufferSize)
 {
     
     size_t totalBytesRead = 0;
-    int32_t timeout = 10000;  //5 sec
+    int32_t timeout = c_commonTimeoutMs;
     
     while (totalBytesRead < bufferSize && !IsStopped())
     {
@@ -412,10 +413,7 @@ size_t PlaylistBuffer::Segment::Read(uint8_t* buffer, size_t size)
 {
     if(_begin == NULL)
         _begin = &_data[0];
-
-    size_t available = _size - (_begin - &_data[0]);
-    
-    size_t actual = std::min(size, available);
+    size_t actual = std::min(size, BytesReady());
 //    m_addonHelper->Log(LOG_DEBUG, ">>> Available: %d  Actual: %d", available, actual);
     memcpy(buffer, _begin, actual);
     _begin += actual;

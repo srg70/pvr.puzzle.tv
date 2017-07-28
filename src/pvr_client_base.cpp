@@ -206,18 +206,20 @@ bool PVRClientBase::OpenLiveStream(const std::string& url )
         return false;
     try
     {
+        InputBuffer* buffer = NULL;
+        
         const std::string m3uExt = ".m3u";
         const std::string m3u8Ext = ".m3u8";
         if( url.find(m3u8Ext) != std::string::npos || url.find(m3uExt) != std::string::npos)
-        {
-            m_inputBuffer = new PlaylistBuffer(m_addonHelper, url);
-        }
-        else if (m_isTimeshiftEnabled)
-        {
-            m_inputBuffer = new TimeshiftBuffer(m_addonHelper, url, m_CacheDir);
-        }
+            buffer = new PlaylistBuffer(m_addonHelper, url);
         else
-            m_inputBuffer = new DirectBuffer(m_addonHelper, url);
+            buffer = new DirectBuffer(m_addonHelper, url);
+        
+        if (m_isTimeshiftEnabled)
+            m_inputBuffer = new TimeshiftBuffer(m_addonHelper, buffer, m_CacheDir);
+        else
+            m_inputBuffer = buffer;
+
     }
     catch (InputBufferException &)
     {

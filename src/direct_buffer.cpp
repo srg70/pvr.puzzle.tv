@@ -64,7 +64,7 @@ int64_t DirectBuffer::GetPosition() const
 
 ssize_t DirectBuffer::Read(unsigned char *buffer, size_t bufferSize)
 {
-    CLockObject lock(m_mutex);
+    //CLockObject lock(m_mutex);
 
     return m_addonHelper->ReadFile(m_streamHandle, buffer, bufferSize);
 }
@@ -76,7 +76,7 @@ int64_t DirectBuffer::Seek(int64_t iPosition, int iWhence)
 
 bool DirectBuffer::SwitchStream(const std::string &newUrl)
 {
-    CLockObject lock(m_mutex);
+    //CLockObject lock(m_mutex);
 
     m_addonHelper->CloseFile(m_streamHandle);
     Open(newUrl.c_str());

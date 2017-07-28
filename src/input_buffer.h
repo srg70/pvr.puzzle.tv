@@ -49,6 +49,8 @@ public:
     virtual ssize_t Read(unsigned char *buffer, size_t bufferSize) = 0;
     virtual int64_t Seek(int64_t iPosition, int iWhence) = 0;
     virtual bool SwitchStream(const std::string &newUrl) = 0;
+protected:
+    const int c_commonTimeoutMs = 10000; // 10 sec
 };
 
 #endif //input_buffer_h

@@ -34,6 +34,7 @@
 #include "timeshift_buffer.h"
 #include "helpers.h"
 #include <sstream>
+#include <functional>
 
 #include "libXBMC_addon.h"
 
@@ -44,33 +45,32 @@ using namespace P8PLATFORM;
 static const int STREAM_READ_BUFFER_SIZE = 1024 * 32; // 32K input read buffer
 static const  unsigned int CHUNK_FILE_SIZE_LIMIT = (unsigned int)(STREAM_READ_BUFFER_SIZE * 1024) * 32; // 1GB chunk (temporary, pending completion of chunck factory)
 
-TimeshiftBuffer::TimeshiftBuffer(CHelper_libXBMC_addon *addonHelper, const string &streamUrl, const string &bufferCacheDir) :
+TimeshiftBuffer::TimeshiftBuffer(CHelper_libXBMC_addon *addonHelper, InputBuffer* inputBuffer, const string &bufferCacheDir) :
     m_addonHelper(addonHelper),
     m_bufferDir(bufferCacheDir),
-m_streamHandle(NULL),
+    m_inputBuffer(inputBuffer),
     m_length(0),
     m_position(0)
 {
+    if (!m_inputBuffer)
+        throw InputBufferException("TimesiftBuffer: source stream buffer is NULL.");
     if(!m_addonHelper->DirectoryExists(m_bufferDir.c_str()))
        if(!m_addonHelper->CreateDirectory(m_bufferDir.c_str()))
           throw InputBufferException("Failed to create cahche directory for timeshift buffer.");
-    Init(streamUrl);
+    Init();
 }
 
-void TimeshiftBuffer::Init(const string &streamUrl) {
+void TimeshiftBuffer::Init(const std::string& newUrl) {
     StopThread();
     
-    if(m_streamHandle) {
-        m_addonHelper->CloseFile(m_streamHandle);
-        m_streamHandle = NULL;
-    }
+    if(!newUrl.empty())
+        m_inputBuffer->SwitchStream(newUrl);
+
+        m_writeEvent.Reset();
     m_length = 0;
     m_position = 0;
     m_ReadChunks.clear();
     m_ChunkFileSwarm.clear();
-    m_streamHandle = m_addonHelper->OpenFile(streamUrl.c_str(), XFILE::READ_AUDIO_VIDEO | XFILE::READ_AFTER_WRITE | XFILE::READ_CHUNKED);
-    if (!m_streamHandle)
-        throw InputBufferException("Failed to open source stream.");
     CreateThread();
 }
 void TimeshiftBuffer::DebugLog(const std::string& message ) const
@@ -83,8 +83,10 @@ void TimeshiftBuffer::DebugLog(const std::string& message ) const
 TimeshiftBuffer::~TimeshiftBuffer()
 {
     StopThread();
-
-    m_addonHelper->CloseFile(m_streamHandle);
+    
+    if(m_inputBuffer)
+        delete m_inputBuffer;
+    
     m_ReadChunks.clear();
 }
 
@@ -109,7 +111,7 @@ void *TimeshiftBuffer::Process()
     ChunkFilePtr chunk = NULL;
     bool isEof = false;
     try {
-        while (!isEof && m_streamHandle != NULL && !IsStopped()) {
+        while (!isEof && m_inputBuffer != NULL && !IsStopped()) {
             // Create new chunk if nesessary
             if(NULL == chunk)
             {
@@ -124,7 +126,7 @@ void *TimeshiftBuffer::Process()
             // Fill read buffer
             ssize_t bytesRead = 0;
             while (!isEof && bytesRead < sizeof(buffer) && !IsStopped()){
-                bytesRead += m_addonHelper->ReadFile(m_streamHandle, buffer + bytesRead, sizeof(buffer) - bytesRead);
+                bytesRead += m_inputBuffer->Read(buffer + bytesRead, sizeof(buffer) - bytesRead);
                 isEof = bytesRead <= 0;
             };
             // Write to local chunk
@@ -152,7 +154,7 @@ ssize_t TimeshiftBuffer::Read(unsigned char *buffer, size_t bufferSize)
 {
 
     size_t totalBytesRead = 0;
-    int32_t timeout = 5000; //5 sec
+    int32_t timeout = c_commonTimeoutMs + 1000;
 
     while (totalBytesRead < bufferSize && !IsStopped())
     {
@@ -183,7 +185,7 @@ ssize_t TimeshiftBuffer::Read(unsigned char *buffer, size_t bufferSize)
             bytesRead = chunk->m_reader.Read( buffer + totalBytesRead, bytesToRead);
             if(bytesRead == 0 && !m_writeEvent.Wait(timeout)) //timeout
             {
-                m_addonHelper->Log(LOG_NOTICE, "TimeshiftBuffer: nothing to read within %d sec.", timeout);
+                m_addonHelper->Log(LOG_NOTICE, "TimeshiftBuffer: nothing to read within %d msec.", timeout);
                 StopThread();
                 break;
             }

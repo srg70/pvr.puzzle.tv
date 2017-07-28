@@ -43,7 +43,7 @@ namespace ADDON
 class TimeshiftBuffer : public InputBuffer, public P8PLATFORM::CThread
 {
 public:
-    TimeshiftBuffer(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &streamUrl, const std::string &bufferCacheDir);
+    TimeshiftBuffer(ADDON::CHelper_libXBMC_addon *addonHelper, InputBuffer* inputBuffer, const std::string &bufferCacheDir);
     ~TimeshiftBuffer();
 
     int64_t GetLength() const;
@@ -119,7 +119,7 @@ private:
     typedef std::vector<ChunkFilePtr > FileChunks;
     typedef std::vector<std::unique_ptr<CAddonFile> > ChunkFileSwarm;
 
-    void Init(const std::string &streamUrl);
+    void Init(const std::string &newUrl = std::string());
     ChunkFilePtr CreateChunk();
     static unsigned int GetChunkIndexFor(int64_t position);
     static int64_t GetPositionInChunkFor(int64_t position);
@@ -132,8 +132,8 @@ private:
     int64_t m_position;
     ADDON::CHelper_libXBMC_addon *m_addonHelper;
     std::string m_bufferDir;
-    void *m_streamHandle;
-    mutable FileChunks m_ReadChunks;    
+    InputBuffer* m_inputBuffer;
+    mutable FileChunks m_ReadChunks;
     ChunkFileSwarm m_ChunkFileSwarm;
     
 };
