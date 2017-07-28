@@ -251,12 +251,15 @@ void *PlaylistBuffer::Process()
             auto it = m_segmentUrls.begin();
             auto end = m_segmentUrls.end();
 //            float sleepInterval = 0;
+            float sleepTime = 1000; //Min sleep time 1 sec
             while (it != end && !isEof  && !IsStopped()) {
-                isEof = FillSegment(it++->second);
-//                auto duration = it++->second.first;
-//                m_addonHelper->Log(LOG_DEBUG, ">>> Segment duration: %f Sleep: %f ", duration, sleepInterval);
+                isEof = FillSegment(it->second);
+                auto duration = it->second.first;
+                sleepTime = duration * 1000;
+                m_addonHelper->Log(LOG_DEBUG, ">>> Segment duration: %f", duration);
 //                sleepInterval += duration;
-                m_writeEvent.Broadcast();
+                ++it;
+                m_writeEvent.Signal();
             }
             m_segmentUrls.clear();
             
@@ -266,7 +269,7 @@ void *PlaylistBuffer::Process()
 //                sleepInterval -= 1,0;
 //                P8PLATFORM::CEvent::Sleep(1000);
 //            }
-            Sleep(1000);
+            Sleep(sleepTime);
         }
         
     } catch (InputBufferException& ex ) {
@@ -280,9 +283,9 @@ ssize_t PlaylistBuffer::Read(unsigned char *buffer, size_t bufferSize)
 {
     
     size_t totalBytesRead = 0;
-    int32_t timeout = c_commonTimeoutMs;
+//    int32_t timeout = c_commonTimeoutMs;
     
-    while (totalBytesRead < bufferSize && !IsStopped())
+    while (totalBytesRead < bufferSize && IsRunning())
     {
         TSegments::value_type segment = NULL;
         {
@@ -291,7 +294,7 @@ ssize_t PlaylistBuffer::Read(unsigned char *buffer, size_t bufferSize)
                 segment = m_segments.front();
         }
         // Retry 1 time after write operation
-        if(NULL == segment && m_writeEvent.Wait(timeout))
+        if(NULL == segment && m_writeEvent.Wait(1000))
         {
             CLockObject lock(m_syncAccess);
             if(!m_segments.empty())
@@ -299,8 +302,8 @@ ssize_t PlaylistBuffer::Read(unsigned char *buffer, size_t bufferSize)
         }
         if(NULL == segment)
         {
-            StopThread();
-            m_addonHelper->Log(LOG_ERROR, "Playlist buffer: failed to obtain chunk for read.");
+//            StopThread();
+            m_addonHelper->Log(LOG_NOTICE, "PlaylistBuffer: no segment for read.");
             break;
         }
 
@@ -319,7 +322,7 @@ ssize_t PlaylistBuffer::Read(unsigned char *buffer, size_t bufferSize)
             CLockObject lock(m_syncAccess);
             if(!m_segments.empty()) {
                 m_segments.pop_front();
-                m_addonHelper->Log(LOG_DEBUG, ">>> Segment removed (%d)", m_segments.size());
+                m_addonHelper->Log(LOG_DEBUG, ">>> PlaylistBuffer: Segment removed (%d)", m_segments.size());
             }
         }
         
@@ -327,7 +330,7 @@ ssize_t PlaylistBuffer::Read(unsigned char *buffer, size_t bufferSize)
 
     }
     
-    return IsStopped() ? -1 :totalBytesRead;
+    return (IsStopped() || !IsRunning()) ? -1 :totalBytesRead;
 }
 
 int64_t PlaylistBuffer::Seek(int64_t iPosition, int iWhence)

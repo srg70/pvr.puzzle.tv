@@ -67,7 +67,8 @@ class PuzzleTV::HelperThread : public P8PLATFORM::CThread
 public:
     HelperThread(PuzzleTV* PuzzleTV, std::function<void(void)> action)
     : m_PuzzleTV(PuzzleTV), m_action(action)
-    , m_epgActivityCounter(0), m_stopEvent(false) /*Manual event*/
+    , m_epgActivityCounter(0)
+//    , m_stopEvent(false) /*Manual event*/
     {}
     void EpgActivityStarted() {++m_epgActivityCounter;}
     void EpgActivityDone() {}
@@ -82,7 +83,7 @@ public:
             bool isStopped = IsStopped();
             while(!isStopped && (oldEpgActivity != m_epgActivityCounter)){
                 oldEpgActivity = m_epgActivityCounter;
-                isStopped = m_stopEvent.Wait(2000);// 2sec
+                isStopped = !Sleep(2000);// 2sec
             }
             if(isStopped)
                 break;
@@ -92,21 +93,21 @@ public:
                 pThis->m_action();
             },  [](const CActionQueue::ActionResult& s) {});
             
-        }while (!IsStopped() && !m_stopEvent.Wait(10*60*1000)); //10 min
+        }while (Sleep(10*60*1000)); //10 min
 
         return NULL;
         
     }
-    bool StopThread(int iWaitMs = 5000)
-    {
-        m_stopEvent.Broadcast();
-        return this->P8PLATFORM::CThread::StopThread(iWaitMs);
-    }
+//    bool StopThread(int iWaitMs = 5000)
+//    {
+//        m_stopEvent.Broadcast();
+//        return this->P8PLATFORM::CThread::StopThread(iWaitMs);
+//    }
 private:
     PuzzleTV* m_PuzzleTV;
     std::function<void(void)> m_action;
     unsigned int m_epgActivityCounter;
-    P8PLATFORM::CEvent m_stopEvent;
+//    P8PLATFORM::CEvent m_stopEvent;
 };
 
 

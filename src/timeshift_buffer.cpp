@@ -66,7 +66,7 @@ void TimeshiftBuffer::Init(const std::string& newUrl) {
     if(!newUrl.empty())
         m_inputBuffer->SwitchStream(newUrl);
 
-        m_writeEvent.Reset();
+    m_writeEvent.Reset();
     m_length = 0;
     m_position = 0;
     m_ReadChunks.clear();
@@ -109,9 +109,9 @@ void *TimeshiftBuffer::Process()
     unsigned char buffer[STREAM_READ_BUFFER_SIZE];
     ssize_t chunkSize = 0;
     ChunkFilePtr chunk = NULL;
-    bool isEof = false;
+    bool isError = false;
     try {
-        while (!isEof && m_inputBuffer != NULL && !IsStopped()) {
+        while (!isError && m_inputBuffer != NULL && !IsStopped()) {
             // Create new chunk if nesessary
             if(NULL == chunk)
             {
@@ -121,26 +121,33 @@ void *TimeshiftBuffer::Process()
                     m_ReadChunks.push_back(chunk);
                 }
                 chunkSize = 0;
-                DebugLog(std::string(">>> New current chunk (for write): ") + chunk->Path());
+                DebugLog(std::string(">>> TimeshiftBuffer: new current chunk (for write): ") + chunk->Path());
             }
             // Fill read buffer
             ssize_t bytesRead = 0;
-            while (!isEof && bytesRead < sizeof(buffer) && !IsStopped()){
+            do {
                 bytesRead += m_inputBuffer->Read(buffer + bytesRead, sizeof(buffer) - bytesRead);
-                isEof = bytesRead <= 0;
-            };
-            // Write to local chunk
-            //DebugLog(std::string(">>> Write: ") + n_to_string(bytesRead));
-            ssize_t bytesWritten = chunk->m_writer.Write(buffer, bytesRead);
-            {
-                CLockObject lock(m_SyncAccess);
-                m_length += bytesWritten;
+                isError = bytesRead < 0;
+            }while (bytesRead > 0 && bytesRead < sizeof(buffer) && !IsStopped());
+            
+            if(bytesRead > 0) {
+                // Write to local chunk
+                //DebugLog(std::string(">>> Write: ") + n_to_string(bytesRead));
+                ssize_t bytesWritten = chunk->m_writer.Write(buffer, bytesRead);
+                {
+                    CLockObject lock(m_SyncAccess);
+                    m_length += bytesWritten;
+                }
+                isError |= bytesWritten != bytesRead;
+                if(bytesWritten != bytesRead)
+                    m_addonHelper->Log(LOG_ERROR,
+                                       "TimeshiftBuffer: write cache error written (%d) != read (%d)", bytesWritten,bytesRead);
+
+                chunkSize += bytesWritten;
+                if(chunkSize >= CHUNK_FILE_SIZE_LIMIT)
+                    chunk = NULL;
+                m_writeEvent.Signal();
             }
-            isEof |= bytesWritten != bytesRead;
-            chunkSize += bytesWritten;
-            if(chunkSize >= CHUNK_FILE_SIZE_LIMIT)
-                chunk = NULL;
-            m_writeEvent.Broadcast();
         }
 
     } catch (InputBufferException& ex ) {
@@ -154,9 +161,9 @@ ssize_t TimeshiftBuffer::Read(unsigned char *buffer, size_t bufferSize)
 {
 
     size_t totalBytesRead = 0;
-    int32_t timeout = c_commonTimeoutMs + 1000;
+    int32_t timeout = 5000;//c_commonTimeoutMs + 1000;
 
-    while (totalBytesRead < bufferSize && !IsStopped())
+    while (totalBytesRead < bufferSize && IsRunning())
     {
         unsigned int idx = GetChunkIndexFor(m_position);
         ChunkFilePtr chunk = NULL;
@@ -173,7 +180,7 @@ ssize_t TimeshiftBuffer::Read(unsigned char *buffer, size_t bufferSize)
         }
         if(NULL == chunk)
         {
-            StopThread();
+//            StopThread();
             m_addonHelper->Log(LOG_ERROR, "TimeshiftBuffer: failed to obtain chunk for read.");
             break;
         }
@@ -186,18 +193,18 @@ ssize_t TimeshiftBuffer::Read(unsigned char *buffer, size_t bufferSize)
             if(bytesRead == 0 && !m_writeEvent.Wait(timeout)) //timeout
             {
                 m_addonHelper->Log(LOG_NOTICE, "TimeshiftBuffer: nothing to read within %d msec.", timeout);
-                StopThread();
-                break;
+                //StopThread();
+                //break;
             }
             //DebugLog(std::string(">>> Read: ") + n_to_string(bytesRead));
             totalBytesRead += bytesRead;
             m_position += bytesRead;
             if(chunk->m_reader.Length() >= CHUNK_FILE_SIZE_LIMIT && chunk->m_reader.Position() == chunk->m_reader.Length())
                 chunk = NULL;
-        }while(bytesRead == 0 && NULL != chunk && !IsStopped());
+        }while(bytesRead == 0 && NULL != chunk && IsRunning());
     }
 
-    return IsStopped() ? -1 :totalBytesRead;
+    return (IsStopped() || !IsRunning()) ? -1 :totalBytesRead;
 }
 
 TimeshiftBuffer::ChunkFilePtr TimeshiftBuffer::CreateChunk()
