@@ -94,20 +94,22 @@ public:
             m_sovokTV->LoadArchiveList();
             
             // Wait for epg done before announce archives
-            bool isStopped = IsStopped();
-            while(!isStopped && (oldEpgActivity != m_epgActivityCounter)){
+            bool isStopped;
+            while(!(isStopped = IsStopped()) && (oldEpgActivity != m_epgActivityCounter)){
                 oldEpgActivity = m_epgActivityCounter;
-                isStopped = !Sleep(2000);// 2sec
+                Sleep(2000);// 2sec
             }
             if(isStopped)
                 break;
+            
             
             HelperThread* pThis = this;
             m_sovokTV->m_httpEngine->RunOnCompletionQueueAsync([pThis]() {
                 pThis->m_action();
             },  [](const CActionQueue::ActionResult& s) {});
             
-        }while (Sleep(10*60*1000)); //10 min
+            Sleep(10*60*1000);//10 min
+        }while (!IsStopped());
 
         return NULL;
         
