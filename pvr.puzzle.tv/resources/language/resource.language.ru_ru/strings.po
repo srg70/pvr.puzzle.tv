@@ -31,7 +31,11 @@ msgid "Timeshift Path"
 msgstr "Timeshift папка"
 
 msgctxt "#20000"
-msgid "PuzzlePort"
+msgid "Puzzle Server"
+msgstr "Сервер"
+
+msgctxt "#20001"
+msgid "Puzzle Port"
 msgstr "Порт"
 
 msgctxt "#20010"

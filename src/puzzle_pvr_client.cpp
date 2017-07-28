@@ -50,7 +50,7 @@ ADDON_STATUS PuzzlePVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_l
        return retVal;
     
 //    m_shouldAddFavoritesGroup = true;
-//    char buffer[1024];
+    char buffer[1024];
     
 //    if (m_addonHelper->GetSetting("puzzle_server_port", &buffer))
 //        m_login = buffer;
@@ -60,12 +60,15 @@ ADDON_STATUS PuzzlePVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_l
     int sercerPort = 54000;
     m_addonHelper->GetSetting("puzzle_server_port", &sercerPort);
     
+    m_addonHelper->GetSetting("puzzle_server_uri", &buffer);
+    
    
     
     try
     {
         CreateCore();
         m_puzzleTV->SetServerPort(sercerPort);
+        m_puzzleTV->SetServerUri(buffer);
     }
     catch (std::exception& ex)
     {
@@ -102,6 +105,11 @@ ADDON_STATUS PuzzlePVRClient::SetSetting(const char *settingName, const void *se
     {
         if(m_puzzleTV)
             m_puzzleTV->SetServerPort(*(int *)(settingValue));
+    }
+    else if (strcmp(settingName, "puzzle_server_uri") == 0 )//&& strcmp((const char*) settingValue, m_password.c_str()) != 0)
+    {
+        if(m_puzzleTV)
+            m_puzzleTV->SetServerUri((const char *)(settingValue));
     }
     else {
         return PVRClientBase::SetSetting(settingName, settingValue);

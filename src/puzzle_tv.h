@@ -175,7 +175,10 @@ namespace PuzzleEngine
         std::string GetNextStream(ChannelId channelId, int currentChannelIdx);
 
         void SetServerPort(uint16_t port) {m_serverPort = port;}
-        uint16_t GetServerPort(uint16_t port) {return m_serverPort;}
+        uint16_t GetServerPort() const {return m_serverPort;}
+
+        void SetServerUri(const char* uri) {m_serverUri = uri;}
+        const std::string& GetServerUri() const {return m_serverUri;}
 
     private:
         typedef std::vector<std::string> StreamerIdsList;
@@ -212,6 +215,7 @@ namespace PuzzleEngine
 
         
         uint16_t m_serverPort;
+        std::string m_serverUri;
         
         ADDON::CHelper_libXBMC_addon *m_addonHelper;
         ChannelList m_channelList;

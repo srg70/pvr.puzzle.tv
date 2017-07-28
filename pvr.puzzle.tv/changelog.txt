@@ -1,8 +1,13 @@
+0.2.0 (alfa version for Puzzle TV Server)
+- Playlist playback support
+- Use alternative stream on playback error (Puzzle Server only)
+- Simplified logic of network buffers.
+
 0.1.3
--Fixed crash on default settings
+- Fixed crash on default settings
 
 0.1.0
-- Template for Puzzle TV proveder. Does not ready yet due to server issues
+- Template for Puzzle TV provider. Does not ready yet due to server issues
 - EPG cache
 - Code structure refactoring
 - General  improvements

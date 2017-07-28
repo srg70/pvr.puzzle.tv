@@ -10,7 +10,8 @@
 
 <!-- Puzzle TV -->
   <category label="20010">
-      <setting id="puzzle_server_port"  type="number"    label="20000" default="8089"/>
+      <setting id="puzzle_server_uri" type="text" label="20000" default="127.0.0.1"/>
+      <setting id="puzzle_server_port" type="number" label="20001" default="8089"/>
   </category>
 
 <!-- Sovok TV -->

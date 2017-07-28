@@ -516,7 +516,7 @@ void PuzzleTV::CallApiAsync(const ApiFunctionData& data, TParser parser, TComple
         query += runner == first ? "?" : "&";
         query += runner->first + '=' + runner->second;
     }
-    std::string strRequest = "http://127.0.0.1:";
+    std::string strRequest = string("http://") + m_serverUri + ":";
     strRequest += n_to_string(m_serverPort);
     strRequest +="/get/";
     strRequest += data.name + query;
