@@ -162,14 +162,20 @@ bool PuzzleTV::StartArchivePollingWithCompletion(std::function<void(void)> actio
     return true;
 }
 
-const ChannelList &PuzzleTV::GetChannelList()
+ChannelList &PuzzleTV::GetMutableChannelList()
 {
     if (m_channelList.empty())
     {
         BuildChannelAndGroupList();
     }
-
+    
     return m_channelList;
+
+}
+
+const ChannelList &PuzzleTV::GetChannelList()
+{
+    return GetMutableChannelList();
 }
 
 const EpgEntryList& PuzzleTV::GetEpgList() const
@@ -394,12 +400,27 @@ const GroupList &PuzzleTV::GetGroupList()
     return m_groupList;
 }
 
+string PuzzleTV::GetNextStream(ChannelId channelId, int currentChannelIdx)
+{
+    auto& channelList = GetChannelList();
+    if(channelList.count( channelId ) != 1) {
+        Log((string(" >>>>   PuzzleTV::GetNextStream: Unknown channel ID=" ) + n_to_string(channelId) + " <<<<<") .c_str());
+        return string();
+    }
+    auto& urls = channelList.at(channelId).Urls;
+    if(urls.size() > currentChannelIdx + 1)
+        return urls[currentChannelIdx + 1];
+    return string();
+
+}
 string PuzzleTV::GetUrl(ChannelId channelId)
 {
-    auto channelList = GetChannelList();
-    if(channelList.count( channelId ) != 1)
+    auto& channelList = GetMutableChannelList();
+    if(channelList.count( channelId ) != 1) {
+        Log((string(" >>>>   PuzzleTV::GetUrl: Unknown channel ID=" ) + n_to_string(channelId) + " <<<<<") .c_str());
         return string();
-    Channel::UrlList& urls = channelList[channelId].Urls;
+    }
+    auto& urls = channelList.at(channelId).Urls;
     if(urls.size() <2)
     {
         urls.clear();

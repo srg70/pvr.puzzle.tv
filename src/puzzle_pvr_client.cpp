@@ -56,7 +56,7 @@ ADDON_STATUS PuzzlePVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_l
 //        m_login = buffer;
 //    if (m_addonHelper->GetSetting("password", &buffer))
 //        m_password = buffer;
-
+    m_currentChannelStreamIdx = -1;
     int sercerPort = 54000;
     m_addonHelper->GetSetting("puzzle_server_port", &sercerPort);
     
@@ -261,16 +261,51 @@ PVR_ERROR PuzzlePVRClient::GetChannels(ADDON_HANDLE handle, bool bRadio)
     return PVR_ERROR_NO_ERROR;
 }
 
+string PuzzlePVRClient::GetStreamUrl(const PVR_CHANNEL& channel)
+{
+    m_currentChannelId = channel.iUniqueId;
+    string url = m_puzzleTV->GetUrl(m_currentChannelId);
+    m_currentChannelStreamIdx = 0;
+    return url;
+}
 bool PuzzlePVRClient::OpenLiveStream(const PVR_CHANNEL& channel)
 {
-    string url = m_puzzleTV->GetUrl(channel.iUniqueId);
-    return PVRClientBase::OpenLiveStream(url);
+    bool succeeded = PVRClientBase::OpenLiveStream(GetStreamUrl(channel));
+    bool tryToRecover = !succeeded;
+    while(tryToRecover) {
+        m_addonHelper->Log(LOG_ERROR, "PuzzlePVRClient:: trying to move to next stream from [%d].", m_currentChannelStreamIdx);
+        string url = m_puzzleTV->GetNextStream(m_currentChannelId,m_currentChannelStreamIdx);
+        if(url.empty()) // nomore streams
+            break;
+        ++m_currentChannelStreamIdx;
+        succeeded = PVRClientBase::OpenLiveStream(url);
+        tryToRecover = !succeeded;
+    }
+
+    return succeeded;
+}
+
+int PuzzlePVRClient::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize)
+{
+    int readBytes = PVRClientBase::ReadLiveStream(pBuffer,iBufferSize);
+    bool tryToRecover = readBytes < 0;
+    while(tryToRecover) {
+        m_addonHelper->Log(LOG_ERROR, "PuzzlePVRClient:: trying to move to next stream from [%d].", m_currentChannelStreamIdx);
+        string url = m_puzzleTV->GetNextStream(m_currentChannelId,m_currentChannelStreamIdx);
+        if(url.empty()) // nomore streams
+            break;
+        ++m_currentChannelStreamIdx;
+        PVRClientBase::SwitchChannel(url);
+        readBytes = PVRClientBase::ReadLiveStream(pBuffer,iBufferSize);
+        tryToRecover = readBytes < 0;
+    }
+
+    return readBytes;
 }
 
 bool PuzzlePVRClient::SwitchChannel(const PVR_CHANNEL& channel)
 {
-    string url = m_puzzleTV->GetUrl(channel.iUniqueId);
-    return PVRClientBase::SwitchChannel(url);
+    return PVRClientBase::SwitchChannel(GetStreamUrl(channel));
 }
 
 //void PuzzlePVRClient::SetAddFavoritesGroup(bool shouldAddFavoritesGroup)

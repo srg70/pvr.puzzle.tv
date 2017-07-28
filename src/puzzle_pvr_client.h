@@ -48,6 +48,8 @@ public:
     PVR_ERROR SignalStatus(PVR_SIGNAL_STATUS &signalStatus);
     ADDON_STATUS GetStatus();
     
+    // Override to check for pure quality streams.
+    int ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize);
     
     PVR_ERROR GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL& channel, time_t iStart, time_t iEnd);
     
@@ -71,9 +73,12 @@ public:
 
 private:
     void CreateCore();
-    
+    std::string GetStreamUrl(const PVR_CHANNEL& channel);
+
     PuzzleEngine::PuzzleTV* m_puzzleTV;
-//    bool m_shouldAddFavoritesGroup;
+    int m_currentChannelStreamIdx;
+    unsigned int m_currentChannelId;
+    //    bool m_shouldAddFavoritesGroup;
 };
 
 #endif //__puzzle_pvr_client_h__

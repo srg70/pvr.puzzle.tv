@@ -221,8 +221,9 @@ bool PVRClientBase::OpenLiveStream(const std::string& url )
             m_inputBuffer = buffer;
 
     }
-    catch (InputBufferException &)
+    catch (InputBufferException &ex)
     {
+        m_addonHelper->Log(LOG_ERROR, "PVRClientBase: impurbuffer error in OpenLiveStream: %s", ex.what());
         return false;
     }
     

@@ -345,7 +345,8 @@ bool PlaylistBuffer::SwitchStream(const std::string &newUrl)
         Init(newUrl);
         succeeded = true;
     } catch (const InputBufferException& ex) {
-        m_addonHelper->Log(LOG_ERROR, "PlaylistBuffer: Failed to switch streams. Error: %s", ex.what());
+        m_addonHelper->QueueNotification(QUEUE_ERROR, "Playlisr error: %s",ex.what());
+        m_addonHelper->Log(LOG_ERROR, "PlaylistBuffer: Failed to switch streams to %s.\n Error: %s", newUrl.c_str(), ex.what());
     }
     
     return succeeded;

@@ -172,7 +172,8 @@ namespace PuzzleEngine
 
         const GroupList &GetGroupList();
         std::string GetUrl(ChannelId channelId);
-        
+        std::string GetNextStream(ChannelId channelId, int currentChannelIdx);
+
         void SetServerPort(uint16_t port) {m_serverPort = port;}
         uint16_t GetServerPort(uint16_t port) {return m_serverPort;}
 
@@ -194,6 +195,9 @@ namespace PuzzleEngine
         void CallApiAsync(const ApiFunctionData& data, TParser parser, TCompletion completion);
         
         void BuildChannelAndGroupList();
+        ChannelList &GetMutableChannelList();
+
+        
         void LoadArchiveList();
         void ResetArchiveList();
         void Log(const char* massage) const;
