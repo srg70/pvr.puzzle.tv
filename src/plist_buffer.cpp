@@ -25,6 +25,7 @@
 #include <windows.h>
 #endif
 
+#include <cctype>
 #include <algorithm>
 #include "plist_buffer.h"
 #include "libXBMC_addon.h"
