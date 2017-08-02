@@ -26,6 +26,9 @@ if(CORE_SYSTEM_NAME STREQUAL osx)
                                 PATHS ${PC_CURL_LIBDIR})
     find_library(CURL_SSL_LIBRARIES NAMES ssl libssl
                                 PATHS ${PC_CURL_LIBDIR})
+    find_library(CURL_CRYPTO_LIBRARIES NAMES crypto libcrypto
+                                PATHS ${PC_CURL_LIBDIR})
+    set(CURL_SSL_LIBRARIES ${CURL_SSL_LIBRARIES} ${CURL_CRYPTO_LIBRARIES})
 else()
     find_path(CURL_INCLUDE_DIRS NAMES curl/curl.h
                     NO_CMAKE_FIND_ROOT_PATH
@@ -36,7 +39,10 @@ else()
     find_library(CURL_SSL_LIBRARIES NAMES ssl libssl libssl_a
                     NO_CMAKE_FIND_ROOT_PATH
                     PATHS ${PC_CURL_LIBDIR})
-
+    find_library(CURL_CRYPTO_LIBRARIES NAMES crypto libcrypto
+                    NO_CMAKE_FIND_ROOT_PATH
+                    PATHS ${PC_CURL_LIBDIR})
+    set(CURL_SSL_LIBRARIES ${CURL_SSL_LIBRARIES} ${CURL_CRYPTO_LIBRARIES})
 endif()
 
 
