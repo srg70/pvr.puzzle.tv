@@ -22,11 +22,12 @@ include_directories(${kodiplatform_INCLUDE_DIRS}
 
 set(DEPLIBS ${p8-platform_LIBRARIES}
             ${ZLIB_LIBRARIES}
-            ${CURL_LIBRARIES})
+            ${CURL_LIBRARIES}
+            ${CURL_SSL_LIBRARIES})
 
 message(STATUS "ZLIB_LIBRARIES: ${ZLIB_LIBRARIES}")
 message(STATUS "CURL_INCLUDE_DIRS: ${CURL_INCLUDE_DIRS}")
-message(STATUS "CURL_LIBRARIES: ${CURL_LIBRARIES}")
+message(STATUS "CURL_LIBRARIES: ${CURL_LIBRARIES} ${CURL_SSL_LIBRARIES}")
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Android")
 	set(ANDROID_CPP_FEATURES exceptions)
