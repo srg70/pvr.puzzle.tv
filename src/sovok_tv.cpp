@@ -94,10 +94,10 @@ public:
             m_sovokTV->LoadArchiveList();
             
             // Wait for epg done before announce archives
-            bool isStopped;
-            while(!(isStopped = IsStopped()) && (oldEpgActivity != m_epgActivityCounter)){
+            bool isStopped = IsStopped();
+            while(!isStopped && (oldEpgActivity != m_epgActivityCounter)){
                 oldEpgActivity = m_epgActivityCounter;
-                Sleep(2000);// 2sec
+                isStopped = NotStoppedIn(3000);// 2sec
             }
             if(isStopped)
                 break;
@@ -108,8 +108,7 @@ public:
                 pThis->m_action();
             },  [](const CActionQueue::ActionResult& s) {});
             
-            Sleep(10*60*1000);//10 min
-        }while (!IsStopped());
+        }while (NotStoppedIn(10*60*1000));//10 min
 
         return NULL;
         
@@ -120,6 +119,15 @@ public:
 //        return this->P8PLATFORM::CThread::StopThread(iWaitMs);
 //    }
 private:
+    bool NotStoppedIn(uint32_t msTimeout) {
+        P8PLATFORM::CTimeout timeout(msTimeout);
+        bool isStoppedOrTimeout = IsStopped() || timeout.TimeLeft() == 0;
+        while(!isStoppedOrTimeout) {
+            isStoppedOrTimeout = IsStopped() || timeout.TimeLeft() == 0;
+            Sleep(1000);//1sec
+        }
+        return isStoppedOrTimeout;
+    }
     SovokTV* m_sovokTV;
     std::function<void(void)> m_action;
     unsigned int m_epgActivityCounter;
