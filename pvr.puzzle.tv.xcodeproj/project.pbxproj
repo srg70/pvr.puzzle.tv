@@ -103,6 +103,8 @@
 		4C49D2411E27C4BF0026F43E /* tinyxml.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1EC1E27C4BF0026F43E /* tinyxml.h */; };
 		4C49D2421E27C4BF0026F43E /* zconf.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1ED1E27C4BF0026F43E /* zconf.h */; };
 		4C49D2431E27C4BF0026F43E /* zlib.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1EE1E27C4BF0026F43E /* zlib.h */; };
+		4C534CC31F347CD50038539D /* file_cache_buffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C534CC11F347CD50038539D /* file_cache_buffer.cpp */; };
+		4C534CC41F347CD50038539D /* file_cache_buffer.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4C534CC21F347CD50038539D /* file_cache_buffer.hpp */; };
 		4C8506E41EF478A000213131 /* pvr_client_base.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C8506E21EF478A000213131 /* pvr_client_base.cpp */; };
 		4C8506E51EF478A000213131 /* pvr_client_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C8506E31EF478A000213131 /* pvr_client_base.h */; };
 		4C8506E81F0E25DF00213131 /* HttpEngine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C8506E61F0E25DF00213131 /* HttpEngine.cpp */; };
@@ -217,6 +219,10 @@
 		4C49D1EC1E27C4BF0026F43E /* tinyxml.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tinyxml.h; sourceTree = "<group>"; };
 		4C49D1ED1E27C4BF0026F43E /* zconf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = zconf.h; sourceTree = "<group>"; };
 		4C49D1EE1E27C4BF0026F43E /* zlib.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = zlib.h; sourceTree = "<group>"; };
+		4C534CC01F3473570038539D /* cache_buffer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cache_buffer.h; sourceTree = "<group>"; };
+		4C534CC11F347CD50038539D /* file_cache_buffer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = file_cache_buffer.cpp; sourceTree = "<group>"; };
+		4C534CC21F347CD50038539D /* file_cache_buffer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = file_cache_buffer.hpp; sourceTree = "<group>"; };
+		4C534CC51F348EF50038539D /* CMakeLists.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
 		4C5BF35E1F18DAEE00437252 /* ott_player.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ott_player.h; sourceTree = "<group>"; };
 		4C5BF35F1F18DAEE00437252 /* ott_pvr_client.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ott_pvr_client.h; sourceTree = "<group>"; };
 		4C5BF3601F18DAEE00437252 /* ott_pvr_client.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ott_pvr_client.cpp; sourceTree = "<group>"; };
@@ -252,6 +258,7 @@
 				4C49D18E1E27C4BF0026F43E /* include */,
 				4C08C78B1D818381004CAAE3 /* src */,
 				4C08C7E01D81D27A004CAAE3 /* Products */,
+				4C534CC51F348EF50038539D /* CMakeLists.txt */,
 			);
 			sourceTree = "<group>";
 		};
@@ -468,6 +475,7 @@
 		4C4FBFA41E77C0590027911E /* Buffers */ = {
 			isa = PBXGroup;
 			children = (
+				4C534CC61F348FB40038539D /* Cache */,
 				4C08C7F91D81E34A004CAAE3 /* input_buffer.h */,
 				4C08C7EF1D81E2A8004CAAE3 /* direct_buffer.cpp */,
 				4C08C7F01D81E2A8004CAAE3 /* direct_buffer.h */,
@@ -477,6 +485,16 @@
 				4C08C7F21D81E2A8004CAAE3 /* timeshift_buffer.h */,
 			);
 			name = Buffers;
+			sourceTree = "<group>";
+		};
+		4C534CC61F348FB40038539D /* Cache */ = {
+			isa = PBXGroup;
+			children = (
+				4C534CC01F3473570038539D /* cache_buffer.h */,
+				4C534CC11F347CD50038539D /* file_cache_buffer.cpp */,
+				4C534CC21F347CD50038539D /* file_cache_buffer.hpp */,
+			);
+			name = Cache;
 			sourceTree = "<group>";
 		};
 		4C5BF35C1F18DAD400437252 /* OTT */ = {
@@ -553,6 +571,7 @@
 				4C49D23C1E27C4BF0026F43E /* rapidjson.h in Headers */,
 				4C49D2051E27C4BF0026F43E /* libXBMC_codec.h in Headers */,
 				4CFEAA901E4DA81A002C2BA4 /* ActionQueue.hpp in Headers */,
+				4C534CC41F347CD50038539D /* file_cache_buffer.hpp in Headers */,
 				4C49D1FC1E27C4BF0026F43E /* kodi_peripheral_utils.hpp in Headers */,
 				4C49D1F31E27C4BF0026F43E /* kodi_adsp_types.h in Headers */,
 				4C49D2341E27C4BF0026F43E /* stack.h in Headers */,
@@ -702,6 +721,7 @@
 				4C8506E41EF478A000213131 /* pvr_client_base.cpp in Sources */,
 				4C08C7FA1D81E34A004CAAE3 /* helpers.cpp in Sources */,
 				4CFEAA8F1E4DA81A002C2BA4 /* ActionQueue.cpp in Sources */,
+				4C534CC31F347CD50038539D /* file_cache_buffer.cpp in Sources */,
 				4C08C7EE1D81D295004CAAE3 /* sovok_tv.cpp in Sources */,
 				4C8506E81F0E25DF00213131 /* HttpEngine.cpp in Sources */,
 				4C08C7F31D81E2A8004CAAE3 /* direct_buffer.cpp in Sources */,

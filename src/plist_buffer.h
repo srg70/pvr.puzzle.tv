@@ -38,59 +38,75 @@ namespace ADDON
     class CHelper_libXBMC_addon;
 }
 
-class PlaylistBuffer :  public InputBuffer, public P8PLATFORM::CThread
+namespace Buffers
 {
-public:
-    PlaylistBuffer(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &streamUrl);
-    ~PlaylistBuffer();
-
-    int64_t GetLength() const;
-    int64_t GetPosition() const;
-    int64_t Seek(int64_t iPosition, int iWhence);
-    ssize_t Read(unsigned char *buffer, size_t bufferSize);
-    bool SwitchStream(const std::string &newUrl);
-
-    /*!
-     * @brief Stop the thread
-     * @param iWaitMs negative = don't wait, 0 = infinite, or the amount of ms to wait
-     */
-    virtual bool StopThread(int iWaitMs = 5000);
-
-private:
-    class Segment
+    class PlaylistBuffer :  public InputBuffer, public P8PLATFORM::CThread
     {
     public:
-//        ADDON::CHelper_libXBMC_addon *m_addonHelper;
-
-        Segment();
-        Segment(const uint8_t* buffer, size_t size);
-        void Push(const uint8_t* buffer, size_t size);
-        const uint8_t* Pop(size_t requesred, size_t*  actual);
-        size_t Read(uint8_t* buffer, size_t size);
-        size_t BytesReady() const {return  _size - (_begin - &_data[0]);}
-        ~Segment();
+        PlaylistBuffer(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &streamUrl);
+        ~PlaylistBuffer();
+        
+        int64_t GetLength() const;
+        int64_t GetPosition() const;
+        int64_t Seek(int64_t iPosition, int iWhence);
+        ssize_t Read(unsigned char *buffer, size_t bufferSize);
+        bool SwitchStream(const std::string &newUrl);
+        
+        /*!
+         * @brief Stop the thread
+         * @param iWaitMs negative = don't wait, 0 = infinite, or the amount of ms to wait
+         */
+        virtual bool StopThread(int iWaitMs = 5000);
+        
     private:
-        uint8_t* _data;
-        size_t _size;
-        const uint8_t* _begin;
+        class Segment
+        {
+        public:
+            //        ADDON::CHelper_libXBMC_addon *m_addonHelper;
+            
+            Segment();
+            Segment(const uint8_t* buffer, size_t size);
+            void Push(const uint8_t* buffer, size_t size);
+            const uint8_t* Pop(size_t requesred, size_t*  actual);
+            size_t Read(uint8_t* buffer, size_t size);
+            size_t BytesReady() const {return  _size - (_begin - &_data[0]);}
+            ~Segment();
+        private:
+            uint8_t* _data;
+            size_t _size;
+            const uint8_t* _begin;
+        };
+        typedef std::map<uint64_t, std::pair<float, std::string> > TSegmentUrls;
+        typedef std::list<std::shared_ptr<Segment> >  TSegments;
+        
+        TSegmentUrls m_segmentUrls;
+        TSegments m_segments;
+        uint64_t m_lastSegment;
+        ADDON::CHelper_libXBMC_addon *m_addonHelper;
+        std::string  m_playListUrl;
+        mutable P8PLATFORM::CMutex m_syncAccess;
+        P8PLATFORM::CEvent m_writeEvent;
+        
+        void *Process();
+        void Init(const std::string &playlistUrl);
+        void ParsePlaylist(const std::string& data);
+        void SetBestPlaylist(const std::string& playlistUrl);
+        void LoadPlaylist(std::string& data);
+        bool FillSegment(const TSegmentUrls::mapped_type& segment);
     };
-    typedef std::map<uint64_t, std::pair<float, std::string> > TSegmentUrls;
-    typedef std::list<std::shared_ptr<Segment> >  TSegments;
-    
-    TSegmentUrls m_segmentUrls;
-    TSegments m_segments;
-    uint64_t m_lastSegment;
-    ADDON::CHelper_libXBMC_addon *m_addonHelper;
-    std::string  m_playListUrl;
-    mutable P8PLATFORM::CMutex m_syncAccess;
-    P8PLATFORM::CEvent m_writeEvent;
+ 
+    class PlistBufferException : public InputBufferException
+    {
+    public:
+        PlistBufferException(const char* reason = "")
+        : m_reason(reason)
+        , InputBufferException(NULL)
+        {}
+        virtual const char* what() const noexcept {return m_reason.c_str();}
+        
+    private:
+        std::string m_reason;
+    };
 
-    void *Process();
-    void Init(const std::string &playlistUrl);
-    void ParsePlaylist(const std::string& data);
-    void SetBestPlaylist(const std::string& playlistUrl);
-    void LoadPlaylist(std::string& data);
-    bool FillSegment(const TSegmentUrls::mapped_type& segment);
-};
-
+}
 #endif //plist_buffer_h

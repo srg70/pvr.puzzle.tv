@@ -29,28 +29,32 @@
 
 #include <exception>
 
-class InputBufferException : public std::exception
-{
-public:
-    InputBufferException(const char* reason = "") : r(reason){}
-    virtual const char* what() const noexcept {return r;}
-
-private:
-    const char* r;
-};
-
-class InputBuffer
-{
-public:
-    virtual ~InputBuffer() {}
-
-    virtual int64_t GetLength() const = 0;
-    virtual int64_t GetPosition() const = 0;
-    virtual ssize_t Read(unsigned char *buffer, size_t bufferSize) = 0;
-    virtual int64_t Seek(int64_t iPosition, int iWhence) = 0;
-    virtual bool SwitchStream(const std::string &newUrl) = 0;
-protected:
-    const int c_commonTimeoutMs = 10000; // 10 sec
-};
+namespace Buffers {
+    
+    class InputBufferException : public std::exception
+    {
+    public:
+        InputBufferException(const char* reason = "") : r(reason){}
+        virtual const char* what() const noexcept {return r;}
+        
+    private:
+        const char* r;
+    };
+    
+    class InputBuffer
+    {
+    public:
+        virtual ~InputBuffer() {}
+        
+        virtual int64_t GetLength() const = 0;
+        virtual int64_t GetPosition() const = 0;
+        virtual ssize_t Read(unsigned char *buffer, size_t bufferSize) = 0;
+        virtual int64_t Seek(int64_t iPosition, int iWhence) = 0;
+        virtual bool SwitchStream(const std::string &newUrl) = 0;
+    protected:
+        const int c_commonTimeoutMs = 10000; // 10 sec
+    };
+    
+}
 
 #endif //input_buffer_h

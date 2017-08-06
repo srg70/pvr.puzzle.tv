@@ -38,378 +38,150 @@
 
 #include "libXBMC_addon.h"
 
-using namespace std;
-using namespace ADDON;
-using namespace P8PLATFORM;
-
-static const int STREAM_READ_BUFFER_SIZE = 1024 * 32; // 32K input read buffer
-static const  unsigned int CHUNK_FILE_SIZE_LIMIT = (unsigned int)(STREAM_READ_BUFFER_SIZE * 1024) * 32; // 1GB chunk (temporary, pending completion of chunck factory)
-
-TimeshiftBuffer::TimeshiftBuffer(CHelper_libXBMC_addon *addonHelper, InputBuffer* inputBuffer, const string &bufferCacheDir) :
-    m_addonHelper(addonHelper),
-    m_bufferDir(bufferCacheDir),
-    m_inputBuffer(inputBuffer),
-    m_length(0),
-    m_position(0)
-{
-    if (!m_inputBuffer)
-        throw InputBufferException("TimesiftBuffer: source stream buffer is NULL.");
-    if(!m_addonHelper->DirectoryExists(m_bufferDir.c_str()))
-       if(!m_addonHelper->CreateDirectory(m_bufferDir.c_str()))
-          throw InputBufferException("Failed to create cahche directory for timeshift buffer.");
-    Init();
-}
-
-void TimeshiftBuffer::Init(const std::string& newUrl) {
-    StopThread();
+namespace Buffers {
     
-    if(!newUrl.empty())
-        m_inputBuffer->SwitchStream(newUrl);
-
-    m_writeEvent.Reset();
-    m_length = 0;
-    m_position = 0;
-    m_ReadChunks.clear();
-    m_ChunkFileSwarm.clear();
-    CreateThread();
-}
-void TimeshiftBuffer::DebugLog(const std::string& message ) const
-{
-//    char* msg = m_addonHelper->UnknownToUTF8(message.c_str());
-    m_addonHelper->Log(LOG_DEBUG, message.c_str());
-//    m_addonHelper->FreeString(msg);
-}
-
-TimeshiftBuffer::~TimeshiftBuffer()
-{
-    StopThread();
+    using namespace std;
+    using namespace ADDON;
+    using namespace P8PLATFORM;
     
-    if(m_inputBuffer)
-        delete m_inputBuffer;
-    
-    m_ReadChunks.clear();
-}
-
-bool TimeshiftBuffer::StopThread(int iWaitMs)
-{
-    int stopCounter = 1;
-    bool retVal = false;
-    while(!(retVal = this->CThread::StopThread(iWaitMs))){
-        if(stopCounter++ > 3)
-            break;
-        m_addonHelper->Log(LOG_NOTICE, "TimeshiftBuffer: can't stop thread in %d ms", iWaitMs);
-    }
-    if(!retVal)
-        m_addonHelper->Log(LOG_ERROR, "TimeshiftBuffer: can't stop thread in %d ms", stopCounter*iWaitMs);
-
-    return retVal;
-}
-void *TimeshiftBuffer::Process()
-{
-    unsigned char buffer[STREAM_READ_BUFFER_SIZE];
-    ssize_t chunkSize = 0;
-    ChunkFilePtr chunk = NULL;
-    bool isError = false;
-    try {
-        while (!isError && m_inputBuffer != NULL && !IsStopped()) {
-            // Create new chunk if nesessary
-            if(NULL == chunk)
-            {
-                chunk  = CreateChunk();
-                {
-                    CLockObject lock(m_SyncAccess);
-                    m_ReadChunks.push_back(chunk);
-                }
-                chunkSize = 0;
-                DebugLog(std::string(">>> TimeshiftBuffer: new current chunk (for write): ") + chunk->Path());
-            }
-            // Fill read buffer
-            ssize_t bytesRead = 0;
-            do {
-                bytesRead += m_inputBuffer->Read(buffer + bytesRead, sizeof(buffer) - bytesRead);
-                isError = bytesRead < 0;
-            }while (bytesRead > 0 && bytesRead < sizeof(buffer) && !IsStopped());
-            
-            if(bytesRead > 0) {
-                // Write to local chunk
-                //DebugLog(std::string(">>> Write: ") + n_to_string(bytesRead));
-                ssize_t bytesWritten = chunk->m_writer.Write(buffer, bytesRead);
-                {
-                    CLockObject lock(m_SyncAccess);
-                    m_length += bytesWritten;
-                }
-                isError |= bytesWritten != bytesRead;
-                if(bytesWritten != bytesRead)
-                    m_addonHelper->Log(LOG_ERROR,
-                                       "TimeshiftBuffer: write cache error written (%d) != read (%d)", bytesWritten,bytesRead);
-
-                chunkSize += bytesWritten;
-                if(chunkSize >= CHUNK_FILE_SIZE_LIMIT)
-                    chunk = NULL;
-                m_writeEvent.Signal();
-            }
-        }
-
-    } catch (InputBufferException& ex ) {
-        m_addonHelper->Log(LOG_ERROR, "Failed to create timeshift chunkfile in directory %s", m_bufferDir.c_str());
-    }
-
-    return NULL;
-}
-
-ssize_t TimeshiftBuffer::Read(unsigned char *buffer, size_t bufferSize)
-{
-
-    size_t totalBytesRead = 0;
-    int32_t timeout = 5000;//c_commonTimeoutMs + 1000;
-
-    while (totalBytesRead < bufferSize && IsRunning())
+    TimeshiftBuffer::TimeshiftBuffer(CHelper_libXBMC_addon *addonHelper, InputBuffer* inputBuffer, ICacheBuffer* cache)
+    : m_addonHelper(addonHelper)
+    , m_inputBuffer(inputBuffer)
+    , m_cache(cache)
     {
-        unsigned int idx = GetChunkIndexFor(m_position);
-        ChunkFilePtr chunk = NULL;
-        {
-            CLockObject lock(m_SyncAccess);
-            chunk = (idx >= m_ReadChunks.size()) ? NULL : m_ReadChunks[idx];
-        }
-        // Retry 1 time after write operation
-        if(NULL == chunk && m_writeEvent.Wait(timeout))
-        {
-            idx = GetChunkIndexFor(m_position);
-            CLockObject lock(m_SyncAccess);
-            chunk = (idx >= m_ReadChunks.size()) ? NULL : m_ReadChunks[idx];
-        }
-        if(NULL == chunk)
-        {
-//            StopThread();
-            m_addonHelper->Log(LOG_ERROR, "TimeshiftBuffer: failed to obtain chunk for read.");
+        if (!m_inputBuffer)
+        throw InputBufferException("TimesiftBuffer: source stream buffer is NULL.");
+        if (!m_cache)
+        throw InputBufferException("TimesiftBuffer: cache buffer is NULL.");
+        Init();
+    }
+    
+    void TimeshiftBuffer::Init(const std::string& newUrl) {
+        StopThread();
+        
+        if(!newUrl.empty())
+        m_inputBuffer->SwitchStream(newUrl);
+        
+        m_writeEvent.Reset();
+        m_cache->Init();
+        CreateThread();
+    }
+    void TimeshiftBuffer::DebugLog(const std::string& message ) const
+    {
+        //    char* msg = m_addonHelper->UnknownToUTF8(message.c_str());
+        m_addonHelper->Log(LOG_DEBUG, message.c_str());
+        //    m_addonHelper->FreeString(msg);
+    }
+    
+    TimeshiftBuffer::~TimeshiftBuffer()
+    {
+        StopThread();
+        
+        if(m_inputBuffer)
+            delete m_inputBuffer;
+        if(m_cache)
+        delete m_cache;
+    }
+    
+    bool TimeshiftBuffer::StopThread(int iWaitMs)
+    {
+        int stopCounter = 1;
+        bool retVal = false;
+        while(!(retVal = this->CThread::StopThread(iWaitMs))){
+            if(stopCounter++ > 3)
             break;
+            m_addonHelper->Log(LOG_NOTICE, "TimeshiftBuffer: can't stop thread in %d ms", iWaitMs);
         }
-
-        ssize_t bytesRead = 0;
-        do
-        {
+        if(!retVal)
+        m_addonHelper->Log(LOG_ERROR, "TimeshiftBuffer: can't stop thread in %d ms", stopCounter*iWaitMs);
+        
+        return retVal;
+    }
+    void *TimeshiftBuffer::Process()
+    {
+        unsigned char buffer[m_cache->UnitSize()];
+        bool isError = false;
+        try {
+            while (!isError && m_inputBuffer != NULL && !IsStopped()) {
+                
+                // Fill read buffer
+                ssize_t bytesRead = 0;
+                do {
+                    bytesRead += m_inputBuffer->Read(buffer + bytesRead, sizeof(buffer) - bytesRead);
+                    isError = bytesRead < 0;
+                }while (bytesRead > 0 && bytesRead < sizeof(buffer) && !IsStopped());
+                
+                if(bytesRead > 0) {
+                    // Write to local chunk
+                    //DebugLog(std::string(">>> Write: ") + n_to_string(bytesRead));
+                    ssize_t bytesWritten = m_cache->Write(buffer, bytesRead);
+                    isError |= bytesWritten != bytesRead;
+                    if(bytesWritten != bytesRead) {
+                        m_addonHelper->Log(LOG_ERROR, "TimeshiftBuffer: write cache error written (%d) != read (%d)", bytesWritten,bytesRead);
+                    }
+                    m_writeEvent.Signal();
+                }
+            }
+            
+        } catch (std::exception& ex ) {
+            m_addonHelper->Log(LOG_ERROR, "Exception in timshift background thread: %s", ex.what());
+        }
+        
+        return NULL;
+    }
+    
+    ssize_t TimeshiftBuffer::Read(unsigned char *buffer, size_t bufferSize)
+    {
+        
+        size_t totalBytesRead = 0;
+        int32_t timeout = 5000;//c_commonTimeoutMs + 1000;
+        
+        while (totalBytesRead < bufferSize && IsRunning()) {
+            ssize_t bytesRead = 0;
             size_t bytesToRead = bufferSize - totalBytesRead;
-            bytesRead = chunk->m_reader.Read( buffer + totalBytesRead, bytesToRead);
-            if(bytesRead == 0 && !m_writeEvent.Wait(timeout)) //timeout
-            {
+            bytesRead = m_cache->Read( buffer + totalBytesRead, bytesToRead);
+            if(bytesRead == 0 && !m_writeEvent.Wait(timeout)){ //timeout
                 m_addonHelper->Log(LOG_NOTICE, "TimeshiftBuffer: nothing to read within %d msec.", timeout);
                 //StopThread();
                 //break;
             }
             //DebugLog(std::string(">>> Read: ") + n_to_string(bytesRead));
             totalBytesRead += bytesRead;
-            m_position += bytesRead;
-            if(chunk->m_reader.Length() >= CHUNK_FILE_SIZE_LIMIT && chunk->m_reader.Position() == chunk->m_reader.Length())
-                chunk = NULL;
-        }while(bytesRead == 0 && NULL != chunk && IsRunning());
-    }
-
-    return (IsStopped() || !IsRunning()) ? -1 :totalBytesRead;
-}
-
-TimeshiftBuffer::ChunkFilePtr TimeshiftBuffer::CreateChunk()
-{
-    ChunkFilePtr newChunk = new CAddonFile(m_addonHelper, UniqueFilename(m_bufferDir, m_addonHelper).c_str());
-    m_ChunkFileSwarm.push_back(ChunkFileSwarm::value_type(newChunk));
-    return newChunk;
-}
-
-unsigned int TimeshiftBuffer::GetChunkIndexFor(int64_t pos) {
-    return pos / CHUNK_FILE_SIZE_LIMIT;
-}
-int64_t TimeshiftBuffer::GetPositionInChunkFor(int64_t pos) {
-    return pos % CHUNK_FILE_SIZE_LIMIT;
-}
-
-int64_t TimeshiftBuffer::GetLength() const
-{
-    int64_t length = -1;
-    {
-        CLockObject lock(m_SyncAccess);
-        length = m_length;
-    }
-    //DebugLog(std::string(">>> GetLength(): ") + n_to_string(length));
-    return length;
-}
-
-int64_t TimeshiftBuffer::GetPosition() const
-{
-    int64_t pos = m_position;
-    //DebugLog(std::string(">>> GetPosition(): ") + n_to_string(pos));
-    return pos;
-}
-
-
-int64_t TimeshiftBuffer::Seek(int64_t iPosition, int iWhence)
-{
-    unsigned int idx = -1;
-    ChunkFilePtr chunk = NULL;
-    {
-        CLockObject lock(m_SyncAccess);
-        
-        // Translate position to offset from start of buffer.
-        if(iWhence == SEEK_CUR)
-            iPosition = m_position + iPosition;
-        else if(iWhence == SEEK_END)
-            iPosition = m_length + iPosition;
-
-        if(iPosition > m_length)
-            iPosition = m_length;
-        iWhence = SEEK_SET;
-        
-        idx = GetChunkIndexFor(iPosition);
-        if(idx >= m_ReadChunks.size()) {
-            m_addonHelper->Log(LOG_ERROR, "TimeshiftBuffer: seek failed. Wrong chunk index %d", idx);
-            return -1;
         }
-        chunk = m_ReadChunks[idx];
+        return (IsStopped() || !IsRunning()) ? -1 :totalBytesRead;
     }
-    auto inPos = GetPositionInChunkFor(iPosition);
-    auto pos =  chunk->m_reader.Seek(inPos, iWhence);
-    m_position = iPosition -  (inPos - pos);
-    return iPosition;
-}
-
-bool TimeshiftBuffer::SwitchStream(const string &newUrl)
-{
-    bool succeeded = false;
-    try {
-        Init(newUrl);
-        succeeded = true;
-    } catch (const InputBufferException& ex) {
-        m_addonHelper->Log(LOG_ERROR, "Failed to switch streams. Error: %s", ex.what());
-    }
-
-    return succeeded;
-}
-
-std::string TimeshiftBuffer::UniqueFilename(const std::string& dir, ADDON::CHelper_libXBMC_addon*  helper)
-{
-    int cnt = 0;
-    std::string candidate;
-    do
+    
+    int64_t TimeshiftBuffer::GetLength() const
     {
-        candidate = dir;
-        candidate += PATH_SEPARATOR_CHAR;
-        candidate +="TimeshiftBuffer-";
-        candidate +=n_to_string(cnt++);
-        candidate += ".bin";
-    }while(helper->FileExists(candidate.c_str(), false));
-    return candidate;
+        //DebugLog(std::string(">>> GetLength(): ") + n_to_string(length));
+        return m_cache->Length();
+    }
+    
+    int64_t TimeshiftBuffer::GetPosition() const
+    {
+        //DebugLog(std::string(">>> GetPosition(): ") + n_to_string(pos));
+        return m_cache->Position();
+    }
+    
+    
+    int64_t TimeshiftBuffer::Seek(int64_t iPosition, int iWhence)
+    {
+           return m_cache->Seek(iPosition,iWhence);
+    }
+    
+    bool TimeshiftBuffer::SwitchStream(const string &newUrl)
+    {
+        bool succeeded = false;
+        try {
+            Init(newUrl);
+            succeeded = true;
+        } catch (const InputBufferException& ex) {
+            m_addonHelper->Log(LOG_ERROR, "Failed to switch streams. Error: %s", ex.what());
+        }
+        
+        return succeeded;
+    }
+    
+    
 }
-
-#pragma mark - CGenericFile
-
-TimeshiftBuffer::CGenericFile::CGenericFile(ADDON::CHelper_libXBMC_addon *addonHelper, void* handler)
-    : m_handler(handler)
-    , m_helper(addonHelper)
-{
-    if(NULL == m_handler)
-        throw InputBufferException("Failed to open timeshift buffer chunk file.");
-}
-int64_t TimeshiftBuffer::CGenericFile::Seek(int64_t iFilePosition, int iWhence)
-{
-    auto s = m_helper->SeekFile(m_handler, iFilePosition, iWhence);
-//    std::stringstream ss;
-//    ss <<">>> SEEK to" << iFilePosition << ". Res=" << s ;
-//    m_helper->Log(LOG_DEBUG, ss.str().c_str());
-    return s;
-}
-
-int64_t TimeshiftBuffer::CGenericFile::Length()
-{
-    auto l = m_helper->GetFileLength(m_handler);
-//    std::stringstream ss;
-//    ss <<">>> LENGHT=" << l;
-//    m_helper->Log(LOG_DEBUG, ss.str().c_str());
-    return l;
-}
-int64_t TimeshiftBuffer::CGenericFile::Position()
-{
-    auto p = m_helper->GetFilePosition(m_handler);
-//    std::stringstream ss;
-//    ss <<">>> POSITION=" << p;
-//    m_helper->Log(LOG_DEBUG, ss.str().c_str());
-
-    return p;
-}
-
-//int TimeshiftBuffer::CGenericFile::Truncate(int64_t iSize)
-//{
-//    return m_helper->TruncateFile(m_handler, iSize);
-//}
-
-bool TimeshiftBuffer::CGenericFile::IsOpened() const
-{
-    return m_handler != NULL;
-}
-
-void TimeshiftBuffer::CGenericFile::Close()
-{
-    m_helper->CloseFile(m_handler);
-    m_handler = NULL;
-}
-TimeshiftBuffer::CGenericFile::~CGenericFile()
-{
-    if(m_handler) Close();
-}
-
-
-
-#pragma mark - CFileForWrite
-
-
-TimeshiftBuffer::CFileForWrite::CFileForWrite(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &pathToFile)
-    : CGenericFile(addonHelper, addonHelper->OpenFileForWrite(pathToFile.c_str(), true))
-{
-}
-ssize_t TimeshiftBuffer::CFileForWrite::Write(const void* lpBuf, size_t uiBufSize)
-{
-    return m_helper->WriteFile(m_handler, lpBuf, uiBufSize);
-
-}
-
-#pragma mark - CFileForRead
-
-
-TimeshiftBuffer::CFileForRead::CFileForRead(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &pathToFile)
-: CGenericFile(addonHelper, addonHelper->OpenFile(pathToFile.c_str(), XFILE::READ_AUDIO_VIDEO | XFILE::READ_AFTER_WRITE))
-{
-}
-
-ssize_t TimeshiftBuffer::CFileForRead::Read(void* lpBuf, size_t uiBufSize)
-{
-    return m_helper->ReadFile(m_handler, lpBuf, uiBufSize);
-}
-
-#pragma mark - CAddonFile
-
-TimeshiftBuffer::CAddonFile::CAddonFile(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &pathToFile)
-    : m_path(pathToFile)
-    , m_helper(addonHelper)
-    , m_writer(addonHelper, pathToFile)
-    , m_reader(addonHelper, pathToFile)
-{
-}
-const std::string& TimeshiftBuffer::CAddonFile::Path() const
-{
-    return m_path;
-}
-
-void TimeshiftBuffer::CAddonFile::Reopen()
-{
-    m_writer.~CFileForWrite();
-    new (&m_writer) CFileForWrite(m_helper, m_path);
-    m_reader.~CFileForRead();
-    new (&m_reader) CFileForRead(m_helper, m_path);
-}
-          
-          
-TimeshiftBuffer::CAddonFile::~CAddonFile()
-{
-    m_reader.Close();
-    m_writer.Close();
-    m_helper->DeleteFile(m_path.c_str());
-}
-
 

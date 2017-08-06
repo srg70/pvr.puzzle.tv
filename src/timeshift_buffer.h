@@ -29,113 +29,46 @@
 
 
 #include <string>
-#include <memory>
-#include <vector>
 #include "p8-platform/threads/threads.h"
 #include "p8-platform/util/buffer.h"
 #include "input_buffer.h"
+#include "cache_buffer.h"
 
 namespace ADDON
 {
     class CHelper_libXBMC_addon;
 }
 
-class TimeshiftBuffer : public InputBuffer, public P8PLATFORM::CThread
-{
-public:
-    TimeshiftBuffer(ADDON::CHelper_libXBMC_addon *addonHelper, InputBuffer* inputBuffer, const std::string &bufferCacheDir);
-    ~TimeshiftBuffer();
-
-    int64_t GetLength() const;
-    int64_t GetPosition() const;
-    ssize_t Read(unsigned char *buffer, size_t bufferSize);
-    int64_t Seek(int64_t iPosition, int iWhence);
-    bool SwitchStream(const std::string &newUrl);
-    /*!
-     * @brief Stop the thread
-     * @param iWaitMs negative = don't wait, 0 = infinite, or the amount of ms to wait
-     */
-    virtual bool StopThread(int iWaitMs = 5000);
-
-private:
-    void *Process();
+namespace Buffers {
     
-    class CAddonFile;
-    class CGenericFile
+    class TimeshiftBuffer : public InputBuffer, public P8PLATFORM::CThread
     {
     public:
-        int64_t Seek(int64_t iFilePosition, int iWhence);
-        int64_t Length();
-        int64_t Position();
-       // int Truncate(int64_t iSize);
-        bool IsOpened() const;
-        ~CGenericFile();
-    protected:
-        CGenericFile(ADDON::CHelper_libXBMC_addon *addonHelper, void* m_handler);
-        void* m_handler;
-        ADDON::CHelper_libXBMC_addon * m_helper;
-        void Close();
-    private:
-        CGenericFile(const CGenericFile&) = delete ;                    //disable copy-constructor
-        CGenericFile& operator=(const CGenericFile&) = delete;  //disable copy-assignment
-        friend class CAddonFile;
-    };
-    
-    class CFileForWrite : public CGenericFile
-    {
-    public:
-        CFileForWrite(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &pathToFile);
-        ssize_t Write(const void* lpBuf, size_t uiBufSize);
-    };
-
-    class CFileForRead : public CGenericFile
-    {
-    public:
-        CFileForRead(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &pathToFile);
-        ssize_t Read(void* lpBuf, size_t uiBufSize);
-    };
-    class CAddonFile
-    {
-    public:
-        CFileForWrite m_writer;
-        CFileForRead m_reader;
-
-        CAddonFile(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &pathToFile);
+        TimeshiftBuffer(ADDON::CHelper_libXBMC_addon *addonHelper, InputBuffer* inputBuffer, ICacheBuffer* cache);
+        ~TimeshiftBuffer();
         
-        const std::string& Path() const;
-        void Reopen();
-        ~CAddonFile();
-        
+        int64_t GetLength() const;
+        int64_t GetPosition() const;
+        ssize_t Read(unsigned char *buffer, size_t bufferSize);
+        int64_t Seek(int64_t iPosition, int iWhence);
+        bool SwitchStream(const std::string &newUrl);
+        /*!
+         * @brief Stop the thread
+         * @param iWaitMs negative = don't wait, 0 = infinite, or the amount of ms to wait
+         */
+        virtual bool StopThread(int iWaitMs = 5000);
         
     private:
-        CAddonFile(const CAddonFile&) = delete ;                    //disable copy-constructor
-        CAddonFile& operator=(const CAddonFile&) = delete;  //disable copy-assignment
-        std::string m_path;
-        ADDON::CHelper_libXBMC_addon * m_helper;
-
+        void *Process();
+        
+        void Init(const std::string &newUrl = std::string());
+        void DebugLog(const std::string& message) const;
+        
+        ADDON::CHelper_libXBMC_addon *m_addonHelper;
+        P8PLATFORM::CEvent m_writeEvent;
+        InputBuffer* m_inputBuffer;
+        ICacheBuffer* m_cache;
     };
-    
-    typedef CAddonFile* ChunkFilePtr;
-    typedef std::vector<ChunkFilePtr > FileChunks;
-    typedef std::vector<std::unique_ptr<CAddonFile> > ChunkFileSwarm;
-
-    void Init(const std::string &newUrl = std::string());
-    ChunkFilePtr CreateChunk();
-    static unsigned int GetChunkIndexFor(int64_t position);
-    static int64_t GetPositionInChunkFor(int64_t position);
-    void DebugLog(const std::string& message) const;
-    static std::string UniqueFilename(const std::string& dir, ADDON::CHelper_libXBMC_addon*  helper);
- 
-    mutable P8PLATFORM::CMutex m_SyncAccess;
-    P8PLATFORM::CEvent m_writeEvent;
-    int64_t m_length;
-    int64_t m_position;
-    ADDON::CHelper_libXBMC_addon *m_addonHelper;
-    std::string m_bufferDir;
-    InputBuffer* m_inputBuffer;
-    mutable FileChunks m_ReadChunks;
-    ChunkFileSwarm m_ChunkFileSwarm;
-    
-};
+}
 
 #endif //timeshift_buffer_h

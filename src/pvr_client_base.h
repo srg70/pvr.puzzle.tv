@@ -29,7 +29,9 @@
 #include "addon.h"
 
 class CHelper_libXBMC_pvr;
-class InputBuffer;
+namespace Buffers {
+    class InputBuffer;
+}
 
 class PVRClientBase: public IPvrIptvDataSource
 {
@@ -79,8 +81,8 @@ protected:
     const std::string& GetClientPath() const { return m_clientPath;}
     const std::string& GetUserPath() const { return m_userPath;}
 private:
-    InputBuffer *m_inputBuffer;
-    InputBuffer *m_recordBuffer;
+    Buffers::InputBuffer *m_inputBuffer;
+    Buffers::InputBuffer *m_recordBuffer;
     bool m_isTimeshiftEnabled;
     std::string m_CacheDir;
     std::string m_clientPath;

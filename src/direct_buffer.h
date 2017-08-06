@@ -35,35 +35,37 @@ namespace ADDON
 {
     class CHelper_libXBMC_addon;
 }
-
-class DirectBuffer : public InputBuffer
-{
-public:
-    DirectBuffer(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &streamUrl);
-    ~DirectBuffer();
-
-    int64_t GetLength() const;
-    int64_t GetPosition() const;
-    int64_t Seek(int64_t iPosition, int iWhence);
-    ssize_t Read(unsigned char *buffer, size_t bufferSize);
-    bool SwitchStream(const std::string &newUrl);
-
-protected:
-    ADDON::CHelper_libXBMC_addon *m_addonHelper;
-    void *m_streamHandle;
-    mutable P8PLATFORM::CMutex m_mutex;
-private:
-    void Open(const char* path);
-};
-
-class ArchiveBuffer : public DirectBuffer
-{
-public:
-    ArchiveBuffer(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &streamUrl);
-    ~ArchiveBuffer();
-
-    int64_t GetLength() const;
-    int64_t GetPosition() const;
-    int64_t Seek(int64_t iPosition, int iWhence);
-};
+namespace Buffers {
+    
+    class DirectBuffer : public InputBuffer
+    {
+    public:
+        DirectBuffer(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &streamUrl);
+        ~DirectBuffer();
+        
+        int64_t GetLength() const;
+        int64_t GetPosition() const;
+        int64_t Seek(int64_t iPosition, int iWhence);
+        ssize_t Read(unsigned char *buffer, size_t bufferSize);
+        bool SwitchStream(const std::string &newUrl);
+        
+    protected:
+        ADDON::CHelper_libXBMC_addon *m_addonHelper;
+        void *m_streamHandle;
+        mutable P8PLATFORM::CMutex m_mutex;
+    private:
+        void Open(const char* path);
+    };
+    
+    class ArchiveBuffer : public DirectBuffer
+    {
+    public:
+        ArchiveBuffer(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &streamUrl);
+        ~ArchiveBuffer();
+        
+        int64_t GetLength() const;
+        int64_t GetPosition() const;
+        int64_t Seek(int64_t iPosition, int iWhence);
+    };
+}
 #endif //direct_buffer_h

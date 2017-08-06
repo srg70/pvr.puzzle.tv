@@ -33,6 +33,7 @@
 
 #include "libXBMC_pvr.h"
 #include "timeshift_buffer.h"
+#include "file_cache_buffer.hpp"
 #include "plist_buffer.h"
 #include "direct_buffer.h"
 #include "helpers.h"
@@ -40,6 +41,7 @@
 
 using namespace std;
 using namespace ADDON;
+using namespace Buffers;
 
 // NOTE: avoid '.' (dot) char in path. Causes to deadlock in Kodi code.
 const char* s_DefaultCacheDir = "special://temp/pvr-puzzle-tv";
@@ -211,12 +213,12 @@ bool PVRClientBase::OpenLiveStream(const std::string& url )
         const std::string m3uExt = ".m3u";
         const std::string m3u8Ext = ".m3u8";
         if( url.find(m3u8Ext) != std::string::npos || url.find(m3uExt) != std::string::npos)
-            buffer = new PlaylistBuffer(m_addonHelper, url);
+            buffer = new Buffers::PlaylistBuffer(m_addonHelper, url);
         else
             buffer = new DirectBuffer(m_addonHelper, url);
         
         if (m_isTimeshiftEnabled)
-            m_inputBuffer = new TimeshiftBuffer(m_addonHelper, buffer, m_CacheDir);
+        m_inputBuffer = new Buffers::TimeshiftBuffer(m_addonHelper, buffer, new Buffers::FileCacheBuffer(m_addonHelper, m_CacheDir)); //m_CacheDir
         else
             m_inputBuffer = buffer;
 
