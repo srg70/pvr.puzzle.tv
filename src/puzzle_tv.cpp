@@ -83,7 +83,7 @@ public:
             bool isStopped = IsStopped();
             while(!isStopped && (oldEpgActivity != m_epgActivityCounter)){
                 oldEpgActivity = m_epgActivityCounter;
-                isStopped = NotStoppedIn(3000);// 2sec
+                isStopped = IsStopped(3000);// 2sec
             }
             if(isStopped)
                 break;
@@ -93,7 +93,7 @@ public:
                 pThis->m_action();
             },  [](const CActionQueue::ActionResult& s) {});
 
-        }while (NotStoppedIn(10*60*1000));//10 min
+        }while (!IsStopped(10*60*1000));//10 min
 
         return NULL;
         
@@ -104,15 +104,17 @@ public:
 //        return this->P8PLATFORM::CThread::StopThread(iWaitMs);
 //    }
 private:
-    bool NotStoppedIn(uint32_t msTimeout) {
-        P8PLATFORM::CTimeout timeout(msTimeout);
-        bool isStoppedOrTimeout = IsStopped() || timeout.TimeLeft() == 0;
+    
+    bool IsStopped(uint32_t timeoutInSec = 0) {
+        P8PLATFORM::CTimeout timeout(timeoutInSec * 1000);
+        bool isStoppedOrTimeout = P8PLATFORM::CThread::IsStopped() || timeout.TimeLeft() == 0;
         while(!isStoppedOrTimeout) {
-            isStoppedOrTimeout = IsStopped() || timeout.TimeLeft() == 0;
+            isStoppedOrTimeout = P8PLATFORM::CThread::IsStopped() || timeout.TimeLeft() == 0;
             Sleep(1000);//1sec
         }
-        return isStoppedOrTimeout;
+        return P8PLATFORM::CThread::IsStopped();
     }
+
     PuzzleTV* m_PuzzleTV;
     std::function<void(void)> m_action;
     unsigned int m_epgActivityCounter;

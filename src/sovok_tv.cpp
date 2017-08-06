@@ -79,17 +79,23 @@ struct SovokTV::ApiFunctionData
 class SovokTV::HelperThread : public P8PLATFORM::CThread
 {
 public:
-    HelperThread(SovokTV* sovokTV, std::function<void(void)> action)
+    HelperThread(ADDON::CHelper_libXBMC_addon *addonHelper, SovokTV* sovokTV, std::function<void(void)> action)
     : m_sovokTV(sovokTV), m_action(action)
     , m_epgActivityCounter(0)
+    , m_addonHelper(addonHelper)
+
 //    , m_stopEvent(false) /*Manual event*/
     {}
     void EpgActivityStarted() {++m_epgActivityCounter;}
     void EpgActivityDone() {}
     void* Process()
     {
+
+        m_addonHelper->Log(LOG_NOTICE, "Archive thread started");
         do
         {
+
+            m_addonHelper->Log(LOG_NOTICE, "Archive thread iteraton started");
             unsigned int oldEpgActivity = m_epgActivityCounter;
             m_sovokTV->LoadArchiveList();
             
@@ -97,7 +103,7 @@ public:
             bool isStopped = IsStopped();
             while(!isStopped && (oldEpgActivity != m_epgActivityCounter)){
                 oldEpgActivity = m_epgActivityCounter;
-                isStopped = NotStoppedIn(3000);// 2sec
+                isStopped = IsStopped(3);// 3sec
             }
             if(isStopped)
                 break;
@@ -107,8 +113,10 @@ public:
             m_sovokTV->m_httpEngine->RunOnCompletionQueueAsync([pThis]() {
                 pThis->m_action();
             },  [](const CActionQueue::ActionResult& s) {});
+            m_addonHelper->Log(LOG_NOTICE, "Archive thread iteraton done");
             
-        }while (NotStoppedIn(10*60*1000));//10 min
+        }while (!IsStopped(10*60));//10 min
+        m_addonHelper->Log(LOG_NOTICE, "Archive thread exit");
 
         return NULL;
         
@@ -119,18 +127,21 @@ public:
 //        return this->P8PLATFORM::CThread::StopThread(iWaitMs);
 //    }
 private:
-    bool NotStoppedIn(uint32_t msTimeout) {
-        P8PLATFORM::CTimeout timeout(msTimeout);
-        bool isStoppedOrTimeout = IsStopped() || timeout.TimeLeft() == 0;
+    
+    bool IsStopped(uint32_t timeoutInSec = 0) {
+        P8PLATFORM::CTimeout timeout(timeoutInSec * 1000);
+        bool isStoppedOrTimeout = P8PLATFORM::CThread::IsStopped() || timeout.TimeLeft() == 0;
         while(!isStoppedOrTimeout) {
-            isStoppedOrTimeout = IsStopped() || timeout.TimeLeft() == 0;
+            isStoppedOrTimeout = P8PLATFORM::CThread::IsStopped() || timeout.TimeLeft() == 0;
             Sleep(1000);//1sec
         }
-        return isStoppedOrTimeout;
+        return P8PLATFORM::CThread::IsStopped();
     }
+    
     SovokTV* m_sovokTV;
     std::function<void(void)> m_action;
     unsigned int m_epgActivityCounter;
+    ADDON::CHelper_libXBMC_addon *m_addonHelper;
 //    P8PLATFORM::CEvent m_stopEvent;
 };
 
@@ -274,7 +285,7 @@ bool SovokTV::StartArchivePollingWithCompletion(std::function<void(void)> action
     if(m_archiveLoader)
         return false;
     
-    m_archiveLoader = new SovokTV::HelperThread(this, action);
+    m_archiveLoader = new SovokTV::HelperThread(m_addonHelper, this, action);
     m_archiveLoader->CreateThread(false);
     return true;
 }
