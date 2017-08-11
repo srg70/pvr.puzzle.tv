@@ -87,7 +87,7 @@ public:
 //    , m_stopEvent(false) /*Manual event*/
     {}
     void EpgActivityStarted() {++m_epgActivityCounter;}
-    void EpgActivityDone() {}
+    void EpgActivityDone() {m_epgActivityCounter = std::max((unsigned int)0, m_epgActivityCounter -1);}
     void* Process()
     {
 
@@ -96,13 +96,15 @@ public:
         {
 
             m_addonHelper->Log(LOG_NOTICE, "Archive thread iteraton started");
-            unsigned int oldEpgActivity = m_epgActivityCounter;
+//            unsigned int oldEpgActivity = m_epgActivityCounter;
             m_sovokTV->LoadArchiveList();
             
             // Wait for epg done before announce archives
             bool isStopped = IsStopped();
-            while(!isStopped && (oldEpgActivity != m_epgActivityCounter)){
-                oldEpgActivity = m_epgActivityCounter;
+            while(!isStopped && m_epgActivityCounter > 0) {//(oldEpgActivity != m_epgActivityCounter)){
+                m_addonHelper->Log(LOG_NOTICE, "Archive thread iteraton pending (%d)", m_epgActivityCounter);
+
+//                oldEpgActivity = m_epgActivityCounter;
                 isStopped = IsStopped(3);// 3sec
             }
             if(isStopped)
@@ -434,32 +436,46 @@ void SovokTV::Log(const char* massage) const
 
 void SovokTV::GetEpg(SovokChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries)
 {
-     m_addonHelper->Log(LOG_DEBUG, "Get EPG for channel %d [%d - %d]", channelId, startTime, endTime);
     P8PLATFORM::CLockObject lock(m_epgAccessMutex);
     if(m_archiveLoader)
         m_archiveLoader->EpgActivityStarted();
     
+    auto epgRequestStart = startTime;
     if (m_lastEpgRequestStartTime == 0)
     {
         m_lastEpgRequestStartTime = startTime;
     }
     else
     {
-        startTime = max(startTime, m_lastEpgRequestEndTime);
+        epgRequestStart = max(startTime, m_lastEpgRequestEndTime);
     }
-    if(endTime > startTime)
+    if(endTime > epgRequestStart)
     {
-        GetEpgForAllChannels(startTime, endTime, m_epgEntries);
+        GetEpgForAllChannels(epgRequestStart, endTime, m_epgEntries);
         m_lastEpgRequestEndTime = endTime;
         SaveEpgCache();
     }
 
+    int cnt = 0;
+    int cnt1 = 0;
     EpgEntryList::const_iterator itEpgEntry = m_epgEntries.begin();
     for (; itEpgEntry != m_epgEntries.end(); ++itEpgEntry)
     {
-        if (itEpgEntry->second.ChannelId == channelId)
-            epgEntries.insert(*itEpgEntry);
+        auto entryStartTime = itEpgEntry->second.StartTime;
+        if (itEpgEntry->second.ChannelId == channelId ) {
+            if(entryStartTime >= startTime &&
+               entryStartTime < endTime)
+            {
+                ++cnt;
+                epgEntries.insert(*itEpgEntry);
+            }
+            else {
+                ++cnt1;
+            }
+        }
     }
+    m_addonHelper->Log(LOG_DEBUG, "Get EPG for channel %d [%d - %d] = %d (%d) entries", channelId, startTime, endTime, cnt, cnt1);
+
     if(m_archiveLoader)
         m_archiveLoader->EpgActivityDone();
 
@@ -509,6 +525,8 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
                 Value::ConstValueIterator itJsonEpgEntry1 = jsonChannelEpg.Begin();
                 Value::ConstValueIterator itJsonEpgEntry2  = itJsonEpgEntry1;
                 itJsonEpgEntry2++;
+                // Check last EPG entrie for missing end time
+                //auto& lastEpg = m_epgEntries.back();
                 for (; itJsonEpgEntry2 != jsonChannelEpg.End(); ++itJsonEpgEntry1, ++itJsonEpgEntry2)
                 {
                     SovokEpgEntry epgEntry;
@@ -523,6 +541,20 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
                         ++id;
                     func(id, epgEntry);
                 }
+                // Last EPG entrie  missing end time.
+                // Put end of requested interval
+                SovokEpgEntry epgEntry;
+                epgEntry.ChannelId = strtoi((*itChannel)["id"].GetString());
+                epgEntry.Title = (*itJsonEpgEntry1)["progname"].GetString();
+                epgEntry.Description = (*itJsonEpgEntry1)["description"].GetString();
+                epgEntry.StartTime = strtoi((*itJsonEpgEntry1)["ut_start"].GetString()) - m_serverTimeShift;
+                epgEntry.EndTime = startTime + numberOfHours * 60 * 60;
+                
+                unsigned int id = epgEntry.StartTime;
+                while( m_epgEntries.count(id) != 0)
+                    ++id;
+                func(id, epgEntry);
+
             }
         });
     } catch (ServerErrorException& ex) {
