@@ -59,6 +59,7 @@ public:
     
     
     void SetTimeshiftEnabled(bool enable);
+    void SetTimeshiftBufferSize(uint64_t factor);
     bool IsTimeshiftEnabled() { return m_isTimeshiftEnabled; }
     void SetTimeshiftPath(const std::string& path);
     
@@ -84,6 +85,7 @@ private:
     Buffers::InputBuffer *m_inputBuffer;
     Buffers::InputBuffer *m_recordBuffer;
     bool m_isTimeshiftEnabled;
+    uint64_t m_timshiftBufferSize;
     std::string m_CacheDir;
     std::string m_clientPath;
     std::string m_userPath;

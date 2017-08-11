@@ -27,15 +27,19 @@ msgid "Enable Timeshift"
 msgstr "Включить Timeshift"
 
 msgctxt "#10002"
-msgid "Timeshift Path"
-msgstr "Timeshift папка"
+msgid "Path"
+msgstr "Путь"
+
+msgctxt "#10003"
+msgid "Buffer Size (MB)"
+msgstr "Размер буффера (MB)"
 
 msgctxt "#20000"
-msgid "Puzzle Server"
+msgid "Server"
 msgstr "Сервер"
 
 msgctxt "#20001"
-msgid "Puzzle Port"
+msgid "Port"
 msgstr "Порт"
 
 msgctxt "#20010"

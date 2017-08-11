@@ -10,9 +10,6 @@
 #include "libXBMC_addon.h"
 #include "helpers.h"
 
-static const int STREAM_READ_BUFFER_SIZE = 1024 * 32; // 32K input read buffer
-static const  unsigned int CHUNK_FILE_SIZE_LIMIT = (unsigned int)(STREAM_READ_BUFFER_SIZE * 1024) * 32; // 1GB chunk (temporary, pending completion of chunck factory)
-
 
 namespace Buffers
 {
@@ -216,11 +213,10 @@ namespace Buffers
     
     
     
-    FileCacheBuffer::FileCacheBuffer(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string& bufferCacheDir)
+    FileCacheBuffer::FileCacheBuffer(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string& bufferCacheDir, uint8_t  sizeFactor)
     : m_addonHelper(addonHelper)
     , m_bufferDir(bufferCacheDir)
-    , m_length(0)
-    , m_position(0)
+    , m_maxSize(std::max(uint8_t(3), sizeFactor) * CHUNK_FILE_SIZE_LIMIT)
     {
         if(!m_addonHelper->DirectoryExists(m_bufferDir.c_str()))
         if(!m_addonHelper->CreateDirectory(m_bufferDir.c_str()))
@@ -230,6 +226,7 @@ namespace Buffers
     void FileCacheBuffer::Init() {
         m_length = 0;
         m_position = 0;
+        m_begin = 0;
         m_ReadChunks.clear();
         m_ChunkFileSwarm.clear();
     }
@@ -243,6 +240,8 @@ namespace Buffers
         unsigned int idx = -1;
         ChunkFilePtr chunk = NULL;
         {
+//            m_addonHelper->Log(LOG_DEBUG, "TimeshiftBuffer::Sseek. >>> Requested pos %d", iPosition);
+
             CLockObject lock(m_SyncAccess);
             
             // Translate position to offset from start of buffer.
@@ -254,8 +253,13 @@ namespace Buffers
             if(iPosition > m_length) {
                 iPosition = m_length;
             }
+            if(iPosition < m_begin) {
+                iPosition = m_begin;
+            }
             iWhence = SEEK_SET;
-            
+//            m_addonHelper->Log(LOG_DEBUG, "TimeshiftBuffer::Sseek. Calculated pos %d", iPosition);
+//            m_addonHelper->Log(LOG_DEBUG, "TimeshiftBuffer::Sseek. Begin %d Length %d", m_begin, m_length);
+
             idx = GetChunkIndexFor(iPosition);
             if(idx >= m_ReadChunks.size()) {
                 m_addonHelper->Log(LOG_ERROR, "TimeshiftBuffer: seek failed. Wrong chunk index %d", idx);
@@ -266,6 +270,8 @@ namespace Buffers
         auto inPos = GetPositionInChunkFor(iPosition);
         auto pos =  chunk->m_reader.Seek(inPos, iWhence);
         m_position = iPosition -  (inPos - pos);
+//        m_addonHelper->Log(LOG_DEBUG, "TimeshiftBuffer::Sseek. Chunk idx %d, pos in chunk %d, actual pos %d", idx, inPos, pos);
+//        m_addonHelper->Log(LOG_DEBUG, "TimeshiftBuffer::Sseek. <<< Result pos %d", m_position);
         return iPosition;
         
     }
@@ -274,7 +280,7 @@ namespace Buffers
     int64_t FileCacheBuffer::Length() {
         int64_t length = -1;
         {
-            CLockObject lock(m_SyncAccess);
+//            CLockObject lock(m_SyncAccess);
             length = m_length;
         }
         return length;
@@ -295,11 +301,10 @@ namespace Buffers
     ssize_t FileCacheBuffer::Read(void* buffer, size_t bufferSize) {
         
         size_t totalBytesRead = 0;
-        int32_t timeout = 5000;//c_commonTimeoutMs + 1000;
         
+        ChunkFilePtr chunk = NULL;
         while (totalBytesRead < bufferSize) {
             unsigned int idx = GetChunkIndexFor(m_position);
-            ChunkFilePtr chunk = NULL;
             {
                 CLockObject lock(m_SyncAccess);
                 chunk = (idx >= m_ReadChunks.size()) ? NULL : m_ReadChunks[idx];
@@ -323,7 +328,15 @@ namespace Buffers
                 chunk = NULL;
             }
         }
-        
+        if(NULL == chunk) {
+            CLockObject lock(m_SyncAccess);
+            while(m_length - m_begin >=  m_maxSize)
+            {
+                m_begin  +=CHUNK_FILE_SIZE_LIMIT;
+                m_ReadChunks.pop_front();
+                m_ChunkFileSwarm.pop_front();
+            }
+        }
         return totalBytesRead;
         
     }
@@ -345,6 +358,9 @@ namespace Buffers
                         chunk = m_ReadChunks.back();
                         if(chunk->m_writer.Length() >= CHUNK_FILE_SIZE_LIMIT) {
                             chunk = CreateChunk();
+                            // No room for new data
+                            if(NULL == chunk)
+                                return  0;
                             m_ReadChunks.push_back(chunk);
                         }
                     }
@@ -359,7 +375,7 @@ namespace Buffers
                 // Write bytes
                 const ssize_t bytesWritten = chunk->m_writer.Write(buffer, bytesToWrite);
                 {
-                    CLockObject lock(m_SyncAccess);
+                    //CLockObject lock(m_SyncAccess);
                     m_length += bytesWritten;
                 }
                 totalWritten += bytesWritten;
@@ -371,6 +387,7 @@ namespace Buffers
                 buffer += bytesWritten;
                 bufferSize -= bytesWritten;
                 if(available <= 0) {
+//                    chunk->m_writer.Close();
                     chunk = NULL;
                 }
             }
@@ -385,6 +402,10 @@ namespace Buffers
     
     FileCacheBuffer::ChunkFilePtr FileCacheBuffer::CreateChunk()
     {
+        // No room for new data
+        if(m_length - m_begin >=  m_maxSize ) {
+            return NULL;
+        }
         ChunkFilePtr newChunk = new CAddonFile(m_addonHelper, UniqueFilename(m_bufferDir, m_addonHelper).c_str());
         m_ChunkFileSwarm.push_back(ChunkFileSwarm::value_type(newChunk));
         m_addonHelper->Log(LOG_DEBUG, ">>> TimeshiftBuffer: new current chunk (for write):  %s", + newChunk->Path().c_str());
@@ -392,9 +413,11 @@ namespace Buffers
     }
     
     unsigned int FileCacheBuffer::GetChunkIndexFor(int64_t pos) {
+        pos -= m_begin;
         return pos / CHUNK_FILE_SIZE_LIMIT;
     }
     int64_t FileCacheBuffer::GetPositionInChunkFor(int64_t pos) {
+        pos -= m_begin;
         return pos % CHUNK_FILE_SIZE_LIMIT;
     }
     

@@ -115,7 +115,8 @@ namespace Buffers {
                     // Write to local chunk
                     //DebugLog(std::string(">>> Write: ") + n_to_string(bytesRead));
                     ssize_t bytesWritten = m_cache->Write(buffer, bytesRead);
-                    isError |= bytesWritten != bytesRead;
+                    // Allow write errors. Cache may be full.
+                    //isError |= bytesWritten != bytesRead;
                     if(bytesWritten != bytesRead) {
                         m_addonHelper->Log(LOG_ERROR, "TimeshiftBuffer: write cache error written (%d) != read (%d)", bytesWritten,bytesRead);
                     }

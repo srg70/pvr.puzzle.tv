@@ -29,16 +29,20 @@ msgid "Enable Timeshift"
 msgstr "Enable Timeshift"
 
 msgctxt "#10002"
-msgid "Timeshift Path"
-msgstr "Timeshift Path"
+msgid "Path"
+msgstr "Path"
+
+msgctxt "#10003"
+msgid "Buffer Size (MB)"
+msgstr "Buffer Size (MB)"
 
 msgctxt "#20000"
-msgid "Puzzle Server"
-msgstr "Puzzle Server"
+msgid "Server"
+msgstr "Server"
 
 msgctxt "#20001"
-msgid "Puzzle Port"
-msgstr "Puzzle Port"
+msgid "Port"
+msgstr "Port"
 
 msgctxt "#20010"
 msgid "Puzzle TV"

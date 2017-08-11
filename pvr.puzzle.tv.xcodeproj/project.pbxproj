@@ -223,6 +223,10 @@
 		4C534CC11F347CD50038539D /* file_cache_buffer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = file_cache_buffer.cpp; sourceTree = "<group>"; };
 		4C534CC21F347CD50038539D /* file_cache_buffer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = file_cache_buffer.hpp; sourceTree = "<group>"; };
 		4C534CC51F348EF50038539D /* CMakeLists.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
+		4C534CC71F3D34EE0038539D /* settings.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = settings.xml; path = ../settings.xml; sourceTree = "<group>"; };
+		4C534CCA1F3D350D0038539D /* strings.po */ = {isa = PBXFileReference; lastKnownFileType = text; path = strings.po; sourceTree = "<group>"; };
+		4C534CCC1F3D350D0038539D /* strings.po */ = {isa = PBXFileReference; lastKnownFileType = text; path = strings.po; sourceTree = "<group>"; };
+		4C534CCE1F3D350D0038539D /* strings.po */ = {isa = PBXFileReference; lastKnownFileType = text; path = strings.po; sourceTree = "<group>"; };
 		4C5BF35E1F18DAEE00437252 /* ott_player.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ott_player.h; sourceTree = "<group>"; };
 		4C5BF35F1F18DAEE00437252 /* ott_pvr_client.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ott_pvr_client.h; sourceTree = "<group>"; };
 		4C5BF3601F18DAEE00437252 /* ott_pvr_client.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ott_pvr_client.cpp; sourceTree = "<group>"; };
@@ -258,6 +262,7 @@
 				4C49D18E1E27C4BF0026F43E /* include */,
 				4C08C78B1D818381004CAAE3 /* src */,
 				4C08C7E01D81D27A004CAAE3 /* Products */,
+				4C534CCF1F3D35310038539D /* Resources */,
 				4C534CC51F348EF50038539D /* CMakeLists.txt */,
 			);
 			sourceTree = "<group>";
@@ -495,6 +500,50 @@
 				4C534CC21F347CD50038539D /* file_cache_buffer.hpp */,
 			);
 			name = Cache;
+			sourceTree = "<group>";
+		};
+		4C534CC81F3D350D0038539D /* language */ = {
+			isa = PBXGroup;
+			children = (
+				4C534CC91F3D350D0038539D /* resource.language.en_gb */,
+				4C534CCB1F3D350D0038539D /* resource.language.en_us */,
+				4C534CCD1F3D350D0038539D /* resource.language.ru_ru */,
+			);
+			name = language;
+			sourceTree = "<group>";
+		};
+		4C534CC91F3D350D0038539D /* resource.language.en_gb */ = {
+			isa = PBXGroup;
+			children = (
+				4C534CCA1F3D350D0038539D /* strings.po */,
+			);
+			path = resource.language.en_gb;
+			sourceTree = "<group>";
+		};
+		4C534CCB1F3D350D0038539D /* resource.language.en_us */ = {
+			isa = PBXGroup;
+			children = (
+				4C534CCC1F3D350D0038539D /* strings.po */,
+			);
+			path = resource.language.en_us;
+			sourceTree = "<group>";
+		};
+		4C534CCD1F3D350D0038539D /* resource.language.ru_ru */ = {
+			isa = PBXGroup;
+			children = (
+				4C534CCE1F3D350D0038539D /* strings.po */,
+			);
+			path = resource.language.ru_ru;
+			sourceTree = "<group>";
+		};
+		4C534CCF1F3D35310038539D /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				4C534CC81F3D350D0038539D /* language */,
+				4C534CC71F3D34EE0038539D /* settings.xml */,
+			);
+			name = Resources;
+			path = pvr.puzzle.tv/resources/language;
 			sourceTree = "<group>";
 		};
 		4C5BF35C1F18DAD400437252 /* OTT */ = {

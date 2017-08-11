@@ -27,6 +27,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <deque>
 #include "cache_buffer.h"
 #include "p8-platform/threads/mutex.h"
 
@@ -44,7 +45,11 @@ namespace Buffers
     class FileCacheBuffer : public ICacheBuffer
     {
     public:
-        FileCacheBuffer(ADDON::CHelper_libXBMC_addon *addonHelper,  const std::string &bufferCacheDir);
+        static const uint32_t STREAM_READ_BUFFER_SIZE = 1024 * 32; // 32K input read buffer
+        static const  uint32_t CHUNK_FILE_SIZE_LIMIT = (STREAM_READ_BUFFER_SIZE * 1024) * 4; // 128MB chunk
+
+        
+        FileCacheBuffer(ADDON::CHelper_libXBMC_addon *addonHelper,  const std::string &bufferCacheDir, uint8_t  sizeFactor);
         
         virtual  void Init();
         virtual  uint32_t UnitSize();
@@ -67,12 +72,12 @@ namespace Buffers
         
     private:
         typedef CAddonFile* ChunkFilePtr;
-        typedef std::vector<ChunkFilePtr > FileChunks;
-        typedef std::vector<std::unique_ptr<CAddonFile> > ChunkFileSwarm;
+        typedef std::deque<ChunkFilePtr > FileChunks;
+        typedef std::deque<std::unique_ptr<CAddonFile> > ChunkFileSwarm;
 
         ChunkFilePtr CreateChunk();
-        static unsigned int GetChunkIndexFor(int64_t position);
-        static int64_t GetPositionInChunkFor(int64_t position);
+        unsigned int GetChunkIndexFor(int64_t position);
+        int64_t GetPositionInChunkFor(int64_t position);
 
         
         mutable FileChunks m_ReadChunks;
@@ -80,6 +85,8 @@ namespace Buffers
         mutable P8PLATFORM::CMutex m_SyncAccess;
         int64_t m_length;
         int64_t m_position;
+        int64_t m_begin;// virtual start of cache
+        const int64_t m_maxSize;
         ADDON::CHelper_libXBMC_addon *m_addonHelper;
         std::string m_bufferDir;
 
