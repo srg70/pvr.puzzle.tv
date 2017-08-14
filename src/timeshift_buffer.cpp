@@ -99,7 +99,7 @@ namespace Buffers {
     }
     void *TimeshiftBuffer::Process()
     {
-        unsigned char buffer[m_cache->UnitSize()];
+        unsigned char buffer = new unsigned char[m_cache->UnitSize()];
         bool isError = false;
         try {
             while (!isError && m_inputBuffer != NULL && !IsStopped()) {
@@ -127,7 +127,9 @@ namespace Buffers {
         } catch (std::exception& ex ) {
             m_addonHelper->Log(LOG_ERROR, "Exception in timshift background thread: %s", ex.what());
         }
-        
+
+		if (NULL != buffrer)
+			delete[] buffer;
         return NULL;
     }
     
