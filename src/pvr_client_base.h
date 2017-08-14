@@ -36,6 +36,12 @@ namespace Buffers {
 class PVRClientBase: public IPvrIptvDataSource
 {
 public:
+    
+    typedef enum {
+        k_TimeshiftBufferMemory = 0,
+        k_TimeshiftBufferFile = 1
+    }TimeshiftBufferType;
+    
     ADDON_STATUS Init(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,  PVR_PROPERTIES* pvrprops);
     virtual ~PVRClientBase();
     
@@ -59,7 +65,8 @@ public:
     
     
     void SetTimeshiftEnabled(bool enable);
-    void SetTimeshiftBufferSize(uint64_t factor);
+    void SetTimeshiftBufferSize(uint64_t size);
+    void SetTimeshiftBufferType(TimeshiftBufferType type);
     bool IsTimeshiftEnabled() { return m_isTimeshiftEnabled; }
     void SetTimeshiftPath(const std::string& path);
     
@@ -86,6 +93,7 @@ private:
     Buffers::InputBuffer *m_recordBuffer;
     bool m_isTimeshiftEnabled;
     uint64_t m_timshiftBufferSize;
+    TimeshiftBufferType m_timeshiftBufferType;
     std::string m_CacheDir;
     std::string m_clientPath;
     std::string m_userPath;

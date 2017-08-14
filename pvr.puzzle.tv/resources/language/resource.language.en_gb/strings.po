@@ -36,6 +36,18 @@ msgctxt "#10003"
 msgid "Buffer Size (MB)"
 msgstr "Buffer Size (MB)"
 
+msgctxt "#10004"
+msgid "Buffer Type"
+msgstr "Buffer Type"
+
+msgctxt "#10005"
+msgid "Memory"
+msgstr "Memory"
+
+msgctxt "#10006"
+msgid "File"
+msgstr "File"
+
 msgctxt "#20000"
 msgid "Server"
 msgstr "Server"

@@ -105,6 +105,8 @@
 		4C49D2431E27C4BF0026F43E /* zlib.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1EE1E27C4BF0026F43E /* zlib.h */; };
 		4C534CC31F347CD50038539D /* file_cache_buffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C534CC11F347CD50038539D /* file_cache_buffer.cpp */; };
 		4C534CC41F347CD50038539D /* file_cache_buffer.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4C534CC21F347CD50038539D /* file_cache_buffer.hpp */; };
+		4C534CD21F418BB50038539D /* memory_cache_buffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C534CD01F418BB50038539D /* memory_cache_buffer.cpp */; };
+		4C534CD31F418BB50038539D /* memory_cache_buffer.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4C534CD11F418BB50038539D /* memory_cache_buffer.hpp */; };
 		4C8506E41EF478A000213131 /* pvr_client_base.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C8506E21EF478A000213131 /* pvr_client_base.cpp */; };
 		4C8506E51EF478A000213131 /* pvr_client_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C8506E31EF478A000213131 /* pvr_client_base.h */; };
 		4C8506E81F0E25DF00213131 /* HttpEngine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C8506E61F0E25DF00213131 /* HttpEngine.cpp */; };
@@ -227,6 +229,8 @@
 		4C534CCA1F3D350D0038539D /* strings.po */ = {isa = PBXFileReference; lastKnownFileType = text; path = strings.po; sourceTree = "<group>"; };
 		4C534CCC1F3D350D0038539D /* strings.po */ = {isa = PBXFileReference; lastKnownFileType = text; path = strings.po; sourceTree = "<group>"; };
 		4C534CCE1F3D350D0038539D /* strings.po */ = {isa = PBXFileReference; lastKnownFileType = text; path = strings.po; sourceTree = "<group>"; };
+		4C534CD01F418BB50038539D /* memory_cache_buffer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = memory_cache_buffer.cpp; sourceTree = "<group>"; };
+		4C534CD11F418BB50038539D /* memory_cache_buffer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = memory_cache_buffer.hpp; sourceTree = "<group>"; };
 		4C5BF35E1F18DAEE00437252 /* ott_player.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ott_player.h; sourceTree = "<group>"; };
 		4C5BF35F1F18DAEE00437252 /* ott_pvr_client.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ott_pvr_client.h; sourceTree = "<group>"; };
 		4C5BF3601F18DAEE00437252 /* ott_pvr_client.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ott_pvr_client.cpp; sourceTree = "<group>"; };
@@ -496,6 +500,8 @@
 			isa = PBXGroup;
 			children = (
 				4C534CC01F3473570038539D /* cache_buffer.h */,
+				4C534CD01F418BB50038539D /* memory_cache_buffer.cpp */,
+				4C534CD11F418BB50038539D /* memory_cache_buffer.hpp */,
 				4C534CC11F347CD50038539D /* file_cache_buffer.cpp */,
 				4C534CC21F347CD50038539D /* file_cache_buffer.hpp */,
 			);
@@ -600,6 +606,7 @@
 				4C49D2321E27C4BF0026F43E /* meta.h in Headers */,
 				4C49D23F1E27C4BF0026F43E /* writer.h in Headers */,
 				4C08C7F61D81E2A8004CAAE3 /* timeshift_buffer.h in Headers */,
+				4C534CD31F418BB50038539D /* memory_cache_buffer.hpp in Headers */,
 				4C49D23B1E27C4BF0026F43E /* prettywriter.h in Headers */,
 				4C49D22C1E27C4BF0026F43E /* filewritestream.h in Headers */,
 				4C49D21B1E27C4BF0026F43E /* tcp.h in Headers */,
@@ -768,6 +775,7 @@
 				4CD394B61F2258610073E2DF /* plist_buffer.cpp in Sources */,
 				4C08C7ED1D81D295004CAAE3 /* sovok_pvr_client.cpp in Sources */,
 				4C8506E41EF478A000213131 /* pvr_client_base.cpp in Sources */,
+				4C534CD21F418BB50038539D /* memory_cache_buffer.cpp in Sources */,
 				4C08C7FA1D81E34A004CAAE3 /* helpers.cpp in Sources */,
 				4CFEAA8F1E4DA81A002C2BA4 /* ActionQueue.cpp in Sources */,
 				4C534CC31F347CD50038539D /* file_cache_buffer.cpp in Sources */,

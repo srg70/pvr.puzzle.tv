@@ -54,6 +54,7 @@ src/ActionQueue.cpp
 src/HttpEngine.cpp
 src/plist_buffer.cpp
 src/file_cache_buffer.cpp
+src/memory_cache_buffer.cpp
 )
 #src/ott_pvr_client.cpp
 #src/ott_player.cpp

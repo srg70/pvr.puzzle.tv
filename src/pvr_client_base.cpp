@@ -34,6 +34,7 @@
 #include "libXBMC_pvr.h"
 #include "timeshift_buffer.h"
 #include "file_cache_buffer.hpp"
+#include "memory_cache_buffer.hpp"
 #include "plist_buffer.h"
 #include "direct_buffer.h"
 #include "helpers.h"
@@ -73,9 +74,13 @@ ADDON_STATUS PVRClientBase::Init(CHelper_libXBMC_addon *addonHelper, CHelper_lib
     m_addonHelper->GetSetting("timeshift_size", &timeshiftBufferSize);
     timeshiftBufferSize *= 1024*1024;
     
+    TimeshiftBufferType timeshiftBufferType = k_TimeshiftBufferMemory;
+    m_addonHelper->GetSetting("timeshift_type", &timeshiftBufferType);
+    
     SetTimeshiftEnabled(isTimeshiftEnabled);
     SetTimeshiftPath(timeshiftPath);
     SetTimeshiftBufferSize(timeshiftBufferSize);
+    SetTimeshiftBufferType(timeshiftBufferType);
     
     //    PVR_MENUHOOK hook = {1, 30020, PVR_MENUHOOK_EPG};
     //    m_pvr->AddMenuHook(&hook);
@@ -142,6 +147,10 @@ ADDON_STATUS PVRClientBase::SetSetting(const char *settingName, const void *sett
     else if (strcmp(settingName, "timeshift_path") == 0)
     {
           SetTimeshiftPath((const char *)(settingValue));
+    }
+    else if (strcmp(settingName, "timeshift_type") == 0)
+    {
+        SetTimeshiftBufferType(*(TimeshiftBufferType*)(settingValue));
     }
     else if (strcmp(settingName, "timeshift_size") == 0)
     {
@@ -226,8 +235,13 @@ bool PVRClientBase::OpenLiveStream(const std::string& url )
         else
             buffer = new DirectBuffer(m_addonHelper, url);
         
-        if (m_isTimeshiftEnabled)
-        m_inputBuffer = new Buffers::TimeshiftBuffer(m_addonHelper, buffer, new Buffers::FileCacheBuffer(m_addonHelper, m_CacheDir, m_timshiftBufferSize /  Buffers::FileCacheBuffer::CHUNK_FILE_SIZE_LIMIT));
+        if (m_isTimeshiftEnabled){
+            if(k_TimeshiftBufferFile == m_timeshiftBufferType) {
+                m_inputBuffer = new Buffers::TimeshiftBuffer(m_addonHelper, buffer, new Buffers::FileCacheBuffer(m_addonHelper, m_CacheDir, m_timshiftBufferSize /  Buffers::FileCacheBuffer::CHUNK_FILE_SIZE_LIMIT));
+            } else {
+                m_inputBuffer = new Buffers::TimeshiftBuffer(m_addonHelper, buffer, new Buffers::MemoryCacheBuffer(m_addonHelper, m_timshiftBufferSize /  Buffers::MemoryCacheBuffer::CHUNK_SIZE_LIMIT));
+            }
+        }
         else
             m_inputBuffer = buffer;
 
@@ -285,6 +299,10 @@ void PVRClientBase::SetTimeshiftBufferSize(uint64_t size)
     m_timshiftBufferSize = size;
 }
 
+void PVRClientBase::SetTimeshiftBufferType(PVRClientBase::TimeshiftBufferType type)
+{
+    m_timeshiftBufferType = type;
+}
 
 bool PVRClientBase::OpenRecordedStream(const std::string& url)
 {

@@ -32,7 +32,7 @@ namespace Buffers
     // New data always apeended to the end of stream
     // Real data capacity may be limited.
     // In case of limited capacity stream will provide partial amount of data inside chache window (latest, i.e. from the tail),
-    // although the total length will always correspond to amount of written (pushed) data.
+    // although the total length will always correspond to amount of written data.
     
     class ICacheBuffer {
     public:
