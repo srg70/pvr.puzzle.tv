@@ -1,3 +1,9 @@
+0.3.0 (alfa version for Puzzle TV Server)
+- EPG optimisation for Sovok TV
+- Timeshift buffer size limit
+- Timeshift into memory buffer
+- minor fixes
+
 0.2.0 (alfa version for Puzzle TV Server)
 - Playlist playback support
 - Use alternative stream on playback error (Puzzle Server only)
