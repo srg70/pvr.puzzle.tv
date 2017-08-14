@@ -521,16 +521,30 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
             Value::ConstValueIterator itChannel = channels.Begin();
             for (; itChannel != channels.End(); ++itChannel)
             {
+                const auto currentChannelId = strtoi((*itChannel)["id"].GetString());
+                // Check last EPG entrie for missing end time
+                auto lastEpgForChannel = m_epgEntries.begin();
+                for(auto runner = m_epgEntries.begin(), end = m_epgEntries.end(); runner != end; ++runner) {
+                    if(lastEpgForChannel != end &&
+                       runner->second.ChannelId == currentChannelId &&
+                       lastEpgForChannel->second.StartTime <= runner->second.StartTime)
+                
+                    lastEpgForChannel = runner;
+                }
+                
                 const Value& jsonChannelEpg = (*itChannel)["epg"];
                 Value::ConstValueIterator itJsonEpgEntry1 = jsonChannelEpg.Begin();
                 Value::ConstValueIterator itJsonEpgEntry2  = itJsonEpgEntry1;
                 itJsonEpgEntry2++;
-                // Check last EPG entrie for missing end time
-                //auto& lastEpg = m_epgEntries.back();
+                // Fix end time of last enrty for the channel
+                // It can't be calculated during previous iteation.
+                if(lastEpgForChannel != m_epgEntries.end()) {
+                    lastEpgForChannel->second.EndTime = strtoi((*itJsonEpgEntry1)["ut_start"].GetString()) - m_serverTimeShift;
+                }
                 for (; itJsonEpgEntry2 != jsonChannelEpg.End(); ++itJsonEpgEntry1, ++itJsonEpgEntry2)
                 {
                     SovokEpgEntry epgEntry;
-                    epgEntry.ChannelId = strtoi((*itChannel)["id"].GetString());
+                    epgEntry.ChannelId = currentChannelId;
                     epgEntry.Title = (*itJsonEpgEntry1)["progname"].GetString();
                     epgEntry.Description = (*itJsonEpgEntry1)["description"].GetString();
                     epgEntry.StartTime = strtoi((*itJsonEpgEntry1)["ut_start"].GetString()) - m_serverTimeShift;
@@ -544,7 +558,7 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
                 // Last EPG entrie  missing end time.
                 // Put end of requested interval
                 SovokEpgEntry epgEntry;
-                epgEntry.ChannelId = strtoi((*itChannel)["id"].GetString());
+                epgEntry.ChannelId = currentChannelId;
                 epgEntry.Title = (*itJsonEpgEntry1)["progname"].GetString();
                 epgEntry.Description = (*itJsonEpgEntry1)["description"].GetString();
                 epgEntry.StartTime = strtoi((*itJsonEpgEntry1)["ut_start"].GetString()) - m_serverTimeShift;
