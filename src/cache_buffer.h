@@ -23,6 +23,12 @@
 #ifndef IChunckedBuffer_h
 #define IChunckedBuffer_h
 
+
+#if defined(_MSC_VER)
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
+#endif
+
 #include <stdint.h>
 
 namespace Buffers
