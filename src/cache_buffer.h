@@ -24,11 +24,7 @@
 #define IChunckedBuffer_h
 
 
-#if defined(_MSC_VER)
-#include <BaseTsd.h>
-typedef SSIZE_T ssize_t;
-#endif
-
+#include "p8-platform/os.h"
 #include <stdint.h>
 
 namespace Buffers
