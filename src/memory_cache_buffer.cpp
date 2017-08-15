@@ -6,6 +6,8 @@
 //  Copyright © 2017 Home. All rights reserved.
 //
 
+#define NOMINMAX
+#include <algorithm>
 #include "memory_cache_buffer.hpp"
 #include "libXBMC_addon.h"
 #include "helpers.h"
