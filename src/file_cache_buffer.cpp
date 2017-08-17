@@ -362,7 +362,7 @@ namespace Buffers
                             chunk = CreateChunk();
                             // No room for new data
                             if(NULL == chunk)
-                                return  0;
+                                return  totalWritten;
                             m_ReadChunks.push_back(chunk);
                         }
                     }
@@ -383,7 +383,7 @@ namespace Buffers
                 totalWritten += bytesWritten;
                 if(bytesWritten != bytesToWrite) {
                     m_addonHelper->Log(LOG_ERROR, "FileCachetBuffer: write cache error, written (%d) != read (%d)", bytesWritten,bytesToWrite);
-                    break;// ???
+                    //break;// ???
                 }
                 available -= bytesWritten;
                 buffer += bytesWritten;
