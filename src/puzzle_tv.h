@@ -163,10 +163,7 @@ namespace PuzzleEngine
         void Apply(std::function<void(const ArchiveList&)>& action) const;
         bool StartArchivePollingWithCompletion(std::function<void(void)> action);
 
-        
-        //EpgEntryList GetEpg(int channelId, time_t day);
         void  GetEpg(ChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries);
-        void GetEpgForAllChannels(time_t startTime, time_t endTime, EpgEntryList& epgEntries);
         bool FindEpg(unsigned int brodcastId, Group& epgEntry);
         std::string GetArchiveForEpg(const Group& epgEntry);
 
@@ -190,8 +187,11 @@ namespace PuzzleEngine
         
         template<class TFunc>
         void  GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHours, TFunc func);
+        void GetEpgForAllChannels(time_t startTime, time_t endTime, EpgEntryList& epgEntries);
+        
         void Cleanup();
         
+              
         template <typename TParser>
         void CallApiFunction(const ApiFunctionData& data, TParser parser);
         template <typename TParser, typename TCompletion>

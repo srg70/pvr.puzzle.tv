@@ -56,15 +56,15 @@ ADDON_STATUS OttPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_libX
     char buffer[1024];
     
     if (m_addonHelper->GetSetting(c_playlist_setting, &buffer))
-        m_playlistUrl = buffer;
+        m_playlistUrl = buffer; // "ott.watch"
     if (m_addonHelper->GetSetting(c_key_setting, &buffer))
-        m_key = buffer;
+        m_key = buffer; // "E0E06JV6SV"
     
     try
     {
         CreateCore();
     }
-    catch (AuthFailedException &)
+    catch (OttEngine::AuthFailedException &)
     {
         m_addonHelper->QueueNotification(QUEUE_ERROR, "Login to Sovok.TV failed.");
     }
@@ -89,7 +89,7 @@ void OttPVRClient::CreateCore()
 {
     if(m_core != NULL)
         SAFE_DELETE(m_core);
-    m_core = new OttPlayer(m_addonHelper, m_playlistUrl, m_key);
+    m_core = new OttEngine::OttPlayer(m_addonHelper, m_pvrHelper, m_playlistUrl, m_key);
 }
 
 ADDON_STATUS OttPVRClient::SetSetting(const char *settingName, const void *settingValue)
@@ -101,8 +101,8 @@ ADDON_STATUS OttPVRClient::SetSetting(const char *settingName, const void *setti
         {
             try {
                 CreateCore();
-            }catch (AuthFailedException &) {
-                m_addonHelper->QueueNotification(QUEUE_ERROR, "Login to Sovok.TV failed.");
+            }catch (OttEngine::AuthFailedException &) {
+                m_addonHelper->QueueNotification(QUEUE_ERROR, "OTT player: connection failed.");
             }
         }
     }
@@ -113,8 +113,8 @@ ADDON_STATUS OttPVRClient::SetSetting(const char *settingName, const void *setti
         {
             try {
                 CreateCore();
-            }catch (AuthFailedException &) {
-                m_addonHelper->QueueNotification(QUEUE_ERROR, "Login to Sovok.TV failed.");
+            }catch (OttEngine::AuthFailedException &) {
+                m_addonHelper->QueueNotification(QUEUE_ERROR, "OTT player: connection failed.");
             }
         }
     }
@@ -126,9 +126,9 @@ ADDON_STATUS OttPVRClient::SetSetting(const char *settingName, const void *setti
 
 PVR_ERROR OttPVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabilities)
 {
-    pCapabilities->bSupportsEPG = false;
+    pCapabilities->bSupportsEPG = true;
     pCapabilities->bSupportsTV = true;
-    pCapabilities->bSupportsRadio = true;
+    pCapabilities->bSupportsRadio = false;
     pCapabilities->bSupportsChannelGroups = true;
     pCapabilities->bHandlesInputStream = true;
     pCapabilities->bSupportsRecordings = true;
@@ -146,14 +146,13 @@ PVR_ERROR OttPVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabiliti
 
 PVR_ERROR OttPVRClient::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL& channel, time_t iStart, time_t iEnd)
 {
-    return PVR_ERROR_NOT_IMPLEMENTED;
     
     if(NULL == m_core)
         return PVR_ERROR_SERVER_ERROR;
     
-    EpgEntryList epgEntries;
+    OttEngine::EpgEntryList epgEntries;
     m_core->GetEpg(channel.iUniqueId, iStart, iEnd, epgEntries);
-    EpgEntryList::const_iterator itEpgEntry = epgEntries.begin();
+    OttEngine::EpgEntryList::const_iterator itEpgEntry = epgEntries.begin();
     for (int i = 0; itEpgEntry != epgEntries.end(); ++itEpgEntry, ++i)
     {
         EPG_TAG tag = { 0 };
@@ -193,8 +192,8 @@ PVR_ERROR OttPVRClient::GetChannelGroups(ADDON_HANDLE handle, bool bRadio)
         PVR_CHANNEL_GROUP pvrGroup = { 0 };
         pvrGroup.bIsRadio = false;
 
-        GroupList groups = m_core->GetGroupList();
-        GroupList::const_iterator itGroup = groups.begin();
+        OttEngine::GroupList groups = m_core->GetGroupList();
+        OttEngine::GroupList::const_iterator itGroup = groups.begin();
         for (; itGroup != groups.end(); ++itGroup)
         {
             strncpy(pvrGroup.strGroupName, itGroup->first.c_str(), sizeof(pvrGroup.strGroupName));
@@ -210,11 +209,11 @@ PVR_ERROR OttPVRClient::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_CH
     if(NULL == m_core)
         return PVR_ERROR_SERVER_ERROR;
 
-    const GroupList &groups = m_core->GetGroupList();
-    GroupList::const_iterator itGroup = groups.find(group.strGroupName);
+    const OttEngine::GroupList &groups = m_core->GetGroupList();
+    OttEngine::GroupList::const_iterator itGroup = groups.find(group.strGroupName);
     if (itGroup != groups.end())
     {
-        std::set<OttChannelId>::const_iterator itChannel = itGroup->second.Channels.begin();
+        std::set<OttEngine::OttChannelId>::const_iterator itChannel = itGroup->second.Channels.begin();
         for (; itChannel != itGroup->second.Channels.end(); ++itChannel)
         {
             if (group.strGroupName == itGroup->first)
@@ -243,17 +242,17 @@ PVR_ERROR OttPVRClient::GetChannels(ADDON_HANDLE handle, bool bRadio)
     if(NULL == m_core)
         return PVR_ERROR_SERVER_ERROR;
 
-    const ChannelList &channels = m_core->GetChannelList();
-    ChannelList::const_iterator itChannel = channels.begin();
+    const OttEngine::ChannelList &channels = m_core->GetChannelList();
+    OttEngine::ChannelList::const_iterator itChannel = channels.begin();
     for(; itChannel != channels.end(); ++itChannel)
     {
-        const OttChannel &channel = itChannel->second;
-        if (bRadio == channel.IsRadio)
+        const OttEngine::OttChannel &channel = itChannel->second;
+        if (bRadio == false)
         {
             PVR_CHANNEL pvrChannel = { 0 };
             pvrChannel.iUniqueId = channel.Id;
             pvrChannel.iChannelNumber = channel.Id;
-            pvrChannel.bIsRadio = channel.IsRadio;
+            pvrChannel.bIsRadio = false;
             strncpy(pvrChannel.strChannelName, channel.Name.c_str(), sizeof(pvrChannel.strChannelName));
 
             string iconUrl = channel.IconPath;
@@ -295,7 +294,7 @@ int OttPVRClient::GetRecordingsAmount(bool deleted)
         return -1;
     
     int size = 0;
-    std::function<void(const ArchiveList&)> f = [&size](const ArchiveList& list){size = list.size();};
+    std::function<void(const OttEngine::ArchiveList&)> f = [&size](const OttEngine::ArchiveList& list){size = list.size();};
     m_core->Apply(f);
     if(size == 0)
     {
@@ -310,6 +309,8 @@ int OttPVRClient::GetRecordingsAmount(bool deleted)
     }
     return size;
     
+    
+    
 }
 PVR_ERROR OttPVRClient::GetRecordings(ADDON_HANDLE handle, bool deleted)
 {
@@ -317,13 +318,14 @@ PVR_ERROR OttPVRClient::GetRecordings(ADDON_HANDLE handle, bool deleted)
         return PVR_ERROR_NOT_IMPLEMENTED;
     
     PVR_ERROR result = PVR_ERROR_NO_ERROR;
-    OttPlayer& sTV(*m_core);
+    OttEngine::OttPlayer& sTV(*m_core);
     CHelper_libXBMC_pvr * pvrHelper = m_pvrHelper;
     ADDON::CHelper_libXBMC_addon * addonHelper = m_addonHelper;
-    std::function<void(const ArchiveList&)> f = [&sTV, &handle, pvrHelper, addonHelper ,&result](const ArchiveList& list){
+    std::function<void(const OttEngine::ArchiveList&)> f = [&sTV, &handle, pvrHelper, addonHelper ,&result](const OttEngine::ArchiveList& list)
+    {
         for(const auto &  i :  list) {
             try {
-                const OttEpgEntry& epgTag = sTV.GetEpgList().at(i);
+                const OttEngine::OttEpgEntry& epgTag = sTV.GetEpgList().at(i);
 
                 PVR_RECORDING tag = { 0 };
     //            memset(&tag, 0, sizeof(PVR_RECORDING));
@@ -363,11 +365,11 @@ bool OttPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     if(NULL == m_core)
         return PVR_ERROR_SERVER_ERROR;
 
-    OttEpgEntry epgTag;
+    OttEngine::OttEpgEntry epgTag;
     
     unsigned int epgId = recording.iEpgEventId;
     if( epgId == 0 )
-        epgId = strtoi(recording.strRecordingId);
+        epgId = stoul(recording.strRecordingId);
     if(!m_core->FindEpg(epgId, epgTag))
         return false;
     

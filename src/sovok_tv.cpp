@@ -46,9 +46,6 @@ using namespace rapidjson;
 
 static const int secondsPerHour = 60 * 60;
 
-const bool ASYNC_API = true;
-const bool SYNC_API = true;
-
 //
 static const char* c_EpgCacheDirPath = "special://temp/pvr-puzzle-tv";
 
@@ -456,8 +453,8 @@ void SovokTV::GetEpg(SovokChannelId channelId, time_t startTime, time_t endTime,
         SaveEpgCache();
     }
 
-    int cnt = 0;
-    int cnt1 = 0;
+//    int cnt = 0;
+//    int cnt1 = 0;
     EpgEntryList::const_iterator itEpgEntry = m_epgEntries.begin();
     for (; itEpgEntry != m_epgEntries.end(); ++itEpgEntry)
     {
@@ -466,15 +463,15 @@ void SovokTV::GetEpg(SovokChannelId channelId, time_t startTime, time_t endTime,
             if(entryStartTime >= startTime &&
                entryStartTime < endTime)
             {
-                ++cnt;
+//                ++cnt;
                 epgEntries.insert(*itEpgEntry);
             }
-            else {
-                ++cnt1;
-            }
+//            else {
+//                ++cnt1;
+//            }
         }
     }
-    m_addonHelper->Log(LOG_DEBUG, "Get EPG for channel %d [%d - %d] = %d (%d) entries", channelId, startTime, endTime, cnt, cnt1);
+    //m_addonHelper->Log(LOG_DEBUG, "Get EPG for channel %d [%d - %d] = %d (%d) entries", channelId, startTime, endTime, cnt, cnt1);
 
     if(m_archiveLoader)
         m_archiveLoader->EpgActivityDone();
@@ -521,7 +518,7 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
             Value::ConstValueIterator itChannel = channels.Begin();
             for (; itChannel != channels.End(); ++itChannel)
             {
-                const auto currentChannelId = strtoi((*itChannel)["id"].GetString());
+                const auto currentChannelId = stoul((*itChannel)["id"].GetString());
                 // Check last EPG entrie for missing end time
                 auto lastEpgForChannel = m_epgEntries.begin();
                 for(auto runner = m_epgEntries.begin(), end = m_epgEntries.end(); runner != end; ++runner) {
@@ -539,7 +536,7 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
                 // Fix end time of last enrty for the channel
                 // It can't be calculated during previous iteation.
                 if(lastEpgForChannel != m_epgEntries.end()) {
-                    lastEpgForChannel->second.EndTime = strtoi((*itJsonEpgEntry1)["ut_start"].GetString()) - m_serverTimeShift;
+                    lastEpgForChannel->second.EndTime = stol((*itJsonEpgEntry1)["ut_start"].GetString()) - m_serverTimeShift;
                 }
                 for (; itJsonEpgEntry2 != jsonChannelEpg.End(); ++itJsonEpgEntry1, ++itJsonEpgEntry2)
                 {
@@ -547,8 +544,8 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
                     epgEntry.ChannelId = currentChannelId;
                     epgEntry.Title = (*itJsonEpgEntry1)["progname"].GetString();
                     epgEntry.Description = (*itJsonEpgEntry1)["description"].GetString();
-                    epgEntry.StartTime = strtoi((*itJsonEpgEntry1)["ut_start"].GetString()) - m_serverTimeShift;
-                    epgEntry.EndTime = strtoi((*itJsonEpgEntry2)["ut_start"].GetString()) - m_serverTimeShift;
+                    epgEntry.StartTime = stoi((*itJsonEpgEntry1)["ut_start"].GetString()) - m_serverTimeShift;
+                    epgEntry.EndTime = stol((*itJsonEpgEntry2)["ut_start"].GetString()) - m_serverTimeShift;
                     
                     unsigned int id = epgEntry.StartTime;
                     while( m_epgEntries.count(id) != 0)
@@ -561,7 +558,7 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
                 epgEntry.ChannelId = currentChannelId;
                 epgEntry.Title = (*itJsonEpgEntry1)["progname"].GetString();
                 epgEntry.Description = (*itJsonEpgEntry1)["description"].GetString();
-                epgEntry.StartTime = strtoi((*itJsonEpgEntry1)["ut_start"].GetString()) - m_serverTimeShift;
+                epgEntry.StartTime = stol((*itJsonEpgEntry1)["ut_start"].GetString()) - m_serverTimeShift;
                 epgEntry.EndTime = startTime + numberOfHours * 60 * 60;
                 
                 unsigned int id = epgEntry.StartTime;
@@ -895,7 +892,10 @@ void SovokTV::LoadArchiveList()
                 throw  JsonParserException("'have_archive_list list' is not array");
             std::for_each(jsonList.Begin(), jsonList.End(), [&]  (const Value & i) mutable
                           {
-                              SovokChannelArchive arch = {strtoi(i["id"].GetString()), strtoi(i["archive_hours"].GetString())};
+                              SovokChannelArchive arch = {
+                                  stoi(i["id"].GetString()),
+                                  stoi(i["archive_hours"].GetString())
+                              };
                               // Remeber only valid channels
                               if(m_channelList.count(arch.ChannelId) != 0)
                                   archives.push_back(arch);

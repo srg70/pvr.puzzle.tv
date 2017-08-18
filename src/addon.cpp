@@ -29,6 +29,7 @@
 #include "addon.h"
 #include "sovok_pvr_client.h"
 #include "puzzle_pvr_client.h"
+#include "ott_pvr_client.h"
 #include "xbmc_pvr_dll.h"
 #include "p8-platform/util/util.h"
 #include "kodi/xbmc_addon_cpp_dll.h"
@@ -73,9 +74,12 @@ ADDON_STATUS ADDON_Create(void* hdl, void* props)
     switch (clientType) {
         case 0:
             m_DataSource = new PuzzlePVRClient();
-            break;
-        case 1:
-            m_DataSource = new SovokPVRClient();
+                break;
+            case 1:
+                m_DataSource = new SovokPVRClient();
+                break;
+            case 2:
+            m_DataSource = new OttPVRClient();
             break;
             
         default:

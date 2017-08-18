@@ -30,7 +30,9 @@
 
 class CHelper_libXBMC_pvr;
 class InputBuffer;
-class OttPlayer;
+namespace OttEngine {
+    class OttPlayer;
+}
 
 class OttPVRClient: public PVRClientBase
 {
@@ -76,7 +78,7 @@ private:
     void SetKey(const std::string& key) {m_key = key;};
 //    const std::string& code SetKey();
 
-    OttPlayer* m_core;
+    OttEngine::OttPlayer* m_core;
     std::string m_playlistUrl;
     std::string m_key;
 };

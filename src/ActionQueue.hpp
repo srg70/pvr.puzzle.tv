@@ -82,8 +82,9 @@ private:
         void Failed(std::exception_ptr e) {{_completion(ActionResult(kActionFailed, e));}}
     };
 public:
-    CActionQueue()
-    : _willStop(false)
+    CActionQueue(size_t maxSize)
+    : _actions(maxSize)
+    , _willStop(false)
     {}
     
     template<typename TAction, typename TCompletion>

@@ -39,7 +39,6 @@
 #include "helpers.h"
 #include "sovok_tv.h"
 
-
 using namespace std;
 using namespace ADDON;
 
@@ -113,7 +112,7 @@ void SovokPVRClient::CreateCore()
     if(m_sovokTV != NULL)
         SAFE_DELETE(m_sovokTV);
     m_sovokTV = new SovokTV(m_addonHelper, m_login, m_password);
-    
+
     auto streamersList = m_sovokTV->GetStreamersList();
     string strimmersPath = GetClientPath();
     strimmersPath.append("/").append("resources/").append("streamers/");
@@ -472,7 +471,7 @@ bool SovokPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     
     unsigned int epgId = recording.iEpgEventId;
     if( epgId == 0 )
-        epgId = strtoi(recording.strRecordingId);
+        epgId = stoul(recording.strRecordingId);
     if(!m_sovokTV->FindEpg(epgId, epgTag))
         return false;
     

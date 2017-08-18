@@ -189,7 +189,6 @@ public:
     
     //EpgEntryList GetEpg(int channelId, time_t day);
     void  GetEpg(SovokChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries);
-    void GetEpgForAllChannels(time_t startTime, time_t endTime, EpgEntryList& epgEntries);
     bool FindEpg(SovokChannelId brodcastId, SovokEpgEntry& epgEntry);
     std::string GetArchiveForEpg(const SovokEpgEntry& epgEntry);
 
@@ -212,6 +211,8 @@ private:
     
     template<class TFunc>
     void  GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHours, TFunc func);
+    void GetEpgForAllChannels(time_t startTime, time_t endTime, EpgEntryList& epgEntries);
+
     bool Login(bool wait);
     void Logout();
     void Cleanup();

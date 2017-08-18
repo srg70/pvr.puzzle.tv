@@ -3,7 +3,7 @@
 
 <!-- Common -->
 <category label="10010">
-    <setting id="provider_type" type="enum" label="10000" lvalues="20010|30010" default="1" />
+    <setting id="provider_type" type="enum" label="10000" lvalues="20010|30010|40010" default="1" />
     <setting id="enable_timeshift" type="bool" label="10001" default="false" />
     <setting id="timeshift_size" type="slider" label="10003" default="512" range="384,128,32640" option="int" visible="eq(-1,true)" subsetting="true"/>
     <setting id="timeshift_type" type="enum" label="10004" lvalues="10005|10006" default="0"  visible="eq(-2,true)" subsetting="true"/>
@@ -26,5 +26,12 @@
       <setting id="pin_code" type="text" label="30004" default="0000" visible="eq(-1,true)"/>
       <setting id="streamer" type="fileenum" label="30005" values="resources/streamers"/>
   </category>
+
+<!-- OTT Player -->
+<category label="40010">
+    <setting id="ott_playlist_url" type="text" label="40000" default="ott.watch"/>
+    <setting id="ott_key" type="text" label="40001" default=""/>
+</category>
+
 
 </settings>

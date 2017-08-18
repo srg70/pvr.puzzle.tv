@@ -41,9 +41,6 @@ using namespace PuzzleEngine;
 
 static const int secondsPerHour = 60 * 60;
 
-const bool ASYNC_API = true;
-const bool SYNC_API = true;
-
 //static const char c_EpgCacheDelimeter = '\n';
 //
 //static const char* c_EpgCacheDirPath = "special://temp/pvr.sovok.tv";
@@ -383,11 +380,11 @@ void PuzzleTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHou
                 for (; itJsonEpgEntry2 != jsonChannelEpg.End(); ++itJsonEpgEntry1, ++itJsonEpgEntry2)
                 {
                     EpgEntry epgEntry;
-                    epgEntry.channelId = strtoi((*itChannel)["id"].GetString());
+                    epgEntry.channelId = stoul((*itChannel)["id"].GetString());
                     epgEntry.Title = (*itJsonEpgEntry1)["progname"].GetString();
                     epgEntry.Description = (*itJsonEpgEntry1)["description"].GetString();
-                    epgEntry.StartTime = strtoi((*itJsonEpgEntry1)["ut_start"].GetString()) - m_serverTimeShift;
-                    epgEntry.EndTime = strtoi((*itJsonEpgEntry2)["ut_start"].GetString()) - m_serverTimeShift;
+                    epgEntry.StartTime = stol((*itJsonEpgEntry1)["ut_start"].GetString()) - m_serverTimeShift;
+                    epgEntry.EndTime = stol((*itJsonEpgEntry2)["ut_start"].GetString()) - m_serverTimeShift;
                     
                     unsigned int id = epgEntry.StartTime;
                     while( m_epgEntries.count(id) != 0)
@@ -591,7 +588,10 @@ void PuzzleTV::LoadArchiveList()
                 throw  JsonParserException("'have_archive_list list' is not array");
             std::for_each(jsonList.Begin(), jsonList.End(), [&]  (const Value & i) mutable
                           {
-                              ChannelArchive arch = {strtoi(i["id"].GetString()), strtoi(i["archive_hours"].GetString())};
+                              ChannelArchive arch = {
+                                  stoi(i["id"].GetString()),
+                                  stoi(i["archive_hours"].GetString())
+                              };
                               // Remeber only valid channels
                               if(m_channelList.count(arch.ChannelId) != 0)
                                   archives.push_back(arch);

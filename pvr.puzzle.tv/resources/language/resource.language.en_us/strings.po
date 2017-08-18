@@ -83,7 +83,18 @@ msgctxt "#30005"
 msgid "Streamer"
 msgstr "Streamer"
 
-
 msgctxt "#30010"
 msgid "Sovok TV"
 msgstr "Sovok TV"
+
+msgctxt "#40000"
+msgid "Server"
+msgstr "Server"
+
+msgctxt "#40001"
+msgid "Key"
+msgstr "Key"
+
+msgctxt "#40010"
+msgid "OTT Player"
+msgstr "OTT Player"

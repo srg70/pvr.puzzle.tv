@@ -107,6 +107,8 @@
 		4C534CC41F347CD50038539D /* file_cache_buffer.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4C534CC21F347CD50038539D /* file_cache_buffer.hpp */; };
 		4C534CD21F418BB50038539D /* memory_cache_buffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C534CD01F418BB50038539D /* memory_cache_buffer.cpp */; };
 		4C534CD31F418BB50038539D /* memory_cache_buffer.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4C534CD11F418BB50038539D /* memory_cache_buffer.hpp */; };
+		4C534CD41F46C9D40038539D /* ott_player.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C5BF3611F1A310D00437252 /* ott_player.cpp */; };
+		4C534CD51F46C9EA0038539D /* ott_pvr_client.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C5BF3601F18DAEE00437252 /* ott_pvr_client.cpp */; };
 		4C8506E41EF478A000213131 /* pvr_client_base.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C8506E21EF478A000213131 /* pvr_client_base.cpp */; };
 		4C8506E51EF478A000213131 /* pvr_client_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C8506E31EF478A000213131 /* pvr_client_base.h */; };
 		4C8506E81F0E25DF00213131 /* HttpEngine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C8506E61F0E25DF00213131 /* HttpEngine.cpp */; };
@@ -770,6 +772,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4C534CD41F46C9D40038539D /* ott_player.cpp in Sources */,
 				4C08C7FE1D8290F6004CAAE3 /* addon.cpp in Sources */,
 				4C8506EC1F0E49F400213131 /* puzzle_pvr_client.cpp in Sources */,
 				4CD394B61F2258610073E2DF /* plist_buffer.cpp in Sources */,
@@ -784,6 +787,7 @@
 				4C08C7F31D81E2A8004CAAE3 /* direct_buffer.cpp in Sources */,
 				4C08C7F51D81E2A8004CAAE3 /* timeshift_buffer.cpp in Sources */,
 				4C8506F11F0E541100213131 /* puzzle_tv.cpp in Sources */,
+				4C534CD51F46C9EA0038539D /* ott_pvr_client.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

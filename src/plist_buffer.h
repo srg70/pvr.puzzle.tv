@@ -86,6 +86,7 @@ namespace Buffers
         std::string  m_playListUrl;
         mutable P8PLATFORM::CMutex m_syncAccess;
         P8PLATFORM::CEvent m_writeEvent;
+        bool m_isVod;
         
         void *Process();
         void Init(const std::string &playlistUrl);

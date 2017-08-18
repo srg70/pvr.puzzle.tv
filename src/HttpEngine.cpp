@@ -23,11 +23,12 @@
 #include "HttpEngine.hpp"
 #include "p8-platform/util/util.h"
 
+static const size_t c_MaxQueueSize = 100000;
 
 HttpEngine::HttpEngine(ADDON::CHelper_libXBMC_addon * addonHelper)
     :  m_addonHelper(addonHelper),
-    m_apiCalls(new CActionQueue()),
-    m_apiCallCompletions(new CActionQueue())
+    m_apiCalls(new CActionQueue(c_MaxQueueSize)),
+    m_apiCallCompletions(new CActionQueue(c_MaxQueueSize))
 {
 
     m_apiCalls->CreateThread();

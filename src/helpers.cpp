@@ -45,7 +45,7 @@ std::string n_to_string_hex(uint64_t n)
 }
 
 
-int strtoi(const std::string &str)
-{
-    return atoi(str.c_str());
-}
+//int strtoi(const std::string &str)
+//{
+//    return atoi(str.c_str());
+//}

@@ -127,7 +127,7 @@ private:
                 
                 P8PLATFORM::CEvent::Sleep(1000);
             }
-            m_addonHelper->Log(ADDON::LOG_INFO, "Got HTTP response in %d ms", P8PLATFORM::GetTimeMs() - start);
+            m_addonHelper->Log(ADDON::LOG_INFO, "Got HTTP response (%d) in %d ms", httpCode,  P8PLATFORM::GetTimeMs() - start);
             
             if (httpCode != 200)
                 *response = "";

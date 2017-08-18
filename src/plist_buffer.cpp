@@ -25,8 +25,7 @@
 #include <windows.h>
 #endif
 
-#include <cctype>
-#include <algorithm>
+#include "helpers.h"
 #include "plist_buffer.h"
 #include "libXBMC_addon.h"
 
@@ -35,26 +34,7 @@ using namespace ADDON;
 
 namespace Buffers {
     
-    // trim from start (in place)
-    static inline void ltrim(std::string &s) {
-        s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int ch) {
-            return !std::isspace(ch);
-        }));
-    }
-    
-    // trim from end (in place)
-    static inline void rtrim(std::string &s) {
-        s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) {
-            return !std::isspace(ch);
-        }).base(), s.end());
-    }
-    
-    // trim from both ends (in place)
-    static inline void trim(std::string &s) {
-        ltrim(s);
-        rtrim(s);
-    }
-    
+      
     static std::string ToAbsoluteUrl(const std::string& url, const std::string& baseUrl){
         const char* c_HTTP = "http://";
         
@@ -154,19 +134,37 @@ namespace Buffers {
         const char* c_M3U = "#EXTM3U";
         const char* c_INF = "#EXTINF:";
         const char* c_SEQ = "#EXT-X-MEDIA-SEQUENCE:";
+        const char* c_TYPE = "#EXT-X-PLAYLIST-TYPE:";
         
         try {
             auto pos = data.find(c_M3U);
             if(std::string::npos == pos)
-            throw PlistBufferException("Invalid playlist format: missing #EXTM3U tag.");
+                throw PlistBufferException("Invalid playlist format: missing #EXTM3U tag.");
             pos += strlen(c_M3U);
             
+            auto mediaIndex = 0;
+            std::string  body;
             pos = data.find(c_SEQ);
-            if(std::string::npos == pos)
-            throw PlistBufferException("Invalid playlist format: missing #EXT-X-MEDIA-SEQUENCE tag.");
-            pos += strlen(c_SEQ);
-            std::string  body = data.substr(pos);
-            auto mediaIndex = std::stoull(body, &pos);
+            // If we have media-sequence tag - use it
+            if(std::string::npos != pos) {
+                pos += strlen(c_SEQ);
+                body = data.substr(pos);
+                mediaIndex = std::stoull(body, &pos);
+               m_isVod = false;
+            } else {
+                // ... otherwise check plist type. VOD list may ommit sequence ID
+                pos = data.find(c_TYPE);
+                if(std::string::npos == pos)
+                    throw PlistBufferException("Invalid playlist format: missing #EXT-X-MEDIA-SEQUENCE and #EXT-X-PLAYLIST-TYPE tag.");
+                pos+= strlen(c_TYPE);
+                body = data.substr(pos);
+                std::string vod("VOD");
+                if(body.substr(0,vod.size()) != vod)
+                    throw PlistBufferException("Invalid playlist format: VOD playlist expected.");
+                m_isVod = true;
+                mediaIndex = 0;
+                body=body.substr(0, body.find("#EXT-X-ENDLIST"));
+            }
             
             pos = body.find(c_INF, pos);
             while(std::string::npos != pos) {
@@ -174,7 +172,7 @@ namespace Buffers {
                 body = body.substr(pos);
                 float duration = std::stof (body, &pos);
                 if(',' != body[pos++])
-                throw PlistBufferException("Invalid playlist format: no coma after INT tag.");
+                    throw PlistBufferException("Invalid playlist format: no coma after INT tag.");
                 
                 std::string::size_type urlPos = body.find('\n',pos) + 1;
                 pos = body.find(c_INF, urlPos);
@@ -192,6 +190,11 @@ namespace Buffers {
                 //            m_addonHelper->Log(LOG_NOTICE, "IDX: %u Duration: %f. URL: %s", mediaIndex, duration, url.c_str());
                 m_segmentUrls[mediaIndex++]  = TSegmentUrls::mapped_type(duration, url);
             }
+            m_addonHelper->Log(LOG_DEBUG, "m_segmentUrls.size = %d", m_segmentUrls.size() );
+        } catch (std::exception& ex) {
+            m_addonHelper->Log(LOG_ERROR, "Bad M3U : parser error %s", ex.what() );
+            m_addonHelper->Log(LOG_ERROR, "M3U data : \n %s", data.c_str() );
+            throw;
         } catch (...) {
             m_addonHelper->Log(LOG_ERROR, "Bad M3U : \n %s", data.c_str() );
             throw;
@@ -209,7 +212,7 @@ namespace Buffers {
             buffer[0]= 0;
             auto bytesRead = m_addonHelper->ReadFile(f, buffer, sizeof(buffer));
             isEof = bytesRead <= 0;
-            data += &buffer[0];
+            data.append(&buffer[0], bytesRead);
         }while(!isEof);
         m_addonHelper->CloseFile(f);
     }
@@ -219,7 +222,7 @@ namespace Buffers {
         unsigned char buffer[8196];
         void* f = m_addonHelper->OpenFile(segment.second.c_str(), XFILE::READ_NO_CACHE | XFILE::READ_CHUNKED); //XFILE::READ_AUDIO_VIDEO);
         if(!f)
-        throw PlistBufferException("Failed to download playlist media segment.");
+            throw PlistBufferException("Failed to download playlist media segment.");
         
         auto segmentData = new TSegments::value_type::element_type();
         //    segmentData->m_addonHelper = m_addonHelper;
@@ -243,7 +246,7 @@ namespace Buffers {
     {
         bool isEof = false;
         try {
-            while (!isEof  && !IsStopped()) {
+            while (!isEof && !IsStopped()) {
                 if(m_segmentUrls.empty()) {
                     std::string data;
                     LoadPlaylist(data);
@@ -272,6 +275,10 @@ namespace Buffers {
                 //                sleepInterval -= 1,0;
                 //                P8PLATFORM::CEvent::Sleep(1000);
                 //            }
+                if(m_isVod) {
+                    m_addonHelper->Log(LOG_DEBUG, ">>> PlaylistBuffer: write is done");
+                    break;
+                }
                 Sleep(sleepTime);
             }
             
@@ -287,27 +294,26 @@ namespace Buffers {
         
         size_t totalBytesRead = 0;
         //    int32_t timeout = c_commonTimeoutMs;
-        
-        while (totalBytesRead < bufferSize && IsRunning())
+        while (totalBytesRead < bufferSize)
         {
             TSegments::value_type segment = NULL;
             {
                 CLockObject lock(m_syncAccess);
                 if(!m_segments.empty())
-                segment = m_segments.front();
+                    segment = m_segments.front();
             }
             // Retry 1 time after write operation
             if(NULL == segment && m_writeEvent.Wait(1000))
             {
                 CLockObject lock(m_syncAccess);
                 if(!m_segments.empty())
-                segment = m_segments.front();
+                    segment = m_segments.front();
             }
             if(NULL == segment)
             {
                 //            StopThread();
                 m_addonHelper->Log(LOG_NOTICE, "PlaylistBuffer: no segment for read.");
-                break;
+                    break;
             }
             
             size_t bytesToRead;
@@ -320,8 +326,9 @@ namespace Buffers {
                 totalBytesRead += bytesRead;
             }while(bytesToRead > 0 && bytesRead > 0);
             
+            bool hasData = segment->BytesReady() > 0 ;
             // Release empty segment
-            if(segment->BytesReady() <= 0 ){
+            if(segment->BytesReady() <= 0){
                 CLockObject lock(m_syncAccess);
                 if(!m_segments.empty()) {
                     m_segments.pop_front();
@@ -332,8 +339,12 @@ namespace Buffers {
             //        m_position += bytesRead;
             
         }
-        
-        return (IsStopped() || !IsRunning()) ? -1 :totalBytesRead;
+        CLockObject lock(m_syncAccess);
+        bool hasMoreData = m_segments.size() > 0  ||  (!IsStopped() && IsRunning());
+        if(!hasMoreData)
+            m_addonHelper->Log(LOG_DEBUG, ">>> PlaylistBuffer: read is done. No more data.");
+
+        return (hasMoreData) ? totalBytesRead : -1;
     }
     
     int64_t PlaylistBuffer::Seek(int64_t iPosition, int iWhence)

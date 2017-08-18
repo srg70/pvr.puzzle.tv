@@ -85,3 +85,16 @@ msgstr "Сервер"
 msgctxt "#30010"
 msgid "Sovok TV"
 msgstr "Совок ТВ"
+
+msgctxt "#40000"
+msgid "Server"
+msgstr "Сервер"
+
+msgctxt "#40001"
+msgid "Key"
+msgstr "Ключ"
+
+msgctxt "#40010"
+msgid "OTT Player"
+msgstr "OTT"
+

@@ -24,8 +24,8 @@
  *
  */
 
-#ifndef sovok_tv_h
-#define sovok_tv_h
+#ifndef _ott_player_h_
+#define _ott_player_h_
 
 #include "libXBMC_pvr.h"
 #include <string>
@@ -37,194 +37,198 @@
 #include <memory>
 
 class HttpEngine;
-
-typedef unsigned int OttChannelId;
-
-struct OttChannel
+namespace OttEngine
 {
-    OttChannelId Id;
-    std::string Name;
-    std::string IconPath;
-    bool IsRadio;
-
-    bool operator <(const OttChannel &anotherChannel) const
+    
+    
+    typedef unsigned int OttChannelId;
+    
+    struct OttChannel
     {
-        return Id < anotherChannel.Id;
-    }
-};
-
-
-struct SovokGroup
-{
-    std::set<OttChannelId> Channels;
-};
-
-struct OttEpgEntry
-{
-    OttChannelId ChannelId;
-    time_t StartTime;
-    time_t EndTime;
-
-    std::string Title;
-    std::string Description;
+        OttChannelId Id;
+        std::string Name;
+        std::string IconPath;
+        std::string UrlTemplate;
+        bool HasArchive;
+        
+        bool operator <(const OttChannel &anotherChannel) const
+        {
+            return Id < anotherChannel.Id;
+        }
+    };
     
-    template <class T>
-    void Serialize(T& writer) const
+    
+    struct OttGroup
     {
-        writer.StartObject();               // Between StartObject()/EndObject(),
-        writer.Key("ChannelId");
-        writer.Uint(ChannelId);
-        writer.Key("StartTime");
-        writer.Int64(StartTime);
-        writer.Key("EndTime");
-        writer.Int64(EndTime);
-        writer.Key("Title");
-        writer.String(Title.c_str());
-        writer.Key("Description");
-        writer.String(Description.c_str());
-        writer.EndObject();
-    }
-    template <class T>
-    void Deserialize(T& reader)
+        std::set<OttChannelId> Channels;
+    };
+    
+    struct OttEpgEntry
     {
-        ChannelId = reader["ChannelId"].GetUint();
-        StartTime = reader["StartTime"].GetInt64();
-        EndTime = reader["EndTime"].GetInt64();
-        Title = reader["Title"].GetString();
-        Description = reader["Description"].GetString();
-    }
-};
-
-typedef unsigned int UniqueBroadcastIdType;
-typedef UniqueBroadcastIdType  OttArchiveEntry;
-
-typedef std::map<OttChannelId, OttChannel> ChannelList;
-typedef std::map<std::string, SovokGroup> GroupList;
-typedef std::map<UniqueBroadcastIdType, OttEpgEntry> EpgEntryList;
-typedef std::map<std::string, std::string> ParamList;
-typedef std::set<OttChannelId> FavoriteList;
-typedef std::vector<std::string> StreamerNamesList;
-typedef std::set<OttArchiveEntry> ArchiveList;
-
-class OttExceptionBase : public std::exception
-{
-public:
-    const char* what() const noexcept {return reason.c_str();}
-    const std::string reason;
-    OttExceptionBase(const std::string& r) : reason(r) {}
-    OttExceptionBase(const char* r = "") : reason(r) {}
-
-};
-
-class AuthFailedException : public OttExceptionBase
-{
-};
-
-class BadSessionIdException : public OttExceptionBase
-{
-public:
-    BadSessionIdException() : OttExceptionBase("Session ID es empty.") {}
-};
-
-class UnknownStreamerIdException : public OttExceptionBase
-{
-public:
-    UnknownStreamerIdException() : OttExceptionBase("Unknown streamer ID.") {}
-};
-
-class MissingApiException : public OttExceptionBase
-{
-public:
-    MissingApiException(const char* r) : OttExceptionBase(r) {}
-};
-
-class JsonParserException : public OttExceptionBase
-{
-public:
-    JsonParserException(const std::string& r) : OttExceptionBase(r) {}
-    JsonParserException(const char* r) : OttExceptionBase(r) {}
-};
-
-class ServerErrorException : public OttExceptionBase
-{
-public:
-    ServerErrorException(const char* r, int c) : OttExceptionBase(r), code(c) {}
-    const int code;
-};
-
-
-
-class OttPlayer
-{
-public:
-    OttPlayer(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &playlistUrl, const std::string &key);
-    ~OttPlayer();
-
-    const ChannelList &GetChannelList();
-    const EpgEntryList& GetEpgList() const;
-    const StreamerNamesList& GetStreamersList() const;
+        const char* ChannelIdName = "ch";
+        OttChannelId ChannelId;
+        const char* StartTimeName = "st";
+        time_t StartTime;
+        const char* EndTimeName = "et";
+       time_t EndTime;
+        
+        const char* TitileName = "ti";
+        std::string Title;
+        const char* DescriptionName = "de";
+        std::string Description;
+        
+        const char* HasArchiveName = "ha";
+        bool HasArchive;
+        
+        template <class T>
+        void Serialize(T& writer) const
+        {
+            writer.StartObject();               // Between StartObject()/EndObject(),
+            writer.Key(ChannelIdName);
+            writer.Uint(ChannelId);
+            writer.Key(StartTimeName);
+            writer.Int64(StartTime);
+            writer.Key(EndTimeName);
+            writer.Int64(EndTime);
+            writer.Key(TitileName);
+            writer.String(Title.c_str());
+            writer.Key(DescriptionName);
+            writer.String(Description.c_str());
+            writer.Key(HasArchiveName);
+            writer.Bool(HasArchive);
+            writer.EndObject();
+        }
+        template <class T>
+        void Deserialize(T& reader)
+        {
+            ChannelId = reader[ChannelIdName].GetUint();
+            StartTime = reader[StartTimeName].GetInt64();
+            EndTime = reader[EndTimeName].GetInt64();
+            Title = reader[TitileName].GetString();
+            Description = reader[DescriptionName].GetString();
+            HasArchive = reader[HasArchiveName].GetBool();
+        }
+    };
     
-    void Apply(std::function<void(const ArchiveList&)>& action) const;
-    bool StartArchivePollingWithCompletion(std::function<void(void)> action);
-
+    typedef unsigned int UniqueBroadcastIdType;
+    typedef UniqueBroadcastIdType  OttArchiveEntry;
     
-    //EpgEntryList GetEpg(int channelId, time_t day);
-    void  GetEpg(OttChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries);
-    void GetEpgForAllChannels(time_t startTime, time_t endTime, EpgEntryList& epgEntries);
-    bool FindEpg(OttChannelId brodcastId, OttEpgEntry& epgEntry);
-    std::string GetArchiveForEpg(const OttEpgEntry& epgEntry);
-
-    const GroupList &GetGroupList();
-    std::string GetUrl(OttChannelId channelId);
-
-private:
-
-    struct ApiFunctionData;
-    class HelperThread;
+    typedef std::map<OttChannelId, OttChannel> ChannelList;
+    typedef std::map<std::string, OttGroup> GroupList;
+    typedef std::map<UniqueBroadcastIdType, OttEpgEntry> EpgEntryList;
+    typedef std::map<std::string, std::string> ParamList;
+    typedef std::set<OttChannelId> FavoriteList;
+    typedef std::vector<std::string> StreamerNamesList;
+    typedef std::set<OttArchiveEntry> ArchiveList;
+    
+    class OttExceptionBase : public std::exception
+    {
+    public:
+        const char* what() const noexcept {return reason.c_str();}
+        const std::string reason;
+        OttExceptionBase(const std::string& r) : reason(r) {}
+        OttExceptionBase(const char* r = "") : reason(r) {}
+        
+    };
+    
+    class AuthFailedException : public OttExceptionBase
+    {
+    };
+    
+    class BadPlaylistFormatException : public OttExceptionBase
+    {
+    public:
+        BadPlaylistFormatException(const char* r) : OttExceptionBase(r) {}
+    };
+    
+    class UnknownStreamerIdException : public OttExceptionBase
+    {
+    public:
+        UnknownStreamerIdException() : OttExceptionBase("Unknown streamer ID.") {}
+    };
+    
+    class MissingApiException : public OttExceptionBase
+    {
+    public:
+        MissingApiException(const char* r) : OttExceptionBase(r) {}
+    };
+    
+    class JsonParserException : public OttExceptionBase
+    {
+    public:
+        JsonParserException(const std::string& r) : OttExceptionBase(r) {}
+        JsonParserException(const char* r) : OttExceptionBase(r) {}
+    };
+    
+    class ServerErrorException : public OttExceptionBase
+    {
+    public:
+        ServerErrorException(const char* r, int c) : OttExceptionBase(r), code(c) {}
+        const int code;
+    };
     
     
     
-    std::string GetArchive(OttChannelId channelId, time_t startTime);
-    
-    template<class TFunc>
-    void  GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHours, TFunc func);
-    void Cleanup();
-    
-    template <typename TParser>
-    void CallApiFunction(const ApiFunctionData& data, TParser parser);
-    template <typename TParser, typename TCompletion>
-    void CallApiAsync(const ApiFunctionData& data, TParser parser, TCompletion completion);
-    
-    void BuildChannelAndGroupList();
-    void LoadSettings();
-    void LoadArchiveList();
-    void ResetArchiveList();
-    bool LoadStreamers();
-    void Log(const char* massage) const;
+    class OttPlayer
+    {
+    public:
+        OttPlayer(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper, const std::string &baseUrl, const std::string &key);
+        ~OttPlayer();
+        
+        const ChannelList &GetChannelList();
+        const EpgEntryList& GetEpgList() const;
+        
+        void Apply(std::function<void(const ArchiveList&)>& action) const;
+        bool StartArchivePollingWithCompletion(std::function<void(void)> action);
+        
+        void  GetEpg(OttChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries);
+        bool FindEpg(OttChannelId brodcastId, OttEpgEntry& epgEntry);
+        std::string GetArchiveForEpg(const OttEpgEntry& epgEntry);
+        
+        const GroupList &GetGroupList();
+        std::string GetUrl(OttChannelId channelId);
+        
+    private:
+        
+        struct ApiFunctionData;
+        class HelperThread;
+        
+//        template<class TFunc>
+        void  GetEpgForAllChannels(OttChannelId channelId,  time_t startTime, time_t endTime);
 
-    void LoadEpgCache();
-    void SaveEpgCache();
+        void Cleanup();
+        
+        template <typename TParser>
+        void CallApiFunction(const ApiFunctionData& data, TParser parser);
+        template <typename TParser, typename TCompletion>
+        void CallApiAsync(const ApiFunctionData& data, TParser parser, TCompletion completion);
+        
+        void ParseChannelAndGroup(const std::string& data);
+        void LoadPlaylist();
+        void ResetArchiveList();
+        void Log(const char* massage) const;
+        
+        void LoadEpgCache();
+        void SaveEpgCache();
+        
+        template <typename TParser>
+        void ParseJson(const std::string& response, TParser parser);
+        
+        
+        ADDON::CHelper_libXBMC_addon *m_addonHelper;
+        CHelper_libXBMC_pvr *m_pvrHelper;
 
-    void BuildRecordingsFor(OttChannelId channelId, time_t from, time_t to);
-
-    template <typename TParser>
-    void ParseJson(const std::string& response, TParser parser);
-
-    
-    ADDON::CHelper_libXBMC_addon *m_addonHelper;
-    std::string m_playlistUrl;
-    std::string m_key;
-    ChannelList m_channelList;
-    ArchiveList m_archiveList;
-    GroupList m_groupList;
-    EpgEntryList m_epgEntries;
-    time_t m_lastEpgRequestStartTime;
-    time_t m_lastEpgRequestEndTime;
-    long m_serverTimeShift;
-    StreamerNamesList m_streamerNames;
-    P8PLATFORM::CMutex m_epgAccessMutex;
-    HelperThread* m_archiveLoader;
-    HttpEngine* m_httpEngine;
-};
-
-#endif //sovok_tv_h
+        std::string m_baseUrl;
+        std::string m_epgUrl;
+        std::string m_logoUrl;
+        std::string m_key;
+        ChannelList m_channelList;
+        ArchiveList m_archiveList;
+        GroupList m_groupList;
+        EpgEntryList m_epgEntries;
+        P8PLATFORM::CMutex m_epgAccessMutex;
+        HelperThread* m_archiveLoader;
+        HttpEngine* m_httpEngine;
+    };
+}
+#endif //_ott_player_h_
