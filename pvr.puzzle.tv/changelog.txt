@@ -1,3 +1,6 @@
+0.4.0 (alfa version for OTT Player)
+- OTT Player API implemented: live,  EPG and archive
+
 0.3.0 (alfa version for Puzzle TV Server)
 - EPG optimisation for Sovok TV
 - Timeshift buffer size limit
