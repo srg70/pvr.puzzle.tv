@@ -99,7 +99,8 @@ namespace Buffers {
     }
     void *TimeshiftBuffer::Process()
     {
-        unsigned char* buffer = new unsigned char[m_cache->UnitSize()];
+        const size_t bufferLenght = m_cache->UnitSize();
+        unsigned char* buffer = new unsigned char[bufferLenght];
         bool isError = false;
         try {
             while (!isError && m_inputBuffer != NULL && !IsStopped()) {
@@ -107,9 +108,9 @@ namespace Buffers {
                 // Fill read buffer
                 ssize_t bytesRead = 0;
                 do {
-                    bytesRead += m_inputBuffer->Read(buffer + bytesRead, sizeof(buffer) - bytesRead);
+                    bytesRead += m_inputBuffer->Read(buffer + bytesRead, bufferLenght - bytesRead);
                     isError = bytesRead < 0;
-                }while (!isError && bytesRead < sizeof(buffer) && !IsStopped());
+                }while (!isError && bytesRead < bufferLenght && !IsStopped());
                 
                 if(bytesRead > 0) {
                     // Write to local chunk
@@ -143,10 +144,11 @@ namespace Buffers {
             ssize_t bytesRead = 0;
             size_t bytesToRead = bufferSize - totalBytesRead;
             bytesRead = m_cache->Read( buffer + totalBytesRead, bytesToRead);
-            if(bytesRead == 0 && !m_writeEvent.Wait(timeout)){ //timeout
-                m_addonHelper->Log(LOG_NOTICE, "TimeshiftBuffer: nothing to read within %d msec.", timeout);
-                //StopThread();
-                //break;
+            while(bytesRead == 0 && (m_cache->Length() - m_cache->Position()) < (bufferSize - totalBytesRead)) {
+                if(!m_writeEvent.Wait(timeout)){ //timeout
+                    m_addonHelper->Log(LOG_NOTICE, "TimeshiftBuffer: nothing to read within %d msec.", timeout);
+                    break;
+                }
             }
             //DebugLog(std::string(">>> Read: ") + n_to_string(bytesRead));
             totalBytesRead += bytesRead;

@@ -1,4 +1,4 @@
-//
+                 //
 //  file_cache_buffer.cpp
 //  pvr.puzzle.tv
 //
@@ -100,8 +100,8 @@ namespace Buffers
         unsigned int idx = -1;
         ChunkPtr chunk = NULL;
         {
-            m_addonHelper->Log(LOG_DEBUG, "TimeshiftBuffer::Seek. >>> Requested pos %d", iPosition);
-
+            m_addonHelper->Log(LOG_DEBUG, "MemoryCacheBuffer::Seek. >>> Requested pos %d", iPosition);
+            
             CLockObject lock(m_SyncAccess);
             
             // Translate position to offset from start of buffer.
@@ -117,22 +117,23 @@ namespace Buffers
                 iPosition = m_begin;
             }
             iWhence = SEEK_SET;
-            m_addonHelper->Log(LOG_DEBUG, "TimeshiftBuffer::Seek. Calculated pos %d", iPosition);
-            m_addonHelper->Log(LOG_DEBUG, "TimeshiftBuffer::Seek. Begin %d Length %d", m_begin, m_length);
-
+            m_addonHelper->Log(LOG_DEBUG, "MemoryCacheBuffer::Seek. Calculated pos %d", iPosition);
+            m_addonHelper->Log(LOG_DEBUG, "MemoryCacheBuffer::Seek. Begin %d Length %d", m_begin, m_length);
+            
             idx = GetChunkIndexFor(iPosition);
             if(idx >= m_ReadChunks.size()) {
-                m_addonHelper->Log(LOG_ERROR, "TimeshiftBuffer: seek failed. Wrong chunk index %d", idx);
-                return -1;
+                m_addonHelper->Log(LOG_ERROR, "MemoryCacheBuffer: seek failed. Wrong chunk index %d", idx);
+                return m_position;
             }
             chunk = m_ReadChunks[idx];
+            
+            auto inPos = GetPositionInChunkFor(iPosition);
+            auto pos =  chunk->Seek(inPos);
+            m_position = iPosition -  (inPos - pos);
+            m_addonHelper->Log(LOG_DEBUG, "MemoryCacheBuffer::Seek. Chunk idx %d, pos in chunk %d, actual pos %d", idx, inPos, pos);
         }
-        auto inPos = GetPositionInChunkFor(iPosition);
-        auto pos =  chunk->Seek(inPos);
-        m_position = iPosition -  (inPos - pos);
-        m_addonHelper->Log(LOG_DEBUG, "TimeshiftBuffer::Seek. Chunk idx %d, pos in chunk %d, actual pos %d", idx, inPos, pos);
-        m_addonHelper->Log(LOG_DEBUG, "TimeshiftBuffer::Seek. <<< Result pos %d", m_position);
-        return iPosition;
+        m_addonHelper->Log(LOG_DEBUG, "MemoryCacheBuffer::Seek. <<< Result pos %d", m_position);
+        return m_position;
         
     }
     
@@ -161,40 +162,40 @@ namespace Buffers
     ssize_t MemoryCacheBuffer::Read(void* buffer, size_t bufferSize) {
         
         size_t totalBytesRead = 0;
+        size_t bytesRead = 0;
         
         ChunkPtr chunk = NULL;
         while (totalBytesRead < bufferSize) {
-            unsigned int idx = GetChunkIndexFor(m_position);
             {
                 CLockObject lock(m_SyncAccess);
+                unsigned int idx = GetChunkIndexFor(m_position);
                 chunk = (idx >= m_ReadChunks.size()) ? NULL : m_ReadChunks[idx];
+                if(NULL == chunk)  {
+                    m_addonHelper->Log(LOG_ERROR, "MemoryCacheBuffer: failed to obtain chunk for read.");
+                    break;
+                }
+                chunk->Seek(GetPositionInChunkFor(m_position));
+                size_t bytesToRead = bufferSize - totalBytesRead;
+                bytesRead = chunk->Read( ((uint8_t*)buffer) + totalBytesRead, bytesToRead);
+                m_position += bytesRead;
             }
-            
-            if(NULL == chunk)  {
-                m_addonHelper->Log(LOG_ERROR, "TimeshiftBuffer: failed to obtain chunk for read.");
-                break;
-            }
-            
-            size_t bytesToRead = bufferSize - totalBytesRead;
-            ssize_t bytesRead = chunk->Read( ((uint8_t*)buffer) + totalBytesRead, bytesToRead);
             if(bytesRead == 0 ) {
-                //m_addonHelper->Log(LOG_NOTICE, "TimeshiftBuffer: nothing to read.");
+                //m_addonHelper->Log(LOG_DEBUG, "MemoryCacheBuffer: nothing to read.");
                 break;
             }
             //DebugLog(std::string(">>> Read: ") + n_to_string(bytesRead));
             totalBytesRead += bytesRead;
-            m_position += bytesRead;
-            if(chunk->ReadPos() == chunk->WritePos() && chunk->WritePos() == chunk->Capacity()) {
+            if(chunk->ReadPos() == chunk->Capacity()) {
                 chunk = NULL;
             }
         }
-        if(NULL == chunk) {
+        if(GetChunkIndexFor(m_position) > 0) {
             CLockObject lock(m_SyncAccess);
             // Free oldest chunk one unit before max size
             // NOTE: write will not wait, just will drop current unit.
             while(m_length - m_begin >=  m_maxSize - UnitSize())
             {
-                m_begin  +=CHUNK_SIZE_LIMIT;
+                m_begin  +=m_ReadChunks.front()->Capacity();
                 m_ReadChunks.pop_front();
                 m_ChunkSwarm.pop_front();
             }
@@ -215,7 +216,6 @@ namespace Buffers
                 // Create new chunk if nesessary
                 if(NULL == chunk)  {
                     CLockObject lock(m_SyncAccess);
-                    
                     if(m_ReadChunks.size()) {
                         chunk = m_ReadChunks.back();
                         if(chunk->WritePos() == chunk->Capacity()) {
@@ -235,14 +235,15 @@ namespace Buffers
                 size_t available = chunk->Capacity() - chunk->WritePos();
                 const size_t bytesToWrite = std::min(available, bufferSize);
                 // Write bytes
-                const ssize_t bytesWritten = chunk->Write(buffer, bytesToWrite);
+                ssize_t bytesWritten = 0;
                 {
-                    //CLockObject lock(m_SyncAccess);
+                    CLockObject lock(m_SyncAccess);
+                    bytesWritten = chunk->Write(buffer, bytesToWrite);
                     m_length += bytesWritten;
                 }
                 totalWritten += bytesWritten;
                 if(bytesWritten != bytesToWrite) {
-                    m_addonHelper->Log(LOG_ERROR, "TimeshiftBuffer: write cache error, written (%d) != read (%d)", bytesWritten,bytesToWrite);
+                    m_addonHelper->Log(LOG_ERROR, "MemoryCacheBuffer: write cache error, written (%d) != read (%d)", bytesWritten,bytesToWrite);
                     //break;// ???
                 }
                 available -= bytesWritten;
@@ -255,7 +256,7 @@ namespace Buffers
             }
             
         } catch (std::exception&  ex) {
-            m_addonHelper->Log(LOG_ERROR, "TimeshiftBuffer: generic exception %s", ex.what());
+            m_addonHelper->Log(LOG_ERROR, "MemoryCacheBuffer: generic exception %s", ex.what());
         }
         
         return totalWritten;
@@ -271,10 +272,10 @@ namespace Buffers
         try {
             ChunkPtr newChunk = new CMemoryBlock();
             m_ChunkSwarm.push_back(ChunkSwarm::value_type(newChunk));
-            m_addonHelper->Log(LOG_DEBUG, ">>> TimeshiftBuffer: new current chunk (for write). Total %d", m_ChunkSwarm.size());
+            m_addonHelper->Log(LOG_DEBUG, ">>> MemoryCacheBuffer: new current chunk (for write). Total %d", m_ChunkSwarm.size());
             return newChunk;
         } catch (std::exception& ex) {
-            m_addonHelper->Log(LOG_DEBUG, ">>> TimeshiftBuffer: allocation of new chunck failed. Exception: %s", ex.what());
+            m_addonHelper->Log(LOG_DEBUG, ">>> MemoryCacheBuffer: allocation of new chunck failed. Exception: %s", ex.what());
         }
         return NULL;
     }
