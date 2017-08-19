@@ -178,7 +178,7 @@ namespace Buffers
             size_t bytesToRead = bufferSize - totalBytesRead;
             ssize_t bytesRead = chunk->Read( ((uint8_t*)buffer) + totalBytesRead, bytesToRead);
             if(bytesRead == 0 ) {
-                m_addonHelper->Log(LOG_NOTICE, "TimeshiftBuffer: nothing to read.");
+                //m_addonHelper->Log(LOG_NOTICE, "TimeshiftBuffer: nothing to read.");
                 break;
             }
             //DebugLog(std::string(">>> Read: ") + n_to_string(bytesRead));

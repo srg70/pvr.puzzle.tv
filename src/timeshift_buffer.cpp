@@ -109,7 +109,7 @@ namespace Buffers {
                 do {
                     bytesRead += m_inputBuffer->Read(buffer + bytesRead, sizeof(buffer) - bytesRead);
                     isError = bytesRead < 0;
-                }while (bytesRead > 0 && bytesRead < sizeof(buffer) && !IsStopped());
+                }while (!isError && bytesRead < sizeof(buffer) && !IsStopped());
                 
                 if(bytesRead > 0) {
                     // Write to local chunk

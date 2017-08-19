@@ -320,7 +320,7 @@ namespace Buffers
             size_t bytesToRead = bufferSize - totalBytesRead;
             ssize_t bytesRead = chunk->m_reader.Read( ((char*)buffer) + totalBytesRead, bytesToRead);
             if(bytesRead == 0 ) {
-                m_addonHelper->Log(LOG_NOTICE, "FileCacheBuffer: nothing to read.");
+                //m_addonHelper->Log(LOG_NOTICE, "FileCacheBuffer: nothing to read.");
                 break;
             }
             //DebugLog(std::string(">>> Read: ") + n_to_string(bytesRead));
