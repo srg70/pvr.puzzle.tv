@@ -86,7 +86,7 @@ namespace Buffers {
         if(std::string::npos == pos)
         throw PlistBufferException("Invalid playlist format: missing NEW LINE in #EXT-X-STREAM-INF tag.");
         url = data.substr(++pos);
-        rtrim(url);
+        trim(url);
         return bandwidth;
     }
     
@@ -186,6 +186,7 @@ namespace Buffers {
                 if(std::string::npos == pos)
                 urlLen = std::string::npos;
                 auto url = body.substr(urlPos, urlLen);
+				trim(url);
                 url = ToAbsoluteUrl(url, m_playListUrl);
                 //            m_addonHelper->Log(LOG_NOTICE, "IDX: %u Duration: %f. URL: %s", mediaIndex, duration, url.c_str());
                 m_segmentUrls[mediaIndex++]  = TSegmentUrls::mapped_type(duration, url);
