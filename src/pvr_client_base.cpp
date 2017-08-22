@@ -318,12 +318,13 @@ bool PVRClientBase::OpenRecordedStream(const std::string& url)
         
         const std::string m3uExt = ".m3u";
         const std::string m3u8Ext = ".m3u8";
-        if( url.find(m3u8Ext) != std::string::npos || url.find(m3uExt) != std::string::npos)
+        const bool isM3u = url.find(m3u8Ext) != std::string::npos || url.find(m3uExt) != std::string::npos;
+        if(isM3u)
             buffer = new Buffers::PlaylistBuffer(m_addonHelper, url);
         else
-            buffer = new DirectBuffer(m_addonHelper, url);
+            buffer = new ArchiveBuffer(m_addonHelper, url);
         
-        if (m_isTimeshiftEnabled){
+        if (m_isTimeshiftEnabled && isM3u){
             if(k_TimeshiftBufferFile == m_timeshiftBufferType) {
                 m_recordBuffer = new Buffers::TimeshiftBuffer(m_addonHelper, buffer, new Buffers::FileCacheBuffer(m_addonHelper, m_CacheDir, m_timshiftBufferSize /  Buffers::FileCacheBuffer::CHUNK_FILE_SIZE_LIMIT));
             } else {
@@ -332,7 +333,6 @@ bool PVRClientBase::OpenRecordedStream(const std::string& url)
         }
         else
             m_recordBuffer = buffer;
-//        m_recordBuffer = new ArchiveBuffer(m_addonHelper, url);
     }
     catch (InputBufferException & ex)
     {
