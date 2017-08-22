@@ -40,10 +40,6 @@
 #include "ott_player.h"
 #include "HttpEngine.hpp"
 
-#ifdef GetObject
-#undef GetObject
-#endif
-
 using namespace std;
 using namespace ADDON;
 using namespace rapidjson;

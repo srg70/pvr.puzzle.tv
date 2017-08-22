@@ -24,11 +24,12 @@
  *
  */
 
+#include "p8-platform/os.h"
 #if (defined(_WIN32) || defined(__WIN32__))
 #include <windows.h>
-#include "p8-platform/windows/os-types.h"
-#else
-#include "p8-platform/posix/os-types.h"
+#ifdef GetObject
+#undef GetObject
+#endif
 #endif
 
 #include "timeshift_buffer.h"

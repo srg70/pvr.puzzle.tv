@@ -43,12 +43,18 @@ void* CActionQueue::Process()
     return NULL;
 }
 
-bool CActionQueue::StopThread(int iWaitMs)
+void CActionQueue::TerminatePipeline()
 {
     // In case of no active tasks unlocks .Pop() waiting
     PerformAsync([this] {
         _willStop = true;
     }, [](const CActionQueue::ActionResult& s) {});
     _willStop = true;
+
+}
+
+bool CActionQueue::StopThread(int iWaitMs)
+{
+    TerminatePipeline();
     return this->CThread::StopThread(iWaitMs);
 }

@@ -26,7 +26,9 @@
 
 #if (defined(_WIN32) || defined(__WIN32__))
 #include <windows.h>
-
+#ifdef GetObject
+#undef GetObject
+#endif
 #endif
 
 #include <algorithm>
@@ -39,10 +41,6 @@
 #include "ott_pvr_client.h"
 #include "helpers.h"
 #include "ott_player.h"
-
-#ifdef GetObject
-#undef GetObject
-#endif
 
 using namespace std;
 using namespace ADDON;

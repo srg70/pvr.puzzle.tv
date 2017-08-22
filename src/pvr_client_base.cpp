@@ -26,6 +26,9 @@
 
 #if (defined(_WIN32) || defined(__WIN32__))
 #include <windows.h>
+#ifdef GetObject
+#undef GetObject
+#endif
 #endif
 
 #include "p8-platform/util/util.h"

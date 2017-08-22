@@ -26,6 +26,9 @@
 
 #if (defined(_WIN32) || defined(__WIN32__))
 #include <windows.h>
+#ifdef GetObject
+#undef GetObject
+#endif
 #endif
 
 #include <algorithm>
@@ -111,7 +114,7 @@ void SovokPVRClient::CreateCore()
 {
     if(m_sovokTV != NULL)
         SAFE_DELETE(m_sovokTV);
-    m_sovokTV = new SovokTV(m_addonHelper, m_login, m_password);
+    m_sovokTV = new SovokTV(m_addonHelper, m_pvrHelper, m_login, m_password);
 
     auto streamersList = m_sovokTV->GetStreamersList();
     string strimmersPath = GetClientPath();
@@ -240,6 +243,7 @@ PVR_ERROR SovokPVRClient::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNE
     }
     return PVR_ERROR_NO_ERROR;
 }
+
 PVR_ERROR  SovokPVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
 {
 //    SovokEpgEntry epgEntry;
@@ -278,7 +282,7 @@ PVR_ERROR SovokPVRClient::GetChannelGroups(ADDON_HANDLE handle, bool bRadio)
         GroupList::const_iterator itGroup = groups.begin();
         for (; itGroup != groups.end(); ++itGroup)
         {
-            strncpy(pvrGroup.strGroupName, itGroup->first.c_str(), sizeof(pvrGroup.strGroupName));
+            strncpy(pvrGroup.strGroupName, itGroup->second.Name.c_str(), sizeof(pvrGroup.strGroupName));
             m_pvrHelper->TransferChannelGroup(handle, &pvrGroup);
         }
     }
@@ -306,7 +310,9 @@ PVR_ERROR SovokPVRClient::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_
     }
 
     auto& groups = m_sovokTV->GetGroupList();
-    GroupList::const_iterator itGroup = groups.find(group.strGroupName);
+    GroupList::const_iterator itGroup =  find_if(groups.begin(), groups.end(), [&](const GroupList::value_type& v ){
+        return strcmp(group.strGroupName, v.second.Name.c_str()) == 0;
+    });
     if (itGroup != groups.end())
     {
         for (auto it= itGroup->second.Channels.begin(), end = itGroup->second.Channels.end(); it !=end;  ++it)
@@ -314,7 +320,7 @@ PVR_ERROR SovokPVRClient::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_
 //            if (group.strGroupName == itGroup->first)
             {
                 PVR_CHANNEL_GROUP_MEMBER pvrGroupMember = { 0 };
-                strncpy(pvrGroupMember.strGroupName, itGroup->first.c_str(), sizeof(pvrGroupMember.strGroupName));
+                strncpy(pvrGroupMember.strGroupName, itGroup->second.Name.c_str(), sizeof(pvrGroupMember.strGroupName));
                 pvrGroupMember.iChannelUniqueId = *it;
                 m_pvrHelper->TransferChannelGroupMember(handle, &pvrGroupMember);
             }
@@ -396,18 +402,14 @@ int SovokPVRClient::GetRecordingsAmount(bool deleted)
         return -1;
     
     int size = 0;
-    std::function<void(const ArchiveList&)> f = [&size](const ArchiveList& list){size = list.size();};
-    m_sovokTV->Apply(f);
+    std::function<void(const SovokArchiveEntry&)> f = [&size](const SovokArchiveEntry&){++size;};
+    m_sovokTV->ForEach(f);
     if(size == 0)
     {
         std::function<void(void)> action = [=](){
             m_pvrHelper->TriggerRecordingUpdate();
         };
         m_sovokTV->StartArchivePollingWithCompletion(action);
-//        m_sovokTV->Apply(f);
-//        if(size != 0)
-//            action();
-    
     }
     return size;
     
@@ -424,41 +426,39 @@ PVR_ERROR SovokPVRClient::GetRecordings(ADDON_HANDLE handle, bool deleted)
     SovokTV& sTV(*m_sovokTV);
     CHelper_libXBMC_pvr * pvrHelper = m_pvrHelper;
     ADDON::CHelper_libXBMC_addon * addonHelper = m_addonHelper;
-    std::function<void(const ArchiveList&)> f = [&sTV, &handle, pvrHelper, addonHelper ,&result](const ArchiveList& list){
-        for(const auto &  i :  list) {
-            try {
-                const SovokEpgEntry& epgTag = sTV.GetEpgList().at(i);
-
-                PVR_RECORDING tag = { 0 };
-    //            memset(&tag, 0, sizeof(PVR_RECORDING));
-                sprintf(tag.strRecordingId, "%d",  i);
-                strncpy(tag.strTitle, epgTag.Title.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
-                strncpy(tag.strPlot, epgTag.Description.c_str(), PVR_ADDON_DESC_STRING_LENGTH - 1);
-                strncpy(tag.strChannelName, sTV.GetChannelList().at(epgTag.ChannelId).Name.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
-                tag.recordingTime = epgTag.StartTime;
-                tag.iLifetime = 0; /* not implemented */
-
-                tag.iDuration = epgTag.EndTime - epgTag.StartTime;
-                tag.iEpgEventId = i;
-                tag.iChannelUid = epgTag.ChannelId;
-
-                string dirName = tag.strChannelName;
-                char buff[20];
-                strftime(buff, sizeof(buff), "/%d-%m-%y", localtime(&epgTag.StartTime));
-                dirName += buff;
-                strncpy(tag.strDirectory, dirName.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
-
-                pvrHelper->TransferRecordingEntry(handle, &tag);
-                
-            }
-            catch (...)  {
-                addonHelper->Log(LOG_ERROR, "%s: failed.", __FUNCTION__);
-                result = PVR_ERROR_FAILED;
-            }
-
+    std::function<void(const SovokArchiveEntry&)> f = [&sTV, &handle, pvrHelper, addonHelper ,&result](const SovokArchiveEntry& i)
+    {
+        try {
+            const SovokEpgEntry& epgTag = sTV.GetEpgList().at(i);
+            
+            PVR_RECORDING tag = { 0 };
+            //            memset(&tag, 0, sizeof(PVR_RECORDING));
+            sprintf(tag.strRecordingId, "%d",  i);
+            strncpy(tag.strTitle, epgTag.Title.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
+            strncpy(tag.strPlot, epgTag.Description.c_str(), PVR_ADDON_DESC_STRING_LENGTH - 1);
+            strncpy(tag.strChannelName, sTV.GetChannelList().at(epgTag.ChannelId).Name.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
+            tag.recordingTime = epgTag.StartTime;
+            tag.iLifetime = 0; /* not implemented */
+            
+            tag.iDuration = epgTag.EndTime - epgTag.StartTime;
+            tag.iEpgEventId = i;
+            tag.iChannelUid = epgTag.ChannelId;
+            
+            string dirName = tag.strChannelName;
+            char buff[20];
+            strftime(buff, sizeof(buff), "/%d-%m-%y", localtime(&epgTag.StartTime));
+            dirName += buff;
+            strncpy(tag.strDirectory, dirName.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
+            
+            pvrHelper->TransferRecordingEntry(handle, &tag);
+            
+        }
+        catch (...)  {
+            addonHelper->Log(LOG_ERROR, "%s: failed.", __FUNCTION__);
+            result = PVR_ERROR_FAILED;
         }
     };
-    m_sovokTV->Apply(f);
+    m_sovokTV->ForEach(f);
     return result;
 }
 

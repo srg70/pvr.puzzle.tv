@@ -28,6 +28,9 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #define CURL_STATICLIB 1
+#ifdef GetObject
+#undef GetObject
+#endif
 #endif
 
 #include <curl/curl.h>

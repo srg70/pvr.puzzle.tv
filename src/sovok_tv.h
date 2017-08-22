@@ -35,6 +35,7 @@
 #include <functional>
 #include <list>
 #include <memory>
+#include "ActionQueue.hpp"
 
 class HttpEngine;
 
@@ -46,6 +47,7 @@ struct SovokChannel
     std::string Name;
     std::string IconPath;
     bool IsRadio;
+    bool HasArchive;
 
     bool operator <(const SovokChannel &anotherChannel) const
     {
@@ -56,6 +58,7 @@ struct SovokChannel
 
 struct SovokGroup
 {
+    std::string Name;
     std::set<SovokChannelId> Channels;
 };
 
@@ -68,12 +71,19 @@ struct SovokGroup
 //};
 struct SovokEpgEntry
 {
+    SovokEpgEntry()
+    : ChannelId(-1)
+    , HasArchive(false)
+    {}
+    
     SovokChannelId ChannelId;
     time_t StartTime;
     time_t EndTime;
 
     std::string Title;
     std::string Description;
+    
+    bool HasArchive;
     
     template <class T>
     void Serialize(T& writer) const
@@ -90,6 +100,7 @@ struct SovokEpgEntry
         writer.Key("Description");
         writer.String(Description.c_str());
         writer.EndObject();
+        // NOTE: do not serialize HasArchive. It'll be calculated on startup
     }
     template <class T>
     void Deserialize(T& reader)
@@ -99,6 +110,7 @@ struct SovokEpgEntry
         EndTime = reader["EndTime"].GetInt64();
         Title = reader["Title"].GetString();
         Description = reader["Description"].GetString();
+        // NOTE: do not serialize HasArchive. It'll be calculated on startup
     }
 };
 
@@ -117,13 +129,13 @@ struct SovokEpgCaheEntry
 };
 
 typedef std::map<SovokChannelId, SovokChannel> ChannelList;
-typedef std::map<std::string, SovokGroup> GroupList;
+typedef std::map<int, SovokGroup> GroupList;
 typedef std::map<UniqueBroadcastIdType, SovokEpgEntry> EpgEntryList;
 //typedef std::vector<SovokEpgCaheEntry> EpgCache;
 typedef std::map<std::string, std::string> ParamList;
 typedef std::set<SovokChannelId> FavoriteList;
 typedef std::vector<std::string> StreamerNamesList;
-typedef std::set<SovokArchiveEntry> ArchiveList;
+typedef std::map<SovokChannelId, int> SovokArchivesInfo;
 
 class SovokExceptionBase : public std::exception
 {
@@ -176,14 +188,15 @@ public:
 class SovokTV
 {
 public:
-    SovokTV(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &login, const std::string &password);
+    SovokTV(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper, const std::string &login, const std::string &password);
     ~SovokTV();
 
     const ChannelList &GetChannelList();
     const EpgEntryList& GetEpgList() const;
     const StreamerNamesList& GetStreamersList() const;
     
-    void Apply(std::function<void(const ArchiveList&)>& action) const;
+    void ForEach(std::function<void(const SovokArchiveEntry&)>& action) const;
+    
     bool StartArchivePollingWithCompletion(std::function<void(void)> action);
 
     
@@ -203,15 +216,17 @@ public:
 
 private:
     typedef std::vector<std::string> StreamerIdsList;
-
+    typedef std::function<void(const CActionQueue::ActionResult&)> TApiCallCompletion;
+    
     struct ApiFunctionData;
     class HelperThread;
     
     std::string GetArchive(SovokChannelId channelId, time_t startTime);
     
-    template<class TFunc>
-    void  GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHours, TFunc func);
-    void GetEpgForAllChannels(time_t startTime, time_t endTime, EpgEntryList& epgEntries);
+    void  GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHours);
+    void GetEpgForAllChannels(time_t startTime, time_t endTime);
+    void AddEpgEntry(UniqueBroadcastIdType id, SovokEpgEntry& entry);
+    void UpdateHasArchive(SovokEpgEntry& entry) const;
 
     bool Login(bool wait);
     void Logout();
@@ -219,40 +234,39 @@ private:
     
     template <typename TParser>
     void CallApiFunction(const ApiFunctionData& data, TParser parser);
-    template <typename TParser, typename TCompletion>
-    void CallApiAsync(const ApiFunctionData& data, TParser parser, TCompletion completion);
+    template <typename TParser>
+    void CallApiAsync(const ApiFunctionData& data, TParser parser, TApiCallCompletion completion);
     
     void BuildChannelAndGroupList();
     void LoadSettings();
-    void LoadArchiveList();
-    void ResetArchiveList();
+    void InitArchivesInfo();
     bool LoadStreamers();
     void Log(const char* massage) const;
 
     void LoadEpgCache();
     void SaveEpgCache();
 
-    void BuildRecordingsFor(SovokChannelId channelId, time_t from, time_t to);
-
     template <typename TParser>
     void ParseJson(const std::string& response, TParser parser);
 
     
     ADDON::CHelper_libXBMC_addon *m_addonHelper;
+    CHelper_libXBMC_pvr *m_pvrHelper;
+
     std::string m_login;
     std::string m_password;
     ChannelList m_channelList;
-    ArchiveList m_archiveList;
+    SovokArchivesInfo  m_archivesInfo;
     GroupList m_groupList;
     EpgEntryList m_epgEntries;
-    time_t m_lastEpgRequestStartTime;
+    //time_t m_lastEpgRequestStartTime;
     time_t m_lastEpgRequestEndTime;
     int m_streammerId;
     long m_serverTimeShift;
     StreamerNamesList m_streamerNames;
     StreamerIdsList m_streamerIds;
-    P8PLATFORM::CMutex m_epgAccessMutex;
-    HelperThread* m_archiveLoader;
+    mutable P8PLATFORM::CMutex m_epgAccessMutex;
+    HelperThread* m_archiveRefresher;
     std::string m_pinCode;
     HttpEngine* m_httpEngine;
 };

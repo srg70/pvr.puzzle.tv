@@ -99,6 +99,8 @@ public:
     virtual bool StopThread(int iWaitMs = 5000);
 private:
     virtual void *Process(void);
+    void TerminatePipeline();
+
     typedef P8PLATFORM::SyncedBuffer <IActionQueueItem*> TActionQueue;
     TActionQueue _actions;
     bool _willStop;
