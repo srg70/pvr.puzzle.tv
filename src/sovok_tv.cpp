@@ -343,6 +343,7 @@ void SovokTV::BuildChannelAndGroupList()
     m_channelList.clear();
     m_groupList.clear();
 
+    const bool adultContentDisabled = m_pinCode.empty();
     try {
 
         ApiFunctionData params("channel_list2");
@@ -357,6 +358,11 @@ void SovokTV::BuildChannelAndGroupList()
             }
             for(auto& ch : jsonRoot["channels"].GetArray())
             {
+                
+                bool isProtected  = atoi(ch["protected"].GetString()) !=0;
+                if(adultContentDisabled && isProtected)
+                    continue;
+                
                 SovokChannel channel;
                 channel.Id = atoi(ch["id"].GetString());
                 channel.Name = ch["name"].GetString();
