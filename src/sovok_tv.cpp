@@ -147,6 +147,10 @@ private:
 
 const ParamList SovokTV::ApiFunctionData::s_EmptyParams;
 
+
+//tatic         P8PLATFORM::CTimeout TEST_LOGIN_FAILED_timeout(30 * 1000);
+
+
 SovokTV::SovokTV(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper, const string &login, const string &password) :
     m_addonHelper(addonHelper),
     m_pvrHelper(pvrHelper),
@@ -158,7 +162,7 @@ SovokTV::SovokTV(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr 
 {
     m_httpEngine = new HttpEngine(m_addonHelper);
     
-    if (!Login(true)) {
+    if (/*TEST_LOGIN_FAILED_timeout.TimeLeft() > 0 ||*/  !Login(true)) {
         Cleanup();
         throw AuthFailedException();
     }

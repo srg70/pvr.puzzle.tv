@@ -69,6 +69,7 @@ public:
 
 private:
     void CreateCore();
+    bool HasCore();
     void SetAddFavoritesGroup(bool shouldAddFavoritesGroup);
     bool ShouldAddFavoritesGroup() { return m_shouldAddFavoritesGroup; }
     void SetStreamerId(int streamerIdx);

@@ -97,8 +97,8 @@ ADDON_STATUS SovokPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_li
     //    PVR_MENUHOOK hook = {1, 30020, PVR_MENUHOOK_EPG};
     //    m_pvr->AddMenuHook(&hook);
     return retVal;
-
 }
+
 
 SovokPVRClient::~SovokPVRClient()
 {
@@ -140,24 +140,20 @@ ADDON_STATUS SovokPVRClient::SetSetting(const char *settingName, const void *set
     if (strcmp(settingName, "login") == 0 && strcmp((const char*) settingValue, m_login.c_str()) != 0)
     {
         m_login = (const char*) settingValue;
-        if (!m_login.empty() && !m_password.empty() && m_sovokTV == NULL)
+        if (!m_login.empty() && !m_password.empty())
         {
-            try {
-                CreateCore();
-            }catch (AuthFailedException &) {
-                m_addonHelper->QueueNotification(QUEUE_ERROR, "Login to Sovok.TV failed.");
+            if(!HasCore()) {
+                m_addonHelper->Log(LOG_ERROR, " Failed to create core aftrer login changes");
             }
         }
     }
     else if (strcmp(settingName, "password") == 0  && strcmp((const char*) settingValue, m_password.c_str()) != 0)
     {
         m_password = (const char*) settingValue;
-        if (!m_login.empty() && !m_password.empty() && m_sovokTV == NULL)
+        if (!m_login.empty() && !m_password.empty())
         {
-            try {
-                CreateCore();
-            }catch (AuthFailedException &) {
-                m_addonHelper->QueueNotification(QUEUE_ERROR, "Login to Sovok.TV failed.");
+            if(!HasCore()) {
+                m_addonHelper->Log(LOG_ERROR, " Failed to create core aftrer password changes");
             }
         }
     }
@@ -202,6 +198,20 @@ ADDON_STATUS SovokPVRClient::SetSetting(const char *settingName, const void *set
     return ADDON_STATUS_NEED_RESTART;
 }
 
+bool SovokPVRClient::HasCore()
+{
+    bool result = m_sovokTV != NULL;
+    
+    try {
+        if(!result)
+            CreateCore();
+        result = m_sovokTV != NULL;
+    }catch (AuthFailedException &) {
+        m_addonHelper->QueueNotification(QUEUE_ERROR, "Login to Sovok.TV failed.");
+    }
+    return result;
+}
+
 PVR_ERROR SovokPVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabilities)
 {
     pCapabilities->bSupportsEPG = true;
@@ -224,7 +234,7 @@ PVR_ERROR SovokPVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabili
 
 PVR_ERROR SovokPVRClient::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL& channel, time_t iStart, time_t iEnd)
 {
-    if(m_sovokTV == NULL)
+    if(!HasCore())
         return PVR_ERROR_SERVER_ERROR;
 
     EpgEntryList epgEntries;
@@ -253,7 +263,7 @@ PVR_ERROR  SovokPVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENU
 }
 int SovokPVRClient::GetChannelGroupsAmount()
 {
-    if(m_sovokTV == NULL)
+    if(!HasCore())
         return -1;
     
     size_t numberOfGroups = m_sovokTV->GetGroupList().size();
@@ -264,7 +274,7 @@ int SovokPVRClient::GetChannelGroupsAmount()
 
 PVR_ERROR SovokPVRClient::GetChannelGroups(ADDON_HANDLE handle, bool bRadio)
 {
-    if(m_sovokTV == NULL)
+    if(!HasCore())
         return PVR_ERROR_SERVER_ERROR;
 
     if (!bRadio)
@@ -292,7 +302,7 @@ PVR_ERROR SovokPVRClient::GetChannelGroups(ADDON_HANDLE handle, bool bRadio)
 
 PVR_ERROR SovokPVRClient::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_CHANNEL_GROUP& group)
 {
-    if(m_sovokTV == NULL)
+    if(!HasCore())
         return PVR_ERROR_SERVER_ERROR;
 
     const std::string favoriteGroupName("Избранное");
@@ -332,14 +342,14 @@ PVR_ERROR SovokPVRClient::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_
 
 int SovokPVRClient::GetChannelsAmount()
 {
-    if(m_sovokTV == NULL)
+    if(!HasCore())
         return -1;
     return m_sovokTV->GetChannelList().size();
 }
 
 PVR_ERROR SovokPVRClient::GetChannels(ADDON_HANDLE handle, bool bRadio)
 {
-    if(m_sovokTV == NULL)
+    if(!HasCore())
         return PVR_ERROR_SERVER_ERROR;
     
     const ChannelList &channels = m_sovokTV->GetChannelList();
@@ -367,7 +377,7 @@ PVR_ERROR SovokPVRClient::GetChannels(ADDON_HANDLE handle, bool bRadio)
 
 bool SovokPVRClient::OpenLiveStream(const PVR_CHANNEL& channel)
 {
-    if(m_sovokTV == NULL)
+    if(!HasCore())
         return false;
 
     string url = m_sovokTV->GetUrl(channel.iUniqueId);
@@ -376,7 +386,7 @@ bool SovokPVRClient::OpenLiveStream(const PVR_CHANNEL& channel)
 
 bool SovokPVRClient::SwitchChannel(const PVR_CHANNEL& channel)
 {
-    if(m_sovokTV == NULL)
+    if(!HasCore())
         return false;
 
     string url = m_sovokTV->GetUrl(channel.iUniqueId);
@@ -395,7 +405,7 @@ void SovokPVRClient::SetAddFavoritesGroup(bool shouldAddFavoritesGroup)
 
 int SovokPVRClient::GetRecordingsAmount(bool deleted)
 {
-    if(m_sovokTV == NULL)
+    if(!HasCore())
         return -1;
 
     if(deleted)
@@ -416,7 +426,7 @@ int SovokPVRClient::GetRecordingsAmount(bool deleted)
 }
 PVR_ERROR SovokPVRClient::GetRecordings(ADDON_HANDLE handle, bool deleted)
 {
-    if(m_sovokTV == NULL)
+    if(!HasCore())
         return PVR_ERROR_SERVER_ERROR;
 
     if(deleted)
@@ -464,7 +474,7 @@ PVR_ERROR SovokPVRClient::GetRecordings(ADDON_HANDLE handle, bool deleted)
 
 bool SovokPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
 {
-    if(m_sovokTV == NULL)
+    if(!HasCore())
         return false;
 
     SovokEpgEntry epgTag;
@@ -488,27 +498,27 @@ PVR_ERROR SovokPVRClient::CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_M
 PVR_ERROR SovokPVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
 {
     snprintf(signalStatus.strAdapterName, sizeof(signalStatus.strAdapterName), "IPTV Sovok TV Adapter 1");
-    snprintf(signalStatus.strAdapterStatus, sizeof(signalStatus.strAdapterStatus), (m_sovokTV == NULL) ? "Not connected" :"OK");
+    snprintf(signalStatus.strAdapterStatus, sizeof(signalStatus.strAdapterStatus), (!HasCore()) ? "Not connected" :"OK");
     return PVR_ERROR_NO_ERROR;
 }
 
-ADDON_STATUS SovokPVRClient::GetStatus(){ return  /*(m_sovokTV == NULL)? ADDON_STATUS_LOST_CONNECTION : */ADDON_STATUS_OK;}
+ADDON_STATUS SovokPVRClient::GetStatus(){ return  /*(!HasCore())? ADDON_STATUS_LOST_CONNECTION : */ADDON_STATUS_OK;}
 void SovokPVRClient::SetStreamerId(int streamerIdx)
 {
-    if(m_sovokTV == NULL)
+    if(!HasCore())
         return;
     m_sovokTV->SetStreamerId(streamerIdx);
 }
 int SovokPVRClient::GetStreamerId()
 {
-    if(m_sovokTV == NULL)
+    if(!HasCore())
         return 0;
     
     return m_sovokTV->GetSreamerId();
 }
 void SovokPVRClient::SetPinCode(const std::string& code)
 {
-    if(m_sovokTV == NULL)
+    if(!HasCore())
         return;
     m_sovokTV->SetPinCode(code);
 }
