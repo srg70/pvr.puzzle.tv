@@ -44,6 +44,7 @@
 static IPvrIptvDataSource* m_DataSource = NULL;
 static ADDON::CHelper_libXBMC_addon *m_xbmc = NULL;
 static CHelper_libXBMC_pvr *m_pvr = NULL;
+int m_clientType = 1;
 
 
 extern "C" {
@@ -68,10 +69,9 @@ ADDON_STATUS ADDON_Create(void* hdl, void* props)
     }
     PVR_PROPERTIES* pvrprops = (PVR_PROPERTIES*)props;
   
-    int clientType = 1;
-    m_xbmc->GetSetting("provider_type", &clientType);
+    m_xbmc->GetSetting("provider_type", &m_clientType);
 
-    switch (clientType) {
+    switch (m_clientType) {
         case 0:
             m_DataSource = new PuzzlePVRClient();
                 break;
@@ -79,15 +79,14 @@ ADDON_STATUS ADDON_Create(void* hdl, void* props)
                 m_DataSource = new SovokPVRClient();
                 break;
             case 2:
-            m_DataSource = new OttPVRClient();
-            break;
+                m_DataSource = new OttPVRClient();
+                break;
             
         default:
             m_DataSource = NULL;
             m_xbmc->QueueNotification(QUEUE_ERROR, "PVR Puzzle TV error: unknown provider");
             break;
     }
-    //m_DataSource = new SovokPVRClient();
     return (NULL == m_DataSource) ? ADDON_STATUS_NEED_SETTINGS: m_DataSource->Init(m_xbmc, m_pvr, pvrprops);
 }
 
@@ -117,8 +116,15 @@ unsigned int ADDON_GetSettings(ADDON_StructSetting ***sSet)
 
 ADDON_STATUS ADDON_SetSetting(const char *settingName, const void *settingValue)
 {
-    if (strcmp(settingName, "provider_type") == 0)
-        return ADDON_STATUS_NEED_RESTART;
+    if (strcmp(settingName, "provider_type") == 0) {
+        
+        int newValue = *(int*) settingValue;
+        if(m_clientType != newValue) {
+            m_clientType = newValue;
+            return ADDON_STATUS_NEED_RESTART;
+        }
+        return ADDON_STATUS_OK;
+    }
     
     return m_DataSource->SetSetting(settingName, settingValue);
 }

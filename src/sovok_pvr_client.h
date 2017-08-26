@@ -70,18 +70,17 @@ public:
 private:
     void CreateCore();
     bool HasCore();
-    void SetAddFavoritesGroup(bool shouldAddFavoritesGroup);
-    bool ShouldAddFavoritesGroup() { return m_shouldAddFavoritesGroup; }
     void SetStreamerId(int streamerIdx);
     int GetStreamerId();
-    
+
+    void SetCountryFilter();
     void SetPinCode(const std::string& code);
 
     SovokTV* m_sovokTV;
-    bool m_shouldAddFavoritesGroup;
     std::string m_login;
     std::string m_password;
     std::string m_strimmer;
+    std::string m_pinCode;
     bool m_enableAdult;
 };
 

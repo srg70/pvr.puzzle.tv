@@ -66,10 +66,6 @@ msgctxt "#30001"
 msgid "Password"
 msgstr "Пароль"
 
-msgctxt "#30002"
-msgid "Add Favorites Group"
-msgstr "Добавить Избранное"
-
 msgctxt "#30003"
 msgid "Enable Adult Content"
 msgstr "Включить каналы для взрослых"
@@ -81,6 +77,42 @@ msgstr "PIN код"
 msgctxt "#30005"
 msgid "Streamer"
 msgstr "Сервер"
+
+msgctxt "#30006"
+msgid "Group By Country"
+msgstr "Группировать по странам"
+
+msgctxt "#30007"
+msgid "Hide LT Channels"
+msgstr "Скрыть каналы LT"
+
+msgctxt "#30008"
+msgid "Hide US Channels"
+msgstr "Скрыть каналы US"
+
+msgctxt "#30009"
+msgid "Hide DE Channels"
+msgstr "Скрыть каналы DE"
+
+msgctxt "#300011"
+msgid "Hide IL Channels"
+msgstr "Скрыть каналы IL"
+
+msgctxt "#300012"
+msgid "Hide LV Channels"
+msgstr "Скрыть каналы LV"
+
+msgctxt "#300013"
+msgid "Hide EE Channels"
+msgstr "Скрыть каналы EE"
+
+msgctxt "#300014"
+msgid "Hide IT Channels"
+msgstr "Скрыть каналы IT"
+
+msgctxt "#300015"
+msgid "Hide FR Channels"
+msgstr "Скрыть каналы FR"
 
 msgctxt "#30010"
 msgid "Sovok TV"

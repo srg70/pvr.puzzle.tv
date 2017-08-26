@@ -45,6 +45,11 @@
 using namespace std;
 using namespace ADDON;
 
+typedef std::map<string, SovokTV::CountryTemplate*> CountryFilterMap;
+static CountryFilterMap& GetCountryFilterMap();
+static SovokTV::CountryFilter& GetCountryFilter();
+
+
 ADDON_STATUS SovokPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,
                                PVR_PROPERTIES* pvrprops)
 {
@@ -52,37 +57,29 @@ ADDON_STATUS SovokPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_li
     if(ADDON_STATUS_OK != (retVal = PVRClientBase::Init(addonHelper, pvrHelper, pvrprops)))
        return retVal;
     
-    m_shouldAddFavoritesGroup = true;
     char buffer[1024];
     
     if (m_addonHelper->GetSetting("login", &buffer))
         m_login = buffer;
     if (m_addonHelper->GetSetting("password", &buffer))
         m_password = buffer;
-    bool shouldAddFavoritesGroup;
-    m_addonHelper->GetSetting("add_favorites_group", &shouldAddFavoritesGroup);
-   
+
+    m_addonHelper->GetSetting("filter_by_country", &GetCountryFilter().IsOn);
+    for(auto& f : GetCountryFilterMap())
+        m_addonHelper->GetSetting(f.first.c_str(), &f.second->Hidden);
     
+    m_addonHelper->GetSetting("enable_adult", &m_enableAdult);
+    if(m_enableAdult && m_addonHelper->GetSetting("pin_code", &buffer))
+        m_pinCode = buffer;
+
+    std::string streamer;
+    if (m_addonHelper->GetSetting("streamer", &buffer))
+        m_strimmer = buffer;
+    
+
     try
     {
         CreateCore();
-        
-        SetAddFavoritesGroup(shouldAddFavoritesGroup);
-        
-        std::string streamer;
-        if (m_addonHelper->GetSetting("streamer", &buffer))
-            streamer = buffer;
-        
-        auto streamersList = m_sovokTV->GetStreamersList();
-        auto current = streamersList[GetStreamerId()];
-        if (current != streamer)
-        {
-            m_addonHelper->QueueNotification(QUEUE_WARNING, "Streamer setting mismatch.");
-        }
-        m_addonHelper->GetSetting("enable_adult", &m_enableAdult);
-        if(m_enableAdult && m_addonHelper->GetSetting("pin_code", &buffer))
-            SetPinCode(buffer);
-        
     }
     catch (AuthFailedException &)
     {
@@ -114,8 +111,14 @@ void SovokPVRClient::CreateCore()
 {
     if(m_sovokTV != NULL)
         SAFE_DELETE(m_sovokTV);
+    
     m_sovokTV = new SovokTV(m_addonHelper, m_pvrHelper, m_login, m_password);
 
+    if(m_enableAdult)
+        m_sovokTV->SetPinCode(m_pinCode);
+    
+    SetCountryFilter();
+    
     auto streamersList = m_sovokTV->GetStreamersList();
     string strimmersPath = GetClientPath();
     strimmersPath.append("/").append("resources/").append("streamers/");
@@ -132,41 +135,46 @@ void SovokPVRClient::CreateCore()
                           if(f) m_addonHelper->CloseFile(f);
                       }
                   });
+
+    auto current = streamersList[GetStreamerId()];
+    if (current != m_strimmer)
+    {
+        m_addonHelper->QueueNotification(QUEUE_WARNING, "Streamer setting mismatch.");
+    }
+
     
 }
 
 ADDON_STATUS SovokPVRClient::SetSetting(const char *settingName, const void *settingValue)
 {
-    if (strcmp(settingName, "login") == 0 && strcmp((const char*) settingValue, m_login.c_str()) != 0)
-    {
-        m_login = (const char*) settingValue;
-        if (!m_login.empty() && !m_password.empty())
-        {
-            if(!HasCore()) {
-                m_addonHelper->Log(LOG_ERROR, " Failed to create core aftrer login changes");
+    ADDON_STATUS result = ADDON_STATUS_OK ;
+    
+    if (strcmp(settingName, "login") == 0) {
+        if(strcmp((const char*) settingValue, m_login.c_str()) != 0) {
+            m_login = (const char*) settingValue;
+            if (!m_login.empty() && !m_password.empty()) {
+                if(!HasCore()) {
+                    m_addonHelper->Log(LOG_ERROR, " Failed to create core aftrer login changes");
+                }
             }
+            result = ADDON_STATUS_NEED_RESTART;
         }
     }
-    else if (strcmp(settingName, "password") == 0  && strcmp((const char*) settingValue, m_password.c_str()) != 0)
-    {
-        m_password = (const char*) settingValue;
-        if (!m_login.empty() && !m_password.empty())
-        {
-            if(!HasCore()) {
-                m_addonHelper->Log(LOG_ERROR, " Failed to create core aftrer password changes");
+    else if (strcmp(settingName, "password") == 0) {
+        if(strcmp((const char*) settingValue, m_password.c_str()) != 0){
+            m_password = (const char*) settingValue;
+            if (!m_login.empty() && !m_password.empty()) {
+                if(!HasCore()) {
+                    m_addonHelper->Log(LOG_ERROR, " Failed to create core aftrer password changes");
+                }
             }
+            result = ADDON_STATUS_NEED_RESTART;
         }
-    }
-    else if (strcmp(settingName, "add_favorites_group") == 0)
-    {
-        if(m_sovokTV)
-            SetAddFavoritesGroup(*(bool *)(settingValue));
     }
     else if (strcmp(settingName, "streamer") == 0)
     {
         m_strimmer = (const char*)settingValue;
-        if(m_sovokTV != NULL)
-        {
+        if(m_sovokTV != NULL) {
             auto streamersList = m_sovokTV->GetStreamersList();
             int currentId = 0;
             std::find_if(streamersList.begin(), streamersList.end(), [&](StreamerNamesList::value_type &s) {
@@ -175,27 +183,69 @@ ADDON_STATUS SovokPVRClient::SetSetting(const char *settingName, const void *set
                 ++currentId;
                 return false;
             });
-            if(currentId == streamersList.size() )
-            {
-                m_addonHelper->QueueNotification(QUEUE_WARNING, "Streamer setting mismatch.");
+            if(currentId != GetStreamerId()) {
+                if(currentId == streamersList.size() ) {
+                    m_addonHelper->QueueNotification(QUEUE_WARNING, "Streamer setting mismatch.");
+                }
+                SetStreamerId(currentId);
+                result = ADDON_STATUS_NEED_RESTART;
             }
-            SetStreamerId(currentId);
         }
     }
     else if (strcmp(settingName, "enable_adult") == 0)
     {
-        m_enableAdult = *(bool*)settingValue;
+        bool newValue = *(bool*)settingValue;
+        if(newValue != m_enableAdult) {
+            m_enableAdult = newValue;
+            SetPinCode(m_enableAdult? m_pinCode : "");
+            m_pvrHelper->TriggerChannelUpdate();
+
+            result = ADDON_STATUS_OK;
+        }
     }
     else if (strcmp(settingName, "pin_code") == 0)
     {
-        if(m_enableAdult && m_sovokTV != NULL)
-            SetPinCode((const char*) settingValue);
-        
+        const char* newValue = m_enableAdult? (const char*) settingValue : "";
+        if(m_pinCode != newValue) {
+            m_pinCode = newValue;
+            SetPinCode(m_pinCode);
+            
+            m_pvrHelper->TriggerChannelGroupsUpdate();
+            m_pvrHelper->TriggerChannelUpdate();
+            result = ADDON_STATUS_OK;
+        }
+    }
+    else if (strcmp(settingName, "filter_by_country") == 0)
+    {
+        bool newValue = *(bool*)settingValue;
+        if(newValue != GetCountryFilter().IsOn) {
+            GetCountryFilter().IsOn = (*(bool *)(settingValue));
+            SetCountryFilter();
+
+            m_pvrHelper->TriggerChannelGroupsUpdate();
+            m_pvrHelper->TriggerChannelUpdate();
+            result = ADDON_STATUS_OK;
+        }
     }
     else {
-        return PVRClientBase::SetSetting(settingName, settingValue);
+        auto& filters = GetCountryFilterMap();
+        
+        auto it = filters.find(settingName);
+        if (it != filters.end())
+        {
+            it->second->Hidden = *(bool*)settingValue;
+            SetCountryFilter();
+            
+            m_pvrHelper->TriggerChannelGroupsUpdate();
+            m_pvrHelper->TriggerChannelUpdate();
+            result = ADDON_STATUS_OK;
+        }
+        
+        else {
+            return PVRClientBase::SetSetting(settingName, settingValue);
+        }
     }
-    return ADDON_STATUS_NEED_RESTART;
+    return result;
 }
 
 bool SovokPVRClient::HasCore()
@@ -267,8 +317,6 @@ int SovokPVRClient::GetChannelGroupsAmount()
         return -1;
     
     size_t numberOfGroups = m_sovokTV->GetGroupList().size();
-    if (m_shouldAddFavoritesGroup)
-        numberOfGroups++;
     return numberOfGroups;
 }
 
@@ -281,12 +329,6 @@ PVR_ERROR SovokPVRClient::GetChannelGroups(ADDON_HANDLE handle, bool bRadio)
     {
         PVR_CHANNEL_GROUP pvrGroup = { 0 };
         pvrGroup.bIsRadio = false;
-
-        if (m_shouldAddFavoritesGroup)
-        {
-            strncpy(pvrGroup.strGroupName, "Избранное", sizeof(pvrGroup.strGroupName));
-            m_pvrHelper->TransferChannelGroup(handle, &pvrGroup);
-        }
 
         GroupList groups = m_sovokTV->GetGroupList();
         GroupList::const_iterator itGroup = groups.begin();
@@ -304,20 +346,6 @@ PVR_ERROR SovokPVRClient::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_
 {
     if(!HasCore())
         return PVR_ERROR_SERVER_ERROR;
-
-    const std::string favoriteGroupName("Избранное");
-    if (m_shouldAddFavoritesGroup && group.strGroupName == favoriteGroupName)
-    {
-        const char* c_GroupName = favoriteGroupName.c_str();
-        auto favorites = m_sovokTV->GetFavorites();
-        for (auto it= favorites.begin(),  end = favorites.end() ; it != end; ++it)
-        {
-            PVR_CHANNEL_GROUP_MEMBER pvrGroupMember = { 0 };
-            strncpy(pvrGroupMember.strGroupName, c_GroupName, sizeof(pvrGroupMember.strGroupName));
-            pvrGroupMember.iChannelUniqueId = *it;
-            m_pvrHelper->TransferChannelGroupMember(handle, &pvrGroupMember);
-        }
-    }
 
     auto& groups = m_sovokTV->GetGroupList();
     GroupList::const_iterator itGroup =  find_if(groups.begin(), groups.end(), [&](const GroupList::value_type& v ){
@@ -393,14 +421,6 @@ bool SovokPVRClient::SwitchChannel(const PVR_CHANNEL& channel)
     return PVRClientBase::SwitchChannel(url);
 }
 
-void SovokPVRClient::SetAddFavoritesGroup(bool shouldAddFavoritesGroup)
-{
-    if (shouldAddFavoritesGroup != m_shouldAddFavoritesGroup)
-    {
-        m_shouldAddFavoritesGroup = shouldAddFavoritesGroup;
-        m_pvrHelper->TriggerChannelGroupsUpdate();
-    }
-}
 
 
 int SovokPVRClient::GetRecordingsAmount(bool deleted)
@@ -522,7 +542,80 @@ void SovokPVRClient::SetPinCode(const std::string& code)
         return;
     m_sovokTV->SetPinCode(code);
 }
-       
+
+enum CountryCodes{
+    CountryCode_LT = 0,
+    CountryCode_US,
+    CountryCode_DE,
+    CountryCode_IL,
+    CountryCode_LV,
+    CountryCode_EE,
+    CountryCode_IT,
+    CountryCode_FR,
+    CountryCode_Total
+};
+
+static CountryFilterMap& GetCountryFilterMap()
+{
+    static CountryFilterMap countryFilterMap;
+    if(countryFilterMap.size() == 0) {
+        auto & filter = GetCountryFilter();
+        countryFilterMap["hide_LT_channels"] = &filter.Filters[CountryCode_LT];
+        countryFilterMap["hide_US_channels"] = &filter.Filters[CountryCode_US];
+        countryFilterMap["hide_DE_channels"] = &filter.Filters[CountryCode_DE];
+        countryFilterMap["hide_IL_channels"] = &filter.Filters[CountryCode_IL];
+        countryFilterMap["hide_LV_channels"] = &filter.Filters[CountryCode_LV];
+        countryFilterMap["hide_EE_channels"] = &filter.Filters[CountryCode_EE];
+        countryFilterMap["hide_IT_channels"] = &filter.Filters[CountryCode_IT];
+        countryFilterMap["hide_FR_channels"] = &filter.Filters[CountryCode_FR];
+    }
+    return countryFilterMap;
+}
+static SovokTV::CountryFilter& GetCountryFilter()
+{
+    static SovokTV::CountryFilter countryFilter;
+    
+    
+    if(countryFilter.Filters.size() == 0) {
+        countryFilter.Filters.resize(CountryCode_Total);
+        SovokTV::CountryTemplate*
+        countryTemplate = &countryFilter.Filters[CountryCode_LT];
+        countryTemplate->FilterPattern = "[LT]";
+        countryTemplate->GroupName = "Литовские";
+        countryTemplate = &countryFilter.Filters[CountryCode_US];
+        countryTemplate->FilterPattern = "[US]";
+        countryTemplate->GroupName = "Американские";
+        countryTemplate = &countryFilter.Filters[CountryCode_DE];
+        countryTemplate->FilterPattern = "[DE]";
+        countryTemplate->GroupName = "Немецкие";
+        countryTemplate = &countryFilter.Filters[CountryCode_IL];
+        countryTemplate->FilterPattern = "[IL]";
+        countryTemplate->GroupName = "Израильские";
+        countryTemplate = &countryFilter.Filters[CountryCode_LV];
+        countryTemplate->FilterPattern = "[LV]";
+        countryTemplate->GroupName = "Латвийские";
+        countryTemplate = &countryFilter.Filters[CountryCode_EE];
+        countryTemplate->FilterPattern = "[EE]";
+        countryTemplate->GroupName = "Эстонские";
+        countryTemplate = &countryFilter.Filters[CountryCode_IT];
+        countryTemplate->FilterPattern = "[IT]";
+        countryTemplate->GroupName = "Итальянские";
+        countryTemplate = &countryFilter.Filters[CountryCode_FR];
+        countryTemplate->FilterPattern = "[FR]";
+        countryTemplate->GroupName = "Французские";
+    }
+    return countryFilter;
+}
+
+void SovokPVRClient::SetCountryFilter()
+{
+    
+    if(!HasCore())
+        return;
+
+    auto & filter = GetCountryFilter();
+    m_sovokTV->SetCountryFilter(filter);
+}
 
 
 

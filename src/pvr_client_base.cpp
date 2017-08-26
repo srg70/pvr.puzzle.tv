@@ -162,7 +162,7 @@ ADDON_STATUS PVRClientBase::SetSetting(const char *settingName, const void *sett
         SetTimeshiftBufferSize(size);
     }
     
-    return ADDON_STATUS_NEED_RESTART;
+    return ADDON_STATUS_OK;
 }
 
 void PVRClientBase::FreeSettings()

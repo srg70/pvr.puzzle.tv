@@ -21,10 +21,18 @@
 <!--      <setting id="sep1" label="30010" type="lsep"/>-->
       <setting id="login" type="text" label="30000" default="" />
       <setting id="password" type="text" label="30001" option="hidden" default="" />
-      <setting id="add_favorites_group" type="bool" label="30002" default="true" />
       <setting id="enable_adult" type="bool" label="30003" default="false" />
       <setting id="pin_code" type="text" label="30004" default="0000" visible="eq(-1,true)"/>
       <setting id="streamer" type="fileenum" label="30005" values="resources/streamers"/>
+      <setting id="filter_by_country" type="bool" label="30006" default="true" />
+      <setting id="hide_LT_channels" type="bool" label="30007" default="false" visible="eq(-1,true)" subsetting="true"/>
+      <setting id="hide_US_channels" type="bool" label="30008" default="false" visible="eq(-2,true)" subsetting="true"/>
+      <setting id="hide_DE_channels" type="bool" label="30009" default="false" visible="eq(-3,true)" subsetting="true"/>
+      <setting id="hide_IL_channels" type="bool" label="300011" default="false" visible="eq(-4,true)" subsetting="true"/>
+      <setting id="hide_LV_channels" type="bool" label="300012" default="false" visible="eq(-5,true)" subsetting="true"/>
+      <setting id="hide_EE_channels" type="bool" label="300013" default="false" visible="eq(-6,true)" subsetting="true"/>
+      <setting id="hide_IT_channels" type="bool" label="300014" default="false" visible="eq(-7,true)" subsetting="true"/>
+      <setting id="hide_FR_channels" type="bool" label="300015" default="false" visible="eq(-8,true)" subsetting="true"/>
   </category>
 
 <!-- OTT Player -->

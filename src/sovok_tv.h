@@ -188,6 +188,17 @@ public:
 class SovokTV
 {
 public:
+    typedef struct {
+        bool Hidden;
+        std::string GroupName;
+        std::string FilterPattern;
+    }CountryTemplate;
+    
+    typedef struct {
+        bool IsOn;
+        std::vector<CountryTemplate> Filters;
+    } CountryFilter;
+    
     SovokTV(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper, const std::string &login, const std::string &password);
     ~SovokTV();
 
@@ -201,7 +212,7 @@ public:
 
     
     //EpgEntryList GetEpg(int channelId, time_t day);
-    void  GetEpg(SovokChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries);
+    void GetEpg(SovokChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries);
     bool FindEpg(SovokChannelId brodcastId, SovokEpgEntry& epgEntry);
     std::string GetArchiveForEpg(const SovokEpgEntry& epgEntry);
 
@@ -213,7 +224,8 @@ public:
     void SetStreamerId(int streamerId);
     
     void SetPinCode(const std::string& code) {m_pinCode = code;}
-
+    void SetCountryFilter(const CountryFilter& filter);
+    
 private:
     typedef std::vector<std::string> StreamerIdsList;
     typedef std::function<void(const CActionQueue::ActionResult&)> TApiCallCompletion;
@@ -223,7 +235,7 @@ private:
     
     std::string GetArchive(SovokChannelId channelId, time_t startTime);
     
-    void  GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHours);
+    void GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHours);
     void GetEpgForAllChannels(time_t startTime, time_t endTime);
     void AddEpgEntry(UniqueBroadcastIdType id, SovokEpgEntry& entry);
     void UpdateHasArchive(SovokEpgEntry& entry) const;
@@ -255,11 +267,26 @@ private:
 
     std::string m_login;
     std::string m_password;
+    
     ChannelList m_channelList;
     SovokArchivesInfo  m_archivesInfo;
     GroupList m_groupList;
+    struct CountryFilterPrivate : public CountryFilter {
+        CountryFilterPrivate() {IsOn = false;}
+        CountryFilterPrivate(const CountryFilter& filter)
+        : CountryFilter (filter)
+        {
+            Groups.resize(Filters.size());
+        }
+        CountryFilterPrivate& operator=(const CountryFilter& filter)
+        {
+           return *this = CountryFilterPrivate(filter);
+        }
+        std::vector<GroupList::key_type>  Groups;
+    }m_countryFilter;
+    
     EpgEntryList m_epgEntries;
-    //time_t m_lastEpgRequestStartTime;
+    
     time_t m_lastEpgRequestEndTime;
     int m_streammerId;
     long m_serverTimeShift;

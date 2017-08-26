@@ -151,17 +151,16 @@ const ParamList SovokTV::ApiFunctionData::s_EmptyParams;
 //tatic         P8PLATFORM::CTimeout TEST_LOGIN_FAILED_timeout(30 * 1000);
 
 
-SovokTV::SovokTV(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper, const string &login, const string &password) :
+SovokTV::SovokTV(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,
+                 const string &login, const string &password) :
     m_addonHelper(addonHelper),
     m_pvrHelper(pvrHelper),
     m_login(login),
     m_password(password),
-//    m_lastEpgRequestStartTime(0),
     m_lastEpgRequestEndTime(0),
     m_archiveRefresher(NULL)
 {
     m_httpEngine = new HttpEngine(m_addonHelper);
-    
     if (/*TEST_LOGIN_FAILED_timeout.TimeLeft() > 0 ||*/  !Login(true)) {
         Cleanup();
         throw AuthFailedException();
@@ -342,6 +341,12 @@ void SovokTV::ParseJson(const std::string& response, TParser parser)
 
 }
 
+void SovokTV::SetCountryFilter(const CountryFilter& filter)
+{
+    m_channelList.clear();
+    m_groupList.clear();
+    m_countryFilter = filter;
+}
 void SovokTV::BuildChannelAndGroupList()
 {
     m_channelList.clear();
@@ -353,12 +358,25 @@ void SovokTV::BuildChannelAndGroupList()
         ApiFunctionData params("channel_list2");
         CallApiFunction(params, [&] (Document& jsonRoot)
         {
+            int maxGroupId = 0;
             for(auto& gr : jsonRoot["groups"].GetArray())
             {
                 auto id = atoi(gr["id"].GetString());
+                if(maxGroupId < id) maxGroupId = id;
                 SovokGroup group;
                 group.Name = gr["name"].GetString();
                 m_groupList[id] = group;
+            }
+            if(m_countryFilter.IsOn) {
+                for(int i = 0; i < m_countryFilter.Filters.size(); ++i){
+                    auto& f = m_countryFilter.Filters[i];
+                    if(f.Hidden)
+                        continue;
+                    SovokGroup group;
+                    group.Name = f.GroupName;
+                    m_groupList[++maxGroupId] = group;
+                    m_countryFilter.Groups[i] = maxGroupId;
+                }
             }
             for(auto& ch : jsonRoot["channels"].GetArray())
             {
@@ -373,6 +391,22 @@ void SovokTV::BuildChannelAndGroupList()
                 channel.IconPath = ch["icon"].GetString();
                 channel.IsRadio = ch["is_video"].GetInt() == 0;//channel.Id > 1000;
                 channel.HasArchive = atoi(ch["have_archive"].GetString()) != 0;
+                
+                bool hideChannel = false;
+                if(m_countryFilter.IsOn) {
+                    for(int i = 0; i < m_countryFilter.Filters.size(); ++i){
+                        auto& f = m_countryFilter.Filters[i];
+                        if(channel.Name.find(f.FilterPattern) != string::npos) {
+                            hideChannel = f.Hidden;
+                            if(hideChannel)
+                                break;
+                            m_groupList[m_countryFilter.Groups[i]].Channels.insert(channel.Id);
+                        }
+                    }
+                }
+                if(hideChannel)
+                    continue;
+                
                 m_channelList[channel.Id] = channel;
                 string groups = ch["groups"].GetString();
                 while(!groups.empty()) {
