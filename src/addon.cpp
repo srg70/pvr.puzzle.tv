@@ -61,7 +61,7 @@ ADDON_STATUS ADDON_Create(void* hdl, void* props)
 //    libBasePath  = ((TEST*)hdl)->libPath;
 //    libBasePath += ADDON_DLL;
 
-#pragma message "_KODI_DLL_PATH_ =" ADDON_DLL
+//#pragma message "_KODI_DLL_PATH_ =" ADDON_DLL
     
     m_xbmc = new CHelper_libXBMC_addon();
     if (!m_xbmc->RegisterMe(hdl))

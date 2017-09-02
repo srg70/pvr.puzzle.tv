@@ -36,7 +36,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Android")
 	set(DEPLIBS ${DEPLIBS} -static-libstdc++)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DANDROID")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DANDROID")
-
+    set(OS "android")
 endif()
 
 message(STATUS "ANDROID_STL: ${ANDROID_STL}")
