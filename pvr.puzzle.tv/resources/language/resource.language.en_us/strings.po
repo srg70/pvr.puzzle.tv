@@ -67,6 +67,10 @@ msgctxt "#30001"
 msgid "Password"
 msgstr "Password"
 
+msgctxt "#30002"
+msgid "Enable Archive"
+msgstr "Enable Archive"
+
 msgctxt "#30003"
 msgid "Enable Adult Content"
 msgstr "Enable Adult Content"

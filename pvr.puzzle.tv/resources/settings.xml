@@ -21,6 +21,7 @@
 <!--      <setting id="sep1" label="30010" type="lsep"/>-->
       <setting id="login" type="text" label="30000" default="" />
       <setting id="password" type="text" label="30001" option="hidden" default="" />
+      <setting id="archive_support" type="bool" label="30002" default="true" />
       <setting id="enable_adult" type="bool" label="30003" default="false" />
       <setting id="pin_code" type="text" label="30004" default="0000" visible="eq(-1,true)"/>
       <setting id="streamer" type="fileenum" label="30005" values="resources/streamers"/>

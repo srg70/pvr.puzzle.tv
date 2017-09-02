@@ -72,6 +72,7 @@ ADDON_STATUS SovokPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_li
     if(m_enableAdult && m_addonHelper->GetSetting("pin_code", &buffer))
         m_pinCode = buffer;
 
+    m_addonHelper->GetSetting("archive_support", &m_supportArchive);
     std::string streamer;
     if (m_addonHelper->GetSetting("streamer", &buffer))
         m_strimmer = buffer;
@@ -215,6 +216,12 @@ ADDON_STATUS SovokPVRClient::SetSetting(const char *settingName, const void *set
             result = ADDON_STATUS_OK;
         }
     }
+    else if (strcmp(settingName, "archive_support") == 0)
+    {
+        bool newValue = *(bool*)settingValue;
+        result = (m_supportArchive != newValue) ? ADDON_STATUS_NEED_RESTART : ADDON_STATUS_OK;
+        
+    }
     else if (strcmp(settingName, "filter_by_country") == 0)
     {
         bool newValue = *(bool*)settingValue;
@@ -269,7 +276,7 @@ PVR_ERROR SovokPVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabili
     pCapabilities->bSupportsRadio = true;
     pCapabilities->bSupportsChannelGroups = true;
     pCapabilities->bHandlesInputStream = true;
-    pCapabilities->bSupportsRecordings = true;
+    pCapabilities->bSupportsRecordings = m_supportArchive;
     
     pCapabilities->bSupportsTimers = false;
     pCapabilities->bSupportsChannelScan = false;
