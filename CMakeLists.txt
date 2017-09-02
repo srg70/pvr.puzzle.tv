@@ -34,6 +34,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Android")
 	set(ANDROID_CPP_FEATURES exceptions)
 	set(ANDROID_STL c++_static)
 	set(DEPLIBS ${DEPLIBS} -static-libstdc++)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DANDROID")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DANDROID")
+
 endif()
 
 message(STATUS "ANDROID_STL: ${ANDROID_STL}")
