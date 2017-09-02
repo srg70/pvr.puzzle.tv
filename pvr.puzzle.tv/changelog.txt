@@ -1,3 +1,8 @@
+0.4.10
+- Fixed Android issues
+- Sovok TV: re-login on each command (when requeired)
+- Sovok TV: optoion to ignore archive.
+
 0.4.0 (alfa version for OTT Player)
 - OTT Player API implemented: live,  EPG and archive
 
