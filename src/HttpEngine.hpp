@@ -77,7 +77,8 @@ public:
     {
         m_apiCallCompletions->PerformAsync(parser,  completion);
     }
-   
+    void CancelAllRequests();
+    
      TCoocies m_sessionCookie;
 
 private:

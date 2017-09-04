@@ -178,6 +178,7 @@ SovokTV::~SovokTV()
 {
     Cleanup();
 }
+
 void SovokTV::Cleanup()
 {
     m_addonHelper->Log(LOG_NOTICE, "SovokTV stopping...");
@@ -186,6 +187,9 @@ void SovokTV::Cleanup()
         m_archiveRefresher->StopThread();
         SAFE_DELETE(m_archiveRefresher);
     }
+    
+    if(m_httpEngine)
+        m_httpEngine->CancelAllRequests();
     
     Logout();
     
@@ -540,7 +544,6 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
     ParamList params;
     params["dtime"] = n_to_string(startTime + m_serverTimeShift);
     params["period"] = n_to_string(numberOfHours);
-    bool hasArchiveLoader =  m_archiveRefresher != NULL;
 
     
     char       buf[80];
@@ -553,9 +556,10 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
     m_addonHelper->Log(LOG_DEBUG, "Scheduled EPG upfdate (all channels) from %s for %d hours.", buf, numberOfHours);
 
     ApiFunctionData apiParams("epg3", params);
-    CallApiAsync(apiParams, [&] (Document& jsonRoot)
+    
+    CallApiAsync(apiParams, [this, numberOfHours, startTime] (Document& jsonRoot)
     {
-        if(hasArchiveLoader)
+        if(m_archiveRefresher)
             m_archiveRefresher->EpgActivityStarted();
         
         P8PLATFORM::CLockObject lock(m_epgAccessMutex);
@@ -609,9 +613,9 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
             m_pvrHelper->TriggerEpgUpdate(currentChannelId);
         }
     },
-     [=](const CActionQueue::ActionResult& s)
+     [this](const CActionQueue::ActionResult& s)
      {
-         if(hasArchiveLoader)
+         if(m_archiveRefresher)
             m_archiveRefresher->EpgActivityDone();
          
          try {
@@ -803,7 +807,7 @@ void SovokTV::CallApiAsync(const ApiFunctionData& data, TParser parser, TApiCall
     strRequest += "/json/";
     strRequest += data.name + query;
     auto start = P8PLATFORM::GetTimeMs();
-    const bool isLoginCommand = data.name == "login";
+    const bool isLoginCommand = data.name == "login" || data.name == "logout";
     m_addonHelper->Log(LOG_DEBUG, "Calling '%s'.",  data.name.c_str());
 
     std::function<void(const std::string&)> parserWrapper = [=](const std::string& response) {
@@ -829,7 +833,7 @@ void SovokTV::CallApiAsync(const ApiFunctionData& data, TParser parser, TApiCall
     };
     m_httpEngine->CallApiAsync(strRequest, parserWrapper, [=](const CActionQueue::ActionResult& s)
                  {
-                     // Do not re-login within login command.
+                     // Do not re-login within login/logout command.
                      if(s.status == CActionQueue::kActionCompleted || isLoginCommand) {
                          completion(s);
                          return;

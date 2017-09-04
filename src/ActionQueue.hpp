@@ -96,7 +96,20 @@ public:
         else
             item->Cancel();
     }
+    template<typename TAction, typename TCompletion>
+    void CancellAllBefore(const TAction action, const TCompletion completion)
+    {
+        // Set _willStop
+        TerminatePipeline();
+        // Reset _willStop when queue becomes empty
+        PerformAsync([]{}, [this, action, completion](const CActionQueue::ActionResult& s) {
+            _willStop = false;
+            PerformAsync(action, completion);
+        });
+    }
     virtual bool StopThread(int iWaitMs = 5000);
+    virtual ~CActionQueue(void);
+
 private:
     virtual void *Process(void);
     void TerminatePipeline();
