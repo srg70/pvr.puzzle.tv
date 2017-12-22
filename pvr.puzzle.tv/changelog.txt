@@ -1,3 +1,7 @@
+0.4.15
+- Reload hanging channel after timeout
+- Timeout for basic CURL operation
+
 0.4.10
 - Fixed Android issues
 - Sovok TV: re-login on each command (when requeired)

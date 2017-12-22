@@ -432,7 +432,7 @@ int SovokPVRClient::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferS
         m_addonHelper->Log(LOG_ERROR, "SovokPVRClient:: trying to restart current channel.");
         string url = m_sovokTV->GetUrl(s_lastChannelId);
         if(!url.empty()){
-            m_addonHelper->QueueNotification(QUEUE_INFO, "Restarting last channel");
+            m_addonHelper->QueueNotification(QUEUE_INFO, "Reloading channel ...");
             PVRClientBase::SwitchChannel(url);
             readBytes = PVRClientBase::ReadLiveStream(pBuffer,iBufferSize);
         }
