@@ -53,7 +53,7 @@ namespace Buffers {
     
     void DirectBuffer::Open(const char* path)
     {
-        m_streamHandle = m_addonHelper->OpenFile(path, XFILE::READ_AUDIO_VIDEO | XFILE::READ_AFTER_WRITE);
+        m_streamHandle = m_addonHelper->OpenFile(path, XFILE::READ_AUDIO_VIDEO | XFILE::READ_AFTER_WRITE) ;
     }
     
     
@@ -67,7 +67,7 @@ namespace Buffers {
         return -1;
     }
     
-    ssize_t DirectBuffer::Read(unsigned char *buffer, size_t bufferSize)
+    ssize_t DirectBuffer::Read(unsigned char *buffer, size_t bufferSize, uint32_t timeoutMs)
     {
         //CLockObject lock(m_mutex);
         

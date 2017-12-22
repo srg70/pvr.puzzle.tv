@@ -46,7 +46,7 @@ namespace Buffers {
         int64_t GetLength() const;
         int64_t GetPosition() const;
         int64_t Seek(int64_t iPosition, int iWhence);
-        ssize_t Read(unsigned char *buffer, size_t bufferSize);
+        ssize_t Read(unsigned char *buffer, size_t bufferSize, uint32_t timeoutMs);
         bool SwitchStream(const std::string &newUrl);
         
     protected:

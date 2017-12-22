@@ -58,6 +58,7 @@ public:
     PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
     
     bool OpenLiveStream(const PVR_CHANNEL& channel);
+    int ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize);
     bool SwitchChannel(const PVR_CHANNEL& channel);
 
     int GetRecordingsAmount(bool deleted);
@@ -83,6 +84,7 @@ private:
     std::string m_pinCode;
     bool m_enableAdult;
     bool m_supportArchive;
+    int m_lastChannelRestartCount;
 };
 
 #endif //__sovok_pvr_client_h__

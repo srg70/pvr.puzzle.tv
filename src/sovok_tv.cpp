@@ -185,7 +185,6 @@ void SovokTV::Cleanup()
 
     if(m_archiveRefresher) {
         m_archiveRefresher->StopThread();
-        SAFE_DELETE(m_archiveRefresher);
     }
     
     if(m_httpEngine)
@@ -197,6 +196,8 @@ void SovokTV::Cleanup()
         SAFE_DELETE(m_httpEngine);
     //m_addonHelper->Log(LOG_NOTICE, "HTTP engine stopped.");
 
+    if(m_archiveRefresher)
+        SAFE_DELETE(m_archiveRefresher);
 
     m_addonHelper->Log(LOG_NOTICE, "SovokTV stopped.");
 }

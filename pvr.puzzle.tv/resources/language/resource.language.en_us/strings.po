@@ -47,6 +47,14 @@ msgctxt "#10006"
 msgid "File"
 msgstr "File"
 
+msgctxt "#10007"
+msgid "Server response timeout (sec)"
+msgstr "Server response timeout (sec)"
+
+msgctxt "#10008"
+msgid "Channel reload timeout (sec)"
+msgstr "Channel reload timeout (sec)"
+
 msgctxt "#20000"
 msgid "Server"
 msgstr "Server"

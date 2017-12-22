@@ -51,9 +51,9 @@ namespace Buffers {
     , m_cache(cache)
     {
         if (!m_inputBuffer)
-        throw InputBufferException("TimesiftBuffer: source stream buffer is NULL.");
+            throw InputBufferException("TimesiftBuffer: source stream buffer is NULL.");
         if (!m_cache)
-        throw InputBufferException("TimesiftBuffer: cache buffer is NULL.");
+            throw InputBufferException("TimesiftBuffer: cache buffer is NULL.");
         Init();
     }
     
@@ -61,7 +61,7 @@ namespace Buffers {
         StopThread();
         
         if(!newUrl.empty())
-        m_inputBuffer->SwitchStream(newUrl);
+            m_inputBuffer->SwitchStream(newUrl);
         
         m_writeEvent.Reset();
         m_cache->Init();
@@ -81,7 +81,7 @@ namespace Buffers {
         if(m_inputBuffer)
             delete m_inputBuffer;
         if(m_cache)
-        delete m_cache;
+             delete m_cache;
     }
     
     bool TimeshiftBuffer::StopThread(int iWaitMs)
@@ -90,11 +90,11 @@ namespace Buffers {
         bool retVal = false;
         while(!(retVal = this->CThread::StopThread(iWaitMs))){
             if(stopCounter++ > 3)
-            break;
+                break;
             m_addonHelper->Log(LOG_NOTICE, "TimeshiftBuffer: can't stop thread in %d ms", iWaitMs);
         }
         if(!retVal)
-        m_addonHelper->Log(LOG_ERROR, "TimeshiftBuffer: can't stop thread in %d ms", stopCounter*iWaitMs);
+            m_addonHelper->Log(LOG_ERROR, "TimeshiftBuffer: can't stop thread in %d ms", stopCounter*iWaitMs);
         
         return retVal;
     }
@@ -109,7 +109,7 @@ namespace Buffers {
                 // Fill read buffer
                 ssize_t bytesRead = 0;
                 do {
-                    bytesRead += m_inputBuffer->Read(buffer + bytesRead, bufferLenght - bytesRead);
+                    bytesRead += m_inputBuffer->Read(buffer + bytesRead, bufferLenght - bytesRead, 0);
                     isError = bytesRead < 0;
                 }while (!isError && bytesRead < bufferLenght && !IsStopped());
                 
@@ -135,24 +135,25 @@ namespace Buffers {
         return NULL;
     }
     
-    ssize_t TimeshiftBuffer::Read(unsigned char *buffer, size_t bufferSize)
+    ssize_t TimeshiftBuffer::Read(unsigned char *buffer, size_t bufferSize, uint32_t timeoutMs)
     {
-        
         size_t totalBytesRead = 0;
-        int32_t timeout = 5000;//c_commonTimeoutMs + 1000;
-        
+
         while (totalBytesRead < bufferSize && IsRunning()) {
             ssize_t bytesRead = 0;
             size_t bytesToRead = bufferSize - totalBytesRead;
             bytesRead = m_cache->Read( buffer + totalBytesRead, bytesToRead);
-            while(bytesRead == 0 && (m_cache->Length() - m_cache->Position()) < (bufferSize - totalBytesRead)) {
-                if(!m_writeEvent.Wait(timeout)){ //timeout
-                    m_addonHelper->Log(LOG_NOTICE, "TimeshiftBuffer: nothing to read within %d msec.", timeout);
-                    break;
-                }
+            totalBytesRead += bytesRead;
+            bool isTimeout = false;
+            while(!isTimeout && bytesRead == 0 && (m_cache->Length() - m_cache->Position()) < (bufferSize - totalBytesRead)) {
+                isTimeout = !m_writeEvent.Wait(timeoutMs); //timeout
+            }
+            if(isTimeout){
+                m_addonHelper->Log(LOG_NOTICE, "TimeshiftBuffer: nothing to read within %d msec.", timeoutMs);
+                totalBytesRead = -1;
+                break;
             }
             //DebugLog(std::string(">>> Read: ") + n_to_string(bytesRead));
-            totalBytesRead += bytesRead;
         }
         return (IsStopped() || !IsRunning()) ? -1 :totalBytesRead;
     }

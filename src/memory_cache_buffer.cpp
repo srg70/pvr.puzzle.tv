@@ -218,7 +218,8 @@ namespace Buffers
                     CLockObject lock(m_SyncAccess);
                     if(m_ReadChunks.size()) {
                         chunk = m_ReadChunks.back();
-                        if(chunk->WritePos() == chunk->Capacity()) {
+                        // If chunck is full?
+                        if(chunk->WritePos() >= chunk->Capacity()) {
                             chunk = CreateChunk();
                             // No room for new data
                             if(NULL == chunk)
@@ -232,7 +233,7 @@ namespace Buffers
                     }
                 }
                 
-                size_t available = chunk->Capacity() - chunk->WritePos();
+                size_t available = std::max(int64_t(0), chunk->Capacity() - chunk->WritePos());
                 const size_t bytesToWrite = std::min(available, bufferSize);
                 // Write bytes
                 ssize_t bytesWritten = 0;
@@ -243,14 +244,13 @@ namespace Buffers
                 }
                 totalWritten += bytesWritten;
                 if(bytesWritten != bytesToWrite) {
-                    m_addonHelper->Log(LOG_ERROR, "MemoryCacheBuffer: write cache error, written (%d) != read (%d)", bytesWritten,bytesToWrite);
+                    m_addonHelper->Log(LOG_INFO, "MemoryCacheBuffer: chunk is full, written (%d) != to write (%d)", bytesWritten,bytesToWrite);
                     //break;// ???
                 }
                 available -= bytesWritten;
                 buffer += bytesWritten;
                 bufferSize -= bytesWritten;
                 if(available <= 0) {
-//                    chunk->m_writer.Close();
                     chunk = NULL;
                 }
             }

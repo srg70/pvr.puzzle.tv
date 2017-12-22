@@ -40,6 +40,7 @@
 #include <exception>
 #include "ActionQueue.hpp"
 
+
 class QueueNotRunningException : public std::exception
 {
 public:
@@ -78,11 +79,13 @@ public:
         m_apiCallCompletions->PerformAsync(parser,  completion);
     }
     void CancelAllRequests();
-    
-     TCoocies m_sessionCookie;
+    static void SetCurlTimeout(long timeout);
+
+    TCoocies m_sessionCookie;
 
 private:
     static size_t CurlWriteData(void *buffer, size_t size, size_t nmemb, void *userp);
+    static  long c_CurlTimeout;
 
     template <typename TResultCallback, typename TCompletion>
     void SendHttpRequest(const std::string &url,const TCoocies &cookie, TResultCallback result, TCompletion completion) const
@@ -100,6 +103,7 @@ private:
             
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlWriteData);
             curl_easy_setopt(curl, CURLOPT_WRITEDATA, response);
+            curl_easy_setopt(curl, CURLOPT_TIMEOUT, c_CurlTimeout);
             
             std::string cookieStr;
             auto itCookie = cookie.begin();
@@ -116,7 +120,13 @@ private:
             while (retries-- > 0)
             {
                 CURLcode curlCode = curl_easy_perform(curl);
-                if (curlCode != CURLE_OK)
+                
+                if (curlCode == CURLE_OPERATION_TIMEDOUT)
+                {
+                    m_addonHelper->Log(ADDON::LOG_ERROR, "CURL operation timeout! (%d sec)", c_CurlTimeout);
+                    break;
+                }
+                else if (curlCode != CURLE_OK)
                 {
                     m_addonHelper->Log(ADDON::LOG_ERROR, "%s: %s", __FUNCTION__, errorMessage);
                     break;

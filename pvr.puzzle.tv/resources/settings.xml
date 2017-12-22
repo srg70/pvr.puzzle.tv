@@ -8,6 +8,8 @@
     <setting id="timeshift_size" type="slider" label="10003" default="512" range="384,128,32640" option="int" visible="eq(-1,true)" subsetting="true"/>
     <setting id="timeshift_type" type="enum" label="10004" lvalues="10005|10006" default="0"  visible="eq(-2,true)" subsetting="true"/>
     <setting id="timeshift_path" type="folder" label="10002" default="" visible="eq(-1,1) + eq(-3,true)" subsetting="true"/>
+    <setting id="curl_timeout" type="number" label="10007" default="15" option="int"/>
+    <setting id="channel_reload_timeout" type="slider" label="10008" default="5" range="1,1,30" option="int"/>
 </category>
 
 <!-- Puzzle TV -->

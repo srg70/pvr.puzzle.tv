@@ -57,6 +57,7 @@ ADDON_STATUS SovokPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_li
     if(ADDON_STATUS_OK != (retVal = PVRClientBase::Init(addonHelper, pvrHelper, pvrprops)))
        return retVal;
     
+    m_lastChannelRestartCount = 0;
     char buffer[1024];
     
     if (m_addonHelper->GetSetting("login", &buffer))
@@ -410,20 +411,43 @@ PVR_ERROR SovokPVRClient::GetChannels(ADDON_HANDLE handle, bool bRadio)
     return PVR_ERROR_NO_ERROR;
 }
 
+static SovokChannelId s_lastChannelId = 0;
 bool SovokPVRClient::OpenLiveStream(const PVR_CHANNEL& channel)
 {
     if(!HasCore())
         return false;
-
+    s_lastChannelId = channel.iUniqueId;
+    m_lastChannelRestartCount = 0;
+    
     string url = m_sovokTV->GetUrl(channel.iUniqueId);
     return PVRClientBase::OpenLiveStream(url);
 }
+
+int SovokPVRClient::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize)
+{
+    int readBytes = PVRClientBase::ReadLiveStream(pBuffer,iBufferSize);
+    // Assuming stream hanging.
+    // Try to restart current channel one time.
+    if (readBytes != iBufferSize ) {
+        m_addonHelper->Log(LOG_ERROR, "SovokPVRClient:: trying to restart current channel.");
+        string url = m_sovokTV->GetUrl(s_lastChannelId);
+        if(!url.empty()){
+            m_addonHelper->QueueNotification(QUEUE_INFO, "Restarting last channel");
+            PVRClientBase::SwitchChannel(url);
+            readBytes = PVRClientBase::ReadLiveStream(pBuffer,iBufferSize);
+        }
+    }
+    
+    return readBytes;
+}
+
 
 bool SovokPVRClient::SwitchChannel(const PVR_CHANNEL& channel)
 {
     if(!HasCore())
         return false;
 
+    s_lastChannelId = channel.iUniqueId;
     string url = m_sovokTV->GetUrl(channel.iUniqueId);
     return PVRClientBase::SwitchChannel(url);
 }

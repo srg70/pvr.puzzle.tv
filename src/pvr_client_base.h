@@ -89,6 +89,9 @@ protected:
     const std::string& GetClientPath() const { return m_clientPath;}
     const std::string& GetUserPath() const { return m_userPath;}
 private:
+    
+    void SetChannelReloadTimeout(int timeout);
+    
     Buffers::InputBuffer *m_inputBuffer;
     Buffers::InputBuffer *m_recordBuffer;
     bool m_isTimeshiftEnabled;
@@ -97,6 +100,7 @@ private:
     std::string m_CacheDir;
     std::string m_clientPath;
     std::string m_userPath;
+    int m_channelReloadTimeout;
 };
 
 #endif //pvr_client_base_h

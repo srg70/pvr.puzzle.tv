@@ -47,6 +47,10 @@ using namespace std;
 using namespace ADDON;
 using namespace Buffers;
 
+namespace CurlUtils
+{
+    extern void SetCurlTimeout(long timeout);
+}
 // NOTE: avoid '.' (dot) char in path. Causes to deadlock in Kodi code.
 const char* s_DefaultCacheDir = "special://temp/pvr-puzzle-tv";
 
@@ -68,6 +72,12 @@ ADDON_STATUS PVRClientBase::Init(CHelper_libXBMC_addon *addonHelper, CHelper_lib
     
     char buffer[1024];
     
+    int curlTimout = 15;
+    m_addonHelper->GetSetting("curl_timeout", &curlTimout);
+    int channelTimeout = 5;
+     m_addonHelper->GetSetting("channel_reload_timeout", &channelTimeout);
+   
+    
     bool isTimeshiftEnabled;
     m_addonHelper->GetSetting("enable_timeshift", &isTimeshiftEnabled);
     string timeshiftPath;
@@ -80,6 +90,8 @@ ADDON_STATUS PVRClientBase::Init(CHelper_libXBMC_addon *addonHelper, CHelper_lib
     TimeshiftBufferType timeshiftBufferType = k_TimeshiftBufferMemory;
     m_addonHelper->GetSetting("timeshift_type", &timeshiftBufferType);
     
+    CurlUtils::SetCurlTimeout(curlTimout);
+    SetChannelReloadTimeout(channelTimeout);
     SetTimeshiftEnabled(isTimeshiftEnabled);
     SetTimeshiftPath(timeshiftPath);
     SetTimeshiftBufferSize(timeshiftBufferSize);
@@ -147,6 +159,10 @@ ADDON_STATUS PVRClientBase::SetSetting(const char *settingName, const void *sett
     {
           SetTimeshiftEnabled(*(bool *)(settingValue));
     }
+    else if (strcmp(settingName, "channel_reload_timeout") == 0)
+    {
+        SetChannelReloadTimeout(*(int *)(settingValue));
+    }
     else if (strcmp(settingName, "timeshift_path") == 0)
     {
           SetTimeshiftPath((const char *)(settingValue));
@@ -161,7 +177,11 @@ ADDON_STATUS PVRClientBase::SetSetting(const char *settingName, const void *sett
         size *= 1024*1024;
         SetTimeshiftBufferSize(size);
     }
-    
+    else if (strcmp(settingName, "curl_timeout") == 0)
+    {
+        CurlUtils::SetCurlTimeout(*(int *)(settingValue));
+    }
+
     return ADDON_STATUS_OK;
 }
 
@@ -251,7 +271,7 @@ bool PVRClientBase::OpenLiveStream(const std::string& url )
     }
     catch (InputBufferException &ex)
     {
-        m_addonHelper->Log(LOG_ERROR, "PVRClientBase: impurbuffer error in OpenLiveStream: %s", ex.what());
+        m_addonHelper->Log(LOG_ERROR, "PVRClientBase: input buffer error in OpenLiveStream: %s", ex.what());
         return false;
     }
     
@@ -269,7 +289,7 @@ void PVRClientBase::CloseLiveStream()
 
 int PVRClientBase::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize)
 {
-    return m_inputBuffer->Read(pBuffer, iBufferSize);
+    return m_inputBuffer->Read(pBuffer, iBufferSize, m_channelReloadTimeout * 1000);
 }
 
 long long PVRClientBase::SeekLiveStream(long long iPosition, int iWhence)
@@ -295,6 +315,11 @@ bool PVRClientBase::SwitchChannel(const std::string& url)
 void PVRClientBase::SetTimeshiftEnabled(bool enable)
 {
     m_isTimeshiftEnabled = enable;
+}
+
+void PVRClientBase::SetChannelReloadTimeout(int timeout)
+{
+    m_channelReloadTimeout = timeout;
 }
 
 void PVRClientBase::SetTimeshiftBufferSize(uint64_t size)
@@ -354,7 +379,8 @@ void PVRClientBase::CloseRecordedStream(void)
 }
 int PVRClientBase::ReadRecordedStream(unsigned char *pBuffer, unsigned int iBufferSize)
 {
-    return (m_recordBuffer == NULL) ? -1 : m_recordBuffer->Read(pBuffer, iBufferSize);
+    uint32_t timeoutMs = 5000;
+    return (m_recordBuffer == NULL) ? -1 : m_recordBuffer->Read(pBuffer, iBufferSize, timeoutMs);
 }
 
 long long PVRClientBase::SeekRecordedStream(long long iPosition, int iWhence)

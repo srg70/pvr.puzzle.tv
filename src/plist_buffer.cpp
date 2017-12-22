@@ -293,7 +293,7 @@ namespace Buffers {
         return NULL;
     }
     
-    ssize_t PlaylistBuffer::Read(unsigned char *buffer, size_t bufferSize)
+    ssize_t PlaylistBuffer::Read(unsigned char *buffer, size_t bufferSize, uint32_t timeoutMs)
     {
         
         size_t totalBytesRead = 0;

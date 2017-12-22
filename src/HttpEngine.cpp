@@ -24,7 +24,16 @@
 #include "p8-platform/util/util.h"
 #include "p8-platform/threads/mutex.h"
 
+namespace CurlUtils
+{
+    void SetCurlTimeout(long timeout) {
+        HttpEngine::SetCurlTimeout(timeout);
+    }
+}
+
+
 static const size_t c_MaxQueueSize = 100000;
+long HttpEngine::c_CurlTimeout = 15; // in sec
 
 HttpEngine::HttpEngine(ADDON::CHelper_libXBMC_addon * addonHelper)
     :  m_addonHelper(addonHelper),
@@ -73,3 +82,7 @@ size_t HttpEngine::CurlWriteData(void *buffer, size_t size, size_t nmemb, void *
     return size * nmemb;
 }
 
+void HttpEngine::SetCurlTimeout(long timeout)
+{
+    HttpEngine::c_CurlTimeout = timeout;
+}
