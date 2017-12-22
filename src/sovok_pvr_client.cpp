@@ -85,7 +85,7 @@ ADDON_STATUS SovokPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_li
     }
     catch (AuthFailedException &)
     {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, "Login to Sovok.TV failed.");
+        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32007));
     }
     
     catch(MissingApiException & ex)
@@ -141,7 +141,9 @@ void SovokPVRClient::CreateCore()
     auto current = streamersList[GetStreamerId()];
     if (current != m_strimmer)
     {
-        m_addonHelper->QueueNotification(QUEUE_WARNING, "Streamer setting mismatch.");
+        char* message  = m_addonHelper->GetLocalizedString(32008);
+        m_addonHelper->QueueNotification(QUEUE_WARNING, message);
+        m_addonHelper->FreeString(message);
     }
 
     
@@ -187,7 +189,7 @@ ADDON_STATUS SovokPVRClient::SetSetting(const char *settingName, const void *set
             });
             if(currentId != GetStreamerId()) {
                 if(currentId == streamersList.size() ) {
-                    m_addonHelper->QueueNotification(QUEUE_WARNING, "Streamer setting mismatch.");
+                    m_addonHelper->QueueNotification(QUEUE_WARNING, m_addonHelper->GetLocalizedString(32008));
                 }
                 SetStreamerId(currentId);
                 result = ADDON_STATUS_NEED_RESTART;
@@ -265,7 +267,7 @@ bool SovokPVRClient::HasCore()
             CreateCore();
         result = m_sovokTV != NULL;
     }catch (AuthFailedException &) {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, "Login to Sovok.TV failed.");
+        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32007));
     }
     return result;
 }
@@ -432,7 +434,9 @@ int SovokPVRClient::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferS
         m_addonHelper->Log(LOG_ERROR, "SovokPVRClient:: trying to restart current channel.");
         string url = m_sovokTV->GetUrl(s_lastChannelId);
         if(!url.empty()){
-            m_addonHelper->QueueNotification(QUEUE_INFO, "Reloading channel ...");
+            char* message = m_addonHelper->GetLocalizedString(32000);
+            m_addonHelper->QueueNotification(QUEUE_INFO, message);
+            m_addonHelper->FreeString(message);
             PVRClientBase::SwitchChannel(url);
             readBytes = PVRClientBase::ReadLiveStream(pBuffer,iBufferSize);
         }

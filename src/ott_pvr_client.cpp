@@ -68,7 +68,7 @@ ADDON_STATUS OttPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_libX
     }
     catch (OttEngine::AuthFailedException &)
     {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, "Login to Sovok.TV failed.");
+        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32003));
     }
     
     //    PVR_MENUHOOK hook = {1, 30020, PVR_MENUHOOK_EPG};
@@ -104,7 +104,7 @@ ADDON_STATUS OttPVRClient::SetSetting(const char *settingName, const void *setti
             try {
                 CreateCore();
             }catch (OttEngine::AuthFailedException &) {
-                m_addonHelper->QueueNotification(QUEUE_ERROR, "OTT player: connection failed.");
+                m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32003));
             }
         }
     }
@@ -116,7 +116,7 @@ ADDON_STATUS OttPVRClient::SetSetting(const char *settingName, const void *setti
             try {
                 CreateCore();
             }catch (OttEngine::AuthFailedException &) {
-                m_addonHelper->QueueNotification(QUEUE_ERROR, "OTT player: connection failed.");
+                m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32003));
             }
         }
     }

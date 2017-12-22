@@ -428,7 +428,7 @@ void SovokTV::BuildChannelAndGroupList()
             }
         });
     } catch (ServerErrorException& ex) {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, "Sovok TV error: %s", ex.reason.c_str() );
+        m_addonHelper->QueueNotification(QUEUE_ERROR,  m_addonHelper->GetLocalizedString(32009), ex.reason.c_str() );
     } catch (...) {
         Log(">>>>  FAILED to build channel list <<<<<");
     }
@@ -472,7 +472,7 @@ std::string SovokTV::GetArchive(SovokChannelId channelId, time_t startTime)
             //Log((string(" >>>>  URL: ") + url +  "<<<<<").c_str());
         });
      } catch (ServerErrorException& ex) {
-         m_addonHelper->QueueNotification(QUEUE_ERROR, "Sovok TV error: %s", ex.reason.c_str() );
+         m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32009), ex.reason.c_str() );
      } catch (...) {
          Log(" >>>>  FAILED receive archive <<<<<");
     }
@@ -623,7 +623,7 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
              if(s.exception)
                 rethrow_exception(s.exception);
          } catch (ServerErrorException& ex) {
-             m_addonHelper->QueueNotification(QUEUE_ERROR, "Sovok TV error: %s", ex.reason.c_str() );
+             m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32009), ex.reason.c_str() );
          } catch (...) {
              Log(" >>>>  FAILED receive EPG for N hours<<<<<");
          }
@@ -677,7 +677,7 @@ string SovokTV::GetUrl(SovokChannelId channelId)
             BeutifyUrl(url);
        });
     } catch (ServerErrorException& ex) {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, "Sovok TV error: %s", ex.reason.c_str() );
+        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32009), ex.reason.c_str() );
     } catch (...) {
        Log((string(" >>>>  FAILED to get URL for channel ID=" ) + n_to_string(channelId) + " <<<<<") .c_str());
    }
@@ -704,7 +704,7 @@ FavoriteList SovokTV::GetFavorites()
                 favorites.insert((*itFavorite)["channel_id"].GetInt());
         });
     } catch (ServerErrorException& ex) {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, "Sovok TV error: %s", ex.reason.c_str() );
+        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32009), ex.reason.c_str() );
     } catch (...) {
         Log(" >>>>  FAILED to get favorites <<<<<");
     }
@@ -740,7 +740,7 @@ bool SovokTV::Login(bool wait)
             ApiFunctionData apiParams("login", params);
             CallApiFunction(apiParams, parser);
         } catch (ServerErrorException& ex) {
-            m_addonHelper->QueueNotification(QUEUE_ERROR, "Sovok TV error: %s", ex.reason.c_str() );
+            m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32009), ex.reason.c_str() );
             return false;
         } catch (...) {
             Log(" >>>>  FAILED to LOGIN!!! <<<<<");
@@ -755,7 +755,7 @@ bool SovokTV::Login(bool wait)
                 try {
                     std::rethrow_exception(s.exception);
                 } catch (ServerErrorException& ex) {
-                    m_addonHelper->QueueNotification(QUEUE_ERROR, "Sovok TV error: %s", ex.reason.c_str() );
+                    m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32009), ex.reason.c_str() );
                 } catch (...) {
                     Log(" >>>>  FAILED to LOGIN!!! <<<<<");
                 }
@@ -871,7 +871,7 @@ bool SovokTV::LoadStreamers()
             m_addonHelper->Log(LOG_DEBUG,"Loaded %d streamers.", m_streamerNames.size());
         });
     } catch (ServerErrorException& ex) {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, "Sovok TV error: %s", ex.reason.c_str() );
+        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32009), ex.reason.c_str() );
     } catch (...) {
         Log(" >>>>  FAILED to load streamers <<<<<");
         return false;
@@ -910,7 +910,7 @@ void SovokTV::LoadSettings()
             }
         });
     } catch (ServerErrorException& ex) {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, "Sovok TV error: %s", ex.reason.c_str() );
+        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32009), ex.reason.c_str() );
     } catch (...) {
         Log(" >>>>  FAILED to load settings <<<<<");
     }
@@ -935,7 +935,7 @@ void SovokTV::SetStreamerId(int streamerId)
 
         CallApiFunction(apiParams, [&] (Document& jsonRoot){});
     } catch (ServerErrorException& ex) {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, "Sovok TV error: %s", ex.reason.c_str() );
+        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32009), ex.reason.c_str() );
     } catch (...) {
         Log(" >>>>  FAILED to set streamer ID <<<<<");
     }

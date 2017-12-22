@@ -524,7 +524,7 @@ namespace OttEngine
             });
             
         } catch (ServerErrorException& ex) {
-            m_addonHelper->QueueNotification(QUEUE_ERROR, "Sovok TV error: %s", ex.reason.c_str() );
+            m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32002), ex.reason.c_str() );
         } catch (...) {
             Log(" >>>>  FAILED receive EPG <<<<<");
         }

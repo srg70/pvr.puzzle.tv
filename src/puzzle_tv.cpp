@@ -241,7 +241,7 @@ void PuzzleTV::BuildChannelAndGroupList()
             }
         });
     } catch (ServerErrorException& ex) {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, "Puzzle TV error: %s", ex.reason.c_str() );
+        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32006), ex.reason.c_str() );
     } catch (...) {
         Log(">>>>  FAILED to build channel list <<<<<");
     }
@@ -285,7 +285,7 @@ std::string PuzzleTV::GetArchive(    ChannelId channelId, time_t startTime)
             //Log((string(" >>>>  URL: ") + url +  "<<<<<").c_str());
         });
      } catch (ServerErrorException& ex) {
-         m_addonHelper->QueueNotification(QUEUE_ERROR, "Puzzle TV error: %s", ex.reason.c_str() );
+         m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32006), ex.reason.c_str() );
      } catch (...) {
          Log(" >>>>  FAILED receive archive <<<<<");
     }
@@ -394,7 +394,7 @@ void PuzzleTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHou
             }
         });
     } catch (ServerErrorException& ex) {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, "Puzzle TV error: %s", ex.reason.c_str() );
+        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32006), ex.reason.c_str() );
     } catch (...) {
         Log(" >>>>  FAILED receive EPG for N hours<<<<<");
     }
@@ -450,7 +450,7 @@ string PuzzleTV::GetUrl(ChannelId channelId)
                                 });
                });
             } catch (ServerErrorException& ex) {
-                m_addonHelper->QueueNotification(QUEUE_ERROR, "Puzzle TV error: %s", ex.reason.c_str() );
+                m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32006), ex.reason.c_str() );
             } catch (...) {
                Log((string(" >>>>  FAILED to get URL for channel ID=" ) + n_to_string(channelId) + " <<<<<") .c_str());
            }
@@ -469,7 +469,7 @@ string PuzzleTV::GetUrl(ChannelId channelId)
 //            BeutifyUrl(url);
 //       });
 //    } catch (ServerErrorException& ex) {
-//        m_addonHelper->QueueNotification(QUEUE_ERROR, "Puzzle TV error: %s", ex.reason.c_str() );
+//        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32006), ex.reason.c_str() );
 //    } catch (...) {
 //       Log((string(" >>>>  FAILED to get URL for channel ID=" ) + n_to_string(channelId) + " <<<<<") .c_str());
 //   }
@@ -605,7 +605,7 @@ void PuzzleTV::LoadArchiveList()
         });
 
     } catch (ServerErrorException& ex) {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, "Puzzle TV error: %s", ex.reason.c_str() );
+        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32006), ex.reason.c_str() );
     } catch (std::exception ex) {
         m_addonHelper->Log(LOG_ERROR, "Failed to load archive list. Reason: %s", ex.what());
     }

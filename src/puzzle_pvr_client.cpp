@@ -75,7 +75,7 @@ ADDON_STATUS PuzzlePVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_l
     }
     catch (std::exception& ex)
     {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, "Failed to connect to Puzzle server.");
+        m_addonHelper->QueueNotification(QUEUE_ERROR,  m_addonHelper->GetLocalizedString(32005));
         retVal = ADDON_STATUS_LOST_CONNECTION;
     }
     

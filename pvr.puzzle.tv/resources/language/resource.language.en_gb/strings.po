@@ -15,6 +15,7 @@ msgstr ""
 "Language: en_GB\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+#======== Common settings ============
 
 msgctxt "#10010"
 msgid "Common"
@@ -56,6 +57,8 @@ msgctxt "#10008"
 msgid "Channel reload timeout (sec)"
 msgstr "Channel reload timeout (sec)"
 
+#============ Puzzle Server Settings ============
+
 msgctxt "#20000"
 msgid "Server"
 msgstr "Server"
@@ -67,6 +70,8 @@ msgstr "Port"
 msgctxt "#20010"
 msgid "Puzzle TV"
 msgstr "Puzzle TV"
+
+#=========== Sovok TV Settings ===============
 
 msgctxt "#30000"
 msgid "Login"
@@ -128,6 +133,8 @@ msgctxt "#30010"
 msgid "Sovok TV"
 msgstr "Sovok TV"
 
+#=============== OTT Player Settings ===========
+
 msgctxt "#40000"
 msgid "Server"
 msgstr "Server"
@@ -139,3 +146,46 @@ msgstr "Key"
 msgctxt "#40010"
 msgid "OTT Player"
 msgstr "OTT Player"
+
+#============= Notifications ================
+
+msgctxt "#32000"
+msgid "Reloading channel ..."
+msgstr "Reloading channel ..."
+
+msgctxt "#32001"
+msgid "Unknown provider"
+msgstr "Unknown provider"
+
+msgctxt "#32002"
+msgid "OTT Player error: %s"
+msgstr "OTT Player error: %s"
+
+msgctxt "#32003"
+msgid "OTT Player: login failed."
+msgstr "OTT Player: login failed."
+
+msgctxt "#32004"
+msgid "Playlist error: %s"
+msgstr "Playlist error: %s"
+
+msgctxt "#32005"
+msgid "Can't' connect to Puzzle server."
+msgstr "Can't connect to Puzzle server."
+
+msgctxt "#32006"
+msgid "Puzzle TV error: %s"
+msgstr "Puzzle TV error: %s"
+
+msgctxt "#32007"
+msgid "Sovok TV: login failed."
+msgstr "Sovok TV: login failed."
+
+msgctxt "#32008"
+msgid "Streamer setting mismatch."
+msgstr "Streamer setting mismatch."
+
+msgctxt "#32009"
+msgid "Sovok TV error: %s"
+msgstr "Sovok TV error: %s"
+

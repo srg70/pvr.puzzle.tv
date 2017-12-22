@@ -94,7 +94,7 @@ ADDON_STATUS ADDON_Create(void* hdl, void* props)
             
         default:
             m_DataSource = NULL;
-            m_xbmc->QueueNotification(QUEUE_ERROR, "PVR Puzzle TV error: unknown provider");
+            m_xbmc->QueueNotification(QUEUE_ERROR, m_xbmc->GetLocalizedString(32001));
             break;
     }
     return (NULL == m_DataSource) ? ADDON_STATUS_NEED_SETTINGS: m_DataSource->Init(m_xbmc, m_pvr, pvrprops);
