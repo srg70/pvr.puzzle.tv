@@ -22,9 +22,8 @@ include_directories(${kodiplatform_INCLUDE_DIRS}
 
 set(DEPLIBS ${p8-platform_LIBRARIES}
             ${ZLIB_LIBRARIES}
-            ${CURL_LIBRARIES})
-
-#${CURL_SSL_LIBRARIES})
+            ${CURL_LIBRARIES}
+            ${CURL_SSL_LIBRARIES})
 
 message(STATUS "ZLIB_LIBRARIES: ${ZLIB_LIBRARIES}")
 message(STATUS "CURL_INCLUDE_DIRS: ${CURL_INCLUDE_DIRS}")
@@ -38,6 +37,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Android")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DANDROID")
     set(OS "android")
 endif()
+
 
 message(STATUS "ANDROID_STL: ${ANDROID_STL}")
 message(STATUS "DEPLIBS: ${DEPLIBS}")
@@ -61,8 +61,6 @@ src/plist_buffer.cpp
 src/file_cache_buffer.cpp
 src/memory_cache_buffer.cpp
 )
-#src/ott_pvr_client.cpp
-#src/ott_player.cpp
 
 
 build_addon(pvr.puzzle.tv IPTV DEPLIBS)
