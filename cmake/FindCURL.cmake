@@ -24,8 +24,8 @@ if(CORE_SYSTEM_NAME STREQUAL osx)
                                PATHS ${PC_CURL_INCLUDEDIR})
     find_library(CURL_LIBRARIES NAMES curl libcurl
                                 PATHS ${PC_CURL_LIBDIR})
-    find_library(CURL_SSL_LIBRARIES NAMES ssl libssl
-                                PATHS ${PC_CURL_LIBDIR})
+#    find_library(CURL_SSL_LIBRARIES NAMES ssl libssl
+#                               PATHS ${PC_CURL_LIBDIR})
 #    find_library(CURL_CRYPTO_LIBRARIES NAMES crypto libcrypto
 #                                PATHS ${PC_CURL_LIBDIR})
     set(CURL_SSL_LIBRARIES ${CURL_SSL_LIBRARIES} "-framework CoreFoundation" "-framework Security")
