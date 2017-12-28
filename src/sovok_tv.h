@@ -151,6 +151,10 @@ class AuthFailedException : public SovokExceptionBase
 {
 };
 
+class MissingHttpsSupportException : public SovokExceptionBase
+{
+};
+
 class BadSessionIdException : public SovokExceptionBase
 {
 public:

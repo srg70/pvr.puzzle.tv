@@ -29,9 +29,12 @@ void* CActionQueue::Process()
     while (!IsStopped())
     {
         IActionQueueItem* action = NULL;
-        _actions.Pop(action, INFINITE_QUEUE_TIMEOUT);
-        if(NULL != action)
+        // Do not wait infinite when pipeline is stopped.
+        // Could be no new task will arrive, e.g. on StopThead()
+        if( _actions.Pop(action, (_willStop) ? 1000 : INFINITE_QUEUE_TIMEOUT))
         {
+            if(NULL == action)
+                continue;
             if(_willStop)
                 action->Cancel();
             else

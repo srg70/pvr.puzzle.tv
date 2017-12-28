@@ -38,7 +38,8 @@ long HttpEngine::c_CurlTimeout = 15; // in sec
 HttpEngine::HttpEngine(ADDON::CHelper_libXBMC_addon * addonHelper)
     :  m_addonHelper(addonHelper),
     m_apiCalls(new CActionQueue(c_MaxQueueSize)),
-    m_apiCallCompletions(new CActionQueue(c_MaxQueueSize))
+    m_apiCallCompletions(new CActionQueue(c_MaxQueueSize)),
+    m_DebugRequestId(1)
 {
 
     m_apiCalls->CreateThread();

@@ -44,6 +44,16 @@ using namespace std;
 using namespace ADDON;
 using namespace rapidjson;
 
+
+#define CATCH_API_CALL(msg) \
+    catch (ServerErrorException& ex) { \
+        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32009), ex.reason.c_str() ); \
+    } catch(CurlErrorException& ex) { \
+        m_addonHelper->QueueNotification(QUEUE_ERROR, "CURL fatal error: %s", ex.reason.c_str() ); \
+    } catch (...) { \
+        Log(msg); \
+    }
+
 static const int secondsPerHour = 60 * 60;
 
 //
@@ -427,13 +437,8 @@ void SovokTV::BuildChannelAndGroupList()
                 }
             }
         });
-    } catch (ServerErrorException& ex) {
-        m_addonHelper->QueueNotification(QUEUE_ERROR,  m_addonHelper->GetLocalizedString(32009), ex.reason.c_str() );
-    } catch (...) {
-        Log(">>>>  FAILED to build channel list <<<<<");
     }
-    
-
+    CATCH_API_CALL(">>>>  FAILED to build channel list <<<<<")
 }
 
 
@@ -471,11 +476,9 @@ std::string SovokTV::GetArchive(SovokChannelId channelId, time_t startTime)
             BeutifyUrl(url);
             //Log((string(" >>>>  URL: ") + url +  "<<<<<").c_str());
         });
-     } catch (ServerErrorException& ex) {
-         m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32009), ex.reason.c_str() );
-     } catch (...) {
-         Log(" >>>>  FAILED receive archive <<<<<");
-    }
+     }
+    CATCH_API_CALL(" >>>>  FAILED receive archive <<<<<")
+
     return url;
 }
 
@@ -676,11 +679,8 @@ string SovokTV::GetUrl(SovokChannelId channelId)
             url = jsonRoot["url"].GetString();
             BeutifyUrl(url);
        });
-    } catch (ServerErrorException& ex) {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32009), ex.reason.c_str() );
-    } catch (...) {
-       Log((string(" >>>>  FAILED to get URL for channel ID=" ) + n_to_string(channelId) + " <<<<<") .c_str());
-   }
+    }
+    CATCH_API_CALL((string(" >>>>  FAILED to get URL for channel ID=" ) + n_to_string(channelId) + " <<<<<") .c_str())
 
     return url;
 }
@@ -703,11 +703,8 @@ FavoriteList SovokTV::GetFavorites()
             for(; itFavorite != jsonFavorites.End(); ++itFavorite)
                 favorites.insert((*itFavorite)["channel_id"].GetInt());
         });
-    } catch (ServerErrorException& ex) {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32009), ex.reason.c_str() );
-    } catch (...) {
-        Log(" >>>>  FAILED to get favorites <<<<<");
     }
+    CATCH_API_CALL(" >>>>  FAILED to get favorites <<<<<")
 
     return favorites;
 }
@@ -742,6 +739,9 @@ bool SovokTV::Login(bool wait)
         } catch (ServerErrorException& ex) {
             m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32009), ex.reason.c_str() );
             return false;
+        } catch(CurlErrorException& ex) {
+            m_addonHelper->QueueNotification(QUEUE_ERROR, "CURL fatal error: %s", ex.reason.c_str() );
+            return false;
         } catch (...) {
             Log(" >>>>  FAILED to LOGIN!!! <<<<<");
             return false;
@@ -754,11 +754,9 @@ bool SovokTV::Login(bool wait)
             if(s.exception) {
                 try {
                     std::rethrow_exception(s.exception);
-                } catch (ServerErrorException& ex) {
-                    m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32009), ex.reason.c_str() );
-                } catch (...) {
-                    Log(" >>>>  FAILED to LOGIN!!! <<<<<");
                 }
+                CATCH_API_CALL(" >>>>  FAILED to LOGIN!!! <<<<<")
+               
             }
             
         });
@@ -803,8 +801,8 @@ void SovokTV::CallApiAsync(const ApiFunctionData& data, TParser parser, TApiCall
         query += runner == first ? "?" : "&";
         query += runner->first + '=' + runner->second;
     }
-    std::string strRequest = "http://api.sovok.tv/";
-    strRequest += (data.api_ver == ApiFunctionData::API_2_2) ? "v2.2" : "v2.3";
+    std::string strRequest = "http://api.sovok.tv/v2.3";
+    //strRequest += (data.api_ver == ApiFunctionData::API_2_2) ? "v2.2" : "v2.3";
     strRequest += "/json/";
     strRequest += data.name + query;
     auto start = P8PLATFORM::GetTimeMs();
@@ -826,7 +824,8 @@ void SovokTV::CallApiAsync(const ApiFunctionData& data, TParser parser, TApiCall
                       }
                       const Value & errObj = jsonRoot["error"];
                       auto err = errObj["message"].GetString();
-                      auto code = errObj["code"].GetInt();
+                      const Value & errCode = errObj["code"];
+                      auto code = errCode.IsInt() ? errCode.GetInt() : errCode.IsString() ? atoi(errCode.GetString()) : -100;
                       m_addonHelper->Log(LOG_ERROR, "Sovok TV server responses error:");
                       m_addonHelper->Log(LOG_ERROR, err);
                       throw ServerErrorException(err,code);
@@ -872,6 +871,9 @@ bool SovokTV::LoadStreamers()
         });
     } catch (ServerErrorException& ex) {
         m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32009), ex.reason.c_str() );
+    } catch(CurlErrorException& ex) {
+        m_addonHelper->QueueNotification(QUEUE_ERROR, "CURL fatal error: %s", ex.reason.c_str() );
+        return false;
     } catch (...) {
         Log(" >>>>  FAILED to load streamers <<<<<");
         return false;
@@ -909,11 +911,8 @@ void SovokTV::LoadSettings()
                 throw UnknownStreamerIdException();
             }
         });
-    } catch (ServerErrorException& ex) {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32009), ex.reason.c_str() );
-    } catch (...) {
-        Log(" >>>>  FAILED to load settings <<<<<");
     }
+    CATCH_API_CALL(" >>>>  FAILED to load settings <<<<<")
 }
 
 void SovokTV::SetStreamerId(int streamerId)
@@ -934,30 +933,30 @@ void SovokTV::SetStreamerId(int streamerId)
         ApiFunctionData apiParams("settings_set", params);
 
         CallApiFunction(apiParams, [&] (Document& jsonRoot){});
-    } catch (ServerErrorException& ex) {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32009), ex.reason.c_str() );
-    } catch (...) {
-        Log(" >>>>  FAILED to set streamer ID <<<<<");
     }
+    CATCH_API_CALL(" >>>>  FAILED to set streamer ID <<<<<")
 }
 
 void SovokTV::InitArchivesInfo()
 {
     m_archivesInfo.clear();
     
-    ApiFunctionData apiParams("archive_channels_list", ApiFunctionData::s_EmptyParams, ApiFunctionData::API_2_3);
-    
-    CallApiFunction(apiParams, [&] (Document& jsonRoot)
-    {
-        const Value &jsonList = jsonRoot["have_archive_list"];
-        if(!jsonList.IsArray())
-        throw  JsonParserException("'have_archive_list list' is not array");
-        for(auto& i : jsonList.GetArray()) {
-            m_archivesInfo[atoi(i["id"].GetString())] = atoi(i["archive_hours"].GetString());
-        };
-        return true;
-    });
-    m_addonHelper->Log(LOG_DEBUG,"Received %d channels with archive.", m_archivesInfo.size());
+    try {
+        ApiFunctionData apiParams("archive_channels_list", ApiFunctionData::s_EmptyParams, ApiFunctionData::API_2_3);
+        
+        CallApiFunction(apiParams, [&] (Document& jsonRoot)
+        {
+            const Value &jsonList = jsonRoot["have_archive_list"];
+            if(!jsonList.IsArray())
+            throw  JsonParserException("'have_archive_list list' is not array");
+            for(auto& i : jsonList.GetArray()) {
+                m_archivesInfo[atoi(i["id"].GetString())] = atoi(i["archive_hours"].GetString());
+            };
+            return true;
+        });
+        m_addonHelper->Log(LOG_DEBUG,"Received %d channels with archive.", m_archivesInfo.size());
+    }
+    CATCH_API_CALL(" >>>>  FAILED to obtain archive channel list <<<<<")
 
 }
 

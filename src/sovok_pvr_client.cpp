@@ -88,11 +88,21 @@ ADDON_STATUS SovokPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_li
         m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32007));
     }
     
+    catch (MissingHttpsSupportException &)
+    {
+        m_addonHelper->QueueNotification(QUEUE_ERROR, "Missing HTTPS support.");
+        retVal = ADDON_STATUS_PERMANENT_FAILURE;
+    }
+    
     catch(MissingApiException & ex)
     {
         m_addonHelper->QueueNotification(QUEUE_WARNING, (std::string("Missing Sovok API: ") + ex.reason).c_str());
     }
-    
+    catch(...)
+    {
+        m_addonHelper->QueueNotification(QUEUE_ERROR, "Sovok TV: unhandeled exception");
+        retVal = ADDON_STATUS_PERMANENT_FAILURE;
+    }
     //    PVR_MENUHOOK hook = {1, 30020, PVR_MENUHOOK_EPG};
     //    m_pvr->AddMenuHook(&hook);
     return retVal;

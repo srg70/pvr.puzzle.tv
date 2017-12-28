@@ -93,8 +93,10 @@ public:
         auto item = new QueueItem<TAction, TCompletion>(action, completion);
         if(!_willStop)
             _actions.Push(item);
-        else
+        else{
             item->Cancel();
+            delete item;
+        }
     }
     template<typename TAction, typename TCompletion>
     void CancellAllBefore(const TAction action, const TCompletion completion)
