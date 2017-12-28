@@ -177,12 +177,14 @@ namespace OttEngine
         
         if(m_archiveLoader) {
             m_archiveLoader->StopThread();
-            SAFE_DELETE(m_archiveLoader);
         }
         if(m_httpEngine){
             SAFE_DELETE(m_httpEngine);
         }
         
+        if(m_archiveLoader)
+            SAFE_DELETE(m_archiveLoader);
+
         m_addonHelper->Log(LOG_NOTICE, "OttPlayer stopped.");
     }
     
