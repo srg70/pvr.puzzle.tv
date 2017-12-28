@@ -253,7 +253,7 @@ PVR_ERROR OttPVRClient::GetChannels(ADDON_HANDLE handle, bool bRadio)
         {
             PVR_CHANNEL pvrChannel = { 0 };
             pvrChannel.iUniqueId = channel.Id;
-            pvrChannel.iChannelNumber = channel.Id;
+            pvrChannel.iChannelNumber = channel.PlistIndex;
             pvrChannel.bIsRadio = false;
             strncpy(pvrChannel.strChannelName, channel.Name.c_str(), sizeof(pvrChannel.strChannelName));
 

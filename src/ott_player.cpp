@@ -246,12 +246,13 @@ namespace OttEngine
 
             const char* c_INF = "#EXTINF:";
             pos = data.find(c_INF, pos);
+            unsigned int plistIndex = 0;
             while(string::npos != pos){
                 pos += strlen(c_M3U);
                 auto pos_end = data.find(c_INF, pos);
                 string::size_type tagLen = (std::string::npos == pos_end) ? std::string::npos : pos_end - pos;
                 string tag = data.substr(pos, tagLen);
-                ParseChannelAndGroup(tag);
+                ParseChannelAndGroup(tag, plistIndex++);
                 pos = pos_end;
             }
         } catch (std::exception& ex) {
@@ -264,7 +265,7 @@ namespace OttEngine
         }
     }
     
-    void OttPlayer::ParseChannelAndGroup(const string& data)
+    void OttPlayer::ParseChannelAndGroup(const string& data, unsigned int plistIndex)
     {
         //-1 tvg-id="131" tvg-logo="perviy.png" group-title="Общие" tvg-rec="1" ,Первый канал HD
         //http://ott.watch/stream/{KEY}/131.m3u8
@@ -297,6 +298,7 @@ namespace OttEngine
         OttChannel channel;
         channel.Id = stoul(FindVar(vars, 0, c_ID));
         channel.Name = name;
+        channel.PlistIndex = plistIndex;
         channel.UrlTemplate = url;
         channel.HasArchive = hasArchive;
         channel.IconPath = m_logoUrl + FindVar(vars, 0, c_LOGO);

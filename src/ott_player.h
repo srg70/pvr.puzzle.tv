@@ -46,6 +46,7 @@ namespace OttEngine
     struct OttChannel
     {
         OttChannelId Id;
+        unsigned int PlistIndex;
         std::string Name;
         std::string IconPath;
         std::string UrlTemplate;
@@ -203,7 +204,7 @@ namespace OttEngine
         template <typename TParser, typename TCompletion>
         void CallApiAsync(const ApiFunctionData& data, TParser parser, TCompletion completion);
         
-        void ParseChannelAndGroup(const std::string& data);
+        void ParseChannelAndGroup(const std::string& data, unsigned int plistIndex);
         void LoadPlaylist();
         void ResetArchiveList();
         void Log(const char* massage) const;
