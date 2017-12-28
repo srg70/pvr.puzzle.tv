@@ -19,6 +19,8 @@ if(PKG_CONFIG_FOUND)
   pkg_check_modules(PC_CURL libcurl QUIET)
 endif()
 
+message(STATUS "In FindCURL.cmake CORE_SYSTEM_NAME=${CORE_SYSTEM_NAME}")
+
 if(CORE_SYSTEM_NAME STREQUAL osx)
     find_path(CURL_INCLUDE_DIRS NAMES curl/curl.h
                                PATHS ${PC_CURL_INCLUDEDIR})
@@ -29,6 +31,16 @@ if(CORE_SYSTEM_NAME STREQUAL osx)
 #    find_library(CURL_CRYPTO_LIBRARIES NAMES crypto libcrypto
 #                                PATHS ${PC_CURL_LIBDIR})
     set(CURL_SSL_LIBRARIES ${CURL_SSL_LIBRARIES} "-framework CoreFoundation" "-framework Security")
+elseif(CORE_SYSTEM_NAME STREQUAL windows)
+    find_path(CURL_INCLUDE_DIRS NAMES curl/curl.h
+                               PATHS ${PC_CURL_INCLUDEDIR})
+    find_library(CURL_LIBRARIES NAMES curl libcurl
+                                PATHS ${PC_CURL_LIBDIR})
+#    find_library(CURL_SSL_LIBRARIES NAMES ssl libssl
+#                               PATHS ${PC_CURL_LIBDIR})
+#    find_library(CURL_CRYPTO_LIBRARIES NAMES crypto libcrypto
+#                                PATHS ${PC_CURL_LIBDIR})
+    set(CURL_SSL_LIBRARIES "")
 else()
     find_path(CURL_INCLUDE_DIRS NAMES curl/curl.h
                     NO_CMAKE_FIND_ROOT_PATH
