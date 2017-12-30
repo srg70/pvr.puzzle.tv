@@ -54,7 +54,10 @@ else()
     find_library(CURL_CRYPTO_LIBRARIES NAMES crypto libcrypto
                     NO_CMAKE_FIND_ROOT_PATH
                     PATHS ${PC_CURL_LIBDIR})
-    set(CURL_SSL_LIBRARIES ${CURL_SSL_LIBRARIES} ${CURL_CRYPTO_LIBRARIES})
+    find_library(CURL_ZLIB_LIBRARIES NAMES z libz
+                    NO_CMAKE_FIND_ROOT_PATH
+                    PATHS ${PC_CURL_LIBDIR})
+    set(CURL_SSL_LIBRARIES ${CURL_SSL_LIBRARIES} ${CURL_CRYPTO_LIBRARIES} ${CURL_ZLIB_LIBRARIES})
 endif()
 
 
