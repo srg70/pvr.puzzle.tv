@@ -1,1 +1,0 @@
-curl https://github.com/srg70/pvr.puzzle.tv/raw/master/prebuilt/linux/curl.zip
