@@ -1,1 +1,0 @@
-curl https://github.com/curl/curl/archive/curl-7_53_1.zip
