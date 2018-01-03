@@ -2,6 +2,6 @@
 <Workspace
    version = "1.0">
    <FileRef
-      location = "self:pvr.iptvsimple.xcodeproj">
+      location = "self:/Code/Git/pvr.puzzle.tv/pvr.puzzle.tv.xcodeproj">
    </FileRef>
 </Workspace>
