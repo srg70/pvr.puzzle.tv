@@ -27,6 +27,7 @@
 #ifndef sovok_tv_h
 #define sovok_tv_h
 
+#include "pvr_client_types.h"
 #include "libXBMC_pvr.h"
 #include <string>
 #include <map>
@@ -39,36 +40,7 @@
 
 class HttpEngine;
 
-typedef unsigned int SovokChannelId;
 
-struct SovokChannel
-{
-    SovokChannelId Id;
-    std::string Name;
-    std::string IconPath;
-    bool IsRadio;
-    bool HasArchive;
-
-    bool operator <(const SovokChannel &anotherChannel) const
-    {
-        return Id < anotherChannel.Id;
-    }
-};
-
-
-struct SovokGroup
-{
-    std::string Name;
-    std::set<SovokChannelId> Channels;
-};
-
-//struct SovokEpgCaheEntry
-//{
-//    int ChannelId;
-//    unsigned int UniqueBroadcastId;
-//    time_t StartTime;
-//    time_t EndTime;
-//};
 struct SovokEpgEntry
 {
     SovokEpgEntry()
@@ -76,7 +48,7 @@ struct SovokEpgEntry
     , HasArchive(false)
     {}
     
-    SovokChannelId ChannelId;
+    PvrClient::ChannelId ChannelId;
     time_t StartTime;
     time_t EndTime;
 
@@ -124,18 +96,17 @@ struct SovokEpgCaheEntry
         , StartTime(startTime)
     {}
 
-    const SovokChannelId ChannelId;
+    const PvrClient::ChannelId  ChannelId;
     const time_t StartTime;
 };
 
-typedef std::map<SovokChannelId, SovokChannel> ChannelList;
-typedef std::map<int, SovokGroup> GroupList;
+typedef std::map<int, PvrClient::Group> GroupList;
 typedef std::map<UniqueBroadcastIdType, SovokEpgEntry> EpgEntryList;
 //typedef std::vector<SovokEpgCaheEntry> EpgCache;
 typedef std::map<std::string, std::string> ParamList;
-typedef std::set<SovokChannelId> FavoriteList;
+typedef std::set<PvrClient::ChannelId > FavoriteList;
 typedef std::vector<std::string> StreamerNamesList;
-typedef std::map<SovokChannelId, int> SovokArchivesInfo;
+typedef std::map<PvrClient::ChannelId , int> SovokArchivesInfo;
 
 class SovokExceptionBase : public std::exception
 {
@@ -189,7 +160,7 @@ public:
 
 
 
-class SovokTV
+class SovokTV : public PvrClient::IClientCore
 {
 public:
     typedef struct {
@@ -206,7 +177,9 @@ public:
     SovokTV(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper, const std::string &login, const std::string &password);
     ~SovokTV();
 
-    const ChannelList &GetChannelList();
+    const PvrClient::ChannelList &GetChannelList();
+    const PvrClient::GroupList &GetGroupList();
+    
     const EpgEntryList& GetEpgList() const;
     const StreamerNamesList& GetStreamersList() const;
     
@@ -216,12 +189,11 @@ public:
 
     
     //EpgEntryList GetEpg(int channelId, time_t day);
-    void GetEpg(SovokChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries);
-    bool FindEpg(SovokChannelId brodcastId, SovokEpgEntry& epgEntry);
+    void GetEpg(PvrClient::ChannelId  channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries);
+    bool FindEpg(PvrClient::ChannelId  brodcastId, SovokEpgEntry& epgEntry);
     std::string GetArchiveForEpg(const SovokEpgEntry& epgEntry);
-
-    const GroupList &GetGroupList();
-    std::string GetUrl(SovokChannelId channelId);
+    
+    std::string GetUrl(PvrClient::ChannelId  channelId);
     FavoriteList GetFavorites();
 
     int GetSreamerId() const { return m_streammerId; }
@@ -237,7 +209,7 @@ private:
     struct ApiFunctionData;
     class HelperThread;
     
-    std::string GetArchive(SovokChannelId channelId, time_t startTime);
+    std::string GetArchive(PvrClient::ChannelId  channelId, time_t startTime);
     
     void GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHours);
     void GetEpgForAllChannels(time_t startTime, time_t endTime);
@@ -272,7 +244,7 @@ private:
     std::string m_login;
     std::string m_password;
     
-    ChannelList m_channelList;
+    PvrClient::ChannelList m_channelList;
     SovokArchivesInfo  m_archivesInfo;
     GroupList m_groupList;
     struct CountryFilterPrivate : public CountryFilter {

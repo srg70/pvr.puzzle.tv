@@ -43,7 +43,7 @@
 using namespace std;
 using namespace ADDON;
 using namespace rapidjson;
-
+using namespace PvrClient;
 
 #define CATCH_API_CALL(msg) \
     catch (ServerErrorException& ex) { \
@@ -377,8 +377,9 @@ void SovokTV::BuildChannelAndGroupList()
             for(auto& gr : jsonRoot["groups"].GetArray())
             {
                 auto id = atoi(gr["id"].GetString());
-                if(maxGroupId < id) maxGroupId = id;
-                SovokGroup group;
+                if(maxGroupId < id)
+                    maxGroupId = id;
+                Group group;
                 group.Name = gr["name"].GetString();
                 m_groupList[id] = group;
             }
@@ -387,7 +388,7 @@ void SovokTV::BuildChannelAndGroupList()
                     auto& f = m_countryFilter.Filters[i];
                     if(f.Hidden)
                         continue;
-                    SovokGroup group;
+                    Group group;
                     group.Name = f.GroupName;
                     m_groupList[++maxGroupId] = group;
                     m_countryFilter.Groups[i] = maxGroupId;
@@ -400,10 +401,11 @@ void SovokTV::BuildChannelAndGroupList()
                 if(adultContentDisabled && isProtected)
                     continue;
                 
-                SovokChannel channel;
+                Channel channel;
                 channel.Id = atoi(ch["id"].GetString());
+                channel.Number = channel.Id;
                 channel.Name = ch["name"].GetString();
-                channel.IconPath = ch["icon"].GetString();
+                channel.IconPath = string("http://sovok.tv" )+ ch["icon"].GetString();
                 channel.IsRadio = ch["is_video"].GetInt() == 0;//channel.Id > 1000;
                 channel.HasArchive = atoi(ch["have_archive"].GetString()) != 0;
                 
@@ -432,7 +434,7 @@ void SovokTV::BuildChannelAndGroupList()
                     } else {
                         groups = groups.substr(pos + 1);
                     }
-                    SovokGroup &group = m_groupList[id];
+                    Group &group = m_groupList[id];
                     group.Channels.insert(channel.Id);
                 }
             }
@@ -460,7 +462,7 @@ std::string SovokTV::GetArchiveForEpg(const SovokEpgEntry& epgEntry)
     return  GetArchive(epgEntry.ChannelId, epgEntry.StartTime + m_serverTimeShift);
 }
 
-std::string SovokTV::GetArchive(SovokChannelId channelId, time_t startTime)
+std::string SovokTV::GetArchive(ChannelId channelId, time_t startTime)
 {
     string url;
     ParamList params;
@@ -490,7 +492,7 @@ void SovokTV::Log(const char* massage) const
     
 }
 
-void SovokTV::GetEpg(SovokChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries)
+void SovokTV::GetEpg(ChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries)
 {
     P8PLATFORM::CLockObject lock(m_epgAccessMutex);
     
@@ -665,7 +667,7 @@ const GroupList &SovokTV::GetGroupList()
     return m_groupList;
 }
 
-string SovokTV::GetUrl(SovokChannelId channelId)
+string SovokTV::GetUrl(ChannelId channelId)
 {
     string url;
 

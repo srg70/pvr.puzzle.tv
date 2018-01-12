@@ -54,12 +54,15 @@ src/puzzle_pvr_client.cpp
 src/puzzle_tv.cpp
 src/ott_pvr_client.cpp
 src/ott_player.cpp
+src/edem_pvr_client.cpp
+src/edem_player.cpp
 src/timeshift_buffer.cpp
 src/ActionQueue.cpp
 src/HttpEngine.cpp
 src/plist_buffer.cpp
 src/file_cache_buffer.cpp
 src/memory_cache_buffer.cpp
+src/XMLTV_loader.cpp
 )
 
 

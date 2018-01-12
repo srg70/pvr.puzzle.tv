@@ -32,7 +32,7 @@ class CHelper_libXBMC_pvr;
 class InputBuffer;
 class SovokTV;
 
-class SovokPVRClient: public PVRClientBase
+class SovokPVRClient: public PvrClient::PVRClientBase
 {
 public:
     ADDON_STATUS Init(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,  PVR_PROPERTIES* pvrprops);
@@ -45,16 +45,8 @@ public:
     PVR_ERROR SignalStatus(PVR_SIGNAL_STATUS &signalStatus);
     ADDON_STATUS GetStatus();
 
-    
     PVR_ERROR GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL& channel, time_t iStart, time_t iEnd);
-
-    int GetChannelGroupsAmount();
-    PVR_ERROR GetChannelGroups(ADDON_HANDLE handle, bool bRadio);
-    PVR_ERROR GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_CHANNEL_GROUP& group);
-
-    int GetChannelsAmount();
-    PVR_ERROR GetChannels(ADDON_HANDLE handle, bool bRadio);
-
+    
     PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
     
     bool OpenLiveStream(const PVR_CHANNEL& channel);

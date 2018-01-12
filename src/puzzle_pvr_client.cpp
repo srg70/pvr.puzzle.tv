@@ -90,16 +90,20 @@ PuzzlePVRClient::~PuzzlePVRClient()
     // Probably is better to close streams before engine destruction
     CloseLiveStream();
     CloseRecordedStream();
-    if(m_puzzleTV != NULL)
+    if(m_puzzleTV != NULL) {
+        m_clientCore = NULL;
         SAFE_DELETE(m_puzzleTV);
+    }
 
 }
 
 void PuzzlePVRClient::CreateCore()
 {
-    if(m_puzzleTV != NULL)
+    if(m_puzzleTV != NULL) {
+        m_clientCore = NULL;
         SAFE_DELETE(m_puzzleTV);
-    m_puzzleTV = new PuzzleTV(m_addonHelper);
+    }
+    m_clientCore = m_puzzleTV = new PuzzleTV(m_addonHelper);
 }
 
 ADDON_STATUS PuzzlePVRClient::SetSetting(const char *settingName, const void *settingValue)
@@ -166,110 +170,6 @@ PVR_ERROR  PuzzlePVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MEN
 //    m_sovokTV->FindEpg(item.data.iEpgUid, epgEntry);
     return PVR_ERROR_NOT_IMPLEMENTED;
     
-}
-int PuzzlePVRClient::GetChannelGroupsAmount()
-{
-   
-    size_t numberOfGroups = m_puzzleTV->GetGroupList().size();
-//    if (m_shouldAddFavoritesGroup)
-//        numberOfGroups++;
-    return numberOfGroups;
-}
-
-PVR_ERROR PuzzlePVRClient::GetChannelGroups(ADDON_HANDLE handle, bool bRadio)
-{
-
-    if (!bRadio)
-    {
-        PVR_CHANNEL_GROUP pvrGroup = { 0 };
-        pvrGroup.bIsRadio = false;
-
-//        if (m_shouldAddFavoritesGroup)
-//        {
-//            strncpy(pvrGroup.strGroupName, "Избранное", sizeof(pvrGroup.strGroupName));
-//            m_pvrHelper->TransferChannelGroup(handle, &pvrGroup);
-//        }
-
-        GroupList groups = m_puzzleTV->GetGroupList();
-        GroupList::const_iterator itGroup = groups.begin();
-        for (; itGroup != groups.end(); ++itGroup)
-        {
-            strncpy(pvrGroup.strGroupName, itGroup->first.c_str(), sizeof(pvrGroup.strGroupName));
-            m_pvrHelper->TransferChannelGroup(handle, &pvrGroup);
-        }
-    }
-
-    return PVR_ERROR_NO_ERROR;
-}
-
-PVR_ERROR PuzzlePVRClient::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_CHANNEL_GROUP& group)
-{
-//    const std::string favoriteGroupName("Избранное");
-//    if (m_shouldAddFavoritesGroup && group.strGroupName == favoriteGroupName)
-//    {
-//        const char* c_GroupName = favoriteGroupName.c_str();
-//        FavoriteList favorites = m_sovokTV->GetFavorites();
-//        FavoriteList::const_iterator itFavorite = favorites.begin();
-//        for (; itFavorite != favorites.end(); ++itFavorite)
-//        {
-//            PVR_CHANNEL_GROUP_MEMBER pvrGroupMember = { 0 };
-//            strncpy(pvrGroupMember.strGroupName, c_GroupName, sizeof(pvrGroupMember.strGroupName));
-//            pvrGroupMember.iChannelUniqueId = *itFavorite;
-//            m_pvrHelper->TransferChannelGroupMember(handle, &pvrGroupMember);
-//        }
-//    }
-
-    const GroupList &groups = m_puzzleTV->GetGroupList();
-    GroupList::const_iterator itGroup = groups.find(group.strGroupName);
-    if (itGroup != groups.end())
-    {
-        std::set<ChannelId>::const_iterator itChannel = itGroup->second.Channels.begin();
-        for (; itChannel != itGroup->second.Channels.end(); ++itChannel)
-        {
-            if (group.strGroupName == itGroup->first)
-            {
-                PVR_CHANNEL_GROUP_MEMBER pvrGroupMember = { 0 };
-                strncpy(pvrGroupMember.strGroupName, itGroup->first.c_str(), sizeof(pvrGroupMember.strGroupName));
-                pvrGroupMember.iChannelUniqueId = *itChannel;
-                m_pvrHelper->TransferChannelGroupMember(handle, &pvrGroupMember);
-            }
-        }
-    }
-
-    return PVR_ERROR_NO_ERROR;
-}
-
-int PuzzlePVRClient::GetChannelsAmount()
-{
-    return m_puzzleTV->GetChannelList().size();
-}
-
-PVR_ERROR PuzzlePVRClient::GetChannels(ADDON_HANDLE handle, bool bRadio)
-{
-    const ChannelList &channels = m_puzzleTV->GetChannelList();
-    ChannelList::const_iterator itChannel = channels.begin();
-    for(; itChannel != channels.end(); ++itChannel)
-    {
-        const Channel &sovokChannel = itChannel->second;
-        if (bRadio == sovokChannel.IsRadio)
-        {
-            PVR_CHANNEL pvrChannel = { 0 };
-            pvrChannel.iUniqueId = sovokChannel.Id;
-            pvrChannel.iChannelNumber = sovokChannel.Id;
-            pvrChannel.bIsRadio = sovokChannel.IsRadio;
-            strncpy(pvrChannel.strChannelName, sovokChannel.Name.c_str(), sizeof(pvrChannel.strChannelName));
-            
-            // Let Kkodi to play channel
-//            strncpy(pvrChannel.strStreamURL, sovokChannel.Urls[0].c_str(), sizeof(pvrChannel.strStreamURL));
-            
-            string iconUrl = sovokChannel.IconPath;
-            strncpy(pvrChannel.strIconPath, iconUrl.c_str(), sizeof(pvrChannel.strIconPath));;
-
-            m_pvrHelper->TransferChannelEntry(handle, &pvrChannel);
-        }
-    }
-
-    return PVR_ERROR_NO_ERROR;
 }
 
 string PuzzlePVRClient::GetStreamUrl(const PVR_CHANNEL& channel)

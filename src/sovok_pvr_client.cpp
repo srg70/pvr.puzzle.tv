@@ -44,6 +44,7 @@
 
 using namespace std;
 using namespace ADDON;
+using namespace PvrClient;
 
 typedef std::map<string, SovokTV::CountryTemplate*> CountryFilterMap;
 static CountryFilterMap& GetCountryFilterMap();
@@ -114,17 +115,21 @@ SovokPVRClient::~SovokPVRClient()
     // Probably is better to close streams before engine destruction
     CloseLiveStream();
     CloseRecordedStream();
-    if(m_sovokTV != NULL)
+    if(m_sovokTV != NULL) {
+        m_clientCore = NULL;
         SAFE_DELETE(m_sovokTV);
+    }
 
 }
 
 void SovokPVRClient::CreateCore()
 {
-    if(m_sovokTV != NULL)
+    if(m_sovokTV != NULL) {
+        m_clientCore = NULL;
         SAFE_DELETE(m_sovokTV);
+    }
     
-    m_sovokTV = new SovokTV(m_addonHelper, m_pvrHelper, m_login, m_password);
+    m_clientCore = m_sovokTV = new SovokTV(m_addonHelper, m_pvrHelper, m_login, m_password);
 
     if(m_enableAdult)
         m_sovokTV->SetPinCode(m_pinCode);
@@ -331,99 +336,8 @@ PVR_ERROR  SovokPVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENU
     return PVR_ERROR_NOT_IMPLEMENTED;
     
 }
-int SovokPVRClient::GetChannelGroupsAmount()
-{
-    if(!HasCore())
-        return -1;
-    
-    size_t numberOfGroups = m_sovokTV->GetGroupList().size();
-    return numberOfGroups;
-}
 
-PVR_ERROR SovokPVRClient::GetChannelGroups(ADDON_HANDLE handle, bool bRadio)
-{
-    if(!HasCore())
-        return PVR_ERROR_SERVER_ERROR;
-
-    if (!bRadio)
-    {
-        PVR_CHANNEL_GROUP pvrGroup = { 0 };
-        pvrGroup.bIsRadio = false;
-
-        GroupList groups = m_sovokTV->GetGroupList();
-        GroupList::const_iterator itGroup = groups.begin();
-        for (; itGroup != groups.end(); ++itGroup)
-        {
-            strncpy(pvrGroup.strGroupName, itGroup->second.Name.c_str(), sizeof(pvrGroup.strGroupName));
-            m_pvrHelper->TransferChannelGroup(handle, &pvrGroup);
-        }
-    }
-
-    return PVR_ERROR_NO_ERROR;
-}
-
-PVR_ERROR SovokPVRClient::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_CHANNEL_GROUP& group)
-{
-    if(!HasCore())
-        return PVR_ERROR_SERVER_ERROR;
-
-    auto& groups = m_sovokTV->GetGroupList();
-    GroupList::const_iterator itGroup =  find_if(groups.begin(), groups.end(), [&](const GroupList::value_type& v ){
-        return strcmp(group.strGroupName, v.second.Name.c_str()) == 0;
-    });
-    if (itGroup != groups.end())
-    {
-        for (auto it= itGroup->second.Channels.begin(), end = itGroup->second.Channels.end(); it !=end;  ++it)
-        {
-//            if (group.strGroupName == itGroup->first)
-            {
-                PVR_CHANNEL_GROUP_MEMBER pvrGroupMember = { 0 };
-                strncpy(pvrGroupMember.strGroupName, itGroup->second.Name.c_str(), sizeof(pvrGroupMember.strGroupName));
-                pvrGroupMember.iChannelUniqueId = *it;
-                m_pvrHelper->TransferChannelGroupMember(handle, &pvrGroupMember);
-            }
-        }
-    }
-
-    return PVR_ERROR_NO_ERROR;
-}
-
-int SovokPVRClient::GetChannelsAmount()
-{
-    if(!HasCore())
-        return -1;
-    return m_sovokTV->GetChannelList().size();
-}
-
-PVR_ERROR SovokPVRClient::GetChannels(ADDON_HANDLE handle, bool bRadio)
-{
-    if(!HasCore())
-        return PVR_ERROR_SERVER_ERROR;
-    
-    const ChannelList &channels = m_sovokTV->GetChannelList();
-    ChannelList::const_iterator itChannel = channels.begin();
-    for(; itChannel != channels.end(); ++itChannel)
-    {
-        const SovokChannel &sovokChannel = itChannel->second;
-        if (bRadio == sovokChannel.IsRadio)
-        {
-            PVR_CHANNEL pvrChannel = { 0 };
-            pvrChannel.iUniqueId = sovokChannel.Id;
-            pvrChannel.iChannelNumber = sovokChannel.Id;
-            pvrChannel.bIsRadio = sovokChannel.IsRadio;
-            strncpy(pvrChannel.strChannelName, sovokChannel.Name.c_str(), sizeof(pvrChannel.strChannelName));
-
-            string iconUrl = "http://sovok.tv" + sovokChannel.IconPath;
-            strncpy(pvrChannel.strIconPath, iconUrl.c_str(), sizeof(pvrChannel.strIconPath));;
-
-            m_pvrHelper->TransferChannelEntry(handle, &pvrChannel);
-        }
-    }
-
-    return PVR_ERROR_NO_ERROR;
-}
-
-static SovokChannelId s_lastChannelId = 0;
+static ChannelId s_lastChannelId = 0;
 bool SovokPVRClient::OpenLiveStream(const PVR_CHANNEL& channel)
 {
     if(!HasCore())

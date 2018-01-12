@@ -38,6 +38,7 @@ using namespace std;
 using namespace ADDON;
 using namespace rapidjson;
 using namespace PuzzleEngine;
+using namespace PvrClient;
 
 static const int secondsPerHour = 60 * 60;
 
@@ -231,6 +232,7 @@ void PuzzleTV::BuildChannelAndGroupList()
                 Channel channel;
                 char* dummy;
                 channel.Id = strtoul((*itChannel)["id"].GetString(), &dummy, 16);
+                channel.Number = channel.Id;
                 channel.Name = (*itChannel)["name"].GetString();
                 channel.IconPath = (*itChannel)["icon"].GetString();
                 channel.IsRadio = false ;//(*itChannel)["is_video"].GetInt() == 0;//channel.Id > 1000;
@@ -238,8 +240,15 @@ void PuzzleTV::BuildChannelAndGroupList()
                 m_channelList[channel.Id] = channel;
 
                 std::string groupName = (*itChannel)["group"].GetString();
-                Group &group = m_groupList[groupName];
-                group.Channels.insert(channel.Id);
+                auto itGroup =  std::find_if(m_groupList.begin(), m_groupList.end(), [&](const GroupList::value_type& v ){
+                    return groupName ==  v.second.Name;
+                });
+                if (itGroup == m_groupList.end()) {
+                    m_groupList[m_groupList.size()].Name = groupName;
+                    itGroup = --m_groupList.end();
+                }
+
+                itGroup->second.Channels.insert(channel.Id);
             }
         });
     } catch (ServerErrorException& ex) {

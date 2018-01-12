@@ -150,6 +150,20 @@ msgctxt "#40010"
 msgid "OTT Player"
 msgstr "OTT Player"
 
+#=============== Edem Player Settings ===========
+
+msgctxt "#50000"
+msgid "Paylist Path"
+msgstr "Paylist Path"
+
+msgctxt "#50001"
+msgid "EPG Path (XMLTV)"
+msgstr "EPG Path (XMLTV)"
+
+msgctxt "#50010"
+msgid "Edem Player"
+msgstr "Edem"
+
 #============= Notifications ================
 
 msgctxt "#32000"
@@ -191,6 +205,14 @@ msgstr "Streamer setting mismatch."
 msgctxt "#32009"
 msgid "Sovok TV error: %s"
 msgstr "Sovok TV error: %s"
+
+msgctxt "#32010"
+msgid "Edem Player: playlist inaccessible."
+msgstr "Edem Player: playlist inaccessible."
+
+msgctxt "#32011"
+msgid "Edem Player: initialization error. See log file for details."
+msgstr "Edem Player: initialization error. See log file for details."
 
 
 

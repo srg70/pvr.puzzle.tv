@@ -40,12 +40,15 @@
 #include "ott_player.h"
 #include "HttpEngine.hpp"
 
-using namespace std;
-using namespace ADDON;
-using namespace rapidjson;
+
 
 namespace OttEngine
 {
+    using namespace std;
+    using namespace ADDON;
+    using namespace rapidjson;
+    using namespace PvrClient;
+
     
     static const int secondsPerHour = 60 * 60;
     
@@ -210,6 +213,7 @@ namespace OttEngine
         try {
             char buffer[1024];
             string data;
+            //"https://edem.tv/playlists/uplist/982ee6d7a2745ac3bb9cd8777a4d8758/edem_pl.m3u8"; 
             // Download playlist
             string playlistUrl = m_baseUrl + "/ottplayer/playlist.m3u";
             auto f = m_addonHelper->OpenFile(playlistUrl.c_str(), 0);
@@ -219,7 +223,8 @@ namespace OttEngine
             do{
                 auto bytesRead = m_addonHelper->ReadFile(f, buffer, sizeof(buffer));
                 isEof = bytesRead <= 0;
-                data.append(&buffer[0], bytesRead);
+                if(!isEof)
+                    data.append(&buffer[0], bytesRead);
             }while(!isEof);
             m_addonHelper->CloseFile(f);
             f = NULL;
@@ -250,7 +255,7 @@ namespace OttEngine
             pos = data.find(c_INF, pos);
             unsigned int plistIndex = 0;
             while(string::npos != pos){
-                pos += strlen(c_M3U);
+                pos += strlen(c_INF);
                 auto pos_end = data.find(c_INF, pos);
                 string::size_type tagLen = (std::string::npos == pos_end) ? std::string::npos : pos_end - pos;
                 string tag = data.substr(pos, tagLen);
@@ -297,19 +302,28 @@ namespace OttEngine
             // Not mandatory var
         }
         
-        OttChannel channel;
+        Channel channel;
         channel.Id = stoul(FindVar(vars, 0, c_ID));
         channel.Name = name;
-        channel.PlistIndex = plistIndex;
-        channel.UrlTemplate = url;
+        channel.Number = plistIndex;
+        channel.Urls.push_back(url);
         channel.HasArchive = hasArchive;
         channel.IconPath = m_logoUrl + FindVar(vars, 0, c_LOGO);
+        channel.IsRadio = false;
         m_channelList[channel.Id] = channel;
         
         std::string groupName = FindVar(vars, 0, c_GROUP);
-        OttGroup &group = m_groupList[groupName];
-        group.Channels.insert(channel.Id);
         
+        auto itGroup =  std::find_if(m_groupList.begin(), m_groupList.end(), [&](const GroupList::value_type& v ){
+            return groupName ==  v.second.Name;
+        });
+        if (itGroup == m_groupList.end()) {
+            m_groupList[m_groupList.size()].Name = groupName;
+            itGroup = --m_groupList.end();
+        }
+        
+        itGroup->second.Channels.insert(channel.Id);
+       
     }
     
    void OttPlayer::SaveEpgCache()
@@ -461,7 +475,7 @@ namespace OttEngine
         
     }
     
-    void OttPlayer::GetEpg(OttChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries)
+    void OttPlayer::GetEpg(ChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries)
     {
         P8PLATFORM::CLockObject lock(m_epgAccessMutex);
 
@@ -485,7 +499,7 @@ namespace OttEngine
     }
     
     //template<class TFunc>
-    void OttPlayer::GetEpgForAllChannels(OttChannelId channelId, time_t startTime, time_t endTime)
+    void OttPlayer::GetEpgForAllChannels(ChannelId channelId, time_t startTime, time_t endTime)
     {
         try {
             bool hasArchive = GetChannelList().at(channelId).HasArchive;
@@ -542,9 +556,9 @@ namespace OttEngine
         return m_groupList;
     }
     
-    string OttPlayer::GetUrl(OttChannelId channelId)
+    string OttPlayer::GetUrl(ChannelId channelId)
     {
-        string url = GetChannelList().at(channelId).UrlTemplate;
+        string url = GetChannelList().at(channelId).Urls[0];
         const char* c_KEY = "{KEY}";
         auto pos = url.find(c_KEY);
         if(string::npos == pos) {

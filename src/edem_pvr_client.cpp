@@ -38,17 +38,18 @@
 #include "libXBMC_pvr.h"
 #include "timeshift_buffer.h"
 #include "direct_buffer.h"
-#include "ott_pvr_client.h"
+#include "edem_pvr_client.h"
 #include "helpers.h"
-#include "ott_player.h"
+#include "edem_player.h"
 
 using namespace std;
 using namespace ADDON;
+using namespace EdemEngine;
 
-static const char* c_playlist_setting = "ott_playlist_url";
-static const char* c_key_setting = "ott_key";
+static const char* c_playlist_setting = "edem_playlist_url";
+static const char* c_epg_setting = "edem_epg_url";
 
-ADDON_STATUS OttPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,
+ADDON_STATUS EdemPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,
                                PVR_PROPERTIES* pvrprops)
 {
     ADDON_STATUS retVal = ADDON_STATUS_OK;
@@ -59,14 +60,14 @@ ADDON_STATUS OttPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_libX
     
     if (m_addonHelper->GetSetting(c_playlist_setting, &buffer))
         m_playlistUrl = buffer;
-    if (m_addonHelper->GetSetting(c_key_setting, &buffer))
-        m_key = buffer;
+    if (m_addonHelper->GetSetting(c_epg_setting, &buffer))
+        m_epgUrl = buffer;
     
     try
     {
         CreateCore();
     }
-    catch (OttEngine::AuthFailedException &)
+    catch (AuthFailedException &)
     {
         m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32003));
     }
@@ -77,7 +78,7 @@ ADDON_STATUS OttPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_libX
 
 }
 
-OttPVRClient::~OttPVRClient()
+EdemPVRClient::~EdemPVRClient()
 {
     // Probably is better to close streams before engine destruction
     CloseLiveStream();
@@ -89,55 +90,55 @@ OttPVRClient::~OttPVRClient()
 
 }
 
-void OttPVRClient::CreateCore()
+void EdemPVRClient::CreateCore()
 {
     if(m_core != NULL) {
         m_clientCore = NULL;
         SAFE_DELETE(m_core);
     }
-    m_clientCore = m_core = new OttEngine::OttPlayer(m_addonHelper, m_pvrHelper, m_playlistUrl, m_key);
+    m_clientCore = m_core = new EdemEngine::Core(m_addonHelper, m_pvrHelper, m_playlistUrl, m_epgUrl);
 }
 
-ADDON_STATUS OttPVRClient::SetSetting(const char *settingName, const void *settingValue)
+ADDON_STATUS EdemPVRClient::SetSetting(const char *settingName, const void *settingValue)
 {
-    if (strcmp(settingName,  c_playlist_setting) == 0 && strcmp((const char*) settingValue, m_playlistUrl.c_str()) != 0)
-    {
-        m_playlistUrl = (const char*) settingValue;
-        if (!m_playlistUrl.empty() && !m_key.empty() && m_core == NULL)
-        {
+    ADDON_STATUS result = ADDON_STATUS_OK ;
+
+    if (strcmp(settingName,  c_playlist_setting) == 0 && strcmp((const char*) settingValue, m_playlistUrl.c_str()) != 0) {
+        m_playlistUrl= (const char*) settingValue;
+        if (m_playlistUrl.empty() || m_playlistUrl.find("***") != string::npos) {
+            m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32010));
+        } else {
             try {
                 CreateCore();
-            }catch (OttEngine::AuthFailedException &) {
-                m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32003));
+                result = ADDON_STATUS_NEED_RESTART;
+            }catch (AuthFailedException &) {
+                m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32011));
             }
         }
     }
-    else if (strcmp(settingName,  c_key_setting) == 0  && strcmp((const char*) settingValue, m_key.c_str()) != 0)
-    {
-        m_key = (const char*) settingValue;
-        if (!m_playlistUrl.empty() && !m_key.empty() && m_core == NULL)
-        {
-            try {
-                CreateCore();
-            }catch (OttEngine::AuthFailedException &) {
-                m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32003));
-            }
+    else if(strcmp(settingName,  c_epg_setting) == 0 && strcmp((const char*) settingValue, m_epgUrl.c_str()) != 0) {
+        m_epgUrl = (const char*) settingValue;
+        try {
+            CreateCore();
+            result = ADDON_STATUS_NEED_RESTART;
+        }catch (AuthFailedException &) {
+            m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32011));
         }
     }
     else {
-        return PVRClientBase::SetSetting(settingName, settingValue);
+        result = PVRClientBase::SetSetting(settingName, settingValue);
     }
-    return ADDON_STATUS_NEED_RESTART;
+    return result;
 }
 
-PVR_ERROR OttPVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabilities)
+PVR_ERROR EdemPVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabilities)
 {
     pCapabilities->bSupportsEPG = true;
     pCapabilities->bSupportsTV = true;
     pCapabilities->bSupportsRadio = false;
     pCapabilities->bSupportsChannelGroups = true;
     pCapabilities->bHandlesInputStream = true;
-    pCapabilities->bSupportsRecordings = true;
+    pCapabilities->bSupportsRecordings = false;
     
     pCapabilities->bSupportsTimers = false;
     pCapabilities->bSupportsChannelScan = false;
@@ -150,15 +151,14 @@ PVR_ERROR OttPVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabiliti
 }
 
 
-PVR_ERROR OttPVRClient::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL& channel, time_t iStart, time_t iEnd)
+PVR_ERROR EdemPVRClient::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL& channel, time_t iStart, time_t iEnd)
 {
-    
     if(NULL == m_core)
         return PVR_ERROR_SERVER_ERROR;
     
-    OttEngine::EpgEntryList epgEntries;
+    EpgEntryList epgEntries;
     m_core->GetEpg(channel.iUniqueId, iStart, iEnd, epgEntries);
-    OttEngine::EpgEntryList::const_iterator itEpgEntry = epgEntries.begin();
+    EpgEntryList::const_iterator itEpgEntry = epgEntries.begin();
     for (int i = 0; itEpgEntry != epgEntries.end(); ++itEpgEntry, ++i)
     {
         EPG_TAG tag = { 0 };
@@ -172,7 +172,7 @@ PVR_ERROR OttPVRClient::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL&
     }
     return PVR_ERROR_NO_ERROR;
 }
-PVR_ERROR  OttPVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
+PVR_ERROR  EdemPVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
 {
 //    SovokEpgEntry epgEntry;
 //    m_core->FindEpg(item.data.iEpgUid, epgEntry);
@@ -180,7 +180,7 @@ PVR_ERROR  OttPVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHO
     
 }
 
-bool OttPVRClient::OpenLiveStream(const PVR_CHANNEL& channel)
+bool EdemPVRClient::OpenLiveStream(const PVR_CHANNEL& channel)
 {
     if(NULL == m_core)
         return false;
@@ -189,7 +189,7 @@ bool OttPVRClient::OpenLiveStream(const PVR_CHANNEL& channel)
     return PVRClientBase::OpenLiveStream(url);
 }
 
-bool OttPVRClient::SwitchChannel(const PVR_CHANNEL& channel)
+bool EdemPVRClient::SwitchChannel(const PVR_CHANNEL& channel)
 {
     if(NULL == m_core)
         return false;
@@ -200,8 +200,10 @@ bool OttPVRClient::SwitchChannel(const PVR_CHANNEL& channel)
 
 
 
-int OttPVRClient::GetRecordingsAmount(bool deleted)
+int EdemPVRClient::GetRecordingsAmount(bool deleted)
 {
+    return -1;
+    
     if(NULL == m_core)
         return -1;
 
@@ -209,7 +211,7 @@ int OttPVRClient::GetRecordingsAmount(bool deleted)
         return -1;
     
     int size = 0;
-    std::function<void(const OttEngine::ArchiveList&)> f = [&size](const OttEngine::ArchiveList& list){size = list.size();};
+    std::function<void(const ArchiveList&)> f = [&size](const ArchiveList& list){size = list.size();};
     m_core->Apply(f);
     if(size == 0)
     {
@@ -227,20 +229,22 @@ int OttPVRClient::GetRecordingsAmount(bool deleted)
     
     
 }
-PVR_ERROR OttPVRClient::GetRecordings(ADDON_HANDLE handle, bool deleted)
+PVR_ERROR EdemPVRClient::GetRecordings(ADDON_HANDLE handle, bool deleted)
 {
+    return PVR_ERROR_NOT_IMPLEMENTED;
+
     if(deleted)
         return PVR_ERROR_NOT_IMPLEMENTED;
     
     PVR_ERROR result = PVR_ERROR_NO_ERROR;
-    OttEngine::OttPlayer& sTV(*m_core);
+    Core& sTV(*m_core);
     CHelper_libXBMC_pvr * pvrHelper = m_pvrHelper;
     ADDON::CHelper_libXBMC_addon * addonHelper = m_addonHelper;
-    std::function<void(const OttEngine::ArchiveList&)> f = [&sTV, &handle, pvrHelper, addonHelper ,&result](const OttEngine::ArchiveList& list)
+    std::function<void(const ArchiveList&)> f = [&sTV, &handle, pvrHelper, addonHelper ,&result](const ArchiveList& list)
     {
         for(const auto &  i :  list) {
             try {
-                const OttEngine::OttEpgEntry& epgTag = sTV.GetEpgList().at(i);
+                const EpgEntry& epgTag = sTV.GetEpgList().at(i);
 
                 PVR_RECORDING tag = { 0 };
     //            memset(&tag, 0, sizeof(PVR_RECORDING));
@@ -275,12 +279,14 @@ PVR_ERROR OttPVRClient::GetRecordings(ADDON_HANDLE handle, bool deleted)
     return result;
 }
 
-bool OttPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
+bool EdemPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
 {
+    return false;
+    
     if(NULL == m_core)
         return PVR_ERROR_SERVER_ERROR;
 
-    OttEngine::OttEpgEntry epgTag;
+    EpgEntry epgTag;
     
     unsigned int epgId = recording.iEpgEventId;
     if( epgId == 0 )
@@ -292,13 +298,13 @@ bool OttPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     return PVRClientBase::OpenRecordedStream(url);
 }
 
-PVR_ERROR OttPVRClient::CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
+PVR_ERROR EdemPVRClient::CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
 {
     m_addonHelper->Log(LOG_DEBUG, " >>>> !!!! Menu hook !!!! <<<<<");
     return MenuHook(menuhook, item);
 }
 
-PVR_ERROR OttPVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
+PVR_ERROR EdemPVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
 {
     snprintf(signalStatus.strAdapterName, sizeof(signalStatus.strAdapterName), "IPTV Sovok TV Adapter 1");
     snprintf(signalStatus.strAdapterStatus, sizeof(signalStatus.strAdapterStatus), (m_core == NULL) ? "Not connected" :"OK");

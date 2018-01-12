@@ -117,6 +117,12 @@
 		4C8506ED1F0E49F400213131 /* puzzle_pvr_client.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C8506EB1F0E49F400213131 /* puzzle_pvr_client.h */; };
 		4C8506F11F0E541100213131 /* puzzle_tv.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C8506EF1F0E541100213131 /* puzzle_tv.cpp */; };
 		4C8506F21F0E541100213131 /* puzzle_tv.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C8506F01F0E541100213131 /* puzzle_tv.h */; };
+		4CAAE7262006438600A866C9 /* edem_player.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CAAE7222006438600A866C9 /* edem_player.cpp */; };
+		4CAAE7272006438600A866C9 /* edem_player.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CAAE7232006438600A866C9 /* edem_player.h */; };
+		4CAAE7282006438600A866C9 /* edem_pvr_client.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CAAE7242006438600A866C9 /* edem_pvr_client.cpp */; };
+		4CAAE7292006438600A866C9 /* edem_pvr_client.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CAAE7252006438600A866C9 /* edem_pvr_client.h */; };
+		4CAAE731200691A600A866C9 /* XMLTV_loader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CAAE72F200691A600A866C9 /* XMLTV_loader.cpp */; };
+		4CAAE732200691A600A866C9 /* XMLTV_loader.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4CAAE730200691A600A866C9 /* XMLTV_loader.hpp */; };
 		4CD394B61F2258610073E2DF /* plist_buffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD394B41F2258610073E2DF /* plist_buffer.cpp */; };
 		4CD394B71F2258610073E2DF /* plist_buffer.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CD394B51F2258610073E2DF /* plist_buffer.h */; };
 		4CFEAA8F1E4DA81A002C2BA4 /* ActionQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CFEAA8D1E4DA81A002C2BA4 /* ActionQueue.cpp */; };
@@ -245,6 +251,13 @@
 		4C8506EB1F0E49F400213131 /* puzzle_pvr_client.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = puzzle_pvr_client.h; sourceTree = "<group>"; };
 		4C8506EF1F0E541100213131 /* puzzle_tv.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = puzzle_tv.cpp; sourceTree = "<group>"; };
 		4C8506F01F0E541100213131 /* puzzle_tv.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = puzzle_tv.h; sourceTree = "<group>"; };
+		4CAAE7212000CB2100A866C9 /* pvr_client_types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = pvr_client_types.h; sourceTree = "<group>"; };
+		4CAAE7222006438600A866C9 /* edem_player.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = edem_player.cpp; path = src/edem_player.cpp; sourceTree = "<group>"; };
+		4CAAE7232006438600A866C9 /* edem_player.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = edem_player.h; path = src/edem_player.h; sourceTree = "<group>"; };
+		4CAAE7242006438600A866C9 /* edem_pvr_client.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = edem_pvr_client.cpp; path = src/edem_pvr_client.cpp; sourceTree = "<group>"; };
+		4CAAE7252006438600A866C9 /* edem_pvr_client.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = edem_pvr_client.h; path = src/edem_pvr_client.h; sourceTree = "<group>"; };
+		4CAAE72F200691A600A866C9 /* XMLTV_loader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = XMLTV_loader.cpp; path = src/XMLTV_loader.cpp; sourceTree = "<group>"; };
+		4CAAE730200691A600A866C9 /* XMLTV_loader.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = XMLTV_loader.hpp; path = src/XMLTV_loader.hpp; sourceTree = "<group>"; };
 		4CD394B41F2258610073E2DF /* plist_buffer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = plist_buffer.cpp; sourceTree = "<group>"; };
 		4CD394B51F2258610073E2DF /* plist_buffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = plist_buffer.h; sourceTree = "<group>"; };
 		4CFEAA8D1E4DA81A002C2BA4 /* ActionQueue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ActionQueue.cpp; sourceTree = "<group>"; };
@@ -283,6 +296,8 @@
 				4C4FBFA41E77C0590027911E /* Buffers */,
 				4C8506E21EF478A000213131 /* pvr_client_base.cpp */,
 				4C8506E31EF478A000213131 /* pvr_client_base.h */,
+				4CAAE7212000CB2100A866C9 /* pvr_client_types.h */,
+				4CAAE72A2006438C00A866C9 /* Edem */,
 				4C5BF35C1F18DAD400437252 /* OTT */,
 				4C8506F31F0E541700213131 /* Puzzle TV */,
 				4C8506EE1F0E53B400213131 /* Sovok TV */,
@@ -587,6 +602,20 @@
 			name = "Puzzle TV";
 			sourceTree = "<group>";
 		};
+		4CAAE72A2006438C00A866C9 /* Edem */ = {
+			isa = PBXGroup;
+			children = (
+				4CAAE7242006438600A866C9 /* edem_pvr_client.cpp */,
+				4CAAE7252006438600A866C9 /* edem_pvr_client.h */,
+				4CAAE7222006438600A866C9 /* edem_player.cpp */,
+				4CAAE7232006438600A866C9 /* edem_player.h */,
+				4CAAE72F200691A600A866C9 /* XMLTV_loader.cpp */,
+				4CAAE730200691A600A866C9 /* XMLTV_loader.hpp */,
+			);
+			name = Edem;
+			path = ..;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -640,7 +669,9 @@
 				4C49D2131E27C4BF0026F43E /* xbmc_vis_dll.h in Headers */,
 				4C49D2421E27C4BF0026F43E /* zconf.h in Headers */,
 				4C49D23E1E27C4BF0026F43E /* stringbuffer.h in Headers */,
+				4CAAE7272006438600A866C9 /* edem_player.h in Headers */,
 				4C8506ED1F0E49F400213131 /* puzzle_pvr_client.h in Headers */,
+				4CAAE732200691A600A866C9 /* XMLTV_loader.hpp in Headers */,
 				4C49D2141E27C4BF0026F43E /* xbmc_vis_types.h in Headers */,
 				4C49D23A1E27C4BF0026F43E /* stdint.h in Headers */,
 				4C49D22D1E27C4BF0026F43E /* biginteger.h in Headers */,
@@ -652,6 +683,7 @@
 				4C49D2351E27C4BF0026F43E /* strfunc.h in Headers */,
 				4C49D2261E27C4BF0026F43E /* document.h in Headers */,
 				4C49D22B1E27C4BF0026F43E /* filereadstream.h in Headers */,
+				4CAAE7292006438600A866C9 /* edem_pvr_client.h in Headers */,
 				4C49D1F21E27C4BF0026F43E /* kodi_adsp_dll.h in Headers */,
 				4C49D2201E27C4BF0026F43E /* buffer.h in Headers */,
 				4C49D21F1E27C4BF0026F43E /* atomic.h in Headers */,
@@ -772,6 +804,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4CAAE7262006438600A866C9 /* edem_player.cpp in Sources */,
+				4CAAE731200691A600A866C9 /* XMLTV_loader.cpp in Sources */,
 				4C534CD41F46C9D40038539D /* ott_player.cpp in Sources */,
 				4C08C7FE1D8290F6004CAAE3 /* addon.cpp in Sources */,
 				4C8506EC1F0E49F400213131 /* puzzle_pvr_client.cpp in Sources */,
@@ -787,6 +821,7 @@
 				4C08C7F31D81E2A8004CAAE3 /* direct_buffer.cpp in Sources */,
 				4C08C7F51D81E2A8004CAAE3 /* timeshift_buffer.cpp in Sources */,
 				4C8506F11F0E541100213131 /* puzzle_tv.cpp in Sources */,
+				4CAAE7282006438600A866C9 /* edem_pvr_client.cpp in Sources */,
 				4C534CD51F46C9EA0038539D /* ott_pvr_client.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

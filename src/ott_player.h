@@ -27,47 +27,23 @@
 #ifndef _ott_player_h_
 #define _ott_player_h_
 
+#include "pvr_client_types.h"
 #include "libXBMC_pvr.h"
-#include <string>
-#include <map>
-#include <set>
 #include <vector>
 #include <functional>
 #include <list>
 #include <memory>
+
 
 class HttpEngine;
 namespace OttEngine
 {
     
     
-    typedef unsigned int OttChannelId;
-    
-    struct OttChannel
-    {
-        OttChannelId Id;
-        unsigned int PlistIndex;
-        std::string Name;
-        std::string IconPath;
-        std::string UrlTemplate;
-        bool HasArchive;
-        
-        bool operator <(const OttChannel &anotherChannel) const
-        {
-            return Id < anotherChannel.Id;
-        }
-    };
-    
-    
-    struct OttGroup
-    {
-        std::set<OttChannelId> Channels;
-    };
-    
     struct OttEpgEntry
     {
         const char* ChannelIdName = "ch";
-        OttChannelId ChannelId;
+        PvrClient::ChannelId ChannelId;
         const char* StartTimeName = "st";
         time_t StartTime;
         const char* EndTimeName = "et";
@@ -114,11 +90,8 @@ namespace OttEngine
     typedef unsigned int UniqueBroadcastIdType;
     typedef UniqueBroadcastIdType  OttArchiveEntry;
     
-    typedef std::map<OttChannelId, OttChannel> ChannelList;
-    typedef std::map<std::string, OttGroup> GroupList;
     typedef std::map<UniqueBroadcastIdType, OttEpgEntry> EpgEntryList;
     typedef std::map<std::string, std::string> ParamList;
-    typedef std::set<OttChannelId> FavoriteList;
     typedef std::vector<std::string> StreamerNamesList;
     typedef std::set<OttArchiveEntry> ArchiveList;
     
@@ -170,24 +143,24 @@ namespace OttEngine
     
     
     
-    class OttPlayer
+    class OttPlayer : public PvrClient::IClientCore
     {
     public:
         OttPlayer(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper, const std::string &baseUrl, const std::string &key);
         ~OttPlayer();
         
-        const ChannelList &GetChannelList();
+        const PvrClient::ChannelList &GetChannelList();
         const EpgEntryList& GetEpgList() const;
         
         void Apply(std::function<void(const ArchiveList&)>& action) const;
         bool StartArchivePollingWithCompletion(std::function<void(void)> action);
         
-        void  GetEpg(OttChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries);
-        bool FindEpg(OttChannelId brodcastId, OttEpgEntry& epgEntry);
+        void  GetEpg(PvrClient::ChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries);
+        bool FindEpg(PvrClient::ChannelId brodcastId, OttEpgEntry& epgEntry);
         std::string GetArchiveForEpg(const OttEpgEntry& epgEntry);
         
-        const GroupList &GetGroupList();
-        std::string GetUrl(OttChannelId channelId);
+        const PvrClient::GroupList &GetGroupList();
+        std::string GetUrl(PvrClient::ChannelId channelId);
         
     private:
         
@@ -195,7 +168,7 @@ namespace OttEngine
         class HelperThread;
         
 //        template<class TFunc>
-        void  GetEpgForAllChannels(OttChannelId channelId,  time_t startTime, time_t endTime);
+        void  GetEpgForAllChannels(PvrClient::ChannelId channelId,  time_t startTime, time_t endTime);
 
         void Cleanup();
         
@@ -223,9 +196,9 @@ namespace OttEngine
         std::string m_epgUrl;
         std::string m_logoUrl;
         std::string m_key;
-        ChannelList m_channelList;
+        PvrClient::ChannelList m_channelList;
         ArchiveList m_archiveList;
-        GroupList m_groupList;
+        PvrClient::GroupList m_groupList;
         EpgEntryList m_epgEntries;
         P8PLATFORM::CMutex m_epgAccessMutex;
         HelperThread* m_archiveLoader;

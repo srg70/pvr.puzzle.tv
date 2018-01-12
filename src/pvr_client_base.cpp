@@ -31,6 +31,7 @@
 #endif
 #endif
 
+#include <algorithm>
 #include "p8-platform/util/util.h"
 #include "kodi/xbmc_addon_cpp_dll.h"
 
@@ -46,6 +47,7 @@
 using namespace std;
 using namespace ADDON;
 using namespace Buffers;
+using namespace PvrClient;
 
 namespace CurlUtils
 {
@@ -57,8 +59,7 @@ const char* s_DefaultCacheDir = "special://temp/pvr-puzzle-tv";
 ADDON_STATUS PVRClientBase::Init(CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,
                                   PVR_PROPERTIES* pvrprops)
 {
-    
-    
+    m_clientCore = NULL;
     m_addonHelper = addonHelper;
     m_pvrHelper = pvrHelper;
     m_inputBuffer = NULL;
@@ -242,6 +243,95 @@ PVR_ERROR  PVRClientBase::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUH
     return PVR_ERROR_NOT_IMPLEMENTED;
     
 }
+
+#pragma mark - Channels
+
+PVR_ERROR PVRClientBase::GetChannels(ADDON_HANDLE handle, bool bRadio)
+{
+    if(NULL == m_clientCore)
+        return PVR_ERROR_SERVER_ERROR;
+    
+    for(auto& itChannel : m_clientCore->GetChannelList())
+    {
+        auto & channel = itChannel.second;
+        if (bRadio == channel.IsRadio)
+        {
+            PVR_CHANNEL pvrChannel = { 0 };
+            pvrChannel.iUniqueId = channel.Id;
+            pvrChannel.iChannelNumber = channel.Number;
+            pvrChannel.bIsRadio = channel.IsRadio;
+            strncpy(pvrChannel.strChannelName, channel.Name.c_str(), sizeof(pvrChannel.strChannelName));
+            strncpy(pvrChannel.strIconPath, channel.IconPath.c_str(), sizeof(pvrChannel.strIconPath));
+            
+            m_pvrHelper->TransferChannelEntry(handle, &pvrChannel);
+        }
+    }
+    
+    return PVR_ERROR_NO_ERROR;
+}
+
+int PVRClientBase::GetChannelsAmount()
+{
+    if(NULL == m_clientCore)
+        return -1;
+    
+    return m_clientCore->GetChannelList().size();
+}
+#pragma mark - Groups
+
+int PVRClientBase::GetChannelGroupsAmount()
+{
+    if(NULL == m_clientCore)
+        return -1;
+    
+    size_t numberOfGroups = m_clientCore->GetGroupList().size();
+    return numberOfGroups;
+}
+
+PVR_ERROR PVRClientBase::GetChannelGroups(ADDON_HANDLE handle, bool bRadio)
+{
+    if(NULL == m_clientCore)
+        return PVR_ERROR_SERVER_ERROR;
+    
+    if (!bRadio)
+    {
+        PVR_CHANNEL_GROUP pvrGroup = { 0 };
+        pvrGroup.bIsRadio = false;
+        for (auto& itGroup : m_clientCore->GetGroupList())
+        {
+            strncpy(pvrGroup.strGroupName, itGroup.second.Name.c_str(), sizeof(pvrGroup.strGroupName));
+            m_pvrHelper->TransferChannelGroup(handle, &pvrGroup);
+        }
+    }
+    
+    return PVR_ERROR_NO_ERROR;
+}
+
+PVR_ERROR PVRClientBase::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_CHANNEL_GROUP& group)
+{
+    if(NULL == m_clientCore)
+        return PVR_ERROR_SERVER_ERROR;
+    
+    auto& groups = m_clientCore->GetGroupList();
+    auto itGroup =  std::find_if(groups.begin(), groups.end(), [&](const GroupList::value_type& v ){
+        return strcmp(group.strGroupName, v.second.Name.c_str()) == 0;
+    });
+    if (itGroup != groups.end())
+    {
+        for (auto it : itGroup->second.Channels)
+        {
+            PVR_CHANNEL_GROUP_MEMBER pvrGroupMember = { 0 };
+            strncpy(pvrGroupMember.strGroupName, itGroup->second.Name.c_str(), sizeof(pvrGroupMember.strGroupName));
+            pvrGroupMember.iChannelUniqueId = it;
+            m_pvrHelper->TransferChannelGroupMember(handle, &pvrGroupMember);
+        }
+    }
+   
+    return PVR_ERROR_NO_ERROR;
+}
+
+
+#pragma mark - Streams
 
 bool PVRClientBase::OpenLiveStream(const std::string& url )
 {

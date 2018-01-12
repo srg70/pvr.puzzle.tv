@@ -3,7 +3,7 @@
 
 <!-- Common -->
 <category label="10010">
-    <setting id="provider_type" type="enum" label="10000" lvalues="20010|30010|40010" default="1" />
+    <setting id="provider_type" type="enum" label="10000" lvalues="20010|30010|40010|50010" default="1" />
     <setting id="enable_timeshift" type="bool" label="10001" default="false" />
     <setting id="timeshift_size" type="slider" label="10003" default="512" range="384,128,32640" option="int" visible="eq(-1,true)" subsetting="true"/>
     <setting id="timeshift_type" type="enum" label="10004" lvalues="10005|10006" default="0"  visible="eq(-2,true)" subsetting="true"/>
@@ -44,5 +44,11 @@
     <setting id="ott_key" type="text" label="40001" default=""/>
 </category>
 
+<!-- Edem Player -->
+<category label="50010">
+    <setting id="edem_playlist_url" type="text" label="50000" default="https://edem.tv/playlists/uplist/***/edem_pl.m3u8"/>
+<!--    <setting id="edem_epg_url" type="text" label="50001" default="http://programtv.ru/xmltv.xml.gz"/>-->
+    <setting id="edem_epg_url" type="text" label="50001" default="http://epg.it999.ru/edem.xml.gz"/>
+</category>
 
 </settings>

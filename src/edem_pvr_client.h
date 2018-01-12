@@ -20,9 +20,8 @@
  *
  */
 
-#ifndef __puzzle_pvr_client_h__
-#define __puzzle_pvr_client_h__
-
+#ifndef  __edem_pvr_client_h__
+#define __edem_pvr_client_h__
 
 #include "xbmc_pvr_types.h"
 #include <string>
@@ -31,47 +30,44 @@
 
 class CHelper_libXBMC_pvr;
 class InputBuffer;
-namespace PuzzleEngine {
-class PuzzleTV;
+namespace EdemEngine {
+    class Core;
 }
 
-class PuzzlePVRClient: public PvrClient::PVRClientBase
+class EdemPVRClient: public PvrClient::PVRClientBase
 {
 public:
     ADDON_STATUS Init(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,  PVR_PROPERTIES* pvrprops);
-    ~PuzzlePVRClient();
+    ~EdemPVRClient();
 
     ADDON_STATUS SetSetting(const char *settingName, const void *settingValue);
     
     PVR_ERROR GetAddonCapabilities(PVR_ADDON_CAPABILITIES* pCapabilities);
-    
+
     PVR_ERROR SignalStatus(PVR_SIGNAL_STATUS &signalStatus);
-    ADDON_STATUS GetStatus();
-    
-    // Override to check for pure quality streams.
-    int ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize);
     
     PVR_ERROR GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL& channel, time_t iStart, time_t iEnd);
-    
+
     PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
     
     bool OpenLiveStream(const PVR_CHANNEL& channel);
     bool SwitchChannel(const PVR_CHANNEL& channel);
-    
+
     int GetRecordingsAmount(bool deleted);
     PVR_ERROR GetRecordings(ADDON_HANDLE handle, bool deleted);
     bool OpenRecordedStream(const PVR_RECORDING &recording);
-    
+
     PVR_ERROR CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
+
 
 private:
     void CreateCore();
-    std::string GetStreamUrl(const PVR_CHANNEL& channel);
 
-    PuzzleEngine::PuzzleTV* m_puzzleTV;
-    int m_currentChannelStreamIdx;
-    unsigned int m_currentChannelId;
-    //    bool m_shouldAddFavoritesGroup;
+    void SetPlaylistUrl(const std::string& url) {m_playlistUrl = url;};
+
+    EdemEngine::Core* m_core;
+    std::string m_playlistUrl;
+    std::string m_epgUrl;
 };
 
-#endif //__puzzle_pvr_client_h__
+#endif //__edem_pvr_client_h__
