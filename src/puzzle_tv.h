@@ -136,8 +136,6 @@ namespace PuzzleEngine
         bool StartArchivePollingWithCompletion(std::function<void(void)> action);
 
         void  GetEpg(PvrClient::ChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries);
-        bool FindEpg(unsigned int brodcastId, EpgEntry& epgEntry);
-        std::string GetArchiveForEpg(const EpgEntry& epgEntry);
 
         std::string GetUrl(PvrClient::ChannelId channelId);
         std::string GetNextStream(PvrClient::ChannelId channelId, int currentChannelIdx);

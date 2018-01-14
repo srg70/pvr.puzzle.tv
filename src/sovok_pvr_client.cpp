@@ -331,8 +331,6 @@ PVR_ERROR SovokPVRClient::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNE
 
 PVR_ERROR  SovokPVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
 {
-//    SovokEpgEntry epgEntry;
-//    m_sovokTV->FindEpg(item.data.iEpgUid, epgEntry);
     return PVR_ERROR_NOT_IMPLEMENTED;
     
 }
@@ -456,15 +454,7 @@ bool SovokPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     if(!HasCore())
         return false;
 
-    SovokEpgEntry epgTag;
-    
-    unsigned int epgId = recording.iEpgEventId;
-    if( epgId == 0 )
-        epgId = stoul(recording.strRecordingId);
-    if(!m_sovokTV->FindEpg(epgId, epgTag))
-        return false;
-    
-    string url = m_sovokTV->GetArchiveForEpg(epgTag);
+    string url = m_sovokTV->GetArchiveUrl(recording.iChannelUid, recording.recordingTime);
     return PVRClientBase::OpenRecordedStream(url);
 }
 

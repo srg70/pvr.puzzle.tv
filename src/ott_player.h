@@ -156,8 +156,7 @@ namespace OttEngine
         bool StartArchivePollingWithCompletion(std::function<void(void)> action);
         
         void  GetEpg(PvrClient::ChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries);
-        bool FindEpg(PvrClient::ChannelId brodcastId, OttEpgEntry& epgEntry);
-        std::string GetArchiveForEpg(const OttEpgEntry& epgEntry);
+        std::string GetArchiveUrl(PvrClient::ChannelId channelId, time_t startTime, int duration);
         
         const PvrClient::GroupList &GetGroupList();
         std::string GetUrl(PvrClient::ChannelId channelId);

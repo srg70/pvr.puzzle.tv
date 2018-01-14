@@ -238,8 +238,6 @@ void PVRClientBase::SetTimeshiftPath(const std::string& path){
 
 PVR_ERROR  PVRClientBase::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
 {
-    //    SovokEpgEntry epgEntry;
-    //    m_sovokTV->FindEpg(item.data.iEpgUid, epgEntry);
     return PVR_ERROR_NOT_IMPLEMENTED;
     
 }

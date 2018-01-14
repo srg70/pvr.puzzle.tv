@@ -190,10 +190,10 @@ public:
     
     //EpgEntryList GetEpg(int channelId, time_t day);
     void GetEpg(PvrClient::ChannelId  channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries);
-    bool FindEpg(PvrClient::ChannelId  brodcastId, SovokEpgEntry& epgEntry);
-    std::string GetArchiveForEpg(const SovokEpgEntry& epgEntry);
     
     std::string GetUrl(PvrClient::ChannelId  channelId);
+    std::string GetArchiveUrl(PvrClient::ChannelId  channelId, time_t startTime);
+
     FavoriteList GetFavorites();
 
     int GetSreamerId() const { return m_streammerId; }
@@ -208,9 +208,7 @@ private:
     
     struct ApiFunctionData;
     class HelperThread;
-    
-    std::string GetArchive(PvrClient::ChannelId  channelId, time_t startTime);
-    
+        
     void GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHours);
     void GetEpgForAllChannels(time_t startTime, time_t endTime);
     void AddEpgEntry(UniqueBroadcastIdType id, SovokEpgEntry& entry);

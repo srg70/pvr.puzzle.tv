@@ -174,8 +174,6 @@ PVR_ERROR OttPVRClient::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL&
 }
 PVR_ERROR  OttPVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
 {
-//    SovokEpgEntry epgEntry;
-//    m_core->FindEpg(item.data.iEpgUid, epgEntry);
     return PVR_ERROR_NOT_IMPLEMENTED;
     
 }
@@ -279,16 +277,8 @@ bool OttPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
 {
     if(NULL == m_core)
         return PVR_ERROR_SERVER_ERROR;
-
-    OttEngine::OttEpgEntry epgTag;
     
-    unsigned int epgId = recording.iEpgEventId;
-    if( epgId == 0 )
-        epgId = stoul(recording.strRecordingId);
-    if(!m_core->FindEpg(epgId, epgTag))
-        return false;
-    
-    string url = m_core->GetArchiveForEpg(epgTag);
+    string url = m_core->GetArchiveUrl(recording.iChannelUid, recording.recordingTime, recording.iDuration);
     return PVRClientBase::OpenRecordedStream(url);
 }
 

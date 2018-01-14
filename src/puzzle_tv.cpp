@@ -260,25 +260,6 @@ void PuzzleTV::BuildChannelAndGroupList()
 
 }
 
-
-//bool PuzzleTV::FindEpg(unsigned int brodcastId, EpgEntry& epgEntry)
-//{
-//    if(m_epgEntries.count(brodcastId) == 0)
-//        return false;
-//    
-//    epgEntry = m_epgEntries[brodcastId];
-//    //Log((string(" >>>> Pogramm:") + epgEntry.Title + "<<<<<").c_str());
-//    
-//    //string url = GetArchiveForEpg(*result);
-//    
-//    return true;
-//}
-
-//std::string PuzzleTV::GetArchiveForEpg(const EpgEntry& epgEntry)
-//{
-//    return  GetArchive(epgEntry.ChannelId, epgEntry.StartTime + m_serverTimeShift);
-//}
-
 std::string PuzzleTV::GetArchive(    ChannelId channelId, time_t startTime)
 {
     string url;

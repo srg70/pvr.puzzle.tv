@@ -174,8 +174,6 @@ PVR_ERROR EdemPVRClient::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL
 }
 PVR_ERROR  EdemPVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
 {
-//    SovokEpgEntry epgEntry;
-//    m_core->FindEpg(item.data.iEpgUid, epgEntry);
     return PVR_ERROR_NOT_IMPLEMENTED;
     
 }
@@ -283,18 +281,7 @@ bool EdemPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
 {
     return false;
     
-    if(NULL == m_core)
-        return PVR_ERROR_SERVER_ERROR;
-
-    EpgEntry epgTag;
-    
-    unsigned int epgId = recording.iEpgEventId;
-    if( epgId == 0 )
-        epgId = stoul(recording.strRecordingId);
-    if(!m_core->FindEpg(epgId, epgTag))
-        return false;
-    
-    string url = m_core->GetArchiveForEpg(epgTag);
+    string url = m_core->GetArchiveUrl(recording.iChannelUid, recording.recordingTime);
     return PVRClientBase::OpenRecordedStream(url);
 }
 

@@ -449,21 +449,12 @@ namespace OttEngine
         
     }
     
-    bool OttPlayer::FindEpg(unsigned int brodcastId, OttEpgEntry& epgEntry)
+    std::string OttPlayer::GetArchiveUrl(ChannelId channelId, time_t startTime, int duration)
     {
-        if(m_epgEntries.count(brodcastId) == 0)
-            return false;
-        
-        epgEntry = m_epgEntries[brodcastId];
-         return true;
-    }
-    
-    std::string OttPlayer::GetArchiveForEpg(const OttEpgEntry& epgEntry)
-    {
-        string url = GetUrl(epgEntry.ChannelId);
+        string url = GetUrl(channelId);
         if(url.empty())
             return url;
-        url += "?archive=" + n_to_string(epgEntry.StartTime)+"&archive_end=" + n_to_string(epgEntry.EndTime);
+        url += "?archive=" + n_to_string(startTime)+"&archive_end=" + n_to_string(startTime + duration);
         return  url;
     }
     

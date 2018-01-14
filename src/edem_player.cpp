@@ -346,21 +346,12 @@ namespace EdemEngine
         return  m_epgEntries;
     }
     
-    bool Core::FindEpg(unsigned int brodcastId, EpgEntry& epgEntry)
+    std::string Core::GetArchiveUrl(ChannelId channelId, time_t startTime)
     {
-        if(m_epgEntries.count(brodcastId) == 0)
-            return false;
-        
-        epgEntry = m_epgEntries[brodcastId];
-         return true;
-    }
-    
-    std::string Core::GetArchiveForEpg(const EpgEntry& epgEntry)
-    {
-        string url = GetUrl(epgEntry.ChannelId);
+        string url = GetUrl(channelId);
         if(url.empty())
             return url;
-        url += "?archive=" + n_to_string(epgEntry.StartTime)+"&archive_end=" + n_to_string(epgEntry.EndTime);
+        url += "?utc=" + n_to_string(startTime)+"&lutc=" + n_to_string(time(nullptr));
         return  url;
     }
     

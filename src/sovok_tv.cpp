@@ -444,25 +444,7 @@ void SovokTV::BuildChannelAndGroupList()
 }
 
 
-bool SovokTV::FindEpg(unsigned int brodcastId, SovokEpgEntry& epgEntry)
-{
-    if(m_epgEntries.count(brodcastId) == 0)
-        return false;
-    
-    epgEntry = m_epgEntries[brodcastId];
-    //Log((string(" >>>> Pogramm:") + epgEntry.Title + "<<<<<").c_str());
-    
-    //string url = GetArchiveForEpg(*result);
-    
-    return true;
-}
-
-std::string SovokTV::GetArchiveForEpg(const SovokEpgEntry& epgEntry)
-{
-    return  GetArchive(epgEntry.ChannelId, epgEntry.StartTime + m_serverTimeShift);
-}
-
-std::string SovokTV::GetArchive(ChannelId channelId, time_t startTime)
+std::string SovokTV::GetArchiveUrl(ChannelId channelId, time_t startTime)
 {
     string url;
     ParamList params;

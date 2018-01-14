@@ -166,8 +166,6 @@ PVR_ERROR PuzzlePVRClient::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANN
 }
 PVR_ERROR  PuzzlePVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
 {
-//    SovokEpgEntry epgEntry;
-//    m_sovokTV->FindEpg(item.data.iEpgUid, epgEntry);
     return PVR_ERROR_NOT_IMPLEMENTED;
     
 }
@@ -303,17 +301,6 @@ PVR_ERROR PuzzlePVRClient::GetRecordings(ADDON_HANDLE handle, bool deleted)
 bool PuzzlePVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
 {
     return false;
-    
-//    SovokEpgEntry epgTag;
-//    
-//    unsigned int epgId = recording.iEpgEventId;
-//    if( epgId == 0 )
-//        epgId = strtoi(recording.strRecordingId);
-//    if(!m_sovokTV->FindEpg(epgId, epgTag))
-//        return false;
-//    
-//    string url = m_sovokTV->GetArchiveForEpg(epgTag);
-//    return PVRClientBase::OpenRecordedStream(url);
 }
 
 PVR_ERROR PuzzlePVRClient::CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
