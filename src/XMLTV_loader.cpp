@@ -27,7 +27,7 @@
  */
 
 #include "p8-platform/util/StringUtils.h"
-#include "p8-platform/posix/os-types.h"
+#include "p8-platform/os.h"
 #include "XMLTV_loader.hpp"
 #include "zlib.h"
 #include "rapidxml/rapidxml.hpp"
