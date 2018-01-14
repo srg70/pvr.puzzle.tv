@@ -278,7 +278,10 @@ bool OttPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     if(NULL == m_core)
         return PVR_ERROR_SERVER_ERROR;
     
-    string url = m_core->GetArchiveUrl(recording.iChannelUid, recording.recordingTime, recording.iDuration);
+    // NOTE: Kodi does NOT provide recording.iChannelUid for unknown reason
+    // Worrkaround: use EPG entry
+    PvrClient::ChannelId channelId =  m_core->GetEpgList().at(stoi(recording.strRecordingId)).ChannelId;
+    string url = m_core->GetArchiveUrl(channelId, recording.recordingTime, recording.iDuration);
     return PVRClientBase::OpenRecordedStream(url);
 }
 

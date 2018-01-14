@@ -453,8 +453,12 @@ bool SovokPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
 {
     if(!HasCore())
         return false;
-
-    string url = m_sovokTV->GetArchiveUrl(recording.iChannelUid, recording.recordingTime);
+    
+    // NOTE: Kodi does NOT provide recording.iChannelUid for unknown reason
+    // Worrkaround: use EPG entry
+    PvrClient::ChannelId channelId =  m_sovokTV->GetEpgList().at(stoi(recording.strRecordingId)).ChannelId;
+    
+    string url = m_sovokTV->GetArchiveUrl(channelId, recording.recordingTime);
     return PVRClientBase::OpenRecordedStream(url);
 }
 
