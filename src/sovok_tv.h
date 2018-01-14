@@ -100,7 +100,6 @@ struct SovokEpgCaheEntry
     const time_t StartTime;
 };
 
-typedef std::map<int, PvrClient::Group> GroupList;
 typedef std::map<UniqueBroadcastIdType, SovokEpgEntry> EpgEntryList;
 //typedef std::vector<SovokEpgCaheEntry> EpgCache;
 typedef std::map<std::string, std::string> ParamList;
@@ -244,7 +243,7 @@ private:
     
     PvrClient::ChannelList m_channelList;
     SovokArchivesInfo  m_archivesInfo;
-    GroupList m_groupList;
+    PvrClient::GroupList m_groupList;
     struct CountryFilterPrivate : public CountryFilter {
         CountryFilterPrivate() {IsOn = false;}
         CountryFilterPrivate(const CountryFilter& filter)
@@ -256,7 +255,7 @@ private:
         {
            return *this = CountryFilterPrivate(filter);
         }
-        std::vector<GroupList::key_type>  Groups;
+        std::vector<PvrClient::GroupList::key_type>  Groups;
     }m_countryFilter;
     
     EpgEntryList m_epgEntries;
