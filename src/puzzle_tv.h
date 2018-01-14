@@ -69,7 +69,6 @@ namespace PuzzleEngine
     typedef std::map<UniqueBroadcastIdType, EpgEntry> EpgEntryList;
     //typedef std::vector<EpgCaheEntry> EpgCache;
     typedef std::map<std::string, std::string> ParamList;
-    typedef std::set<int> FavoriteList;
     typedef std::vector<std::string> StreamerNamesList;
     typedef std::set<ArchiveEntry> ArchiveList;
 

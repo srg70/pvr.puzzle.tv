@@ -103,7 +103,6 @@ struct SovokEpgCaheEntry
 typedef std::map<UniqueBroadcastIdType, SovokEpgEntry> EpgEntryList;
 //typedef std::vector<SovokEpgCaheEntry> EpgCache;
 typedef std::map<std::string, std::string> ParamList;
-typedef std::set<PvrClient::ChannelId > FavoriteList;
 typedef std::vector<std::string> StreamerNamesList;
 typedef std::map<PvrClient::ChannelId , int> SovokArchivesInfo;
 
@@ -193,7 +192,7 @@ public:
     std::string GetUrl(PvrClient::ChannelId  channelId);
     std::string GetArchiveUrl(PvrClient::ChannelId  channelId, time_t startTime);
 
-    FavoriteList GetFavorites();
+    PvrClient::FavoriteList GetFavorites();
 
     int GetSreamerId() const { return m_streammerId; }
     void SetStreamerId(int streamerId);
