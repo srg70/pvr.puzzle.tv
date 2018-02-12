@@ -115,8 +115,10 @@ namespace EdemEngine
                 
                 P8PLATFORM::CLockObject lock(m_engine->m_epgAccessMutex);
                 time_t now = time(nullptr);
+                const time_t archivePeriod = 4 * 24 * 60 * 60; //4 days in secs
                 for(const auto& i : m_engine->m_epgEntries) {
-                    if(i.second.HasArchive &&  i.second.StartTime < now)
+                    auto when = now - i.second.StartTime;
+                    if(i.second.HasArchive &&   when > 0 && when < archivePeriod)
                         m_engine->m_archiveList.insert(i.first);
                 }
                 m_engine->SaveEpgCache();
@@ -311,6 +313,8 @@ namespace EdemEngine
                     EpgEntryList::key_type k = (*it)["k"].GetInt64();
                     EpgEntryList::mapped_type e;
                     e.Deserialize((*it)["v"]);
+                    if(m_channelList.count(e.ChannelId) != 1)
+                        continue;
                     m_epgEntries[k] = e;
                 }
             });
@@ -324,7 +328,7 @@ namespace EdemEngine
     bool Core::StartArchivePollingWithCompletion(std::function<void(void)> action)
     {
         if(m_archiveLoader)
-        return false;
+            return false;
         
         m_archiveLoader = new HelperThread(m_addonHelper, this, action);
         m_archiveLoader->CreateThread(false);
@@ -365,6 +369,9 @@ namespace EdemEngine
     
     void Core::GetEpg(ChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries)
     {
+        if(m_archiveLoader)
+            m_archiveLoader->EpgActivityStarted();
+        
         P8PLATFORM::CLockObject lock(m_epgAccessMutex);
 
         time_t moreStartTime = startTime;
@@ -384,11 +391,18 @@ namespace EdemEngine
         if(needMore ) {
             UpdateEpgForAllChannels(channelId, moreStartTime, endTime);
         }
+        if(m_archiveLoader)
+            m_archiveLoader->EpgActivityDone();
     }
     
     bool Core::AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry)
     {
         unsigned int id = xmlEpgEntry.startTime;
+        
+        // Do not add EPG for unknown channels
+        if(m_channelList.count(xmlEpgEntry.iChannelId) != 1)
+           return false;
+
         while( m_epgEntries.count(id) != 0) {
             // Do not override existing EPG.
             if(m_epgEntries[id].ChannelId == xmlEpgEntry.iChannelId)
@@ -401,7 +415,7 @@ namespace EdemEngine
         epgEntry.Description = xmlEpgEntry.strPlot;
         epgEntry.StartTime = xmlEpgEntry.startTime;
         epgEntry.EndTime = xmlEpgEntry.endTime;
-        epgEntry.HasArchive = false;
+        epgEntry.HasArchive = true;
         m_epgEntries[id] =  epgEntry;
 
         return true;
@@ -585,7 +599,7 @@ namespace EdemEngine
         channel.Name = name;
         channel.Number = plistIndex;
         channel.Urls.push_back(url);
-        channel.HasArchive = false;
+        channel.HasArchive = true;
         //channel.IconPath = m_logoUrl + FindVar(vars, 0, c_LOGO);
         channel.IsRadio = false;
         channels[channel.Name] = PlaylistContent::mapped_type(channel,groupName);

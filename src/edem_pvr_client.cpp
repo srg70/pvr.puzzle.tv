@@ -138,7 +138,7 @@ PVR_ERROR EdemPVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabilit
     pCapabilities->bSupportsRadio = false;
     pCapabilities->bSupportsChannelGroups = true;
     pCapabilities->bHandlesInputStream = true;
-    pCapabilities->bSupportsRecordings = false;
+    pCapabilities->bSupportsRecordings = true;
     
     pCapabilities->bSupportsTimers = false;
     pCapabilities->bSupportsChannelScan = false;
@@ -200,7 +200,6 @@ bool EdemPVRClient::SwitchChannel(const PVR_CHANNEL& channel)
 
 int EdemPVRClient::GetRecordingsAmount(bool deleted)
 {
-    return -1;
     
     if(NULL == m_core)
         return -1;
@@ -229,7 +228,6 @@ int EdemPVRClient::GetRecordingsAmount(bool deleted)
 }
 PVR_ERROR EdemPVRClient::GetRecordings(ADDON_HANDLE handle, bool deleted)
 {
-    return PVR_ERROR_NOT_IMPLEMENTED;
 
     if(deleted)
         return PVR_ERROR_NOT_IMPLEMENTED;
@@ -279,9 +277,11 @@ PVR_ERROR EdemPVRClient::GetRecordings(ADDON_HANDLE handle, bool deleted)
 
 bool EdemPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
 {
-    return false;
-    
-    string url = m_core->GetArchiveUrl(recording.iChannelUid, recording.recordingTime);
+    // NOTE: Kodi does NOT provide recording.iChannelUid for unknown reason
+    // Worrkaround: use EPG entry
+    PvrClient::ChannelId channelId =  m_core->GetEpgList().at(stoi(recording.strRecordingId)).ChannelId;
+
+    string url = m_core->GetArchiveUrl(channelId, recording.recordingTime);
     return PVRClientBase::OpenRecordedStream(url);
 }
 
