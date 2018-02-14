@@ -246,6 +246,16 @@ namespace Buffers {
         return bytesRead < 0; // 0 (i.e. EOF) means no error, caller may continue with next chunk
     }
     
+    bool PlaylistBuffer::IsStopped(uint32_t timeoutInSec) {
+        P8PLATFORM::CTimeout timeout(timeoutInSec * 1000);
+        bool isStoppedOrTimeout = P8PLATFORM::CThread::IsStopped() || timeout.TimeLeft() == 0;
+        while(!isStoppedOrTimeout) {
+            isStoppedOrTimeout = P8PLATFORM::CThread::IsStopped() || timeout.TimeLeft() == 0;
+            Sleep(1000);//1sec
+        }
+        return P8PLATFORM::CThread::IsStopped();
+    }
+
     void *PlaylistBuffer::Process()
     {
         bool isEof = false;
@@ -261,11 +271,11 @@ namespace Buffers {
                 auto it = m_segmentUrls.begin();
                 auto end = m_segmentUrls.end();
                 //            float sleepInterval = 0;
-                float sleepTime = 1000; //Min sleep time 1 sec
+                float sleepTime = 1; //Min sleep time 1 sec
                 while (it != end && !isEof  && !IsStopped()) {
                     isEof = FillSegment(it->second);
                     auto duration = it->second.first;
-                    sleepTime = duration * 1000;
+                    sleepTime = duration;
                     m_addonHelper->Log(LOG_DEBUG, ">>> Segment duration: %f", duration);
                     //                sleepInterval += duration;
                     ++it;
@@ -273,17 +283,11 @@ namespace Buffers {
                 }
                 m_segmentUrls.clear();
                 
-                //            sleepInterval = 10;
-                //            while(sleepInterval > 0 && !isEof && !IsStopped()) {
-                //                m_addonHelper->Log(LOG_DEBUG, ">>> Write threads sleep: %f ", sleepInterval);
-                //                sleepInterval -= 1,0;
-                //                P8PLATFORM::CEvent::Sleep(1000);
-                //            }
-                if(m_isVod) {
+                 if(m_isVod) {
                     m_addonHelper->Log(LOG_DEBUG, ">>> PlaylistBuffer: write is done");
                     break;
                 }
-                Sleep(sleepTime);
+                IsStopped(sleepTime);
             }
             
         } catch (InputBufferException& ex ) {
@@ -386,11 +390,11 @@ namespace Buffers {
         bool retVal = false;
         while(!(retVal = this->CThread::StopThread(iWaitMs))){
             if(stopCounter++ > 3)
-            break;
-            m_addonHelper->Log(LOG_NOTICE, "PlaylistBuffer: can't stop thread in %d ms", iWaitMs);
+                break;
+            m_addonHelper->Log(LOG_NOTICE, "PlaylistBuffer: can't stop thread in %d ms (%d)", iWaitMs, stopCounter - 1);
         }
         if(!retVal)
-        m_addonHelper->Log(LOG_ERROR, "PlaylistBuffer: can't stop thread in %d ms", stopCounter*iWaitMs);
+            m_addonHelper->Log(LOG_ERROR, "PlaylistBuffer: failed to stop thread in %d ms", stopCounter*iWaitMs);
         
         return retVal;
     }

@@ -94,6 +94,7 @@ namespace Buffers
         void SetBestPlaylist(const std::string& playlistUrl);
         void LoadPlaylist(std::string& data);
         bool FillSegment(const TSegmentUrls::mapped_type& segment);
+        bool IsStopped(uint32_t timeoutInSec = 0);
     };
  
     class PlistBufferException : public InputBufferException
