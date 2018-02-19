@@ -40,10 +40,18 @@ namespace ADDON
 
 namespace Buffers
 {
+    class IPlaylistBufferDelegate
+    {
+    public:
+        virtual time_t Duration() const= 0;
+        virtual std::string UrlForTimeshift(time_t timeshift, time_t* timeshiftAdjusted) const = 0;
+    };
+    typedef  std::shared_ptr<IPlaylistBufferDelegate> PlaylistBufferDelegate;
+    
     class PlaylistBuffer :  public InputBuffer, public P8PLATFORM::CThread
     {
     public:
-        PlaylistBuffer(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &streamUrl);
+        PlaylistBuffer(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &streamUrl,  PlaylistBufferDelegate delegate);
         ~PlaylistBuffer();
         
         int64_t GetLength() const;
@@ -64,17 +72,21 @@ namespace Buffers
         public:
             //        ADDON::CHelper_libXBMC_addon *m_addonHelper;
             
-            Segment();
-            Segment(const uint8_t* buffer, size_t size);
+            Segment(float duration);
+            Segment(const uint8_t* buffer, size_t size, float duration);
             void Push(const uint8_t* buffer, size_t size);
             const uint8_t* Pop(size_t requesred, size_t*  actual);
             size_t Read(uint8_t* buffer, size_t size);
             size_t BytesReady() const {return  _size - (_begin - &_data[0]);}
+            float Bitrate() const { return  _duration == 0.0 ? 0.0 : _size/_duration;}
+            float Duration() const {return _duration;}
+            float Length() const {return _size;}
             ~Segment();
         private:
             uint8_t* _data;
             size_t _size;
             const uint8_t* _begin;
+            const float _duration;
         };
         typedef std::map<uint64_t, std::pair<float, std::string> > TSegmentUrls;
         typedef std::list<std::shared_ptr<Segment> >  TSegments;
@@ -87,16 +99,23 @@ namespace Buffers
         mutable P8PLATFORM::CMutex m_syncAccess;
         P8PLATFORM::CEvent m_writeEvent;
         bool m_isVod;
+        int64_t m_totalLength;
+        float m_totalDuration;
+        PlaylistBufferDelegate m_delegate;
+        int64_t m_position;
         
         void *Process();
         void Init(const std::string &playlistUrl);
         void ParsePlaylist(const std::string& data);
         void SetBestPlaylist(const std::string& playlistUrl);
         void LoadPlaylist(std::string& data);
-        bool FillSegment(const TSegmentUrls::mapped_type& segment);
+        bool FillSegment(const TSegmentUrls::mapped_type& segment, float* bitrate = nullptr);
         bool IsStopped(uint32_t timeoutInSec = 0);
+        float Bitrate() const {
+            return m_totalLength / (m_totalDuration + 0.01);
+        }
     };
- 
+    
     class PlistBufferException : public InputBufferException
     {
     public:
@@ -109,6 +128,6 @@ namespace Buffers
     private:
         std::string m_reason;
     };
-
+    
 }
 #endif //plist_buffer_h

@@ -31,6 +31,7 @@
 class CHelper_libXBMC_pvr;
 namespace Buffers {
     class InputBuffer;
+    class IPlaylistBufferDelegate;
 }
 
 namespace PvrClient
@@ -95,7 +96,7 @@ namespace PvrClient
         IClientCore* m_clientCore;
         
         bool OpenLiveStream(const std::string& url );
-        bool OpenRecordedStream(const std::string& url);
+        bool OpenRecordedStream(const std::string& url, Buffers::IPlaylistBufferDelegate* delegate);
         bool SwitchChannel(const std::string& url);
         const std::string& GetClientPath() const { return m_clientPath;}
         const std::string& GetUserPath() const { return m_userPath;}

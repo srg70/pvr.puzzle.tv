@@ -41,6 +41,7 @@
 #include "edem_pvr_client.h"
 #include "helpers.h"
 #include "edem_player.h"
+#include "plist_buffer.h"
 
 using namespace std;
 using namespace ADDON;
@@ -48,6 +49,7 @@ using namespace EdemEngine;
 
 static const char* c_playlist_setting = "edem_playlist_url";
 static const char* c_epg_setting = "edem_epg_url";
+static const char* c_seek_archives = "edem_seek_archives";
 
 ADDON_STATUS EdemPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,
                                PVR_PROPERTIES* pvrprops)
@@ -63,6 +65,9 @@ ADDON_STATUS EdemPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_lib
     if (m_addonHelper->GetSetting(c_epg_setting, &buffer))
         m_epgUrl = buffer;
     
+    m_supportSeek = false;
+    m_addonHelper->GetSetting(c_seek_archives, &m_supportSeek);
+
     try
     {
         CreateCore();
@@ -124,6 +129,9 @@ ADDON_STATUS EdemPVRClient::SetSetting(const char *settingName, const void *sett
         }catch (AuthFailedException &) {
             m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32011));
         }
+    }
+    else if(strcmp(settingName,  c_seek_archives) == 0) {
+        m_supportSeek = *(const bool*) settingValue;
     }
     else {
         result = PVRClientBase::SetSetting(settingName, settingValue);
@@ -275,14 +283,44 @@ PVR_ERROR EdemPVRClient::GetRecordings(ADDON_HANDLE handle, bool deleted)
     return result;
 }
 
+class EdemArchiveDelegate : public Buffers::IPlaylistBufferDelegate
+{
+public:
+    EdemArchiveDelegate(EdemEngine::Core* core, const PVR_RECORDING &recording)
+    : _duration(recording.iDuration)
+    , _recordingTime(recording.recordingTime)
+    , _core(core)
+    {
+        // NOTE: Kodi does NOT provide recording.iChannelUid for unknown reason
+        // Worrkaround: use EPG entry
+        _channelId =  _core->GetEpgList().at(stoi(recording.strRecordingId)).ChannelId;
+
+    }
+    virtual time_t Duration() const { return _duration;}
+    virtual std::string UrlForTimeshift(time_t timeshiftReqested, time_t* timeshiftAdjusted = nullptr) const
+    {
+        auto startTime = std::min(_recordingTime + timeshiftReqested, _recordingTime + _duration);
+        if(startTime < _recordingTime)
+            startTime = _recordingTime;
+        if(timeshiftAdjusted)
+            *timeshiftAdjusted = startTime - _recordingTime;
+        return  _core->GetArchiveUrl(_channelId, startTime);
+    }
+    
+private:
+    const time_t _duration;
+    const time_t _recordingTime;
+    PvrClient::ChannelId _channelId;
+    EdemEngine::Core* _core;
+};
+
 bool EdemPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
 {
-    // NOTE: Kodi does NOT provide recording.iChannelUid for unknown reason
-    // Worrkaround: use EPG entry
-    PvrClient::ChannelId channelId =  m_core->GetEpgList().at(stoi(recording.strRecordingId)).ChannelId;
-
-    string url = m_core->GetArchiveUrl(channelId, recording.recordingTime);
-    return PVRClientBase::OpenRecordedStream(url);
+    auto delegate = new EdemArchiveDelegate(m_core, recording);
+    string url = delegate->UrlForTimeshift(0);
+    if(m_supportSeek)
+        return PVRClientBase::OpenRecordedStream(url, delegate);
+    return PVRClientBase::OpenRecordedStream(url, nullptr);
 }
 
 PVR_ERROR EdemPVRClient::CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)

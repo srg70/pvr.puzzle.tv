@@ -157,6 +157,10 @@ msgctxt "#50001"
 msgid "EPG Path (XMLTV)"
 msgstr "EPG Path (XMLTV)"
 
+msgctxt "#50002"
+msgid "Seek Recordings (Experimental)"
+msgstr "Seek Recordings (Experimental)"
+
 msgctxt "#50010"
 msgid "Edem Player"
 msgstr "Edem"

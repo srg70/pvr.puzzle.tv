@@ -68,6 +68,7 @@ private:
     EdemEngine::Core* m_core;
     std::string m_playlistUrl;
     std::string m_epgUrl;
+    bool m_supportSeek;
 };
 
 #endif //__edem_pvr_client_h__

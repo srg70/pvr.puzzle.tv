@@ -342,7 +342,7 @@ bool PVRClientBase::OpenLiveStream(const std::string& url )
         const std::string m3uExt = ".m3u";
         const std::string m3u8Ext = ".m3u8";
         if( url.find(m3u8Ext) != std::string::npos || url.find(m3uExt) != std::string::npos)
-            buffer = new Buffers::PlaylistBuffer(m_addonHelper, url);
+            buffer = new Buffers::PlaylistBuffer(m_addonHelper, url, NULL);
         else
             buffer = new DirectBuffer(m_addonHelper, url);
         
@@ -420,7 +420,7 @@ void PVRClientBase::SetTimeshiftBufferType(PVRClientBase::TimeshiftBufferType ty
     m_timeshiftBufferType = type;
 }
 
-bool PVRClientBase::OpenRecordedStream(const std::string& url)
+bool PVRClientBase::OpenRecordedStream(const std::string& url,  Buffers::IPlaylistBufferDelegate* delegate)
 {
      if (url.empty())
         return false;
@@ -432,19 +432,20 @@ bool PVRClientBase::OpenRecordedStream(const std::string& url)
         const std::string m3uExt = ".m3u";
         const std::string m3u8Ext = ".m3u8";
         const bool isM3u = url.find(m3u8Ext) != std::string::npos || url.find(m3uExt) != std::string::npos;
+        Buffers::PlaylistBufferDelegate plistDelegate(delegate);
         if(isM3u)
-            buffer = new Buffers::PlaylistBuffer(m_addonHelper, url);
+            buffer = new Buffers::PlaylistBuffer(m_addonHelper, url, plistDelegate);
         else
             buffer = new ArchiveBuffer(m_addonHelper, url);
         
-        if (m_isTimeshiftEnabled && isM3u){
-            if(k_TimeshiftBufferFile == m_timeshiftBufferType) {
-                m_recordBuffer = new Buffers::TimeshiftBuffer(m_addonHelper, buffer, new Buffers::FileCacheBuffer(m_addonHelper, m_CacheDir, m_timshiftBufferSize /  Buffers::FileCacheBuffer::CHUNK_FILE_SIZE_LIMIT));
-            } else {
-                m_recordBuffer = new Buffers::TimeshiftBuffer(m_addonHelper, buffer, new Buffers::MemoryCacheBuffer(m_addonHelper, m_timshiftBufferSize /  Buffers::MemoryCacheBuffer::CHUNK_SIZE_LIMIT));
-            }
-        }
-        else
+//        if (m_isTimeshiftEnabled && isM3u){
+//            if(k_TimeshiftBufferFile == m_timeshiftBufferType) {
+//                m_recordBuffer = new Buffers::TimeshiftBuffer(m_addonHelper, buffer, new Buffers::FileCacheBuffer(m_addonHelper, m_CacheDir, m_timshiftBufferSize /  Buffers::FileCacheBuffer::CHUNK_FILE_SIZE_LIMIT));
+//            } else {
+//                m_recordBuffer = new Buffers::TimeshiftBuffer(m_addonHelper, buffer, new Buffers::MemoryCacheBuffer(m_addonHelper, m_timshiftBufferSize /  Buffers::MemoryCacheBuffer::CHUNK_SIZE_LIMIT));
+//            }
+//        }
+//        else
             m_recordBuffer = buffer;
     }
     catch (InputBufferException & ex)

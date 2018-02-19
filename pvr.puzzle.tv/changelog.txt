@@ -1,3 +1,6 @@
+0.5.4
+- Archives support for Edem provider (beta)
+
 0.5.0
 - Added initial support for Edem provider
 

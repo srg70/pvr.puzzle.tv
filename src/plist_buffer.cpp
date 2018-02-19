@@ -37,7 +37,7 @@ using namespace ADDON;
 
 namespace Buffers {
     
-      
+    
     static std::string ToAbsoluteUrl(const std::string& url, const std::string& baseUrl){
         const char* c_HTTP = "http://";
         
@@ -46,17 +46,20 @@ namespace Buffers {
             // Append site prefix...
             auto urlPos = baseUrl.find(c_HTTP);
             if(std::string::npos == urlPos)
-            throw PlistBufferException((std::string("Missing http:// in base URL: ") + baseUrl).c_str());
+                throw PlistBufferException((std::string("Missing http:// in base URL: ") + baseUrl).c_str());
             urlPos = baseUrl.rfind('/');
             if(std::string::npos == urlPos)
-            throw PlistBufferException((std::string("No '/' in base URL: ") + baseUrl).c_str());
+                throw PlistBufferException((std::string("No '/' in base URL: ") + baseUrl).c_str());
             return baseUrl.substr(0, urlPos + 1) + url;
         }
         return url;
         
     }
-    PlaylistBuffer::PlaylistBuffer(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &playListUrl) :
-    m_addonHelper(addonHelper)
+    PlaylistBuffer::PlaylistBuffer(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &playListUrl,  PlaylistBufferDelegate delegate)
+    : m_addonHelper(addonHelper)
+    , m_totalLength(0)
+    , m_totalDuration(0.0)
+    , m_delegate(delegate)
     {
         Init(playListUrl);
     }
@@ -68,10 +71,15 @@ namespace Buffers {
     
     void PlaylistBuffer::Init(const std::string &playListUrl)
     {
-        StopThread();
-        m_writeEvent.Reset();
-        m_segmentUrls.clear();
-        m_segments.clear();
+        StopThread(20000);
+        {
+            CLockObject lock(m_syncAccess);
+
+            m_writeEvent.Reset();
+            m_segmentUrls.clear();
+            m_segments.clear();
+            m_position = 0;
+        }
         SetBestPlaylist(playListUrl);
         CreateThread();
     }
@@ -82,12 +90,12 @@ namespace Buffers {
         
         auto pos = data.find(c_BAND);
         if(std::string::npos == pos)
-        throw PlistBufferException("Invalid playlist format: missing BANDWIDTH in #EXT-X-STREAM-INF tag.");
+            throw PlistBufferException("Invalid playlist format: missing BANDWIDTH in #EXT-X-STREAM-INF tag.");
         pos += strlen(c_BAND);
         uint64_t bandwidth = std::stoull(data.substr(pos), &pos);
         pos = data.find('\n', pos);
         if(std::string::npos == pos)
-        throw PlistBufferException("Invalid playlist format: missing NEW LINE in #EXT-X-STREAM-INF tag.");
+            throw PlistBufferException("Invalid playlist format: missing NEW LINE in #EXT-X-STREAM-INF tag.");
         url = data.substr(++pos);
         trim(url);
         return bandwidth;
@@ -117,7 +125,7 @@ namespace Buffers {
             auto endTag = data.find(c_XINF,pos);
             std::string::size_type tagLen = endTag - pos;
             if(std::string::npos == endTag)
-            tagLen = std::string::npos;
+                tagLen = std::string::npos;
             
             std::string tagBody = data.substr(pos, tagLen);
             pos = endTag;
@@ -153,7 +161,7 @@ namespace Buffers {
                 pos += strlen(c_SEQ);
                 body = data.substr(pos);
                 mediaIndex = std::stoull(body, &pos);
-               m_isVod = false;
+                m_isVod = false;
             } else {
                 // ... otherwise check plist type. VOD list may ommit sequence ID
                 pos = data.find(c_TYPE);
@@ -187,9 +195,9 @@ namespace Buffers {
                 m_lastSegment = mediaIndex;
                 std::string::size_type urlLen = pos - urlPos;
                 if(std::string::npos == pos)
-                urlLen = std::string::npos;
+                    urlLen = std::string::npos;
                 auto url = body.substr(urlPos, urlLen);
-				trim(url);
+                trim(url);
                 url = ToAbsoluteUrl(url, m_playListUrl);
                 //            m_addonHelper->Log(LOG_NOTICE, "IDX: %u Duration: %f. URL: %s", mediaIndex, duration, url.c_str());
                 m_segmentUrls[mediaIndex++]  = TSegmentUrls::mapped_type(duration, url);
@@ -208,9 +216,9 @@ namespace Buffers {
     void PlaylistBuffer::LoadPlaylist(std::string& data)
     {
         char buffer[1024];
-        auto f = m_addonHelper->OpenFile(m_playListUrl.c_str(), 0);
+        auto f = m_addonHelper->OpenFile(m_playListUrl.c_str(), XFILE::READ_NO_CACHE);
         if (!f)
-        throw PlistBufferException("Failed to obtain playlist from server.");
+            throw PlistBufferException("Failed to obtain playlist from server.");
         bool isEof = false;
         do{
             buffer[0]= 0;
@@ -221,14 +229,14 @@ namespace Buffers {
         m_addonHelper->CloseFile(f);
     }
     
-    bool PlaylistBuffer::FillSegment(const PlaylistBuffer::TSegmentUrls::mapped_type& segment)
+    bool PlaylistBuffer::FillSegment(const PlaylistBuffer::TSegmentUrls::mapped_type& segment, float* _)
     {
         unsigned char buffer[8196];
         void* f = m_addonHelper->OpenFile(segment.second.c_str(), XFILE::READ_NO_CACHE | XFILE::READ_CHUNKED); //XFILE::READ_AUDIO_VIDEO);
         if(!f)
             throw PlistBufferException("Failed to download playlist media segment.");
         
-        auto segmentData = new TSegments::value_type::element_type();
+        auto segmentData = new TSegments::value_type::element_type(segment.first);
         //    segmentData->m_addonHelper = m_addonHelper;
         ssize_t  bytesRead;
         do {
@@ -239,10 +247,23 @@ namespace Buffers {
         
         m_addonHelper->CloseFile(f);
         
-        CLockObject lock(m_syncAccess);
-        m_segments.push_back(TSegments::value_type(segmentData));
-        //    m_addonHelper->Log(LOG_DEBUG, ">>> Segment added (%d)", m_segments.size());
-        
+        float bitrate = 0.0;
+        size_t segmantsSize = 0;
+        if(!IsStopped()) {
+            {
+                CLockObject lock(m_syncAccess);
+                m_segments.push_back(TSegments::value_type(segmentData));
+                m_totalDuration += segmentData->Duration();
+                m_totalLength += segmentData->Length();
+                bitrate = Bitrate();
+                segmantsSize = m_segments.size();
+            }
+            m_addonHelper->Log(LOG_DEBUG, ">>> Segment added (%d). Bitrate %f", segmantsSize, segmentData->Bitrate());
+            m_addonHelper->Log(LOG_DEBUG, ">>> Average bitrate: %f", bitrate);
+        }
+    
+
+    
         return bytesRead < 0; // 0 (i.e. EOF) means no error, caller may continue with next chunk
     }
     
@@ -255,7 +276,7 @@ namespace Buffers {
         }
         return P8PLATFORM::CThread::IsStopped();
     }
-
+    
     void *PlaylistBuffer::Process()
     {
         bool isEof = false;
@@ -270,20 +291,30 @@ namespace Buffers {
                 //isEof = m_segmentUrls.size() == 0;
                 auto it = m_segmentUrls.begin();
                 auto end = m_segmentUrls.end();
-                //            float sleepInterval = 0;
                 float sleepTime = 1; //Min sleep time 1 sec
+//                float totalBitrate = 0.0;
                 while (it != end && !isEof  && !IsStopped()) {
-                    isEof = FillSegment(it->second);
+//                    float bitrate = 0.0;
+                    isEof = FillSegment(it->second, nullptr);
+//                    m_addonHelper->Log(LOG_DEBUG, ">>> Average bitrate: %f", m_bitrate);
+
+//                    totalBitrate += bitrate;
                     auto duration = it->second.first;
                     sleepTime = duration;
                     m_addonHelper->Log(LOG_DEBUG, ">>> Segment duration: %f", duration);
                     //                sleepInterval += duration;
                     ++it;
-                    m_writeEvent.Signal();
+                    if(!IsStopped())
+                        m_writeEvent.Signal();
                 }
+//                if(m_bitrate == 0.0 && totalBitrate != 0.0){
+//                    m_bitrate =  totalBitrate / m_segmentUrls.size();
+//                    m_addonHelper->Log(LOG_DEBUG, ">>> Average Bitrate: %f", m_bitrate);
+//                }
+
                 m_segmentUrls.clear();
-                
-                 if(m_isVod) {
+
+                if(m_isVod) {
                     m_addonHelper->Log(LOG_DEBUG, ">>> PlaylistBuffer: write is done");
                     break;
                 }
@@ -321,7 +352,7 @@ namespace Buffers {
             {
                 //            StopThread();
                 m_addonHelper->Log(LOG_NOTICE, "PlaylistBuffer: no segment for read.");
-                    break;
+                break;
             }
             
             size_t bytesToRead;
@@ -330,11 +361,10 @@ namespace Buffers {
             {
                 bytesToRead = bufferSize - totalBytesRead;
                 bytesRead = segment->Read( buffer + totalBytesRead, bytesToRead);
-                //            m_addonHelper->Log(LOG_DEBUG, ">>> Read: %d", bytesRead);
                 totalBytesRead += bytesRead;
             }while(bytesToRead > 0 && bytesRead > 0);
-            
-            bool hasData = segment->BytesReady() > 0 ;
+
+
             // Release empty segment
             if(segment->BytesReady() <= 0){
                 CLockObject lock(m_syncAccess);
@@ -347,16 +377,19 @@ namespace Buffers {
             //        m_position += bytesRead;
             
         }
-        CLockObject lock(m_syncAccess);
-        bool hasMoreData = m_segments.size() > 0  ||  (!IsStopped() && IsRunning());
+        m_position += totalBytesRead;
+//        m_addonHelper->Log(LOG_DEBUG, ">>> PlaylistBuffer::Read(): totalBytesRead %d, position %lld", totalBytesRead, m_position);
+
+        bool hasMoreData = false;
+        {
+            CLockObject lock(m_syncAccess);
+            hasMoreData = m_segments.size() > 0  ||  (!IsStopped() && IsRunning());
+        }
         if(!hasMoreData)
             m_addonHelper->Log(LOG_DEBUG, ">>> PlaylistBuffer: read is done. No more data.");
-
-        return (hasMoreData) ? totalBytesRead : -1;
-    }
-    
-    int64_t PlaylistBuffer::Seek(int64_t iPosition, int iWhence)
-    {
+        
+        if (hasMoreData)
+            return totalBytesRead;
         return -1;
     }
     
@@ -376,22 +409,116 @@ namespace Buffers {
     
     int64_t PlaylistBuffer::GetLength() const
     {
-        return -1;
+        if(m_isVod || m_delegate == nullptr) {
+            m_addonHelper->Log(LOG_DEBUG, "Plist archive lenght -1");
+            return -1;
+        }
+        float bitrate = 0.0;
+        {
+            CLockObject lock(m_syncAccess);
+            bitrate = Bitrate();
+         }
+        int64_t retVal = m_delegate->Duration() * bitrate;
+       m_addonHelper->Log(LOG_DEBUG, "Plist archive lenght %lld (bitrate %f)", retVal, bitrate);
+        return retVal;
     }
     
     int64_t PlaylistBuffer::GetPosition() const
     {
-        return -1;
+        if(m_isVod || m_delegate == nullptr) {
+            m_addonHelper->Log(LOG_DEBUG, "Plist archive position =1");
+            return -1;
+        }
+        m_addonHelper->Log(LOG_DEBUG, "Plist archive position %lld", m_position);
+        return m_position;
+    }
+    
+    int64_t PlaylistBuffer::Seek(int64_t iPosition, int iWhence)
+    {
+        if(m_isVod || m_delegate == nullptr)
+            return -1;
+        
+        m_addonHelper->Log(LOG_DEBUG, "PlaylistBuffer::Seek. >>> Requested pos %lld, from %d", iPosition, iWhence);
+        
+        // Translate position to offset from start of buffer.
+        int64_t length = GetLength();
+        int64_t begin = 0;
+        
+        if(iWhence == SEEK_CUR) {
+            iPosition = m_position + iPosition;
+        } else if(iWhence == SEEK_END) {
+            iPosition = length + iPosition;
+        }
+        if(iPosition < 0 )
+            m_addonHelper->Log(LOG_DEBUG, "PlaylistBuffer::Seek. Can't be pos %lld", iPosition);
+
+        if(iPosition > length) {
+            iPosition = length;
+        }
+        if(iPosition < begin) {
+            iPosition = begin;
+        }
+        iWhence = SEEK_SET;
+        m_addonHelper->Log(LOG_DEBUG, "PlaylistBuffer::Seek. Calculated pos %lld", iPosition);
+        
+        int64_t seekDelta =  iPosition - m_position;
+        if(seekDelta == 0)
+            return m_position;
+        
+        // If we seek forward for less than 5M, just read, Avoid reinitialization of playlist.
+        if(seekDelta > 0 && seekDelta < 5 * 1024 * 1024) {
+            unsigned char* dummy = new unsigned char[seekDelta];
+            if(dummy) {
+                Read(&dummy[0], seekDelta, 0);
+                delete [] dummy;
+                dummy = nullptr;
+            }
+            return m_position;
+        }
+        
+        try {
+            
+            float bitrate = 0.0;
+            {
+                CLockObject lock(m_syncAccess);
+                bitrate = Bitrate();
+            }
+
+            time_t requestedTimeshit = iPosition / (bitrate + 0.001);
+            time_t adjustedTimeshift = requestedTimeshit;
+            Init(m_delegate->UrlForTimeshift(requestedTimeshit, &adjustedTimeshift));
+            // If we can't read from strean in 60 sec - report error
+            if(!m_writeEvent.Wait(60000)) {
+                m_addonHelper->Log(LOG_ERROR, "PlaylistBuffer::Seek. failed to read after seek in 60 sec.", m_position);
+                return -1;
+            }
+
+            if(requestedTimeshit == adjustedTimeshift )
+                m_position =  iPosition;
+            else
+                m_position =  adjustedTimeshift * bitrate;
+        } catch (std::exception&  ex) {
+            m_addonHelper->Log(LOG_ERROR, "PlaylistBuffer::Seek. Exception thrown. Reason: %s. Reset position!", ex.what());
+            m_position = 0;
+            return -1;
+
+        }catch (...) {
+            m_addonHelper->Log(LOG_ERROR, "PlaylistBuffer::Seek. Unknown exception. Reset position!");
+            m_position = 0;
+            return -1;
+        }
+        m_addonHelper->Log(LOG_DEBUG, "PlaylistBuffer::Seek. pos after seek %lld", m_position);
+        return m_position;
     }
     
     bool PlaylistBuffer::StopThread(int iWaitMs)
     {
-        int stopCounter = 1;
+        int stopCounter = 0;
         bool retVal = false;
         while(!(retVal = this->CThread::StopThread(iWaitMs))){
-            if(stopCounter++ > 3)
+            if(++stopCounter > 3)
                 break;
-            m_addonHelper->Log(LOG_NOTICE, "PlaylistBuffer: can't stop thread in %d ms (%d)", iWaitMs, stopCounter - 1);
+            m_addonHelper->Log(LOG_NOTICE, "PlaylistBuffer: can't stop thread in %d ms (%d)", iWaitMs, stopCounter);
         }
         if(!retVal)
             m_addonHelper->Log(LOG_ERROR, "PlaylistBuffer: failed to stop thread in %d ms", stopCounter*iWaitMs);
@@ -399,12 +526,19 @@ namespace Buffers {
         return retVal;
     }
     
+#pragma mark - Segment
     
-    PlaylistBuffer::Segment::Segment()
-    :_data(NULL), _size(0), _begin(_data)
-    {}
+    PlaylistBuffer::Segment::Segment(float duration)
+    :_data(NULL)
+    , _size(0)
+    , _begin(NULL)
+    , _duration(duration)
+    {
+    }
     
-    PlaylistBuffer::Segment::Segment(const uint8_t* buffer, size_t size)
+    PlaylistBuffer::Segment::Segment(const uint8_t* buffer, size_t size, float duration)
+    : _duration(duration)
+    , _begin(NULL)
     {
         Push(buffer, size);
     }
@@ -412,11 +546,11 @@ namespace Buffers {
     void PlaylistBuffer::Segment::Push(const uint8_t* buffer, size_t size)
     {
         if(NULL == buffer || 0 == size)
-        return;
+            return;
         
         void * ptr = realloc(_data, _size + size);
         if(NULL == ptr)
-        throw PlistBufferException("Faied to allocate segmwnt.");
+            throw PlistBufferException("Faied to allocate segmwnt.");
         _data = (uint8_t*) ptr;
         memcpy(&_data[_size], buffer, size);
         _size += size;
@@ -426,7 +560,7 @@ namespace Buffers {
     const uint8_t* PlaylistBuffer::Segment::Pop(size_t requesred, size_t*  actual)
     {
         if(_begin == NULL)
-        _begin = &_data[0];
+            _begin = &_data[0];
         
         size_t available = _size - (_begin - &_data[0]);
         *actual = std::min(requesred, available);
@@ -438,7 +572,7 @@ namespace Buffers {
     size_t PlaylistBuffer::Segment::Read(uint8_t* buffer, size_t size)
     {
         if(_begin == NULL)
-        _begin = &_data[0];
+            _begin = &_data[0];
         size_t actual = std::min(size, BytesReady());
         //    m_addonHelper->Log(LOG_DEBUG, ">>> Available: %d  Actual: %d", available, actual);
         memcpy(buffer, _begin, actual);
@@ -450,7 +584,7 @@ namespace Buffers {
     PlaylistBuffer::Segment::~Segment()
     {
         if(_data != NULL)
-        delete _data;
+            delete _data;
     }
     
 }

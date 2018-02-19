@@ -49,6 +49,7 @@
     <setting id="edem_playlist_url" type="text" label="50000" default="https://edem.tv/playlists/uplist/***/edem_pl.m3u8"/>
 <!--    <setting id="edem_epg_url" type="text" label="50001" default="http://programtv.ru/xmltv.xml.gz"/>-->
     <setting id="edem_epg_url" type="text" label="50001" default="http://epg.it999.ru/edem.xml.gz"/>
+    <setting id="edem_seek_archives" type="bool" label="50002" default="false"/>
 </category>
 
 </settings>

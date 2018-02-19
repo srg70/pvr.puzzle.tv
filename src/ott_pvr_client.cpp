@@ -282,7 +282,7 @@ bool OttPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     // Worrkaround: use EPG entry
     PvrClient::ChannelId channelId =  m_core->GetEpgList().at(stoi(recording.strRecordingId)).ChannelId;
     string url = m_core->GetArchiveUrl(channelId, recording.recordingTime, recording.iDuration);
-    return PVRClientBase::OpenRecordedStream(url);
+    return PVRClientBase::OpenRecordedStream(url, nullptr);
 }
 
 PVR_ERROR OttPVRClient::CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)

@@ -459,7 +459,7 @@ bool SovokPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     PvrClient::ChannelId channelId =  m_sovokTV->GetEpgList().at(stoi(recording.strRecordingId)).ChannelId;
     
     string url = m_sovokTV->GetArchiveUrl(channelId, recording.recordingTime);
-    return PVRClientBase::OpenRecordedStream(url);
+    return PVRClientBase::OpenRecordedStream(url, nullptr);
 }
 
 PVR_ERROR SovokPVRClient::CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
