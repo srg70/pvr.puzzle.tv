@@ -62,7 +62,7 @@ public:
 
 private:
     void CreateCore();
-
+    bool CheckPlaylistUrl();
     void SetPlaylistUrl(const std::string& url) {m_playlistUrl = url;};
 
     EdemEngine::Core* m_core;

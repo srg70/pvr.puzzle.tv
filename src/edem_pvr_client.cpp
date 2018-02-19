@@ -70,7 +70,8 @@ ADDON_STATUS EdemPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_lib
 
     try
     {
-        CreateCore();
+        if(CheckPlaylistUrl())
+            CreateCore();
     }
     catch (AuthFailedException &)
     {
@@ -104,14 +105,23 @@ void EdemPVRClient::CreateCore()
     m_clientCore = m_core = new EdemEngine::Core(m_addonHelper, m_pvrHelper, m_playlistUrl, m_epgUrl);
 }
 
-ADDON_STATUS EdemPVRClient::SetSetting(const char *settingName, const void *settingValue)
+bool EdemPVRClient::CheckPlaylistUrl()
+{
+    if (m_playlistUrl.empty() || m_playlistUrl.find("***") != string::npos) {
+        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32010));
+        return false;
+    }
+    return true;
+}
+    
+    ADDON_STATUS EdemPVRClient::SetSetting(const char *settingName, const void *settingValue)
 {
     ADDON_STATUS result = ADDON_STATUS_OK ;
 
     if (strcmp(settingName,  c_playlist_setting) == 0 && strcmp((const char*) settingValue, m_playlistUrl.c_str()) != 0) {
         m_playlistUrl= (const char*) settingValue;
-        if (m_playlistUrl.empty() || m_playlistUrl.find("***") != string::npos) {
-            m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32010));
+        if(!CheckPlaylistUrl()) {
+            return result;
         } else {
             try {
                 CreateCore();
