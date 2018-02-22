@@ -306,10 +306,14 @@ public:
         _channelId =  _core->GetEpgList().at(stoi(recording.strRecordingId)).ChannelId;
 
     }
-    virtual time_t Duration() const { return _duration;}
+    virtual time_t Duration() const
+    {
+        time_t fromNow = time(nullptr) - _recordingTime;
+        return std::min(_duration, fromNow) ;
+    }
     virtual std::string UrlForTimeshift(time_t timeshiftReqested, time_t* timeshiftAdjusted = nullptr) const
     {
-        auto startTime = std::min(_recordingTime + timeshiftReqested, _recordingTime + _duration);
+        auto startTime = std::min(_recordingTime + timeshiftReqested, _recordingTime + Duration());
         if(startTime < _recordingTime)
             startTime = _recordingTime;
         if(timeshiftAdjusted)

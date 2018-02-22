@@ -249,21 +249,19 @@ namespace Buffers {
         
         float bitrate = 0.0;
         size_t segmantsSize = 0;
-        if(!IsStopped()) {
-            {
-                CLockObject lock(m_syncAccess);
+        {
+            CLockObject lock(m_syncAccess);
+            if(!IsStopped()) {
                 m_segments.push_back(TSegments::value_type(segmentData));
                 m_totalDuration += segmentData->Duration();
                 m_totalLength += segmentData->Length();
                 bitrate = Bitrate();
                 segmantsSize = m_segments.size();
             }
-            m_addonHelper->Log(LOG_DEBUG, ">>> Segment added (%d). Bitrate %f", segmantsSize, segmentData->Bitrate());
-            m_addonHelper->Log(LOG_DEBUG, ">>> Average bitrate: %f", bitrate);
         }
-    
+        m_addonHelper->Log(LOG_DEBUG, ">>> Segment added (%d). Bitrate %f", segmantsSize, segmentData->Bitrate());
+        m_addonHelper->Log(LOG_DEBUG, ">>> Average bitrate: %f", bitrate);
 
-    
         return bytesRead < 0; // 0 (i.e. EOF) means no error, caller may continue with next chunk
     }
     
@@ -312,7 +310,8 @@ namespace Buffers {
 //                    m_addonHelper->Log(LOG_DEBUG, ">>> Average Bitrate: %f", m_bitrate);
 //                }
 
-                m_segmentUrls.clear();
+                if(!IsStopped())
+                    m_segmentUrls.clear();
 
                 if(m_isVod) {
                     m_addonHelper->Log(LOG_DEBUG, ">>> PlaylistBuffer: write is done");
