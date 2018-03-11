@@ -69,6 +69,7 @@ private:
     void SetKey(const std::string& key) {m_key = key;};
 //    const std::string& code SetKey();
 
+    bool m_supportSeek;
     OttEngine::OttPlayer* m_core;
     std::string m_playlistUrl;
     std::string m_key;

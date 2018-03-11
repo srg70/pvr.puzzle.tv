@@ -408,7 +408,7 @@ namespace Buffers {
     
     int64_t PlaylistBuffer::GetLength() const
     {
-        if(m_isVod || m_delegate == nullptr) {
+        if(m_delegate == nullptr) {
             m_addonHelper->Log(LOG_DEBUG, "Plist archive lenght -1");
             return -1;
         }
@@ -424,7 +424,7 @@ namespace Buffers {
     
     int64_t PlaylistBuffer::GetPosition() const
     {
-        if(m_isVod || m_delegate == nullptr) {
+        if(m_delegate == nullptr) {
             m_addonHelper->Log(LOG_DEBUG, "Plist archive position =1");
             return -1;
         }
@@ -434,7 +434,7 @@ namespace Buffers {
     
     int64_t PlaylistBuffer::Seek(int64_t iPosition, int iWhence)
     {
-        if(m_isVod || m_delegate == nullptr)
+        if(m_delegate == nullptr)
             return -1;
         
         m_addonHelper->Log(LOG_DEBUG, "PlaylistBuffer::Seek. >>> Requested pos %lld, from %d", iPosition, iWhence);

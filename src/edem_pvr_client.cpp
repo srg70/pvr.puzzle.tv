@@ -330,6 +330,9 @@ private:
 
 bool EdemPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
 {
+    if(NULL == m_core)
+        return false;
+
     auto delegate = new EdemArchiveDelegate(m_core, recording);
     string url = delegate->UrlForTimeshift(0);
     if(m_supportSeek)

@@ -41,6 +41,7 @@
 #include "ott_pvr_client.h"
 #include "helpers.h"
 #include "ott_player.h"
+#include "plist_buffer.h"
 
 using namespace std;
 using namespace ADDON;
@@ -61,6 +62,7 @@ ADDON_STATUS OttPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_libX
         m_playlistUrl = buffer;
     if (m_addonHelper->GetSetting(c_key_setting, &buffer))
         m_key = buffer;
+    m_supportSeek = false;
     
     try
     {
@@ -273,15 +275,52 @@ PVR_ERROR OttPVRClient::GetRecordings(ADDON_HANDLE handle, bool deleted)
     return result;
 }
 
+
+class OttArchiveDelegate : public Buffers::IPlaylistBufferDelegate
+{
+public:
+    OttArchiveDelegate(OttEngine::OttPlayer* core, const PVR_RECORDING &recording)
+    : _duration(recording.iDuration)
+    , _recordingTime(recording.recordingTime)
+    , _core(core)
+    {
+        // NOTE: Kodi does NOT provide recording.iChannelUid for unknown reason
+        // Worrkaround: use EPG entry
+        _channelId =  _core->GetEpgList().at(stoi(recording.strRecordingId)).ChannelId;
+        
+    }
+    virtual time_t Duration() const
+    {
+        time_t fromNow = time(nullptr) - _recordingTime;
+        return std::min(_duration, fromNow) ;
+    }
+    virtual std::string UrlForTimeshift(time_t timeshiftReqested, time_t* timeshiftAdjusted = nullptr) const
+    {
+        auto startTime = std::min(_recordingTime + timeshiftReqested, _recordingTime + Duration());
+        if(startTime < _recordingTime)
+            startTime = _recordingTime;
+        if(timeshiftAdjusted)
+            *timeshiftAdjusted = startTime - _recordingTime;
+        return _core->GetArchiveUrl(_channelId, startTime, Duration()  -  (startTime - _recordingTime));
+    }
+    
+private:
+    const time_t _duration;
+    const time_t _recordingTime;
+    PvrClient::ChannelId _channelId;
+    OttEngine::OttPlayer* _core;
+};
+
+
 bool OttPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
 {
     if(NULL == m_core)
-        return PVR_ERROR_SERVER_ERROR;
+        return false;
     
-    // NOTE: Kodi does NOT provide recording.iChannelUid for unknown reason
-    // Worrkaround: use EPG entry
-    PvrClient::ChannelId channelId =  m_core->GetEpgList().at(stoi(recording.strRecordingId)).ChannelId;
-    string url = m_core->GetArchiveUrl(channelId, recording.recordingTime, recording.iDuration);
+    auto delegate = new OttArchiveDelegate(m_core, recording);
+    string url = delegate->UrlForTimeshift(0);
+    if(m_supportSeek)
+        return PVRClientBase::OpenRecordedStream(url, delegate);
     return PVRClientBase::OpenRecordedStream(url, nullptr);
 }
 
