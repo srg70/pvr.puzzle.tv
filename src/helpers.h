@@ -39,14 +39,14 @@ std::string n_to_string_hex(uint64_t n);
 
 // trim from start (in place)
 inline void ltrim(std::string &s) {
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int ch) {
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](char ch) {
         return !std::isspace(ch);
     }));
 }
 
 // trim from end (in place)
 inline void rtrim(std::string &s) {
-    s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) {
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](char ch) {
         return !std::isspace(ch);
     }).base(), s.end());
 }
