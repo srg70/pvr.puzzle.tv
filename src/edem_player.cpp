@@ -515,6 +515,8 @@ namespace EdemEngine
             string data;
             
             // Download playlist
+            XBMC->Log(LOG_DEBUG, "EdemPlayer: loading playlist: %s", plistUrl.c_str());
+
             auto f = XBMC->OpenFile(plistUrl.c_str(), 0);
             if (!f)
                 throw BadPlaylistFormatException("Failed to obtain playlist from server.");
@@ -530,6 +532,8 @@ namespace EdemEngine
             
             //XBMC->Log(LOG_ERROR, ">>> DUMP M3U : \n %s", data.c_str() );
             
+            XBMC->Log(LOG_DEBUG, "EdemPlayer: parsing playlist.");
+
             // Parse gloabal variables
             //#EXTM3U
             const char* c_M3U = "#EXTM3U";
@@ -555,6 +559,8 @@ namespace EdemEngine
                 ParseChannelAndGroup(tag, plistIndex++, channels);
                 pos = pos_end;
             }
+            XBMC->Log(LOG_DEBUG, "EdemPlayer: added %d channels from playlist." , channels.size());
+
         } catch (std::exception& ex) {
             XBMC->Log(LOG_ERROR, "EdemPlayer: exception during playlist loading: %s", ex.what());
             if(NULL != f) {

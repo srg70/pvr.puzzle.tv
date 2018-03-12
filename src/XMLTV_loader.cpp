@@ -71,6 +71,8 @@ namespace XMLTV {
     {
         strContent.clear();
         
+        XBMC->Log(LOG_DEBUG, "XMLTV Loader: open file %s." , url.c_str());
+
         void* fileHandle = XBMC->OpenFile(url.c_str(), 0);
         if (fileHandle)
         {
@@ -78,6 +80,12 @@ namespace XMLTV {
             while (int bytesRead = XBMC->ReadFile(fileHandle, buffer, 1024))
                 strContent.append(buffer, bytesRead);
             XBMC->CloseFile(fileHandle);
+            XBMC->Log(LOG_DEBUG, "XMLTV Loader: file reading done.");
+
+        }
+        else
+        {
+            XBMC->Log(LOG_DEBUG, "XMLTV Loader: failed  to open file.");
         }
         
         return strContent.length();
@@ -93,6 +101,8 @@ namespace XMLTV {
         bool bNeedReload = false;
         std::string strCachedPath = GetCachedPathFor(filePath);
         
+        XBMC->Log(LOG_DEBUG, "XMLTV Loader: open cached file %s." , filePath.c_str());
+
         // check cached file is exists
         if (XBMC->FileExists(strCachedPath.c_str(), false))
         {
@@ -106,6 +116,8 @@ namespace XMLTV {
             // Modification time is not provided by some servers.
             // It should be safe to compare file sizes.
             bNeedReload = statOrig.st_size == 0 ||  statOrig.st_size != statCached.st_size;
+            XBMC->Log(LOG_DEBUG, "XMLTV Loader: cached file exists. Reload?  %s." , bNeedReload ? "Yes" : "No");
+
         }
         else
             bNeedReload = true;
@@ -312,9 +324,14 @@ return false;             \
     {
         xml_document<> xmlDoc;
         
+        XBMC->Log(LOG_DEBUG, "XMLTV Loader: open document from %s." , url.c_str());
+
+        
         if(!CreateDocument(url, xmlDoc, XBMC))
            return false;
         
+        XBMC->Log(LOG_DEBUG, "XMLTV Loader: start document parsing.");
+
         xml_node<> *pRootElement = xmlDoc.first_node("tv");
         if (!pRootElement)
         {
@@ -335,9 +352,9 @@ return false;             \
             xml_node<> *pIconNode = pChannelNode->first_node("icon");
             if (pIconNode == NULL || !GetAttributeValue(pIconNode, "src", channel.strIcon))
                 channel.strIcon = "";
-                
-                onChannelFound(channel);
-                }
+            
+            onChannelFound(channel);
+        }
         
         xmlDoc.clear();
         
