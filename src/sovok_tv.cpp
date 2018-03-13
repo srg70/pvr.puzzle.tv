@@ -224,10 +224,8 @@ void SovokTV::SaveEpgCache()
     // Leave epg entries not older then 2 weeks from now
     time_t now = time(nullptr);
     auto oldest =  now - 14*24*60*60; //m_lastEpgRequestStartTime = max(m_lastEpgRequestStartTime, now - 14*24*60*60);
-    time_t newest = 0;
-    erase_if(m_epgEntries,  [oldest, &newest] (const EpgEntryList::value_type& i)
+    erase_if(m_epgEntries,  [oldest] (const EpgEntryList::value_type& i)
              {
-                 newest = max(newest, i.second.StartTime);
                  return i.second.StartTime < oldest;
              });
 
@@ -235,11 +233,7 @@ void SovokTV::SaveEpgCache()
     Writer<StringBuffer> writer(s);
     
     writer.StartObject();               // Between StartObject()/EndObject(),
-//    writer.Key("m_lastEpgRequestStartTime");
-//    writer.Int64(m_lastEpgRequestStartTime);
-    writer.Key("m_lastEpgRequestEndTime");
-    writer.Int64(newest);
-    
+
     writer.Key("m_epgEntries");
     writer.StartArray();                // Between StartArray()/EndArray(),
     for_each(m_epgEntries.begin(), m_epgEntries.end(),[&](const EpgEntryList::value_type& i) {
@@ -284,8 +278,6 @@ void SovokTV::LoadEpgCache()
     delete[] rawBuf;
     try {
         ParseJson(ss, [&] (Document& jsonRoot) {
-            //m_lastEpgRequestStartTime = jsonRoot["m_lastEpgRequestStartTime"].GetInt();
-            m_lastEpgRequestEndTime = jsonRoot["m_lastEpgRequestEndTime"].GetInt();
             
             const Value& v = jsonRoot["m_epgEntries"];
             Value::ConstValueIterator it = v.Begin();
@@ -301,8 +293,6 @@ void SovokTV::LoadEpgCache()
     } catch (...) {
         Log(" >>>>  FAILED load EPG cache <<<<<");
         m_epgEntries.clear();
-        //m_lastEpgRequestStartTime = 0;
-        m_lastEpgRequestEndTime = 0;
     }
 }
 
