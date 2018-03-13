@@ -354,7 +354,7 @@ return false;             \
         xml_node<> *pChannelNode = NULL;
         for(pChannelNode = pRootElement->first_node("channel"); pChannelNode; pChannelNode = pChannelNode->next_sibling("channel"))
         {
-            XBMC->Log(LOG_DEBUG, "XMLTV Loader: found channel node.");
+            //XBMC->Log(LOG_DEBUG, "XMLTV Loader: found channel node.");
 
             EpgChannel channel;
             if(!GetAttributeValue(pChannelNode, "id", channel.strId)){
@@ -367,7 +367,7 @@ return false;             \
                 continue;
             }
             
-            XBMC->Log(LOG_DEBUG, "XMLTV Loader: found channel %s.", channel.strName.c_str());
+            //XBMC->Log(LOG_DEBUG, "XMLTV Loader: found channel %s.", channel.strName.c_str());
 
             xml_node<> *pIconNode = pChannelNode->first_node("icon");
             if (pIconNode == NULL)
@@ -375,7 +375,7 @@ return false;             \
             else if (!GetAttributeValue(pIconNode, "src", channel.strIcon))
                 channel.strIcon = "";
             
-            XBMC->Log(LOG_DEBUG, "XMLTV Loader: populating channel");
+            //XBMC->Log(LOG_DEBUG, "XMLTV Loader: populating channel");
 
             onChannelFound(channel);
         }
