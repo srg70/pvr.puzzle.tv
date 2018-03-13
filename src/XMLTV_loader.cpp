@@ -43,6 +43,17 @@ namespace XMLTV {
     
     static const std::string c_CacheFolder = "special://temp/pvr-puzzle-tv/XmlTvCache/";
     
+    struct XmlDocumentAndData {
+        xml_document<> doc;
+        template<int Flags>
+        void parse(const char *text){
+            data = text;
+            doc.parse<Flags>(&data[0]);
+        }
+    private:
+        string data;
+    };
+    
     template<class Ch>
     inline bool GetNodeValue(const xml_node<Ch> * pRootNode, const char* strTag, string& strStringValue)
     {
@@ -258,7 +269,7 @@ return false;             \
         return true ;
     }
     
-   bool CreateDocument(const std::string& url,  xml_document<>& xmlDoc, ADDON::CHelper_libXBMC_addon * XBMC)
+   bool CreateDocument(const std::string& url,  XmlDocumentAndData& xmlDoc, ADDON::CHelper_libXBMC_addon * XBMC)
     {
         if (url.empty())
         {
@@ -322,7 +333,8 @@ return false;             \
     
     bool ParseChannels(const std::string& url,  const ChannelCallback& onChannelFound, ADDON::CHelper_libXBMC_addon * XBMC)
     {
-        xml_document<> xmlDoc;
+
+        XmlDocumentAndData xmlDoc;
         
         XBMC->Log(LOG_DEBUG, "XMLTV Loader: open document from %s." , url.c_str());
 
@@ -332,7 +344,7 @@ return false;             \
         
         XBMC->Log(LOG_DEBUG, "XMLTV Loader: start document parsing.");
 
-        xml_node<> *pRootElement = xmlDoc.first_node("tv");
+        xml_node<> *pRootElement = xmlDoc.doc.first_node("tv");
         if (!pRootElement)
         {
             XBMC->Log(LOG_ERROR, "Invalid EPG XML: no <tv> tag found");
@@ -368,7 +380,7 @@ return false;             \
             onChannelFound(channel);
         }
         
-        xmlDoc.clear();
+        xmlDoc.doc.clear();
         
         XBMC->Log(LOG_NOTICE, "XMLTV: channels Loaded.");
         
@@ -378,12 +390,12 @@ return false;             \
     
     bool ParseEpg(const std::string& url,  const EpgEntryCallback& onEpgEntryFound ,ADDON::CHelper_libXBMC_addon * XBMC)
     {
-        xml_document<> xmlDoc;
+        XmlDocumentAndData xmlDoc;
         
         if(!CreateDocument(url, xmlDoc, XBMC))
            return false;
            
-        xml_node<> *pRootElement = xmlDoc.first_node("tv");
+        xml_node<> *pRootElement = xmlDoc.doc.first_node("tv");
         if (!pRootElement)
         {
             XBMC->Log(LOG_ERROR, "Invalid EPG XML: no <tv> tag found");
@@ -416,7 +428,7 @@ return false;             \
             onEpgEntryFound(entry);
         }
         
-        xmlDoc.clear();
+        xmlDoc.doc.clear();
         
         XBMC->Log(LOG_NOTICE, "XMLTV: EPG loaded.");
         
