@@ -33,6 +33,8 @@
 
 #include <algorithm>
 #include "p8-platform/util/util.h"
+#include "p8-platform/util/StringUtils.h"
+
 #include "kodi/xbmc_addon_cpp_dll.h"
 
 #include "libXBMC_pvr.h"
@@ -65,8 +67,8 @@ ADDON_STATUS PVRClientBase::Init(CHelper_libXBMC_addon *addonHelper, CHelper_lib
     m_inputBuffer = NULL;
     SetTimeshiftPath(s_DefaultCacheDir);
     
-    m_addonHelper->Log(LOG_DEBUG, "User path: %s", pvrprops->strUserPath);
-    m_addonHelper->Log(LOG_DEBUG, "Client path: %s", pvrprops->strClientPath);
+    LogDebug( "User path: %s", pvrprops->strUserPath);
+    LogDebug( "Client path: %s", pvrprops->strClientPath);
     //auto g_strUserPath   = pvrprops->strUserPath;
     m_clientPath = pvrprops->strClientPath;
     m_userPath = pvrprops->strUserPath;
@@ -232,7 +234,7 @@ void PVRClientBase::SetTimeshiftPath(const std::string& path){
     const char* nonEmptyPath = (path.empty()) ? s_DefaultCacheDir : path.c_str();
     if(!m_addonHelper->DirectoryExists(nonEmptyPath))
         if(!m_addonHelper->CreateDirectory(nonEmptyPath))
-            m_addonHelper->Log(LOG_ERROR, "Failed to create cache folder");
+            LogError( "Failed to create cache folder");
     m_CacheDir = nonEmptyPath;
 }
 
@@ -359,7 +361,7 @@ bool PVRClientBase::OpenLiveStream(const std::string& url )
     }
     catch (InputBufferException &ex)
     {
-        m_addonHelper->Log(LOG_ERROR, "PVRClientBase: input buffer error in OpenLiveStream: %s", ex.what());
+        LogError(  "PVRClientBase: input buffer error in OpenLiveStream: %s", ex.what());
         return false;
     }
     
@@ -369,9 +371,9 @@ bool PVRClientBase::OpenLiveStream(const std::string& url )
 void PVRClientBase::CloseLiveStream()
 {
     if(m_inputBuffer) {
-        m_addonHelper->Log(LOG_NOTICE, "PVRClientBase: closing input sream...");
+        LogNotice("PVRClientBase: closing input sream...");
         SAFE_DELETE(m_inputBuffer);
-        m_addonHelper->Log(LOG_NOTICE, "PVRClientBase: input sream closed.");
+        LogNotice("PVRClientBase: input sream closed.");
     }
 }
 
@@ -450,7 +452,7 @@ bool PVRClientBase::OpenRecordedStream(const std::string& url,  Buffers::IPlayli
     }
     catch (InputBufferException & ex)
     {
-        m_addonHelper->Log(LOG_ERROR, "%s: failed. Can't open recording stream.", __FUNCTION__);
+        LogError(  "%s: failed. Can't open recording stream.", __FUNCTION__);
         return false;
     }
     
@@ -460,9 +462,9 @@ bool PVRClientBase::OpenRecordedStream(const std::string& url,  Buffers::IPlayli
 void PVRClientBase::CloseRecordedStream(void)
 {
     if(m_recordBuffer) {
-        m_addonHelper->Log(LOG_NOTICE, "PVRClientBase: closing recorded sream...");
+        LogNotice("PVRClientBase: closing recorded sream...");
         SAFE_DELETE(m_recordBuffer);
-        m_addonHelper->Log(LOG_NOTICE, "PVRClientBase: input recorded closed.");
+        LogNotice("PVRClientBase: input recorded closed.");
     }
     
 }
@@ -488,10 +490,36 @@ long long PVRClientBase::LengthRecordedStream(void)
 
 PVR_ERROR PVRClientBase::CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
 {
-    m_addonHelper->Log(LOG_DEBUG, " >>>> !!!! Menu hook !!!! <<<<<");
+    LogDebug( " >>>> !!!! Menu hook !!!! <<<<<");
     return MenuHook(menuhook, item);
 }
 
+# define PrintToLog(loglevel) \
+    std::string strData; \
+    strData.reserve(16384); \
+    va_list va; \
+    va_start(va, format); \
+    strData = StringUtils::FormatV(format,va); \
+    va_end(va); \
+    m_addonHelper->Log(loglevel, strData.c_str()); \
+
+
+void PVRClientBase::LogError(const char *format, ... )
+{
+    PrintToLog(LOG_ERROR);
+}
+void PVRClientBase::LogInfo(const char *format, ... )
+{
+    PrintToLog(LOG_INFO);
+}
+void PVRClientBase::LogNotice(const char *format, ... )
+{
+    PrintToLog(LOG_NOTICE);
+}
+void PVRClientBase::LogDebug(const char *format, ... )
+{
+    PrintToLog(LOG_DEBUG);
+}
 
 
 

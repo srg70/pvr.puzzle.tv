@@ -100,6 +100,12 @@ namespace PvrClient
         bool SwitchChannel(const std::string& url);
         const std::string& GetClientPath() const { return m_clientPath;}
         const std::string& GetUserPath() const { return m_userPath;}
+        
+        void LogError(const char *format, ... );
+        void LogInfo(const char *format, ... );
+        void LogNotice(const char *format, ... );
+        void LogDebug(const char *format, ... );
+
     private:
         
         void SetChannelReloadTimeout(int timeout);

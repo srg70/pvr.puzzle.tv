@@ -77,10 +77,13 @@ namespace Buffers
             void Push(const uint8_t* buffer, size_t size);
             const uint8_t* Pop(size_t requesred, size_t*  actual);
             size_t Read(uint8_t* buffer, size_t size);
-            size_t BytesReady() const {return  _size - (_begin - &_data[0]);}
+            size_t Seek(size_t position);
+            size_t Position() const  {return _begin - &_data[0];}
+            size_t BytesReady() const {return  _size - Position();}
             float Bitrate() const { return  _duration == 0.0 ? 0.0 : _size/_duration;}
             float Duration() const {return _duration;}
-            float Length() const {return _size;}
+            size_t Length() const {return _size;}
+            
             ~Segment();
         private:
             uint8_t* _data;
@@ -89,11 +92,11 @@ namespace Buffers
             const float _duration;
         };
         typedef std::map<uint64_t, std::pair<float, std::string> > TSegmentUrls;
-        typedef std::list<std::shared_ptr<Segment> >  TSegments;
+        typedef std::map<time_t, std::shared_ptr<Segment> >  TSegments;
         
         TSegmentUrls m_segmentUrls;
         TSegments m_segments;
-        uint64_t m_lastSegment;
+        int64_t m_lastSegment;
         ADDON::CHelper_libXBMC_addon *m_addonHelper;
         std::string  m_playListUrl;
         mutable P8PLATFORM::CMutex m_syncAccess;
@@ -103,13 +106,15 @@ namespace Buffers
         float m_totalDuration;
         PlaylistBufferDelegate m_delegate;
         int64_t m_position;
+        time_t m_writeTimshift;
+        time_t m_readTimshift;
         
         void *Process();
-        void Init(const std::string &playlistUrl);
-        void ParsePlaylist(const std::string& data);
+        void Init(const std::string &playlistUrl, int64_t position = 0, time_t timeshift = 0);
+        bool ParsePlaylist(const std::string& data);
         void SetBestPlaylist(const std::string& playlistUrl);
         void LoadPlaylist(std::string& data);
-        bool FillSegment(const TSegmentUrls::mapped_type& segment, float* bitrate = nullptr);
+        bool FillSegment(const TSegmentUrls::mapped_type& segment);
         bool IsStopped(uint32_t timeoutInSec = 0);
         float Bitrate() const {
             return m_totalLength / (m_totalDuration + 0.01);

@@ -89,16 +89,16 @@ struct SovokEpgEntry
 typedef unsigned int UniqueBroadcastIdType;
 typedef UniqueBroadcastIdType  SovokArchiveEntry;
 
-struct SovokEpgCaheEntry
-{
-    SovokEpgCaheEntry(int channelId, time_t startTime)
-        : ChannelId(channelId)
-        , StartTime(startTime)
-    {}
-
-    const PvrClient::ChannelId  ChannelId;
-    const time_t StartTime;
-};
+//struct SovokEpgCaheEntry
+//{
+//    SovokEpgCaheEntry(int channelId, time_t startTime)
+//        : ChannelId(channelId)
+//        , StartTime(startTime)
+//    {}
+//
+//    const PvrClient::ChannelId  ChannelId;
+//    const time_t StartTime;
+//};
 
 typedef std::map<UniqueBroadcastIdType, SovokEpgEntry> EpgEntryList;
 //typedef std::vector<SovokEpgCaheEntry> EpgCache;

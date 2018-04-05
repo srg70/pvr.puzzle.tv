@@ -313,7 +313,8 @@ public:
     }
     virtual std::string UrlForTimeshift(time_t timeshiftReqested, time_t* timeshiftAdjusted = nullptr) const
     {
-        auto startTime = std::min(_recordingTime + timeshiftReqested, _recordingTime + Duration());
+        //auto startTime = std::min(_recordingTime + timeshiftReqested, _recordingTime + Duration());
+        auto startTime = _recordingTime + timeshiftReqested;
         if(startTime < _recordingTime)
             startTime = _recordingTime;
         if(timeshiftAdjusted)
