@@ -166,7 +166,7 @@ PVR_ERROR PuzzlePVRClient::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANN
 }
 PVR_ERROR  PuzzlePVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
 {
-    return PVR_ERROR_NOT_IMPLEMENTED;
+    return PVRClientBase::MenuHook(menuhook, item);
     
 }
 
@@ -301,12 +301,6 @@ PVR_ERROR PuzzlePVRClient::GetRecordings(ADDON_HANDLE handle, bool deleted)
 bool PuzzlePVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
 {
     return false;
-}
-
-PVR_ERROR PuzzlePVRClient::CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
-{
-    m_addonHelper->Log(LOG_DEBUG, " >>>> !!!! Menu hook !!!! <<<<<");
-    return MenuHook(menuhook, item);
 }
 
 PVR_ERROR PuzzlePVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)

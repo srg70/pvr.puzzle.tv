@@ -67,8 +67,6 @@ namespace PvrClient
         
         ADDON_STATUS GetStatus();
         
-        PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
-        
         void CloseLiveStream();
         int ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize);
         long long SeekLiveStream(long long iPosition, int iWhence);
@@ -95,6 +93,10 @@ namespace PvrClient
         CHelper_libXBMC_pvr *m_pvrHelper;
         IClientCore* m_clientCore;
         
+        virtual PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
+        virtual ADDON_STATUS OnReloadEpg();
+        virtual ADDON_STATUS OnReloadRecordings();
+
         bool OpenLiveStream(const std::string& url );
         bool OpenRecordedStream(const std::string& url, Buffers::IPlaylistBufferDelegate* delegate);
         bool SwitchChannel(const std::string& url);

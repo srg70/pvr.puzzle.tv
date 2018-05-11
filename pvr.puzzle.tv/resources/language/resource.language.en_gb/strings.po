@@ -215,3 +215,16 @@ msgctxt "#32011"
 msgid "Edem Player: initialization error. See log file for details."
 msgstr "Edem Player: initialization error. See log file for details."
 
+msgctxt "#32012"
+msgid "Reloading EPG ..."
+msgstr "Reloading EPG ..."
+
+#============= Menus ================
+
+msgctxt "#32050"
+msgid "Reload EPG"
+msgstr "Reload EPG"
+
+msgctxt "#32051"
+msgid "Reload Recordings"
+msgstr "Reload Recordings"

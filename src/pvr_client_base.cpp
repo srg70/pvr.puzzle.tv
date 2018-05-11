@@ -58,6 +58,9 @@ namespace CurlUtils
 // NOTE: avoid '.' (dot) char in path. Causes to deadlock in Kodi code.
 const char* s_DefaultCacheDir = "special://temp/pvr-puzzle-tv";
 
+const int RELOAD_EPG_MENU_HOOK = 1;
+const int RELOAD_RECORDINGS_MENU_HOOK = 2;
+
 ADDON_STATUS PVRClientBase::Init(CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,
                                   PVR_PROPERTIES* pvrprops)
 {
@@ -100,8 +103,12 @@ ADDON_STATUS PVRClientBase::Init(CHelper_libXBMC_addon *addonHelper, CHelper_lib
     SetTimeshiftBufferSize(timeshiftBufferSize);
     SetTimeshiftBufferType(timeshiftBufferType);
     
-    //    PVR_MENUHOOK hook = {1, 30020, PVR_MENUHOOK_EPG};
-    //    m_pvr->AddMenuHook(&hook);
+    PVR_MENUHOOK hook = {RELOAD_EPG_MENU_HOOK, 32050, PVR_MENUHOOK_EPG};
+    m_pvrHelper->AddMenuHook(&hook);
+
+    hook = {RELOAD_RECORDINGS_MENU_HOOK, 32051, PVR_MENUHOOK_RECORDING};
+    m_pvrHelper->AddMenuHook(&hook);
+
     return ADDON_STATUS_OK;
     
 }
@@ -240,8 +247,31 @@ void PVRClientBase::SetTimeshiftPath(const std::string& path){
 
 PVR_ERROR  PVRClientBase::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
 {
-    return PVR_ERROR_NOT_IMPLEMENTED;
     
+    if(menuhook.iHookId == RELOAD_EPG_MENU_HOOK ) {
+        char* message = m_addonHelper->GetLocalizedString(32012);
+        m_addonHelper->QueueNotification(QUEUE_INFO, message);
+        m_addonHelper->FreeString(message);
+        OnReloadEpg();
+    } else if(RELOAD_RECORDINGS_MENU_HOOK == menuhook.iHookId) {
+//        char* message = m_addonHelper->GetLocalizedString(32012);
+//        m_addonHelper->QueueNotification(QUEUE_INFO, message);
+//        m_addonHelper->FreeString(message);
+        OnReloadRecordings();
+    }
+
+    return PVR_ERROR_NO_ERROR;
+    
+}
+
+ADDON_STATUS PVRClientBase::OnReloadEpg()
+{
+    return ADDON_STATUS_OK;
+}
+
+ADDON_STATUS PVRClientBase::OnReloadRecordings()
+{
+    return ADDON_STATUS_OK;
 }
 
 #pragma mark - Channels

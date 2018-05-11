@@ -172,7 +172,7 @@ public:
         std::vector<CountryTemplate> Filters;
     } CountryFilter;
     
-    SovokTV(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper, const std::string &login, const std::string &password);
+    SovokTV(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper, const std::string &login, const std::string &password, bool cleanEpgCache = false);
     ~SovokTV();
 
     const PvrClient::ChannelList &GetChannelList();
@@ -188,7 +188,8 @@ public:
     
     //EpgEntryList GetEpg(int channelId, time_t day);
     void GetEpg(PvrClient::ChannelId  channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries);
-    
+    void GetEpgForAllChannels(time_t startTime, time_t endTime);
+
     std::string GetUrl(PvrClient::ChannelId  channelId);
     std::string GetArchiveUrl(PvrClient::ChannelId  channelId, time_t startTime);
 
@@ -199,7 +200,8 @@ public:
     
     void SetPinCode(const std::string& code) {m_pinCode = code;}
     void SetCountryFilter(const CountryFilter& filter);
-    
+        
+    P8PLATFORM::CEvent m_epgUpdateEvent;
 private:
     typedef std::vector<std::string> StreamerIdsList;
     typedef std::function<void(const CActionQueue::ActionResult&)> TApiCallCompletion;
@@ -208,7 +210,6 @@ private:
     class HelperThread;
         
     void GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHours);
-    void GetEpgForAllChannels(time_t startTime, time_t endTime);
     void AddEpgEntry(UniqueBroadcastIdType id, SovokEpgEntry& entry);
     void UpdateHasArchive(SovokEpgEntry& entry) const;
 
@@ -265,6 +266,7 @@ private:
     StreamerNamesList m_streamerNames;
     StreamerIdsList m_streamerIds;
     mutable P8PLATFORM::CMutex m_epgAccessMutex;
+    unsigned int m_epgActivityCounter;
     HelperThread* m_archiveRefresher;
     std::string m_pinCode;
     HttpEngine* m_httpEngine;

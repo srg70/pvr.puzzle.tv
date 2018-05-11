@@ -176,7 +176,7 @@ PVR_ERROR OttPVRClient::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL&
 }
 PVR_ERROR  OttPVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
 {
-    return PVR_ERROR_NOT_IMPLEMENTED;
+    return PVRClientBase::MenuHook(menuhook, item);
     
 }
 
@@ -322,12 +322,6 @@ bool OttPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     if(m_supportSeek)
         return PVRClientBase::OpenRecordedStream(url, delegate);
     return PVRClientBase::OpenRecordedStream(url, nullptr);
-}
-
-PVR_ERROR OttPVRClient::CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
-{
-    m_addonHelper->Log(LOG_DEBUG, " >>>> !!!! Menu hook !!!! <<<<<");
-    return MenuHook(menuhook, item);
 }
 
 PVR_ERROR OttPVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)

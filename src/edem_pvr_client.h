@@ -48,8 +48,6 @@ public:
     
     PVR_ERROR GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL& channel, time_t iStart, time_t iEnd);
 
-    PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
-    
     bool OpenLiveStream(const PVR_CHANNEL& channel);
     bool SwitchChannel(const PVR_CHANNEL& channel);
 
@@ -57,9 +55,9 @@ public:
     PVR_ERROR GetRecordings(ADDON_HANDLE handle, bool deleted);
     bool OpenRecordedStream(const PVR_RECORDING &recording);
 
-    PVR_ERROR CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
-
-
+protected:
+    PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
+    
 private:
     void CreateCore();
     bool CheckPlaylistUrl();

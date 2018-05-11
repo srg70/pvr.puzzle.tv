@@ -47,8 +47,6 @@ public:
 
     PVR_ERROR GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL& channel, time_t iStart, time_t iEnd);
     
-    PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
-    
     bool OpenLiveStream(const PVR_CHANNEL& channel);
     int ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize);
     bool SwitchChannel(const PVR_CHANNEL& channel);
@@ -56,12 +54,14 @@ public:
     int GetRecordingsAmount(bool deleted);
     PVR_ERROR GetRecordings(ADDON_HANDLE handle, bool deleted);
     bool OpenRecordedStream(const PVR_RECORDING &recording);
-
-    PVR_ERROR CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
-
+protected:
+    PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
+    ADDON_STATUS OnReloadEpg();
+    ADDON_STATUS OnReloadRecordings();
 
 private:
-    void CreateCore();
+    void CreateCore(bool clenEpgCache);
+    void StartArchivePolling();
     bool HasCore();
     void SetStreamerId(int streamerIdx);
     int GetStreamerId();
