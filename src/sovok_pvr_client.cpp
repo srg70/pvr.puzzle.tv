@@ -132,7 +132,12 @@ void SovokPVRClient::CreateCore(bool clenEpgCache)
         SAFE_DELETE(ptr);
     }
     
-    m_clientCore = m_sovokTV = new SovokTV(m_addonHelper, m_pvrHelper, m_login, m_password, clenEpgCache);
+    auto pvr = m_pvrHelper;
+    std::function<void(void)> action = [pvr](){
+        pvr->TriggerRecordingUpdate();
+    };
+
+    m_clientCore = m_sovokTV = new SovokTV(m_addonHelper, m_pvrHelper, m_login, m_password, action, clenEpgCache);
 
     if(m_enableAdult)
         m_sovokTV->SetPinCode(m_pinCode);
@@ -374,7 +379,6 @@ ADDON_STATUS SovokPVRClient::OnReloadEpg()
         startTime -= 7 * 24 * 60 * 60;
         
         m_sovokTV->GetEpgForAllChannels(startTime, endTime);
-        StartArchivePolling();
     }
     
     return retVal;
@@ -386,7 +390,7 @@ ADDON_STATUS SovokPVRClient::OnReloadRecordings()
         return ADDON_STATUS_LOST_CONNECTION;
     
     ADDON_STATUS retVal = ADDON_STATUS_OK;
-    m_sovokTV->m_epgUpdateEvent.Broadcast();
+    m_sovokTV->OnEpgUpdateDone();
     return retVal;
 }
 
@@ -434,16 +438,6 @@ bool SovokPVRClient::SwitchChannel(const PVR_CHANNEL& channel)
     return PVRClientBase::SwitchChannel(url);
 }
 
-void SovokPVRClient::StartArchivePolling()
-{
-    auto pvr = m_pvrHelper;
-    std::function<void(void)> action = [pvr](){
-        pvr->TriggerRecordingUpdate();
-    };
-    m_sovokTV->StartArchivePollingWithCompletion(action);
-
-}
-
 int SovokPVRClient::GetRecordingsAmount(bool deleted)
 {
     if(!HasCore())
@@ -455,10 +449,6 @@ int SovokPVRClient::GetRecordingsAmount(bool deleted)
     int size = 0;
     std::function<void(const SovokArchiveEntry&)> f = [&size](const SovokArchiveEntry&){++size;};
     m_sovokTV->ForEach(f);
-    if(size == 0)
-    {
-        StartArchivePolling();
-    }
     LogDebug("SovokPVRClient has %d recordings.", size);
     return size;
     

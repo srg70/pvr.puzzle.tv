@@ -83,72 +83,6 @@ struct SovokTV::ApiFunctionData
     static const  ParamList s_EmptyParams;
 };
 
-class SovokTV::HelperThread : public P8PLATFORM::CThread
-{
-public:
-    HelperThread(ADDON::CHelper_libXBMC_addon *addonHelper, SovokTV* engine, std::function<void(void)> action)
-    : m_engine(engine), m_action(action)
-    , m_addonHelper(addonHelper)
-    {}
-    
-    void* Process()
-    {
-        
-        m_addonHelper->Log(LOG_NOTICE, "Archive thread started");
-        unsigned int oldEpgActivity = (unsigned int)-1; //For frirst time let for EPG chance
-        
-        while (m_engine->m_epgUpdateEvent.Wait())
-        {
-            
-            if(IsStopped())
-                break;
-
-            m_addonHelper->Log(LOG_NOTICE, "Archive thread iteraton started");
-            // Localize EPG lock
-            {
-                P8PLATFORM::CLockObject lock(m_engine->m_epgAccessMutex);
-                m_addonHelper->Log(LOG_DEBUG, "Archive thread: EPG size %d", m_engine->m_epgEntries.size());
-                int recCounter = 0;
-                for(auto& i : m_engine->m_epgEntries) {
-                    m_engine->UpdateHasArchive(i.second);
-                    if(i.second.HasArchive)
-                        ++recCounter;
-                }
-                m_addonHelper->Log(LOG_DEBUG, "Archive thread: Recordings size %d", recCounter);
-                m_engine->SaveEpgCache();
-            }
-            HelperThread* pThis = this;
-            m_engine->m_httpEngine->RunOnCompletionQueueAsync([pThis]() {
-                pThis->m_action();
-            },  [](const CActionQueue::ActionResult& s) {});
-            m_addonHelper->Log(LOG_NOTICE, "Archive thread iteraton done");
-            
-        };
-        m_addonHelper->Log(LOG_NOTICE, "Archive thread exit");
-        
-        return NULL;
-        
-    }
-    
-private:
-    
-    bool IsStopped(uint32_t timeoutInSec = 0) {
-        P8PLATFORM::CTimeout timeout(timeoutInSec * 1000);
-        bool isStoppedOrTimeout = P8PLATFORM::CThread::IsStopped() || timeout.TimeLeft() == 0;
-        while(!isStoppedOrTimeout) {
-            isStoppedOrTimeout = P8PLATFORM::CThread::IsStopped() || timeout.TimeLeft() == 0;
-            Sleep(1000);//1sec
-        }
-        return P8PLATFORM::CThread::IsStopped();
-    }
-    
-    SovokTV* m_engine;
-    std::function<void(void)> m_action;
-    ADDON::CHelper_libXBMC_addon *m_addonHelper;
-    //    P8PLATFORM::CEvent m_stopEvent;
-};
-
-
 const ParamList SovokTV::ApiFunctionData::s_EmptyParams;
 
 
@@ -156,13 +90,14 @@ const ParamList SovokTV::ApiFunctionData::s_EmptyParams;
 
 
 SovokTV::SovokTV(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,
-                 const string &login, const string &password, bool cleanEpgCache) :
+                 const string &login, const string &password,
+                 const std::function<void(void)>& archiveUpdateDone,  bool cleanEpgCache) :
     m_addonHelper(addonHelper),
     m_pvrHelper(pvrHelper),
     m_login(login),
     m_password(password),
     m_lastEpgRequestEndTime(0),
-    m_archiveRefresher(NULL)
+    m_archiveUpdateDone(archiveUpdateDone)
 {
     m_httpEngine = new HttpEngine(m_addonHelper);
     if (/*TEST_LOGIN_FAILED_timeout.TimeLeft() > 0 ||*/  !Login(true)) {
@@ -192,13 +127,6 @@ void SovokTV::Cleanup()
 {
     m_addonHelper->Log(LOG_NOTICE, "SovokTV stopping...");
 
-    if(m_archiveRefresher) {
-        // Do not wait for archive refresher
-        // because it waits for m_epgUpdateEvent
-        m_archiveRefresher->StopThread(-1);
-        m_epgUpdateEvent.Broadcast();
-    }
-    
     if(m_httpEngine)
         m_httpEngine->CancelAllRequests();
     
@@ -207,9 +135,6 @@ void SovokTV::Cleanup()
     if(m_httpEngine)
         SAFE_DELETE(m_httpEngine);
     //m_addonHelper->Log(LOG_NOTICE, "HTTP engine stopped.");
-
-    if(m_archiveRefresher)
-        SAFE_DELETE(m_archiveRefresher);
 
     m_addonHelper->Log(LOG_NOTICE, "SovokTV stopped.");
 }
@@ -291,7 +216,7 @@ void SovokTV::LoadEpgCache()
                 AddEpgEntry(k, e);
             }
         });
-        m_epgUpdateEvent.Broadcast();
+        OnEpgUpdateDone();
 
     } catch (...) {
         Log(" >>>>  FAILED load EPG cache <<<<<");
@@ -299,14 +224,25 @@ void SovokTV::LoadEpgCache()
     }
 }
 
-bool SovokTV::StartArchivePollingWithCompletion(std::function<void(void)> action)
+void SovokTV::OnEpgUpdateDone()
 {
-    if(m_archiveRefresher)
-        return false;
-    
-    m_archiveRefresher = new SovokTV::HelperThread(m_addonHelper, this, action);
-    m_archiveRefresher->CreateThread(false);
-    return true;
+    m_addonHelper->Log(LOG_NOTICE, "Archive thread iteraton started");
+    // Localize EPG lock
+    {
+        P8PLATFORM::CLockObject lock(m_epgAccessMutex);
+        m_addonHelper->Log(LOG_DEBUG, "Archive thread: EPG size %d", m_epgEntries.size());
+        int recCounter = 0;
+        for(auto& i : m_epgEntries) {
+            UpdateHasArchive(i.second);
+            if(i.second.HasArchive)
+                ++recCounter;
+        }
+        m_addonHelper->Log(LOG_DEBUG, "Archive thread: Recordings size %d", recCounter);
+        SaveEpgCache();
+    }
+    if(m_archiveUpdateDone)
+        m_archiveUpdateDone();
+    m_addonHelper->Log(LOG_NOTICE, "Archive thread iteraton done");
 }
 
 const ChannelList &SovokTV::GetChannelList()
@@ -594,7 +530,7 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
      [this, epgActivityCounter](const CActionQueue::ActionResult& s)
      {
          if(epgActivityCounter == m_epgActivityCounter){
-             m_epgUpdateEvent.Broadcast();
+             OnEpgUpdateDone();
          }
 
          try {

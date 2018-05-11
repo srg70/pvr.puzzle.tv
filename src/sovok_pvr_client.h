@@ -61,7 +61,6 @@ protected:
 
 private:
     void CreateCore(bool clenEpgCache);
-    void StartArchivePolling();
     bool HasCore();
     void SetStreamerId(int streamerIdx);
     int GetStreamerId();

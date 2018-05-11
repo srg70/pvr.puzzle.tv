@@ -172,7 +172,9 @@ public:
         std::vector<CountryTemplate> Filters;
     } CountryFilter;
     
-    SovokTV(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper, const std::string &login, const std::string &password, bool cleanEpgCache = false);
+    SovokTV(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,
+            const std::string &login, const std::string &password,
+            const std::function<void(void)>& archiveUpdateDone = nullptr, bool cleanEpgCache = false);
     ~SovokTV();
 
     const PvrClient::ChannelList &GetChannelList();
@@ -182,9 +184,6 @@ public:
     const StreamerNamesList& GetStreamersList() const;
     
     void ForEach(std::function<void(const SovokArchiveEntry&)>& action) const;
-    
-    bool StartArchivePollingWithCompletion(std::function<void(void)> action);
-
     
     //EpgEntryList GetEpg(int channelId, time_t day);
     void GetEpg(PvrClient::ChannelId  channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries);
@@ -201,13 +200,12 @@ public:
     void SetPinCode(const std::string& code) {m_pinCode = code;}
     void SetCountryFilter(const CountryFilter& filter);
         
-    P8PLATFORM::CEvent m_epgUpdateEvent;
+    void OnEpgUpdateDone();
 private:
     typedef std::vector<std::string> StreamerIdsList;
     typedef std::function<void(const CActionQueue::ActionResult&)> TApiCallCompletion;
     
     struct ApiFunctionData;
-    class HelperThread;
         
     void GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHours);
     void AddEpgEntry(UniqueBroadcastIdType id, SovokEpgEntry& entry);
@@ -267,7 +265,7 @@ private:
     StreamerIdsList m_streamerIds;
     mutable P8PLATFORM::CMutex m_epgAccessMutex;
     unsigned int m_epgActivityCounter;
-    HelperThread* m_archiveRefresher;
+    std::function<void(void)> m_archiveUpdateDone;
     std::string m_pinCode;
     HttpEngine* m_httpEngine;
 };
