@@ -110,7 +110,8 @@ namespace Buffers
         time_t m_readTimshift;
         
         void *Process();
-        void Init(const std::string &playlistUrl, int64_t position = 0, time_t timeshift = 0);
+        void Init(const std::string &playlistUrl);
+        void Init(const std::string &playlistUrl, bool cleanContent, int64_t position, time_t timeshift);
         bool ParsePlaylist(const std::string& data);
         void SetBestPlaylist(const std::string& playlistUrl);
         void LoadPlaylist(std::string& data);

@@ -70,7 +70,12 @@ namespace Buffers {
         StopThread();
     }
     
-    void PlaylistBuffer::Init(const std::string &playListUrl, int64_t position, time_t timeshift)
+    void PlaylistBuffer::Init(const std::string &playlistUrl)
+    {
+        Init(playlistUrl, true, 0, 0);
+    }
+
+    void PlaylistBuffer::Init(const std::string &playListUrl, bool clearContent, int64_t position, time_t timeshift)
     {
         StopThread(20000);
         {
@@ -78,7 +83,8 @@ namespace Buffers {
 
             m_writeEvent.Reset();
             m_segmentUrls.clear();
-            //m_segments.clear();
+            if(clearContent)
+                m_segments.clear();
             m_position = position;
             m_writeTimshift = m_readTimshift =  timeshift;
             s_SeekTimeout.Init(10*1000);
@@ -533,7 +539,7 @@ namespace Buffers {
 
             m_addonHelper->Log(LOG_DEBUG, "PlaylistBuffer::Seek. Restart write from %lld sec. Read at %lld sec", writeTimeshift, readTimshift);
             
-            Init(newUrl,  iPosition, writeTimeshift);
+            Init(newUrl, false,  iPosition, writeTimeshift);
         }
         if(haveCachedSeg) {
             m_readTimshift = readTimshift;
@@ -558,7 +564,7 @@ namespace Buffers {
 
             // Flour to segment duration (10 sec)
             time_t segTimeshift = requestedTimeshit / 10 * 10;
-            Init(newUrl,  iPosition, segTimeshift);
+            Init(newUrl,  false, iPosition, segTimeshift);
 
             // If we can't read from strean in 60 sec - report error
             if(!m_writeEvent.Wait(60000)) {
