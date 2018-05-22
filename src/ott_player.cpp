@@ -509,7 +509,7 @@ namespace OttEngine
                         continue;
                     }
                     *shouldUpdate = true;
-                    OttEpgEntry epgEntry;
+                    EpgEntry epgEntry;
                     epgEntry.ChannelId = stoul(m.value["ch_id"].GetString()) ;
                     epgEntry.Title = m.value["name"].GetString();
                     epgEntry.Description = m.value["descr"].GetString();

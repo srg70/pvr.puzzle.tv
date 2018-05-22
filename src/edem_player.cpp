@@ -206,9 +206,6 @@ namespace EdemEngine
         };
         
         XMLTV::ParseChannels(m_epgUrl, onNewChannel, m_addonHelper);
-//        if(shouldUpdateChannels) {
-//            m_pvrHelper->TriggerChannelUpdate();
-//        }
 
         m_channelList.clear();
         m_groupList.clear();
@@ -454,7 +451,6 @@ namespace EdemEngine
         using namespace XMLTV;
         auto pThis = this;
 
-        bool shouldUpdateChannels = false;
         EpgEntryCallback onEpgEntry = [&pThis] (const XMLTV::EpgEntry& newEntry) {pThis->AddEpgEntry(newEntry);};
         
         XMLTV::ParseEpg(m_epgUrl, onEpgEntry, m_addonHelper);
@@ -546,7 +542,7 @@ namespace EdemEngine
             // Parse channels
             //#EXTINF:0,РБК-ТВ
             //#EXTGRP:новости
-            //http://882406a1.iptvspy.me/iptv/9A7PTRGZWEA336/106/index.m3u8
+            //http://882406a1.iptvspy.me/iptv/xxx/106/index.m3u8
             
             const char* c_INF = "#EXTINF:";
             pos = data.find(c_INF, pos);
@@ -575,7 +571,7 @@ namespace EdemEngine
     {
         //0,РБК-ТВ
         //#EXTGRP:новости
-        //http://882406a1.iptvspy.me/iptv/9A7PTRGZWEA336/106/index.m3u8
+        //http://882406a1.iptvspy.me/iptv/xxx/106/index.m3u8
         
         auto pos = data.find(',');
         if(string::npos == pos)

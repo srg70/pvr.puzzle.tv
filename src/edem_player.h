@@ -44,64 +44,9 @@ namespace XMLTV {
 class HttpEngine;
 namespace EdemEngine
 {
-    
-    
-    struct EpgEntry
-    {
-        const char* ChannelIdName = "ch";
-        PvrClient::ChannelId ChannelId;
-        
-        const char* StartTimeName = "st";
-        time_t StartTime;
-        
-        const char* EndTimeName = "et";
-       time_t EndTime;
-        
-        const char* TitileName = "ti";
-        std::string Title;
-        
-        const char* DescriptionName = "de";
-        std::string Description;
-        
-        const char* HasArchiveName = "ha";
-        bool HasArchive;
-        
-        template <class T>
-        void Serialize(T& writer) const
-        {
-            writer.StartObject();               // Between StartObject()/EndObject(),
-            writer.Key(ChannelIdName);
-            writer.Uint(ChannelId);
-            writer.Key(StartTimeName);
-            writer.Int64(StartTime);
-            writer.Key(EndTimeName);
-            writer.Int64(EndTime);
-            writer.Key(TitileName);
-            writer.String(Title.c_str());
-            writer.Key(DescriptionName);
-            writer.String(Description.c_str());
-            writer.Key(HasArchiveName);
-            writer.Bool(HasArchive);
-            writer.EndObject();
-        }
-        template <class T>
-        void Deserialize(T& reader)
-        {
-            ChannelId = reader[ChannelIdName].GetUint();
-            StartTime = reader[StartTimeName].GetInt64();
-            EndTime = reader[EndTimeName].GetInt64();
-            Title = reader[TitileName].GetString();
-            Description = reader[DescriptionName].GetString();
-            HasArchive = reader[HasArchiveName].GetBool();
-        }
-    };
-    
-    typedef unsigned int UniqueBroadcastIdType;
-    typedef UniqueBroadcastIdType  ArchiveEntry;
-    
-    typedef std::map<UniqueBroadcastIdType, EpgEntry> EpgEntryList;
     typedef std::map<std::string, std::string> ParamList;
-    typedef std::vector<std::string> StreamerNamesList;
+
+    typedef PvrClient::UniqueBroadcastIdType  ArchiveEntry;
     typedef std::set<ArchiveEntry> ArchiveList;
     
     class ExceptionBase : public std::exception
@@ -159,12 +104,12 @@ namespace EdemEngine
         ~Core();
         
         const PvrClient::ChannelList &GetChannelList();
-        const EpgEntryList& GetEpgList() const;
+        const PvrClient::EpgEntryList& GetEpgList() const;
         
         void Apply(std::function<void(const ArchiveList&)>& action) const;
         bool StartArchivePollingWithCompletion(std::function<void(void)> action);
         
-        void  GetEpg(PvrClient::ChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries);
+        void  GetEpg(PvrClient::ChannelId channelId, time_t startTime, time_t endTime, PvrClient::EpgEntryList& epgEntries);
         std::string GetArchiveUrl(PvrClient::ChannelId channelId, time_t startTime);
         
         const PvrClient::GroupList &GetGroupList();
@@ -200,7 +145,7 @@ namespace EdemEngine
         PvrClient::ChannelList m_channelList;
         ArchiveList m_archiveList;
         PvrClient::GroupList m_groupList;
-        EpgEntryList m_epgEntries;
+        PvrClient::EpgEntryList m_epgEntries;
         P8PLATFORM::CMutex m_epgAccessMutex;
         HelperThread* m_archiveLoader;
         HttpEngine* m_httpEngine;

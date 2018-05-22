@@ -314,29 +314,6 @@ PVR_ERROR SovokPVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabili
     return PVRClientBase::GetAddonCapabilities(pCapabilities);
 }
 
-
-PVR_ERROR SovokPVRClient::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL& channel, time_t iStart, time_t iEnd)
-{
-    if(!HasCore())
-        return PVR_ERROR_SERVER_ERROR;
-
-    EpgEntryList epgEntries;
-    m_sovokTV->GetEpg(channel.iUniqueId, iStart, iEnd, epgEntries);
-    EpgEntryList::const_iterator itEpgEntry = epgEntries.begin();
-    for (int i = 0; itEpgEntry != epgEntries.end(); ++itEpgEntry, ++i)
-    {
-        EPG_TAG tag = { 0 };
-        tag.iUniqueBroadcastId = itEpgEntry->first;
-        tag.iChannelNumber = channel.iUniqueId;
-        tag.strTitle = itEpgEntry->second.Title.c_str();
-        tag.strPlot = itEpgEntry->second.Description.c_str();
-        tag.startTime = itEpgEntry->second.StartTime;
-        tag.endTime = itEpgEntry->second.EndTime;
-        m_pvrHelper->TransferEpgEntry(handle, &tag);
-    }
-    return PVR_ERROR_NO_ERROR;
-}
-
 PVR_ERROR  SovokPVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
 {
     return PVRClientBase::MenuHook(menuhook, item);
@@ -468,7 +445,7 @@ PVR_ERROR SovokPVRClient::GetRecordings(ADDON_HANDLE handle, bool deleted)
     std::function<void(const SovokArchiveEntry&)> f = [&sTV, &handle, pvrHelper, addonHelper ,&result](const SovokArchiveEntry& i)
     {
         try {
-            const SovokEpgEntry& epgTag = sTV.GetEpgList().at(i);
+            const EpgEntry& epgTag = sTV.GetEpgList().at(i);
             
             PVR_RECORDING tag = { 0 };
             //            memset(&tag, 0, sizeof(PVR_RECORDING));
@@ -516,12 +493,11 @@ bool SovokPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
 
 PVR_ERROR SovokPVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
 {
-    snprintf(signalStatus.strAdapterName, sizeof(signalStatus.strAdapterName), "IPTV Sovok TV Adapter 1");
+    snprintf(signalStatus.strAdapterName, sizeof(signalStatus.strAdapterName), "IPTV Sovok TV");
     snprintf(signalStatus.strAdapterStatus, sizeof(signalStatus.strAdapterStatus), (!HasCore()) ? "Not connected" :"OK");
     return PVR_ERROR_NO_ERROR;
 }
 
-ADDON_STATUS SovokPVRClient::GetStatus(){ return  /*(!HasCore())? ADDON_STATUS_LOST_CONNECTION : */ADDON_STATUS_OK;}
 void SovokPVRClient::SetStreamerId(int streamerIdx)
 {
     if(!HasCore())

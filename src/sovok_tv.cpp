@@ -503,7 +503,7 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
             }
             for (; itJsonEpgEntry2 != jsonChannelEpg.End(); ++itJsonEpgEntry1, ++itJsonEpgEntry2)
             {
-                SovokEpgEntry epgEntry;
+                EpgEntry epgEntry;
                 epgEntry.ChannelId = currentChannelId;
                 epgEntry.Title = (*itJsonEpgEntry1)["progname"].GetString();
                 epgEntry.Description = (*itJsonEpgEntry1)["description"].GetString();
@@ -515,7 +515,7 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
             }
             // Last EPG entrie  missing end time.
             // Put end of requested interval
-            SovokEpgEntry epgEntry;
+            EpgEntry epgEntry;
             epgEntry.ChannelId = currentChannelId;
             epgEntry.Title = (*itJsonEpgEntry1)["progname"].GetString();
             epgEntry.Description = (*itJsonEpgEntry1)["description"].GetString();
@@ -544,7 +544,7 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
      });
 }
 
-void SovokTV::UpdateHasArchive(SovokEpgEntry& entry) const
+void SovokTV::UpdateHasArchive(EpgEntry& entry) const
 {
     auto channel = m_channelList.find(entry.ChannelId);
     entry.HasArchive = channel != m_channelList.end() &&  channel->second.HasArchive;
@@ -557,7 +557,7 @@ void SovokTV::UpdateHasArchive(SovokEpgEntry& entry) const
     entry.HasArchive = entry.StartTime >= from && entry.StartTime < to;
 }
 
-void SovokTV::AddEpgEntry(UniqueBroadcastIdType id, SovokEpgEntry& entry)
+void SovokTV::AddEpgEntry(UniqueBroadcastIdType id, EpgEntry& entry)
 {
     UpdateHasArchive(entry);
     while( m_epgEntries.count(id) != 0) {

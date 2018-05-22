@@ -331,6 +331,16 @@ return false;             \
 
     }
     
+    std::string& PatchChannelId(std::string& strId)
+    {
+        const char * c_TTVChannelidPrefix = "ttv";
+        auto idPrefixPos = strId.find(c_TTVChannelidPrefix);
+        if(idPrefixPos != std::string::npos) {
+            strId = strId.substr(idPrefixPos + strlen(c_TTVChannelidPrefix));
+        }
+        return strId;
+    }
+    
     bool ParseChannels(const std::string& url,  const ChannelCallback& onChannelFound, ADDON::CHelper_libXBMC_addon * XBMC)
     {
 
@@ -361,6 +371,8 @@ return false;             \
                 XBMC->Log(LOG_DEBUG, "XMLTV Loader: no channel ID found.");
                 continue;
             }
+            
+            PatchChannelId(channel.strId);
             
             if(!GetNodeValue(pChannelNode, "display-name", channel.strName)){
                 XBMC->Log(LOG_DEBUG, "XMLTV Loader: no channel display name found.");
@@ -417,6 +429,8 @@ return false;             \
             int iTmpStart = ParseDateTime(strStart);
             int iTmpEnd = ParseDateTime(strStop);
             
+            PatchChannelId(strId);
+
             EpgEntry entry;
             entry.iChannelId = stoul(strId.c_str());
             entry.startTime = iTmpStart;

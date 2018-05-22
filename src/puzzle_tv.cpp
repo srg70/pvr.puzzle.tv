@@ -30,9 +30,12 @@
 #include "p8-platform/threads/mutex.h"
 #include "p8-platform/util/timeutils.h"
 #include "p8-platform/util/util.h"
+#include "p8-platform/util/StringUtils.h"
 #include "helpers.h"
 #include "puzzle_tv.h"
 #include "HttpEngine.hpp"
+#include "XMLTV_loader.hpp"
+
 
 using namespace std;
 using namespace ADDON;
@@ -122,16 +125,19 @@ private:
 
 const ParamList PuzzleTV::ApiFunctionData::s_EmptyParams;
 
-PuzzleTV::PuzzleTV(ADDON::CHelper_libXBMC_addon *addonHelper) :
+PuzzleTV::PuzzleTV(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper) :
     m_addonHelper(addonHelper),
+    m_pvrHelper(pvrHelper),
     m_lastEpgRequestStartTime(0),
     m_lastEpgRequestEndTime(0),
     m_lastUniqueBroadcastId(0),
-    m_archiveLoader(NULL)
+    m_archiveLoader(NULL),
+    m_epgUrl("http://api.torrent-tv.ru/ttv.xmltv.xml.gz")
 {
     m_httpEngine = new HttpEngine(m_addonHelper);
     
     LoadEpgCache();
+    LoadEpg();
 }
 
 PuzzleTV::~PuzzleTV()
@@ -217,13 +223,26 @@ void PuzzleTV::ParseJson(const std::string& response, TParser parser)
 
 void PuzzleTV::BuildChannelAndGroupList()
 {
+    struct NoCaseComparator : binary_function<string, string, bool>
+    {
+        inline bool operator()(const string& x, const string& y) const
+        {
+            return StringUtils::CompareNoCase(x, y) < 0;
+        }
+    };
+
+    typedef map<string, pair<Channel, string>, NoCaseComparator> PlaylistContent;
+
     m_channelList.clear();
     m_groupList.clear();
 
     try {
 
+        PlaylistContent plistContent;
+
+        // Get channels from server
         ApiFunctionData params("json");
-        CallApiFunction(params, [&] (Document& jsonRoot)
+        CallApiFunction(params, [&plistContent] (Document& jsonRoot)
         {
             const Value &channels = jsonRoot["channels"];
             Value::ConstValueIterator itChannel = channels.Begin();
@@ -237,20 +256,44 @@ void PuzzleTV::BuildChannelAndGroupList()
                 channel.IconPath = (*itChannel)["icon"].GetString();
                 channel.IsRadio = false ;//(*itChannel)["is_video"].GetInt() == 0;//channel.Id > 1000;
                 channel.Urls.push_back((*itChannel)["url"].GetString());
-                m_channelList[channel.Id] = channel;
-
                 std::string groupName = (*itChannel)["group"].GetString();
-                auto itGroup =  std::find_if(m_groupList.begin(), m_groupList.end(), [&](const GroupList::value_type& v ){
-                    return groupName ==  v.second.Name;
-                });
-                if (itGroup == m_groupList.end()) {
-                    m_groupList[m_groupList.size()].Name = groupName;
-                    itGroup = --m_groupList.end();
-                }
-
-                itGroup->second.Channels.insert(channel.Id);
+                plistContent[channel.Name] = PlaylistContent::mapped_type(channel,groupName);
             }
         });
+        
+        using namespace XMLTV;
+        
+        // Update channels ID from EPG
+        ChannelCallback onNewChannel = [&plistContent](const EpgChannel& newChannel){
+            if(plistContent.count(newChannel.strName) != 0) {
+                auto& plistChannel = plistContent[newChannel.strName].first;
+                plistChannel.Id = stoul(newChannel.strId.c_str());
+                if(plistChannel.IconPath.empty())
+                    plistChannel.IconPath = newChannel.strIcon;
+            }
+        };
+        
+        XMLTV::ParseChannels(m_epgUrl, onNewChannel, m_addonHelper);
+
+        
+        for(const auto& channelWithGroup : plistContent)
+        {
+            const auto& channel = channelWithGroup.second.first;
+            const auto& groupName = channelWithGroup.second.second;
+            
+            m_channelList[channel.Id] = channel;
+            
+            auto itGroup =  std::find_if(m_groupList.begin(), m_groupList.end(), [&](const GroupList::value_type& v ){
+                return groupName ==  v.second.Name;
+            });
+            if (itGroup == m_groupList.end()) {
+                m_groupList[m_groupList.size()].Name = groupName;
+                itGroup = --m_groupList.end();
+            }
+            
+            itGroup->second.Channels.insert(channel.Id);
+        }
+       
     } catch (ServerErrorException& ex) {
         m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32006), ex.reason.c_str() );
     } catch (...) {
@@ -295,101 +338,94 @@ void PuzzleTV::Log(const char* massage) const
 void PuzzleTV::GetEpg(ChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries)
 {
      m_addonHelper->Log(LOG_DEBUG, "Get EPG for channel %d [%d - %d]", channelId, startTime, endTime);
-    P8PLATFORM::CLockObject lock(m_epgAccessMutex);
     if(m_archiveLoader)
         m_archiveLoader->EpgActivityStarted();
     
-    if (m_lastEpgRequestStartTime == 0)
-    {
-        m_lastEpgRequestStartTime = startTime;
+    P8PLATFORM::CLockObject lock(m_epgAccessMutex);
+    
+    time_t moreStartTime = startTime;
+    bool needMore = true;
+    for (const auto& i  : m_epgEntries)  {
+        auto entryStartTime = i.second.StartTime;
+        if (i.second.ChannelId == channelId  &&
+            entryStartTime >= startTime &&
+            entryStartTime < endTime)
+        {
+            moreStartTime = i.second.EndTime;
+            needMore = moreStartTime < endTime;
+            epgEntries.insert(i);
+        }
     }
-    else
-    {
-        startTime = max(startTime, m_lastEpgRequestEndTime);
-    }
-    if(endTime > startTime)
-    {
-        GetEpgForAllChannels(startTime, endTime, m_epgEntries);
-        m_lastEpgRequestEndTime = endTime;
-        SaveEpgCache();
-    }
-
-    EpgEntryList::const_iterator itEpgEntry = m_epgEntries.begin();
-    for (; itEpgEntry != m_epgEntries.end(); ++itEpgEntry)
-    {
-        if (itEpgEntry->second.channelId == channelId)
-            epgEntries.insert(*itEpgEntry);
+    
+    if(needMore ) {
+        UpdateEpgForAllChannels(channelId, moreStartTime, endTime);
     }
     if(m_archiveLoader)
         m_archiveLoader->EpgActivityDone();
-
 }
 
-
-void PuzzleTV::GetEpgForAllChannels(time_t startTime, time_t endTime, EpgEntryList& epgEntries)
+bool PuzzleTV::AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry)
 {
-
-    int64_t totalNumberOfHours = (endTime - startTime) / secondsPerHour;
-    int64_t hoursRemaining = totalNumberOfHours;
-    const int64_t hours24 = 24;
+    unsigned int id = xmlEpgEntry.startTime;
     
-    while (hoursRemaining > 0)
-    {
-        // Query EPG for max 24 hours per single request.
-        int64_t requestNumberOfHours = min(hours24, hoursRemaining);
-
-        //EpgEntryList epgEntries24Hours;
-        GetEpgForAllChannelsForNHours(startTime, requestNumberOfHours, [&](EpgEntryList::key_type key, const EpgEntryList::mapped_type& val) {epgEntries[key] = val; });
-        
-        hoursRemaining -= requestNumberOfHours;
-        startTime += requestNumberOfHours * secondsPerHour;
+    // Do not add EPG for unknown channels
+    if(m_channelList.count(xmlEpgEntry.iChannelId) != 1)
+        return false;
+    
+    while( m_epgEntries.count(id) != 0) {
+        // Do not override existing EPG.
+        if(m_epgEntries[id].ChannelId == xmlEpgEntry.iChannelId)
+            return false;
+        ++id;
     }
-
+    EpgEntry epgEntry;
+    epgEntry.ChannelId = xmlEpgEntry.iChannelId;
+    epgEntry.Title = xmlEpgEntry.strTitle;
+    epgEntry.Description = xmlEpgEntry.strPlot;
+    epgEntry.StartTime = xmlEpgEntry.startTime;
+    epgEntry.EndTime = xmlEpgEntry.endTime;
+    epgEntry.HasArchive = true;
+    m_epgEntries[id] =  epgEntry;
+    
+    return true;
 }
 
-template<class TFunc>
-void PuzzleTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHours, TFunc func)
+void PuzzleTV::UpdateEpgForAllChannels(ChannelId channelId, time_t startTime, time_t endTime)
 {
-    // For queries over 24 hours Puzzle.TV returns incomplete results.
-    assert(numberOfHours > 0 && numberOfHours <= 24);
-
-    ParamList params;
-    params["dtime"] = n_to_string(startTime + m_serverTimeShift);
-    params["period"] = n_to_string(numberOfHours);
+    if(m_epgUpdateInterval.IsSet() && m_epgUpdateInterval.TimeLeft() > 0)
+        return;
+    
+    m_epgUpdateInterval.Init(24*60*60*1000);
+    
+    using namespace XMLTV;
     try {
-        ApiFunctionData apiParams("epg3", params);
-
-        CallApiFunction(apiParams, [&] (Document& jsonRoot)
-        {
-            const Value &channels = jsonRoot["epg3"];
-            Value::ConstValueIterator itChannel = channels.Begin();
-            for (; itChannel != channels.End(); ++itChannel)
-            {
-                const Value& jsonChannelEpg = (*itChannel)["epg"];
-                Value::ConstValueIterator itJsonEpgEntry1 = jsonChannelEpg.Begin();
-                Value::ConstValueIterator itJsonEpgEntry2  = itJsonEpgEntry1;
-                itJsonEpgEntry2++;
-                for (; itJsonEpgEntry2 != jsonChannelEpg.End(); ++itJsonEpgEntry1, ++itJsonEpgEntry2)
-                {
-                    EpgEntry epgEntry;
-                    epgEntry.channelId = stoul((*itChannel)["id"].GetString());
-                    epgEntry.Title = (*itJsonEpgEntry1)["progname"].GetString();
-                    epgEntry.Description = (*itJsonEpgEntry1)["description"].GetString();
-                    epgEntry.StartTime = stol((*itJsonEpgEntry1)["ut_start"].GetString()) - m_serverTimeShift;
-                    epgEntry.EndTime = stol((*itJsonEpgEntry2)["ut_start"].GetString()) - m_serverTimeShift;
-                    
-                    unsigned int id = epgEntry.StartTime;
-                    while( m_epgEntries.count(id) != 0)
-                        ++id;
-                    func(id, epgEntry);
-                }
-            }
-        });
-    } catch (ServerErrorException& ex) {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32006), ex.reason.c_str() );
+        auto pThis = this;
+        
+        bool shouldUpdateEpg = false;
+        EpgEntryCallback onEpgEntry = [&pThis, &shouldUpdateEpg, channelId,  startTime] (const XMLTV::EpgEntry& newEntry) {
+            if(pThis->AddEpgEntry(newEntry))
+                shouldUpdateEpg = shouldUpdateEpg || (newEntry.iChannelId == channelId && newEntry.startTime >= startTime);
+        };
+        
+        XMLTV::ParseEpg(m_epgUrl, onEpgEntry, m_addonHelper);
+        
+        if(shouldUpdateEpg)
+            m_pvrHelper->TriggerEpgUpdate(channelId);
+        //        } catch (ServerErrorException& ex) {
+        //            m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32002), ex.reason.c_str() );
     } catch (...) {
-        Log(" >>>>  FAILED receive EPG for N hours<<<<<");
+        Log(" >>>>  FAILED receive EPG <<<<<");
     }
+}
+
+void PuzzleTV::LoadEpg()
+{
+    using namespace XMLTV;
+    auto pThis = this;
+    
+    EpgEntryCallback onEpgEntry = [&pThis] (const XMLTV::EpgEntry& newEntry) {pThis->AddEpgEntry(newEntry);};
+    
+    XMLTV::ParseEpg(m_epgUrl, onEpgEntry, m_addonHelper);
 }
 
 const GroupList &PuzzleTV::GetGroupList()
@@ -490,13 +526,15 @@ void PuzzleTV::CallApiFunction(const ApiFunctionData& data, TParser parser)
         try {
             std::rethrow_exception(ex);
         } catch (JsonParserException jex) {
-            if(data.attempt > 0)
+            Log((string("Puzzle server JSON error: ") + jex.what()).c_str());
+            if(data.attempt > 2)
                 throw jex;
             // Probably server doesn'r start yet
             // Wait and retry
-            P8PLATFORM::CEvent::Sleep(2000);
+            P8PLATFORM::CEvent::Sleep(4000);
            
-             data.attempt += 1;
+            data.attempt += 1;
+            m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32013), data.attempt);
             CallApiFunction(data, parser);
         }
 }
@@ -616,7 +654,7 @@ void PuzzleTV::BuildRecordingsFor(ChannelId channelId, time_t from, time_t to)
     for(const auto & i : epgEntries)
     {
          const EpgEntry& epgTag = i.second;
-         if(epgTag.channelId == channelId
+         if(epgTag.ChannelId == channelId
             && epgTag.StartTime >= from
             && epgTag.StartTime < to
             && m_archiveList.count(i.first) == 0)

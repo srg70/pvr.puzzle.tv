@@ -62,12 +62,72 @@ namespace PvrClient {
     typedef std::map<GroupId, Group> GroupList;
     typedef std::set<ChannelId> FavoriteList;
 
+    
+    struct EpgEntry
+    {
+        EpgEntry()
+        : ChannelId(-1)
+        , HasArchive (false)
+        {}
+        const char* ChannelIdName = "ch";
+        PvrClient::ChannelId ChannelId;
+        
+        const char* StartTimeName = "st";
+        time_t StartTime;
+        
+        const char* EndTimeName = "et";
+        time_t EndTime;
+        
+        const char* TitileName = "ti";
+        std::string Title;
+        
+        const char* DescriptionName = "de";
+        std::string Description;
+        
+        const char* HasArchiveName = "ha";
+        bool HasArchive;
+        
+        template <class T>
+        void Serialize(T& writer) const
+        {
+            writer.StartObject();               // Between StartObject()/EndObject(),
+            writer.Key(ChannelIdName);
+            writer.Uint(ChannelId);
+            writer.Key(StartTimeName);
+            writer.Int64(StartTime);
+            writer.Key(EndTimeName);
+            writer.Int64(EndTime);
+            writer.Key(TitileName);
+            writer.String(Title.c_str());
+            writer.Key(DescriptionName);
+            writer.String(Description.c_str());
+            writer.Key(HasArchiveName);
+            writer.Bool(HasArchive);
+            writer.EndObject();
+        }
+        template <class T>
+        void Deserialize(T& reader)
+        {
+            ChannelId = reader[ChannelIdName].GetUint();
+            StartTime = reader[StartTimeName].GetInt64();
+            EndTime = reader[EndTimeName].GetInt64();
+            Title = reader[TitileName].GetString();
+            Description = reader[DescriptionName].GetString();
+            HasArchive = reader[HasArchiveName].GetBool();
+        }
+    };
+    
+    typedef unsigned int UniqueBroadcastIdType;
+    typedef std::map<UniqueBroadcastIdType, EpgEntry> EpgEntryList;
+    
+
+    
     class IClientCore
     {
     public:
         virtual const ChannelList& GetChannelList() = 0;
         virtual const GroupList &GetGroupList() = 0;
-
+        virtual void GetEpg(ChannelId  channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries) = 0;
     };
 }
 

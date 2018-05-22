@@ -259,7 +259,6 @@ PVR_ERROR  PVRClientBase::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUH
 //        m_addonHelper->FreeString(message);
         OnReloadRecordings();
     }
-
     return PVR_ERROR_NO_ERROR;
     
 }
@@ -360,6 +359,28 @@ PVR_ERROR PVRClientBase::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_C
     return PVR_ERROR_NO_ERROR;
 }
 
+
+PVR_ERROR PVRClientBase::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL& channel, time_t iStart, time_t iEnd)
+{
+    if(NULL == m_clientCore)
+        return PVR_ERROR_SERVER_ERROR;
+    
+    EpgEntryList epgEntries;
+    m_clientCore->GetEpg(channel.iUniqueId, iStart, iEnd, epgEntries);
+    EpgEntryList::const_iterator itEpgEntry = epgEntries.begin();
+    for (int i = 0; itEpgEntry != epgEntries.end(); ++itEpgEntry, ++i)
+    {
+        EPG_TAG tag = { 0 };
+        tag.iUniqueBroadcastId = itEpgEntry->first;
+        tag.iChannelNumber = channel.iUniqueId;
+        tag.strTitle = itEpgEntry->second.Title.c_str();
+        tag.strPlot = itEpgEntry->second.Description.c_str();
+        tag.startTime = itEpgEntry->second.StartTime;
+        tag.endTime = itEpgEntry->second.EndTime;
+        m_pvrHelper->TransferEpgEntry(handle, &tag);
+    }
+    return PVR_ERROR_NO_ERROR;
+}
 
 #pragma mark - Streams
 

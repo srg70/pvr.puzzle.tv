@@ -40,70 +40,10 @@
 
 class HttpEngine;
 
-
-struct SovokEpgEntry
-{
-    SovokEpgEntry()
-    : ChannelId(-1)
-    , HasArchive(false)
-    {}
-    
-    PvrClient::ChannelId ChannelId;
-    time_t StartTime;
-    time_t EndTime;
-
-    std::string Title;
-    std::string Description;
-    
-    bool HasArchive;
-    
-    template <class T>
-    void Serialize(T& writer) const
-    {
-        writer.StartObject();               // Between StartObject()/EndObject(),
-        writer.Key("ChannelId");
-        writer.Uint(ChannelId);
-        writer.Key("StartTime");
-        writer.Int64(StartTime);
-        writer.Key("EndTime");
-        writer.Int64(EndTime);
-        writer.Key("Title");
-        writer.String(Title.c_str());
-        writer.Key("Description");
-        writer.String(Description.c_str());
-        writer.EndObject();
-        // NOTE: do not serialize HasArchive. It'll be calculated on startup
-    }
-    template <class T>
-    void Deserialize(T& reader)
-    {
-        ChannelId = reader["ChannelId"].GetUint();
-        StartTime = reader["StartTime"].GetInt64();
-        EndTime = reader["EndTime"].GetInt64();
-        Title = reader["Title"].GetString();
-        Description = reader["Description"].GetString();
-        // NOTE: do not serialize HasArchive. It'll be calculated on startup
-    }
-};
-
-typedef unsigned int UniqueBroadcastIdType;
-typedef UniqueBroadcastIdType  SovokArchiveEntry;
-
-//struct SovokEpgCaheEntry
-//{
-//    SovokEpgCaheEntry(int channelId, time_t startTime)
-//        : ChannelId(channelId)
-//        , StartTime(startTime)
-//    {}
-//
-//    const PvrClient::ChannelId  ChannelId;
-//    const time_t StartTime;
-//};
-
-typedef std::map<UniqueBroadcastIdType, SovokEpgEntry> EpgEntryList;
-//typedef std::vector<SovokEpgCaheEntry> EpgCache;
 typedef std::map<std::string, std::string> ParamList;
 typedef std::vector<std::string> StreamerNamesList;
+
+typedef PvrClient::UniqueBroadcastIdType  SovokArchiveEntry;
 typedef std::map<PvrClient::ChannelId , int> SovokArchivesInfo;
 
 class SovokExceptionBase : public std::exception
@@ -180,13 +120,12 @@ public:
     const PvrClient::ChannelList &GetChannelList();
     const PvrClient::GroupList &GetGroupList();
     
-    const EpgEntryList& GetEpgList() const;
+    const PvrClient::EpgEntryList& GetEpgList() const;
     const StreamerNamesList& GetStreamersList() const;
     
     void ForEach(std::function<void(const SovokArchiveEntry&)>& action) const;
     
-    //EpgEntryList GetEpg(int channelId, time_t day);
-    void GetEpg(PvrClient::ChannelId  channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries);
+    void GetEpg(PvrClient::ChannelId  channelId, time_t startTime, time_t endTime, PvrClient::EpgEntryList& epgEntries);
     void GetEpgForAllChannels(time_t startTime, time_t endTime);
 
     std::string GetUrl(PvrClient::ChannelId  channelId);
@@ -208,8 +147,8 @@ private:
     struct ApiFunctionData;
         
     void GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHours);
-    void AddEpgEntry(UniqueBroadcastIdType id, SovokEpgEntry& entry);
-    void UpdateHasArchive(SovokEpgEntry& entry) const;
+    void AddEpgEntry(PvrClient::UniqueBroadcastIdType id, PvrClient::EpgEntry& entry);
+    void UpdateHasArchive(PvrClient::EpgEntry& entry) const;
 
     bool Login(bool wait);
     void Logout();
@@ -256,7 +195,7 @@ private:
         std::vector<PvrClient::GroupList::key_type>  Groups;
     }m_countryFilter;
     
-    EpgEntryList m_epgEntries;
+    PvrClient::EpgEntryList m_epgEntries;
     
     time_t m_lastEpgRequestEndTime;
     int m_streammerId;

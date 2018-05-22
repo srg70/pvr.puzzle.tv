@@ -44,6 +44,7 @@
 using namespace std;
 using namespace ADDON;
 using namespace PuzzleEngine;
+using namespace PvrClient;
 
 ADDON_STATUS PuzzlePVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,
                                PVR_PROPERTIES* pvrprops)
@@ -52,16 +53,11 @@ ADDON_STATUS PuzzlePVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_l
     if(ADDON_STATUS_OK != (retVal = PVRClientBase::Init(addonHelper, pvrHelper, pvrprops)))
        return retVal;
     
-//    m_shouldAddFavoritesGroup = true;
     char buffer[1024];
     
-//    if (m_addonHelper->GetSetting("puzzle_server_port", &buffer))
-//        m_login = buffer;
-//    if (m_addonHelper->GetSetting("password", &buffer))
-//        m_password = buffer;
     m_currentChannelStreamIdx = -1;
-    int sercerPort = 54000;
-    m_addonHelper->GetSetting("puzzle_server_port", &sercerPort);
+    int serverPort = 8089;
+    m_addonHelper->GetSetting("puzzle_server_port", &serverPort);
     
     m_addonHelper->GetSetting("puzzle_server_uri", &buffer);
     
@@ -70,12 +66,13 @@ ADDON_STATUS PuzzlePVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_l
     try
     {
         CreateCore();
-        m_puzzleTV->SetServerPort(sercerPort);
+        m_puzzleTV->SetServerPort(serverPort);
         m_puzzleTV->SetServerUri(buffer);
     }
     catch (std::exception& ex)
     {
         m_addonHelper->QueueNotification(QUEUE_ERROR,  m_addonHelper->GetLocalizedString(32005));
+        m_addonHelper->Log(LOG_ERROR, "PuzzlePVRClient:: Can't create Puzzle Server core. Exeption: [%s].", ex.what());
         retVal = ADDON_STATUS_LOST_CONNECTION;
     }
     
@@ -103,7 +100,7 @@ void PuzzlePVRClient::CreateCore()
         m_clientCore = NULL;
         SAFE_DELETE(m_puzzleTV);
     }
-    m_clientCore = m_puzzleTV = new PuzzleTV(m_addonHelper);
+    m_clientCore = m_puzzleTV = new PuzzleTV(m_addonHelper, m_pvrHelper);
 }
 
 ADDON_STATUS PuzzlePVRClient::SetSetting(const char *settingName, const void *settingValue)
@@ -126,7 +123,7 @@ ADDON_STATUS PuzzlePVRClient::SetSetting(const char *settingName, const void *se
 
 PVR_ERROR PuzzlePVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabilities)
 {
-    //pCapabilities->bSupportsEPG = true;
+    pCapabilities->bSupportsEPG = true;
     pCapabilities->bSupportsTV = true;
     pCapabilities->bSupportsRadio = true;
     pCapabilities->bSupportsChannelGroups = true;
@@ -143,27 +140,6 @@ PVR_ERROR PuzzlePVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabil
     return PVRClientBase::GetAddonCapabilities(pCapabilities);
 }
 
-
-PVR_ERROR PuzzlePVRClient::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL& channel, time_t iStart, time_t iEnd)
-{
-    return PVR_ERROR_NOT_IMPLEMENTED;
-    
-//    EpgEntryList epgEntries;
-//    m_sovokTV->GetEpg(channel.iUniqueId, iStart, iEnd, epgEntries);
-//    EpgEntryList::const_iterator itEpgEntry = epgEntries.begin();
-//    for (int i = 0; itEpgEntry != epgEntries.end(); ++itEpgEntry, ++i)
-//    {
-//        EPG_TAG tag = { 0 };
-//        tag.iUniqueBroadcastId = itEpgEntry->first;
-//        tag.iChannelNumber = channel.iUniqueId;
-//        tag.strTitle = itEpgEntry->second.Title.c_str();
-//        tag.strPlot = itEpgEntry->second.Description.c_str();
-//        tag.startTime = itEpgEntry->second.StartTime;
-//        tag.endTime = itEpgEntry->second.EndTime;
-//        m_pvrHelper->TransferEpgEntry(handle, &tag);
-//    }
-//    return PVR_ERROR_NO_ERROR;
-}
 PVR_ERROR  PuzzlePVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
 {
     return PVRClientBase::MenuHook(menuhook, item);
@@ -305,12 +281,10 @@ bool PuzzlePVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
 
 PVR_ERROR PuzzlePVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
 {
-    snprintf(signalStatus.strAdapterName, sizeof(signalStatus.strAdapterName), "IPTV Puzzle TV Adapter 1");
+    snprintf(signalStatus.strAdapterName, sizeof(signalStatus.strAdapterName), "IPTV Puzzle Server");
     snprintf(signalStatus.strAdapterStatus, sizeof(signalStatus.strAdapterStatus), (m_puzzleTV == NULL) ? "Not connected" :"OK");
     return PVR_ERROR_NO_ERROR;
 }
-
-ADDON_STATUS PuzzlePVRClient::GetStatus(){ return  /*(m_sovokTV == NULL)? ADDON_STATUS_LOST_CONNECTION : */ADDON_STATUS_OK;}
        
 
 

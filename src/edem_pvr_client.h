@@ -46,8 +46,6 @@ public:
 
     PVR_ERROR SignalStatus(PVR_SIGNAL_STATUS &signalStatus);
     
-    PVR_ERROR GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL& channel, time_t iStart, time_t iEnd);
-
     bool OpenLiveStream(const PVR_CHANNEL& channel);
     bool SwitchChannel(const PVR_CHANNEL& channel);
 

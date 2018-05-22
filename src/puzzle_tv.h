@@ -36,40 +36,21 @@
 #include <functional>
 #include <list>
 #include <memory>
+#include "p8-platform/util/timeutils.h"
 
 class HttpEngine;
+
+namespace XMLTV {
+    struct EpgEntry;
+    struct EpgChannel;
+}
 
 namespace PuzzleEngine
 {
 
-    struct EpgEntry
-    {
-        PvrClient::ChannelId channelId;
-        time_t StartTime;
-        time_t EndTime;
-
-        std::string Title;
-        std::string Description;
-    };
-
-    typedef unsigned int UniqueBroadcastIdType;
-    typedef UniqueBroadcastIdType  ArchiveEntry;
-
-    struct EpgCaheEntry
-    {
-        EpgCaheEntry(PvrClient::ChannelId channelId, time_t startTime)
-            : channelId(channelId)
-            , StartTime(startTime)
-        {}
-
-        const PvrClient::ChannelId channelId;
-        const time_t StartTime;
-    };
-
-    typedef std::map<UniqueBroadcastIdType, EpgEntry> EpgEntryList;
-    //typedef std::vector<EpgCaheEntry> EpgCache;
     typedef std::map<std::string, std::string> ParamList;
-    typedef std::vector<std::string> StreamerNamesList;
+
+    typedef PvrClient::UniqueBroadcastIdType  ArchiveEntry;
     typedef std::set<ArchiveEntry> ArchiveList;
 
     class ExceptionBase : public std::exception
@@ -84,18 +65,6 @@ namespace PuzzleEngine
 
     class AuthFailedException : public ExceptionBase
     {
-    };
-
-    class BadSessionIdException : public ExceptionBase
-    {
-    public:
-        BadSessionIdException() : ExceptionBase("Session ID es empty.") {}
-    };
-
-    class UnknownStreamerIdException : public ExceptionBase
-    {
-    public:
-        UnknownStreamerIdException() : ExceptionBase("Unknown streamer ID.") {}
     };
 
     class MissingApiException : public ExceptionBase
@@ -123,18 +92,18 @@ namespace PuzzleEngine
     class PuzzleTV : public PvrClient::IClientCore
     {
     public:
-        PuzzleTV(ADDON::CHelper_libXBMC_addon *addonHelper);
+        PuzzleTV(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper);
         ~PuzzleTV();
 
         const PvrClient::ChannelList &GetChannelList();
         const PvrClient::GroupList &GetGroupList();
        
-        const EpgEntryList& GetEpgList() const;
+        const PvrClient::EpgEntryList& GetEpgList() const;
         
         void Apply(std::function<void(const ArchiveList&)>& action) const;
         bool StartArchivePollingWithCompletion(std::function<void(void)> action);
 
-        void  GetEpg(PvrClient::ChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries);
+        void  GetEpg(PvrClient::ChannelId channelId, time_t startTime, time_t endTime, PvrClient::EpgEntryList& epgEntries);
 
         std::string GetUrl(PvrClient::ChannelId channelId);
         std::string GetNextStream(PvrClient::ChannelId channelId, int currentChannelIdx);
@@ -153,10 +122,10 @@ namespace PuzzleEngine
         
         std::string GetArchive(PvrClient::ChannelId channelId, time_t startTime);
         
-        template<class TFunc>
-        void  GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHours, TFunc func);
-        void GetEpgForAllChannels(time_t startTime, time_t endTime, EpgEntryList& epgEntries);
-        
+        bool AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
+        void  UpdateEpgForAllChannels(PvrClient::ChannelId channelId,  time_t startTime, time_t endTime);
+        void LoadEpg();
+
         void Cleanup();
         
               
@@ -186,10 +155,13 @@ namespace PuzzleEngine
         std::string m_serverUri;
         
         ADDON::CHelper_libXBMC_addon *m_addonHelper;
+        CHelper_libXBMC_pvr *m_pvrHelper;
+
         PvrClient::ChannelList m_channelList;
         ArchiveList m_archiveList;
         PvrClient::GroupList m_groupList;
-        EpgEntryList m_epgEntries;
+        std::string m_epgUrl;
+        PvrClient::EpgEntryList m_epgEntries;
         time_t m_lastEpgRequestStartTime;
         time_t m_lastEpgRequestEndTime;
         unsigned int m_lastUniqueBroadcastId;
@@ -197,6 +169,8 @@ namespace PuzzleEngine
         P8PLATFORM::CMutex m_epgAccessMutex;
         HelperThread* m_archiveLoader;
         HttpEngine* m_httpEngine;
+        P8PLATFORM::CTimeout m_epgUpdateInterval;
+
     };
 }
 #endif //__puzzle_tv_h__

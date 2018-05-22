@@ -43,10 +43,7 @@ public:
     PVR_ERROR GetAddonCapabilities(PVR_ADDON_CAPABILITIES* pCapabilities);
 
     PVR_ERROR SignalStatus(PVR_SIGNAL_STATUS &signalStatus);
-    ADDON_STATUS GetStatus();
 
-    PVR_ERROR GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL& channel, time_t iStart, time_t iEnd);
-    
     bool OpenLiveStream(const PVR_CHANNEL& channel);
     int ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize);
     bool SwitchChannel(const PVR_CHANNEL& channel);

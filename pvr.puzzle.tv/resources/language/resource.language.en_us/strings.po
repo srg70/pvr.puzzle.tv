@@ -222,6 +222,10 @@ msgctxt "#32012"
 msgid "Reloading EPG ..."
 msgstr "Reloading EPG ..."
 
+msgctxt "#32013"
+msgid "Waiting for Puzzle Server (%d)..."
+msgid "Waiting for Puzzle Server (%d)..."
+
 #============= Menus ================
 
 msgctxt "#32050"

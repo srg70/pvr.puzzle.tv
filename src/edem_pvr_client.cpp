@@ -46,6 +46,7 @@
 using namespace std;
 using namespace ADDON;
 using namespace EdemEngine;
+using namespace PvrClient;
 
 static const char* c_playlist_setting = "edem_playlist_url";
 static const char* c_epg_setting = "edem_epg_url";
@@ -168,32 +169,9 @@ PVR_ERROR EdemPVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabilit
     return PVRClientBase::GetAddonCapabilities(pCapabilities);
 }
 
-
-PVR_ERROR EdemPVRClient::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL& channel, time_t iStart, time_t iEnd)
-{
-    if(NULL == m_core)
-        return PVR_ERROR_SERVER_ERROR;
-    
-    EpgEntryList epgEntries;
-    m_core->GetEpg(channel.iUniqueId, iStart, iEnd, epgEntries);
-    EpgEntryList::const_iterator itEpgEntry = epgEntries.begin();
-    for (int i = 0; itEpgEntry != epgEntries.end(); ++itEpgEntry, ++i)
-    {
-        EPG_TAG tag = { 0 };
-        tag.iUniqueBroadcastId = itEpgEntry->first;
-        tag.iChannelNumber = channel.iUniqueId;
-        tag.strTitle = itEpgEntry->second.Title.c_str();
-        tag.strPlot = itEpgEntry->second.Description.c_str();
-        tag.startTime = itEpgEntry->second.StartTime;
-        tag.endTime = itEpgEntry->second.EndTime;
-        m_pvrHelper->TransferEpgEntry(handle, &tag);
-    }
-    return PVR_ERROR_NO_ERROR;
-}
 PVR_ERROR  EdemPVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
 {
-    return PVRClientBase::MenuHook(menuhook, item);
-    
+    return PVRClientBase::MenuHook(menuhook, item);  
 }
 
 bool EdemPVRClient::OpenLiveStream(const PVR_CHANNEL& channel)
@@ -343,7 +321,7 @@ bool EdemPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
 
 PVR_ERROR EdemPVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
 {
-    snprintf(signalStatus.strAdapterName, sizeof(signalStatus.strAdapterName), "IPTV Sovok TV Adapter 1");
+    snprintf(signalStatus.strAdapterName, sizeof(signalStatus.strAdapterName), "IPTV Edem TV");
     snprintf(signalStatus.strAdapterStatus, sizeof(signalStatus.strAdapterStatus), (m_core == NULL) ? "Not connected" :"OK");
     return PVR_ERROR_NO_ERROR;
 }
