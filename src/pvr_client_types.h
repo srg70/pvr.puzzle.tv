@@ -27,7 +27,8 @@
 #include <map>
 #include <set>
 #include <vector>
-
+#include <vector>
+#include <functional>
 
 namespace PvrClient {
     typedef unsigned int ChannelId;
