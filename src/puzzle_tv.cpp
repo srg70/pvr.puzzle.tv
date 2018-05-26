@@ -44,12 +44,7 @@ using namespace PuzzleEngine;
 using namespace PvrClient;
 
 static const int secondsPerHour = 60 * 60;
-
-//static const char c_EpgCacheDelimeter = '\n';
-//
-//static const char* c_EpgCacheDirPath = "special://temp/pvr.sovok.tv";
-//
-//static const char* c_EpgCacheFilePath = "special://temp/pvr.sovok.tv/EpgCache.txt";
+static const char* c_EpgCacheFile = "puzzle_epg_cache.txt";
 
 static void BeutifyUrl(string& url);
 struct PuzzleTV::ApiFunctionData
@@ -63,81 +58,21 @@ struct PuzzleTV::ApiFunctionData
     mutable int attempt;
 };
 
-class PuzzleTV::HelperThread : public P8PLATFORM::CThread
-{
-public:
-    HelperThread(PuzzleTV* PuzzleTV, std::function<void(void)> action)
-    : m_PuzzleTV(PuzzleTV), m_action(action)
-    , m_epgActivityCounter(0)
-//    , m_stopEvent(false) /*Manual event*/
-    {}
-    void EpgActivityStarted() {++m_epgActivityCounter;}
-    void EpgActivityDone() {}
-    void* Process()
-    {
-        do
-        {
-            unsigned int oldEpgActivity = m_epgActivityCounter;
-            m_PuzzleTV->LoadArchiveList();
-            
-            // Wait for epg done before announce archives
-            bool isStopped = IsStopped();
-            while(!isStopped && (oldEpgActivity != m_epgActivityCounter)){
-                oldEpgActivity = m_epgActivityCounter;
-                isStopped = IsStopped(3000);// 2sec
-            }
-            if(isStopped)
-                break;
-            
-            HelperThread* pThis = this;
-            m_PuzzleTV->m_httpEngine->RunOnCompletionQueueAsync([pThis]() {
-                pThis->m_action();
-            },  [](const CActionQueue::ActionResult& s) {});
-
-        }while (!IsStopped(10*60*1000));//10 min
-
-        return NULL;
-        
-    }
-//    bool StopThread(int iWaitMs = 5000)
-//    {
-//        m_stopEvent.Broadcast();
-//        return this->P8PLATFORM::CThread::StopThread(iWaitMs);
-//    }
-private:
-    
-    bool IsStopped(uint32_t timeoutInSec = 0) {
-        P8PLATFORM::CTimeout timeout(timeoutInSec * 1000);
-        bool isStoppedOrTimeout = P8PLATFORM::CThread::IsStopped() || timeout.TimeLeft() == 0;
-        while(!isStoppedOrTimeout) {
-            isStoppedOrTimeout = P8PLATFORM::CThread::IsStopped() || timeout.TimeLeft() == 0;
-            Sleep(1000);//1sec
-        }
-        return P8PLATFORM::CThread::IsStopped();
-    }
-
-    PuzzleTV* m_PuzzleTV;
-    std::function<void(void)> m_action;
-    unsigned int m_epgActivityCounter;
-//    P8PLATFORM::CEvent m_stopEvent;
-};
-
-
 const ParamList PuzzleTV::ApiFunctionData::s_EmptyParams;
 
 PuzzleTV::PuzzleTV(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper) :
-    m_addonHelper(addonHelper),
-    m_pvrHelper(pvrHelper),
+    ClientCoreBase(addonHelper, pvrHelper),
     m_lastEpgRequestStartTime(0),
     m_lastEpgRequestEndTime(0),
     m_lastUniqueBroadcastId(0),
-    m_archiveLoader(NULL),
     m_epgUrl("http://api.torrent-tv.ru/ttv.xmltv.xml.gz")
 {
     m_httpEngine = new HttpEngine(m_addonHelper);
     
-    LoadEpgCache();
+    BuildChannelAndGroupList();
+    LoadEpgCache(c_EpgCacheFile);
     LoadEpg();
+    OnEpgUpdateDone();
 }
 
 PuzzleTV::~PuzzleTV()
@@ -148,77 +83,10 @@ void PuzzleTV::Cleanup()
 {
     m_addonHelper->Log(LOG_NOTICE, "PuzzleTV stopping...");
 
-    if(m_archiveLoader) {
-        m_archiveLoader->StopThread();
-    }
-    //Logout();
     if(m_httpEngine)
         SAFE_DELETE(m_httpEngine);
     
-    if(m_archiveLoader)
-        SAFE_DELETE(m_archiveLoader);
-
     m_addonHelper->Log(LOG_NOTICE, "PuzzleTV stopped.");
-}
-
-void PuzzleTV::SaveEpgCache()
-{
-}
-void PuzzleTV::LoadEpgCache()
-{
-   
-}
-
-bool PuzzleTV::StartArchivePollingWithCompletion(std::function<void(void)> action)
-{
-    if(m_archiveLoader)
-        return false;
-    
-    m_archiveLoader = new PuzzleTV::HelperThread(this, action);
-    m_archiveLoader->CreateThread(false);
-    return true;
-}
-
-ChannelList &PuzzleTV::GetMutableChannelList()
-{
-    if (m_channelList.empty())
-    {
-        BuildChannelAndGroupList();
-    }
-    
-    return m_channelList;
-
-}
-
-const ChannelList &PuzzleTV::GetChannelList()
-{
-    return GetMutableChannelList();
-}
-
-const EpgEntryList& PuzzleTV::GetEpgList() const
-{
-    return  m_epgEntries;
-}
-
-template <typename TParser>
-void PuzzleTV::ParseJson(const std::string& response, TParser parser)
-{
-    Document jsonRoot;
-    jsonRoot.Parse(response.c_str());
-    if(jsonRoot.HasParseError()) {
-        
-        ParseErrorCode error = jsonRoot.GetParseError();
-        auto strError = string("Rapid JSON parse error: ");
-        strError += GetParseError_En(error);
-        strError += " (" ;
-        strError += n_to_string(error);
-        strError += ").";
-        Log(strError.c_str());
-        throw JsonParserException(strError);
-    }
-    parser(jsonRoot);
-    return;
-
 }
 
 void PuzzleTV::BuildChannelAndGroupList()
@@ -232,9 +100,6 @@ void PuzzleTV::BuildChannelAndGroupList()
     };
 
     typedef map<string, pair<Channel, string>, NoCaseComparator> PlaylistContent;
-
-    m_channelList.clear();
-    m_groupList.clear();
 
     try {
 
@@ -281,23 +146,25 @@ void PuzzleTV::BuildChannelAndGroupList()
             const auto& channel = channelWithGroup.second.first;
             const auto& groupName = channelWithGroup.second.second;
             
-            m_channelList[channel.Id] = channel;
+            AddChannel(channel);
             
-            auto itGroup =  std::find_if(m_groupList.begin(), m_groupList.end(), [&](const GroupList::value_type& v ){
+            const auto& groupList = GetGroupList();
+            auto itGroup =  std::find_if(groupList.begin(), groupList.end(), [&](const GroupList::value_type& v ){
                 return groupName ==  v.second.Name;
             });
-            if (itGroup == m_groupList.end()) {
-                m_groupList[m_groupList.size()].Name = groupName;
-                itGroup = --m_groupList.end();
+            if (itGroup == groupList.end()) {
+                Group newGroup;
+                newGroup.Name = groupName;
+                AddGroup(groupList.size(), newGroup);
+                itGroup = --groupList.end();
             }
-            
-            itGroup->second.Channels.insert(channel.Id);
+            AddChannelToGroup(itGroup->first, channel.Id);
         }
        
     } catch (ServerErrorException& ex) {
         m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32006), ex.reason.c_str() );
     } catch (...) {
-        Log(">>>>  FAILED to build channel list <<<<<");
+        LogError(">>>>  FAILED to build channel list <<<<<");
     }
     
 
@@ -322,30 +189,17 @@ std::string PuzzleTV::GetArchive(    ChannelId channelId, time_t startTime)
      } catch (ServerErrorException& ex) {
          m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32006), ex.reason.c_str() );
      } catch (...) {
-         Log(" >>>>  FAILED receive archive <<<<<");
+         LogError(" >>>>  FAILED receive archive <<<<<");
     }
     return url;
 }
 
-void PuzzleTV::Log(const char* massage) const
-{
-    //char* msg = m_addonHelper->UnknownToUTF8(massage);
-    m_addonHelper->Log(LOG_DEBUG, massage);
-    //m_addonHelper->FreeString(msg);
-    
-}
-
 void PuzzleTV::GetEpg(ChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries)
 {
-     m_addonHelper->Log(LOG_DEBUG, "Get EPG for channel %d [%d - %d]", channelId, startTime, endTime);
-    if(m_archiveLoader)
-        m_archiveLoader->EpgActivityStarted();
-    
-    P8PLATFORM::CLockObject lock(m_epgAccessMutex);
-    
-    time_t moreStartTime = startTime;
     bool needMore = true;
-    for (const auto& i  : m_epgEntries)  {
+    time_t moreStartTime = startTime;
+    IClientCore::EpgEntryAction action = [&needMore, &moreStartTime, &epgEntries, channelId, startTime, endTime] (const EpgEntryList::value_type& i)
+    {
         auto entryStartTime = i.second.StartTime;
         if (i.second.ChannelId == channelId  &&
             entryStartTime >= startTime &&
@@ -355,39 +209,33 @@ void PuzzleTV::GetEpg(ChannelId channelId, time_t startTime, time_t endTime, Epg
             needMore = moreStartTime < endTime;
             epgEntries.insert(i);
         }
-    }
+    };
+    ForEachEpg(action);
+
     
     if(needMore ) {
         UpdateEpgForAllChannels(channelId, moreStartTime, endTime);
     }
-    if(m_archiveLoader)
-        m_archiveLoader->EpgActivityDone();
+    OnEpgUpdateDone();
+
 }
 
 bool PuzzleTV::AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry)
 {
     unsigned int id = xmlEpgEntry.startTime;
-    
-    // Do not add EPG for unknown channels
-    if(m_channelList.count(xmlEpgEntry.iChannelId) != 1)
-        return false;
-    
-    while( m_epgEntries.count(id) != 0) {
-        // Do not override existing EPG.
-        if(m_epgEntries[id].ChannelId == xmlEpgEntry.iChannelId)
-            return false;
-        ++id;
-    }
+
     EpgEntry epgEntry;
     epgEntry.ChannelId = xmlEpgEntry.iChannelId;
     epgEntry.Title = xmlEpgEntry.strTitle;
     epgEntry.Description = xmlEpgEntry.strPlot;
     epgEntry.StartTime = xmlEpgEntry.startTime;
     epgEntry.EndTime = xmlEpgEntry.endTime;
-    epgEntry.HasArchive = true;
-    m_epgEntries[id] =  epgEntry;
-    
-    return true;
+    return ClientCoreBase::AddEpgEntry(id, epgEntry);
+}
+
+void PuzzleTV::UpdateHasArchive(PvrClient::EpgEntry& entry)
+{
+    entry.HasArchive = false;
 }
 
 void PuzzleTV::UpdateEpgForAllChannels(ChannelId channelId, time_t startTime, time_t endTime)
@@ -411,10 +259,12 @@ void PuzzleTV::UpdateEpgForAllChannels(ChannelId channelId, time_t startTime, ti
         
         if(shouldUpdateEpg)
             m_pvrHelper->TriggerEpgUpdate(channelId);
+
+        SaveEpgCache(c_EpgCacheFile);
         //        } catch (ServerErrorException& ex) {
         //            m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32002), ex.reason.c_str() );
     } catch (...) {
-        Log(" >>>>  FAILED receive EPG <<<<<");
+        LogError(" >>>>  FAILED receive EPG <<<<<");
     }
 }
 
@@ -428,19 +278,11 @@ void PuzzleTV::LoadEpg()
     XMLTV::ParseEpg(m_epgUrl, onEpgEntry, m_addonHelper);
 }
 
-const GroupList &PuzzleTV::GetGroupList()
-{
-    if (m_groupList.empty())
-        BuildChannelAndGroupList();
-
-    return m_groupList;
-}
-
 string PuzzleTV::GetNextStream(ChannelId channelId, int currentChannelIdx)
 {
     auto& channelList = GetChannelList();
     if(channelList.count( channelId ) != 1) {
-        Log((string(" >>>>   PuzzleTV::GetNextStream: Unknown channel ID=" ) + n_to_string(channelId) + " <<<<<") .c_str());
+        LogError(" >>>>   PuzzleTV::GetNextStream: Unknown channel ID= %d <<<<<", channelId);
         return string();
     }
     auto& urls = channelList.at(channelId).Urls;
@@ -451,12 +293,13 @@ string PuzzleTV::GetNextStream(ChannelId channelId, int currentChannelIdx)
 }
 string PuzzleTV::GetUrl(ChannelId channelId)
 {
-    auto& channelList = GetMutableChannelList();
+    auto& channelList = GetChannelList();
     if(channelList.count( channelId ) != 1) {
-        Log((string(" >>>>   PuzzleTV::GetUrl: Unknown channel ID=" ) + n_to_string(channelId) + " <<<<<") .c_str());
+        LogError(" >>>>   PuzzleTV::GetNextStream: Unknown channel ID= %d <<<<<", channelId);
         return string();
     }
-    auto& urls = channelList.at(channelId).Urls;
+    Channel ch = channelList.at(channelId);
+    auto& urls = ch.Urls;
     if(urls.size() <2)
     {
         urls.clear();
@@ -473,36 +316,19 @@ string PuzzleTV::GetUrl(ChannelId channelId)
                                 {
                                     auto url = i.GetString();
                                          urls.push_back(url);
-                                    Log((string(" >>>>  URL: ") + url +  "<<<<<").c_str());
+                                    LogDebug(" >>>>  URL: %s <<<<<",  url);
 
                                 });
                });
             } catch (ServerErrorException& ex) {
                 m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32006), ex.reason.c_str() );
             } catch (...) {
-               Log((string(" >>>>  FAILED to get URL for channel ID=" ) + n_to_string(channelId) + " <<<<<") .c_str());
+               LogError(" >>>>  FAILED to get URL for channel ID=%d <<<<<", channelId);
            }
         
     }
-    return channelList[channelId].Urls[0];
-//    string url;
-//
-//    ParamList params;
-//    params["cid"] = n_to_string_hex(channelId);
-//    try {
-//        ApiFunctionData apiParams("streams", params);
-//        CallApiFunction(apiParams, [&] (Document& jsonRoot)
-//       {
-//            url = jsonRoot["url"].GetString();
-//            BeutifyUrl(url);
-//       });
-//    } catch (ServerErrorException& ex) {
-//        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32006), ex.reason.c_str() );
-//    } catch (...) {
-//       Log((string(" >>>>  FAILED to get URL for channel ID=" ) + n_to_string(channelId) + " <<<<<") .c_str());
-//   }
-//
-//    return url;
+    AddChannel(ch);
+    return ch.Urls[0];
 }
 
 void BeutifyUrl(string& url)
@@ -526,15 +352,15 @@ void PuzzleTV::CallApiFunction(const ApiFunctionData& data, TParser parser)
         try {
             std::rethrow_exception(ex);
         } catch (JsonParserException jex) {
-            Log((string("Puzzle server JSON error: ") + jex.what()).c_str());
+            LogError("Puzzle server JSON error: %s",  jex.what());
             if(data.attempt > 2)
                 throw jex;
             // Probably server doesn'r start yet
             // Wait and retry
-            P8PLATFORM::CEvent::Sleep(4000);
-           
             data.attempt += 1;
             m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32013), data.attempt);
+            P8PLATFORM::CEvent::Sleep(4000);
+           
             CallApiFunction(data, parser);
         }
 }
@@ -560,13 +386,13 @@ void PuzzleTV::CallApiAsync(const ApiFunctionData& data, TParser parser, TComple
     strRequest += data.name + query;
     auto start = P8PLATFORM::GetTimeMs();
 
-    m_addonHelper->Log(LOG_DEBUG, "Calling '%s'.",  data.name.c_str());
+    LogDebug("Calling '%s'.",  data.name.c_str());
 
     std::function<void(const std::string&)> parserWrapper = [=](const std::string& response) {
-        m_addonHelper->Log(LOG_DEBUG, "Response in %d ms.",  P8PLATFORM::GetTimeMs() - start);
+        LogDebug("Response in %d ms.",  P8PLATFORM::GetTimeMs() - start);
         
         //            if(data.name.compare( "get_url") == 0)
-        //                m_addonHelper->Log(LOG_DEBUG, response.substr(0, 16380).c_str());
+        //                LogDebug(response.substr(0, 16380).c_str());
         
         ParseJson(response, [&] (Document& jsonRoot)
                   {
@@ -623,7 +449,7 @@ void PuzzleTV::LoadArchiveList()
                                   stoi(i["archive_hours"].GetString())
                               };
                               // Remeber only valid channels
-                              if(m_channelList.count(arch.ChannelId) != 0)
+                              if(GetChannelList().count(arch.ChannelId) != 0)
                                   archives.push_back(arch);
                           });
             return true;
@@ -664,7 +490,7 @@ void PuzzleTV::BuildRecordingsFor(ChannelId channelId, time_t from, time_t to)
              
          }
      }
-    //m_addonHelper->Log(LOG_DEBUG, "Found %d EPG records for %d .", cnt, channelId);
+    //LogDebug("Found %d EPG records for %d .", cnt, channelId);
 
 }
 void PuzzleTV::Apply(std::function<void(const ArchiveList&)>& action ) const {

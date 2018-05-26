@@ -27,8 +27,7 @@
 #ifndef _edem_player_h_
 #define _edem_player_h_
 
-#include "pvr_client_types.h"
-#include "libXBMC_pvr.h"
+#include "client_core_base.hpp"
 #include <vector>
 #include <functional>
 #include <list>
@@ -46,49 +45,29 @@ namespace EdemEngine
 {
     typedef std::map<std::string, std::string> ParamList;
 
-    typedef PvrClient::UniqueBroadcastIdType  ArchiveEntry;
-    typedef std::set<ArchiveEntry> ArchiveList;
-    
-    class ExceptionBase : public std::exception
-    {
-    public:
-        const char* what() const noexcept {return reason.c_str();}
-        const std::string reason;
-        ExceptionBase(const std::string& r) : reason(r) {}
-        ExceptionBase(const char* r = "") : reason(r) {}
-        
-    };
-    
-    class AuthFailedException : public ExceptionBase
+    class AuthFailedException : public PvrClient::ExceptionBase
     {
     };
     
-    class BadPlaylistFormatException : public ExceptionBase
+    class BadPlaylistFormatException : public PvrClient::ExceptionBase
     {
     public:
         BadPlaylistFormatException(const char* r) : ExceptionBase(r) {}
     };
     
-    class UnknownStreamerIdException : public ExceptionBase
+    class UnknownStreamerIdException : public PvrClient::ExceptionBase
     {
     public:
         UnknownStreamerIdException() : ExceptionBase("Unknown streamer ID.") {}
     };
     
-    class MissingApiException : public ExceptionBase
+    class MissingApiException : public PvrClient::ExceptionBase
     {
     public:
         MissingApiException(const char* r) : ExceptionBase(r) {}
     };
     
-    class JsonParserException : public ExceptionBase
-    {
-    public:
-        JsonParserException(const std::string& r) : ExceptionBase(r) {}
-        JsonParserException(const char* r) : ExceptionBase(r) {}
-    };
-    
-    class ServerErrorException : public ExceptionBase
+    class ServerErrorException : public PvrClient::ExceptionBase
     {
     public:
         ServerErrorException(const char* r, int c) : ExceptionBase(r), code(c) {}
@@ -97,57 +76,35 @@ namespace EdemEngine
     
     
     
-    class Core : public PvrClient::IClientCore
+    class Core : public PvrClient::ClientCoreBase
     {
     public:
         Core(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper, const std::string &playListUrl, const std::string &epgUrl);
         ~Core();
         
-        const PvrClient::ChannelList &GetChannelList();
-        const PvrClient::EpgEntryList& GetEpgList() const;
-        
-        void Apply(std::function<void(const ArchiveList&)>& action) const;
-        bool StartArchivePollingWithCompletion(std::function<void(void)> action);
-        
         void  GetEpg(PvrClient::ChannelId channelId, time_t startTime, time_t endTime, PvrClient::EpgEntryList& epgEntries);
         std::string GetArchiveUrl(PvrClient::ChannelId channelId, time_t startTime);
         
-        const PvrClient::GroupList &GetGroupList();
         std::string GetUrl(PvrClient::ChannelId channelId);
-        
+    protected:
+        virtual void UpdateHasArchive(PvrClient::EpgEntry& entry);
+        virtual void BuildChannelAndGroupList();
+
     private:
         
         struct ApiFunctionData;
         class HelperThread;
         
+        
+        void LoadEpg();
         bool AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
         void  UpdateEpgForAllChannels(PvrClient::ChannelId channelId,  time_t startTime, time_t endTime);
 
         void Cleanup();
-        
-        void LoadEpg();
-        void LoadPlaylist();
-
         void ResetArchiveList();
-        void Log(const char* massage) const;
-        
-        void LoadEpgCache();
-        void SaveEpgCache();
-        
-        template <typename TParser>
-        void ParseJson(const std::string& response, TParser parser);
-
-        ADDON::CHelper_libXBMC_addon *m_addonHelper;
-        CHelper_libXBMC_pvr *m_pvrHelper;
 
         std::string m_playListUrl;
         std::string m_epgUrl;
-        PvrClient::ChannelList m_channelList;
-        ArchiveList m_archiveList;
-        PvrClient::GroupList m_groupList;
-        PvrClient::EpgEntryList m_epgEntries;
-        P8PLATFORM::CMutex m_epgAccessMutex;
-        HelperThread* m_archiveLoader;
         HttpEngine* m_httpEngine;
         P8PLATFORM::CTimeout m_epgUpdateInterval;
     };

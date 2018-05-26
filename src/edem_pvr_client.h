@@ -49,8 +49,6 @@ public:
     bool OpenLiveStream(const PVR_CHANNEL& channel);
     bool SwitchChannel(const PVR_CHANNEL& channel);
 
-    int GetRecordingsAmount(bool deleted);
-    PVR_ERROR GetRecordings(ADDON_HANDLE handle, bool deleted);
     bool OpenRecordedStream(const PVR_RECORDING &recording);
 
 protected:

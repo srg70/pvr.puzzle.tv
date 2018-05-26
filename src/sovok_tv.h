@@ -27,13 +27,12 @@
 #ifndef sovok_tv_h
 #define sovok_tv_h
 
-#include "pvr_client_types.h"
+#include "client_core_base.hpp"
 #include "libXBMC_pvr.h"
 #include <string>
 #include <map>
 #include <set>
 #include <vector>
-#include <functional>
 #include <list>
 #include <memory>
 #include "ActionQueue.hpp"
@@ -43,62 +42,44 @@ class HttpEngine;
 typedef std::map<std::string, std::string> ParamList;
 typedef std::vector<std::string> StreamerNamesList;
 
-typedef PvrClient::UniqueBroadcastIdType  SovokArchiveEntry;
 typedef std::map<PvrClient::ChannelId , int> SovokArchivesInfo;
 
-class SovokExceptionBase : public std::exception
+class AuthFailedException : public PvrClient::ExceptionBase
+{
+};
+
+class MissingHttpsSupportException : public PvrClient::ExceptionBase
+{
+};
+
+class BadSessionIdException : public PvrClient::ExceptionBase
 {
 public:
-    const char* what() const noexcept {return reason.c_str();}
-    const std::string reason;
-    SovokExceptionBase(const std::string& r) : reason(r) {}
-    SovokExceptionBase(const char* r = "") : reason(r) {}
-
+    BadSessionIdException() : ExceptionBase("Session ID es empty.") {}
 };
 
-class AuthFailedException : public SovokExceptionBase
-{
-};
-
-class MissingHttpsSupportException : public SovokExceptionBase
-{
-};
-
-class BadSessionIdException : public SovokExceptionBase
+class UnknownStreamerIdException : public PvrClient::ExceptionBase
 {
 public:
-    BadSessionIdException() : SovokExceptionBase("Session ID es empty.") {}
+    UnknownStreamerIdException() : ExceptionBase("Unknown streamer ID.") {}
 };
 
-class UnknownStreamerIdException : public SovokExceptionBase
+class MissingApiException : public PvrClient::ExceptionBase
 {
 public:
-    UnknownStreamerIdException() : SovokExceptionBase("Unknown streamer ID.") {}
+    MissingApiException(const char* r) : ExceptionBase(r) {}
 };
 
-class MissingApiException : public SovokExceptionBase
+class ServerErrorException : public PvrClient::ExceptionBase
 {
 public:
-    MissingApiException(const char* r) : SovokExceptionBase(r) {}
-};
-
-class JsonParserException : public SovokExceptionBase
-{
-public:
-    JsonParserException(const std::string& r) : SovokExceptionBase(r) {}
-    JsonParserException(const char* r) : SovokExceptionBase(r) {}
-};
-
-class ServerErrorException : public SovokExceptionBase
-{
-public:
-    ServerErrorException(const char* r, int c) : SovokExceptionBase(r), code(c) {}
+    ServerErrorException(const char* r, int c) : ExceptionBase(r), code(c) {}
     const int code;
 };
 
 
 
-class SovokTV : public PvrClient::IClientCore
+class SovokTV : public PvrClient::ClientCoreBase
 {
 public:
     typedef struct {
@@ -114,16 +95,10 @@ public:
     
     SovokTV(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,
             const std::string &login, const std::string &password,
-            const std::function<void(void)>& archiveUpdateDone = nullptr, bool cleanEpgCache = false);
+            bool cleanEpgCache = false);
     ~SovokTV();
 
-    const PvrClient::ChannelList &GetChannelList();
-    const PvrClient::GroupList &GetGroupList();
-    
-    const PvrClient::EpgEntryList& GetEpgList() const;
     const StreamerNamesList& GetStreamersList() const;
-    
-    void ForEach(std::function<void(const SovokArchiveEntry&)>& action) const;
     
     void GetEpg(PvrClient::ChannelId  channelId, time_t startTime, time_t endTime, PvrClient::EpgEntryList& epgEntries);
     void GetEpgForAllChannels(time_t startTime, time_t endTime);
@@ -138,8 +113,11 @@ public:
     
     void SetPinCode(const std::string& code) {m_pinCode = code;}
     void SetCountryFilter(const CountryFilter& filter);
-        
-    void OnEpgUpdateDone();
+
+protected:
+    void UpdateHasArchive(PvrClient::EpgEntry& entry);
+    void BuildChannelAndGroupList();
+
 private:
     typedef std::vector<std::string> StreamerIdsList;
     typedef std::function<void(const CActionQueue::ActionResult&)> TApiCallCompletion;
@@ -147,8 +125,6 @@ private:
     struct ApiFunctionData;
         
     void GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHours);
-    void AddEpgEntry(PvrClient::UniqueBroadcastIdType id, PvrClient::EpgEntry& entry);
-    void UpdateHasArchive(PvrClient::EpgEntry& entry) const;
 
     bool Login(bool wait);
     void Logout();
@@ -159,28 +135,14 @@ private:
     template <typename TParser>
     void CallApiAsync(const ApiFunctionData& data, TParser parser, TApiCallCompletion completion);
     
-    void BuildChannelAndGroupList();
     void LoadSettings();
     void InitArchivesInfo();
     bool LoadStreamers();
-    void Log(const char* massage) const;
-
-    void LoadEpgCache();
-    void SaveEpgCache();
-
-    template <typename TParser>
-    void ParseJson(const std::string& response, TParser parser);
-
-    
-    ADDON::CHelper_libXBMC_addon *m_addonHelper;
-    CHelper_libXBMC_pvr *m_pvrHelper;
 
     std::string m_login;
     std::string m_password;
     
-    PvrClient::ChannelList m_channelList;
     SovokArchivesInfo  m_archivesInfo;
-    PvrClient::GroupList m_groupList;
     struct CountryFilterPrivate : public CountryFilter {
         CountryFilterPrivate() {IsOn = false;}
         CountryFilterPrivate(const CountryFilter& filter)
@@ -194,17 +156,13 @@ private:
         }
         std::vector<PvrClient::GroupList::key_type>  Groups;
     }m_countryFilter;
-    
-    PvrClient::EpgEntryList m_epgEntries;
-    
+   
     time_t m_lastEpgRequestEndTime;
     int m_streammerId;
     long m_serverTimeShift;
     StreamerNamesList m_streamerNames;
     StreamerIdsList m_streamerIds;
-    mutable P8PLATFORM::CMutex m_epgAccessMutex;
     unsigned int m_epgActivityCounter;
-    std::function<void(void)> m_archiveUpdateDone;
     std::string m_pinCode;
     HttpEngine* m_httpEngine;
 };

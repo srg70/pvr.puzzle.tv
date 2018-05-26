@@ -125,6 +125,8 @@
 		4CAAE732200691A600A866C9 /* XMLTV_loader.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4CAAE730200691A600A866C9 /* XMLTV_loader.hpp */; };
 		4CD394B61F2258610073E2DF /* plist_buffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD394B41F2258610073E2DF /* plist_buffer.cpp */; };
 		4CD394B71F2258610073E2DF /* plist_buffer.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CD394B51F2258610073E2DF /* plist_buffer.h */; };
+		4CDC11E020B4531900EA9E2B /* client_core_base.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CDC11DE20B4531900EA9E2B /* client_core_base.cpp */; };
+		4CDC11E120B4531900EA9E2B /* client_core_base.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4CDC11DF20B4531900EA9E2B /* client_core_base.hpp */; };
 		4CFEAA8F1E4DA81A002C2BA4 /* ActionQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CFEAA8D1E4DA81A002C2BA4 /* ActionQueue.cpp */; };
 		4CFEAA901E4DA81A002C2BA4 /* ActionQueue.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4CFEAA8E1E4DA81A002C2BA4 /* ActionQueue.hpp */; };
 /* End PBXBuildFile section */
@@ -260,6 +262,8 @@
 		4CAAE730200691A600A866C9 /* XMLTV_loader.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = XMLTV_loader.hpp; sourceTree = "<group>"; };
 		4CD394B41F2258610073E2DF /* plist_buffer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = plist_buffer.cpp; sourceTree = "<group>"; };
 		4CD394B51F2258610073E2DF /* plist_buffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = plist_buffer.h; sourceTree = "<group>"; };
+		4CDC11DE20B4531900EA9E2B /* client_core_base.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = client_core_base.cpp; sourceTree = "<group>"; };
+		4CDC11DF20B4531900EA9E2B /* client_core_base.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = client_core_base.hpp; sourceTree = "<group>"; };
 		4CFEAA8D1E4DA81A002C2BA4 /* ActionQueue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ActionQueue.cpp; sourceTree = "<group>"; };
 		4CFEAA8E1E4DA81A002C2BA4 /* ActionQueue.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ActionQueue.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -294,9 +298,7 @@
 				4C08C7F71D81E34A004CAAE3 /* helpers.cpp */,
 				4C08C7F81D81E34A004CAAE3 /* helpers.h */,
 				4C4FBFA41E77C0590027911E /* Buffers */,
-				4C8506E21EF478A000213131 /* pvr_client_base.cpp */,
-				4C8506E31EF478A000213131 /* pvr_client_base.h */,
-				4CAAE7212000CB2100A866C9 /* pvr_client_types.h */,
+				4CDC11DD20B452B300EA9E2B /* Client Base */,
 				4CAAE72A2006438C00A866C9 /* Edem */,
 				4C5BF35C1F18DAD400437252 /* OTT */,
 				4C8506F31F0E541700213131 /* Puzzle TV */,
@@ -616,6 +618,18 @@
 			path = ..;
 			sourceTree = "<group>";
 		};
+		4CDC11DD20B452B300EA9E2B /* Client Base */ = {
+			isa = PBXGroup;
+			children = (
+				4CAAE7212000CB2100A866C9 /* pvr_client_types.h */,
+				4C8506E21EF478A000213131 /* pvr_client_base.cpp */,
+				4C8506E31EF478A000213131 /* pvr_client_base.h */,
+				4CDC11DE20B4531900EA9E2B /* client_core_base.cpp */,
+				4CDC11DF20B4531900EA9E2B /* client_core_base.hpp */,
+			);
+			name = "Client Base";
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -690,6 +704,7 @@
 				4C49D21A1E27C4BF0026F43E /* socket.h in Headers */,
 				4C49D22F1E27C4BF0026F43E /* dtoa.h in Headers */,
 				4C49D2001E27C4BF0026F43E /* libKODI_audioengine.h in Headers */,
+				4CDC11E120B4531900EA9E2B /* client_core_base.hpp in Headers */,
 				4C08C7F41D81E2A8004CAAE3 /* direct_buffer.h in Headers */,
 				4C49D2081E27C4BF0026F43E /* xbmc_addon_cpp_dll.h in Headers */,
 				4C49D1FB1E27C4BF0026F43E /* kodi_peripheral_types.h in Headers */,
@@ -806,6 +821,7 @@
 			files = (
 				4CAAE7262006438600A866C9 /* edem_player.cpp in Sources */,
 				4CAAE731200691A600A866C9 /* XMLTV_loader.cpp in Sources */,
+				4CDC11E020B4531900EA9E2B /* client_core_base.cpp in Sources */,
 				4C534CD41F46C9D40038539D /* ott_player.cpp in Sources */,
 				4C08C7FE1D8290F6004CAAE3 /* addon.cpp in Sources */,
 				4C8506EC1F0E49F400213131 /* puzzle_pvr_client.cpp in Sources */,

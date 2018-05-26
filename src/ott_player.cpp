@@ -51,21 +51,8 @@ namespace OttEngine
 
     
     static const int secondsPerHour = 60 * 60;
-    
-    
-    template< typename ContainerT, typename PredicateT >
-    void erase_if( ContainerT& items, const PredicateT& predicate ) {
-        for( auto it = items.begin(); it != items.end(); ) {
-            if( predicate(*it) ) it = items.erase(it);
-            else ++it;
-        }
-    };
-   
-    //
-    static const char* c_EpgCacheDirPath = "special://temp/pvr-puzzle-tv";
-    
-    static const char* c_EpgCacheFilePath = "special://temp/pvr-puzzle-tv/ott_epg_cache.txt";
-    
+    static const char* c_EpgCacheFile = "ott_epg_cache.txt";
+
     struct OttPlayer::ApiFunctionData
     {
         //    ApiFunctionData(const char* _name)
@@ -80,94 +67,20 @@ namespace OttEngine
         static const  ParamList s_EmptyParams;
     };
     
-    class OttPlayer::HelperThread : public P8PLATFORM::CThread
-    {
-    public:
-        HelperThread(ADDON::CHelper_libXBMC_addon *addonHelper, OttPlayer* engine, std::function<void(void)> action)
-        : m_engine(engine), m_action(action)
-        , m_epgActivityCounter(0)
-        , m_addonHelper(addonHelper)
-        {}
-        
-        void EpgActivityStarted() {++m_epgActivityCounter;}
-        void EpgActivityDone() {++m_epgActivityCounter;}
-        void* Process()
-        {
-            
-            m_addonHelper->Log(LOG_NOTICE, "Archive thread started");
-            unsigned int oldEpgActivity = (unsigned int)-1; //For frirst time let for EPG chance
-
-            do
-            {
-                
-                m_addonHelper->Log(LOG_NOTICE, "Archive thread iteraton started");
-                // Wait for epg done before announce archives
-                bool isStopped = IsStopped();
-                while(!isStopped && (oldEpgActivity != m_epgActivityCounter)){
-                    m_addonHelper->Log(LOG_NOTICE, "Archive thread iteraton pending (%d)", m_epgActivityCounter);
-                    oldEpgActivity = m_epgActivityCounter;
-                    isStopped = IsStopped(3);// 3sec
-                }
-                if(isStopped)
-                    break;
-                
-                m_engine->ResetArchiveList();
-                
-                P8PLATFORM::CLockObject lock(m_engine->m_epgAccessMutex);
-                time_t now = time(nullptr);
-                for(const auto& i : m_engine->m_epgEntries) {
-                    if(i.second.HasArchive &&  i.second.StartTime < now)
-                        m_engine->m_archiveList.insert(i.first);
-                }
-                m_engine->SaveEpgCache();
-
-                HelperThread* pThis = this;
-                m_engine->m_httpEngine->RunOnCompletionQueueAsync([pThis]() {
-                    pThis->m_action();
-                },  [](const CActionQueue::ActionResult& s) {});
-                m_addonHelper->Log(LOG_NOTICE, "Archive thread iteraton done");
-                
-            }while (!IsStopped(10*60));//10 min
-            m_addonHelper->Log(LOG_NOTICE, "Archive thread exit");
-            
-            return NULL;
-            
-        }
-        
-    private:
-        
-        bool IsStopped(uint32_t timeoutInSec = 0) {
-            P8PLATFORM::CTimeout timeout(timeoutInSec * 1000);
-            bool isStoppedOrTimeout = P8PLATFORM::CThread::IsStopped() || timeout.TimeLeft() == 0;
-            while(!isStoppedOrTimeout) {
-                isStoppedOrTimeout = P8PLATFORM::CThread::IsStopped() || timeout.TimeLeft() == 0;
-                Sleep(1000);//1sec
-            }
-            return P8PLATFORM::CThread::IsStopped();
-        }
-        
-        OttPlayer* m_engine;
-        std::function<void(void)> m_action;
-        unsigned int m_epgActivityCounter;
-        ADDON::CHelper_libXBMC_addon *m_addonHelper;
-        //    P8PLATFORM::CEvent m_stopEvent;
-    };
-    
     
     const ParamList OttPlayer::ApiFunctionData::s_EmptyParams;
     
     OttPlayer::OttPlayer(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,
                          const std::string &baseUrl, const std::string &key)
-    : m_addonHelper(addonHelper)
-    , m_pvrHelper(pvrHelper)
+    : ClientCoreBase(addonHelper, pvrHelper)
     , m_baseUrl(baseUrl)
     , m_key(key)
-    , m_archiveLoader(NULL)
     {
         m_httpEngine = new HttpEngine(m_addonHelper);
         m_baseUrl = "http://" + m_baseUrl ;
-        LoadPlaylist();
-        LoadEpgCache();
+        BuildChannelAndGroupList();
+        LoadEpgCache(c_EpgCacheFile);
+        OnEpgUpdateDone();
     }
     
     OttPlayer::~OttPlayer()
@@ -178,16 +91,10 @@ namespace OttEngine
     {
         m_addonHelper->Log(LOG_NOTICE, "OttPlayer stopping...");
         
-        if(m_archiveLoader) {
-            m_archiveLoader->StopThread();
-        }
         if(m_httpEngine){
             SAFE_DELETE(m_httpEngine);
         }
         
-        if(m_archiveLoader)
-            SAFE_DELETE(m_archiveLoader);
-
         m_addonHelper->Log(LOG_NOTICE, "OttPlayer stopped.");
     }
     
@@ -206,14 +113,14 @@ namespace OttEngine
 
     }
     
-    void OttPlayer::LoadPlaylist()
+    void OttPlayer::BuildChannelAndGroupList()
     {
         void* f = NULL;
 
         try {
             char buffer[1024];
             string data;
-            //"https://edem.tv/playlists/uplist/982ee6d7a2745ac3bb9cd8777a4d8758/edem_pl.m3u8"; 
+
             // Download playlist
             string playlistUrl = m_baseUrl + "/ottplayer/playlist.m3u";
             auto f = m_addonHelper->OpenFile(playlistUrl.c_str(), 0);
@@ -243,9 +150,6 @@ namespace OttEngine
             pos += strlen(c_M3U);
             m_epgUrl = FindVar(data, pos, c_EPG);
             m_logoUrl = FindVar(data, pos, c_LOGO);
-            
-            m_channelList.clear();
-            m_groupList.clear();
 
             // Parse channels
             //#EXTINF:-1 tvg-id="131" tvg-logo="perviy.png" group-title="Общие" tvg-rec="1" ,Первый канал HD
@@ -310,143 +214,21 @@ namespace OttEngine
         channel.HasArchive = hasArchive;
         channel.IconPath = m_logoUrl + FindVar(vars, 0, c_LOGO);
         channel.IsRadio = false;
-        m_channelList[channel.Id] = channel;
+        AddChannel(channel);
         
         std::string groupName = FindVar(vars, 0, c_GROUP);
         
-        auto itGroup =  std::find_if(m_groupList.begin(), m_groupList.end(), [&](const GroupList::value_type& v ){
+        const auto& groupList = GetGroupList();
+        auto itGroup =  std::find_if(groupList.begin(), groupList.end(), [&](const GroupList::value_type& v ){
             return groupName ==  v.second.Name;
         });
-        if (itGroup == m_groupList.end()) {
-            m_groupList[m_groupList.size()].Name = groupName;
-            itGroup = --m_groupList.end();
+        if (itGroup == groupList.end()) {
+            Group newGroup;
+            newGroup.Name = groupName;
+            AddGroup(groupList.size(), newGroup);
+            itGroup = --groupList.end();
         }
-        
-        itGroup->second.Channels.insert(channel.Id);
-       
-    }
-    
-   void OttPlayer::SaveEpgCache()
-    {
-        // Leave epg entries not older then 2 weeks from now
-        time_t now = time(nullptr);
-        auto oldest = now - 14*24*60*60;
-        erase_if(m_epgEntries,  [oldest] (const EpgEntryList::value_type& i)
-                 {
-                     return i.second.StartTime < oldest;
-                 });
-        
-        StringBuffer s;
-        Writer<StringBuffer> writer(s);
-        
-        writer.StartObject();               // Between StartObject()/EndObject(),
-
-        writer.Key("m_epgEntries");
-        writer.StartArray();                // Between StartArray()/EndArray(),
-        for_each(m_epgEntries.begin(), m_epgEntries.end(),[&](const EpgEntryList::value_type& i) {
-            writer.StartObject();               // Between StartObject()/EndObject(),
-            writer.Key("k");
-            writer.Int64(i.first);
-            writer.Key("v");
-            i.second.Serialize(writer);
-            writer.EndObject();
-        });
-        writer.EndArray();
-        
-        writer.EndObject();
-        
-        m_addonHelper->CreateDirectory(c_EpgCacheDirPath);
-        
-        void* file = m_addonHelper->OpenFileForWrite(c_EpgCacheFilePath, true);
-        if(NULL == file)
-        return;
-        auto buf = s.GetString();
-        m_addonHelper->WriteFile(file, buf, s.GetSize());
-        m_addonHelper->CloseFile(file);
-        
-    }
-    void OttPlayer::LoadEpgCache()
-    {
-        void* file = m_addonHelper->OpenFile(c_EpgCacheFilePath, 0);
-        if(NULL == file)
-        return;
-        int64_t fSize = m_addonHelper->GetFileLength(file);
-        
-        char* rawBuf = new char[fSize + 1];
-        if(0 == rawBuf)
-        return;
-        m_addonHelper->ReadFile(file, rawBuf, fSize);
-        m_addonHelper->CloseFile(file);
-        file = NULL;
-        
-        rawBuf[fSize] = 0;
-        
-        string ss(rawBuf);
-        delete[] rawBuf;
-        try {
-            ParseJson(ss, [&] (Document& jsonRoot) {
-
-                const Value& v = jsonRoot["m_epgEntries"];
-                Value::ConstValueIterator it = v.Begin();
-                for(; it != v.End(); ++it)
-                {
-                    EpgEntryList::key_type k = (*it)["k"].GetInt64();
-                    EpgEntryList::mapped_type e;
-                    e.Deserialize((*it)["v"]);
-                    m_epgEntries[k] = e;
-                }
-            });
-            
-        } catch (...) {
-            Log(" >>>>  FAILED load EPG cache <<<<<");
-            m_epgEntries.clear();
-        }
-    }
-    
-    bool OttPlayer::StartArchivePollingWithCompletion(std::function<void(void)> action)
-    {
-        if(m_archiveLoader)
-        return false;
-        
-        m_archiveLoader = new HelperThread(m_addonHelper, this, action);
-        m_archiveLoader->CreateThread(false);
-        return true;
-    }
-    
-    const ChannelList &OttPlayer::GetChannelList()
-    {
-        if (m_channelList.empty())
-        {
-            LoadPlaylist();
-        }
-        
-        return m_channelList;
-    }
-    
-    const EpgEntryList& OttPlayer::GetEpgList() const
-    {
-        return  m_epgEntries;
-    }
-    
-    template <typename TParser>
-    void OttPlayer::ParseJson(const std::string& response, TParser parser)
-    {
-        Document jsonRoot;
-        jsonRoot.Parse(response.c_str());
-        if(jsonRoot.HasParseError()) {
-            
-            ParseErrorCode error = jsonRoot.GetParseError();
-            auto strError = string("Rapid JSON parse error: ");
-            strError += GetParseError_En(error);
-            strError += " (" ;
-            strError += error;
-            strError += ").";
-            Log(strError.c_str());
-            throw JsonParserException(strError);
-        }
-        parser(jsonRoot);
-        return;
-        
+        AddChannelToGroup(itGroup->first, channel.Id);
     }
     
     std::string OttPlayer::GetArchiveUrl(ChannelId channelId, time_t startTime, int duration)
@@ -458,21 +240,12 @@ namespace OttEngine
         return  url;
     }
     
-    void OttPlayer::Log(const char* massage) const
-    {
-        //char* msg = m_addonHelper->UnknownToUTF8(massage);
-        m_addonHelper->Log(LOG_DEBUG, massage);
-        //m_addonHelper->FreeString(msg);
-        
-    }
-    
     void OttPlayer::GetEpg(ChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries)
     {
-        P8PLATFORM::CLockObject lock(m_epgAccessMutex);
-
         bool needMore = true;
         time_t moreStartTime = startTime;
-        for (const auto& i  : m_epgEntries)  {
+        IClientCore::EpgEntryAction action = [&needMore, &moreStartTime, &epgEntries, channelId, startTime, endTime] (const EpgEntryList::value_type& i)
+        {
             auto entryStartTime = i.second.StartTime;
             if (i.second.ChannelId == channelId  &&
                 entryStartTime >= startTime &&
@@ -482,10 +255,13 @@ namespace OttEngine
                 needMore = moreStartTime < endTime;
                 epgEntries.insert(i);
             }
-        }
-
+        };
+        ForEachEpg(action);
+ 
         if(needMore) {
             GetEpgForAllChannels(channelId, moreStartTime, endTime);
+        } else {
+            OnEpgUpdateDone();
         }
     }
     
@@ -493,17 +269,14 @@ namespace OttEngine
     void OttPlayer::GetEpgForAllChannels(ChannelId channelId, time_t startTime, time_t endTime)
     {
         try {
-            bool hasArchive = GetChannelList().at(channelId).HasArchive;
             string call = string("channel/") + n_to_string(channelId);
             ApiFunctionData apiParams(call.c_str());
             bool* shouldUpdate = new bool(false);
-            bool hasArchiveLoader =  m_archiveLoader != NULL;
 
-            CallApiAsync(apiParams,  [=] (Document& jsonRoot)
+            unsigned int epgActivityCounter = ++m_epgActivityCounter;
+
+            CallApiAsync(apiParams,  [this, startTime, shouldUpdate] (Document& jsonRoot)
             {
-                if(hasArchiveLoader)
-                    m_archiveLoader->EpgActivityStarted();
-                P8PLATFORM::CLockObject lock(m_epgAccessMutex);
                 for (auto& m : jsonRoot.GetObject()) {
                     if(std::stol(m.name.GetString()) < startTime) {
                         continue;
@@ -515,36 +288,41 @@ namespace OttEngine
                     epgEntry.Description = m.value["descr"].GetString();
                     epgEntry.StartTime = m.value["time"].GetInt() ;
                     epgEntry.EndTime = m.value["time_to"].GetInt();
-                    epgEntry.HasArchive = hasArchive;
-                    unsigned int id = epgEntry.StartTime;
-                    while( m_epgEntries.count(id) != 0) {
-                        ++id;
-                    }
-                    m_epgEntries[id] =  epgEntry;
+                    UniqueBroadcastIdType id = epgEntry.StartTime;
+                    AddEpgEntry(id, epgEntry);
+ 
                 }
             },
-            [=](const CActionQueue::ActionResult& s)
+            [this, shouldUpdate, channelId, epgActivityCounter](const CActionQueue::ActionResult& s)
             {
-                if(hasArchiveLoader)
-                    m_archiveLoader->EpgActivityDone();
-                if(s.exception == NULL && *shouldUpdate)
+                if(s.exception == NULL && *shouldUpdate){
                     m_pvrHelper->TriggerEpgUpdate(channelId);
+                }
                 delete shouldUpdate;
+                if(epgActivityCounter == m_epgActivityCounter){
+                    OnEpgUpdateDone();
+                    SaveEpgCache(c_EpgCacheFile);
+                }
             });
             
         } catch (ServerErrorException& ex) {
             m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32002), ex.reason.c_str() );
         } catch (...) {
-            Log(" >>>>  FAILED receive EPG <<<<<");
+            LogError(" >>>>  FAILED receive EPG <<<<<");
         }
     }
     
-    const GroupList &OttPlayer::GetGroupList()
+    void OttPlayer::UpdateHasArchive(PvrClient::EpgEntry& entry)
     {
-        if (m_groupList.empty())
-            LoadPlaylist();
+        auto channel = GetChannelList().find(entry.ChannelId);
+        entry.HasArchive = channel != GetChannelList().end() &&  channel->second.HasArchive;
         
-        return m_groupList;
+        if(!entry.HasArchive)
+            return;
+        
+        time_t to = time(nullptr);
+        entry.HasArchive = entry.StartTime < to;
+
     }
     
     string OttPlayer::GetUrl(ChannelId channelId)
@@ -611,17 +389,6 @@ namespace OttEngine
            completion(s);
        });
     }
-    
-    void OttPlayer::ResetArchiveList()
-    {
-        m_archiveList.clear();
-    }
-    
-    void OttPlayer::Apply(std::function<void(const ArchiveList&)>& action ) const {
-        action(m_archiveList);
-        return;
-    }
-    
 }
 
 

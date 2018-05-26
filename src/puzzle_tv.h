@@ -27,7 +27,7 @@
 #ifndef __puzzle_tv_h__
 #define __puzzle_tv_h__
 
-#include "pvr_client_types.h"
+#include "client_core_base.hpp"
 #include "libXBMC_pvr.h"
 #include <string>
 #include <map>
@@ -49,38 +49,20 @@ namespace PuzzleEngine
 {
 
     typedef std::map<std::string, std::string> ParamList;
-
     typedef PvrClient::UniqueBroadcastIdType  ArchiveEntry;
     typedef std::set<ArchiveEntry> ArchiveList;
 
-    class ExceptionBase : public std::exception
-    {
-    public:
-        const char* what() const noexcept {return reason.c_str();}
-        const std::string reason;
-        ExceptionBase(const std::string& r) : reason(r) {}
-        ExceptionBase(const char* r = "") : reason(r) {}
-
-    };
-
-    class AuthFailedException : public ExceptionBase
+    class AuthFailedException : public PvrClient::ExceptionBase
     {
     };
 
-    class MissingApiException : public ExceptionBase
+    class MissingApiException : public PvrClient::ExceptionBase
     {
     public:
         MissingApiException(const char* r) : ExceptionBase(r) {}
     };
 
-    class JsonParserException : public ExceptionBase
-    {
-    public:
-        JsonParserException(const std::string& r) : ExceptionBase(r) {}
-        JsonParserException(const char* r) : ExceptionBase(r) {}
-    };
-
-    class ServerErrorException : public ExceptionBase
+    class ServerErrorException : public PvrClient::ExceptionBase
     {
     public:
         ServerErrorException(const char* r, int c) : ExceptionBase(r), code(c) {}
@@ -89,19 +71,15 @@ namespace PuzzleEngine
 
 
 
-    class PuzzleTV : public PvrClient::IClientCore
+    class PuzzleTV : public PvrClient::ClientCoreBase
     {
     public:
         PuzzleTV(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper);
         ~PuzzleTV();
 
-        const PvrClient::ChannelList &GetChannelList();
-        const PvrClient::GroupList &GetGroupList();
-       
         const PvrClient::EpgEntryList& GetEpgList() const;
         
         void Apply(std::function<void(const ArchiveList&)>& action) const;
-        bool StartArchivePollingWithCompletion(std::function<void(void)> action);
 
         void  GetEpg(PvrClient::ChannelId channelId, time_t startTime, time_t endTime, PvrClient::EpgEntryList& epgEntries);
 
@@ -114,6 +92,9 @@ namespace PuzzleEngine
         void SetServerUri(const char* uri) {m_serverUri = uri;}
         const std::string& GetServerUri() const {return m_serverUri;}
 
+    protected:
+        virtual void UpdateHasArchive(PvrClient::EpgEntry& entry);
+        void BuildChannelAndGroupList();
     private:
         typedef std::vector<std::string> StreamerIdsList;
 
@@ -127,47 +108,26 @@ namespace PuzzleEngine
         void LoadEpg();
 
         void Cleanup();
-        
-              
+
         template <typename TParser>
         void CallApiFunction(const ApiFunctionData& data, TParser parser);
         template <typename TParser, typename TCompletion>
         void CallApiAsync(const ApiFunctionData& data, TParser parser, TCompletion completion);
         
-        void BuildChannelAndGroupList();
-        PvrClient::ChannelList &GetMutableChannelList();
-
-        
         void LoadArchiveList();
         void ResetArchiveList();
-        void Log(const char* massage) const;
-
-        void LoadEpgCache();
-        void SaveEpgCache();
 
         void BuildRecordingsFor(PvrClient::ChannelId channelId, time_t from, time_t to);
 
-        template <typename TParser>
-        void ParseJson(const std::string& response, TParser parser);
-
-        
         uint16_t m_serverPort;
         std::string m_serverUri;
         
-        ADDON::CHelper_libXBMC_addon *m_addonHelper;
-        CHelper_libXBMC_pvr *m_pvrHelper;
-
-        PvrClient::ChannelList m_channelList;
         ArchiveList m_archiveList;
-        PvrClient::GroupList m_groupList;
         std::string m_epgUrl;
-        PvrClient::EpgEntryList m_epgEntries;
         time_t m_lastEpgRequestStartTime;
         time_t m_lastEpgRequestEndTime;
         unsigned int m_lastUniqueBroadcastId;
         long m_serverTimeShift;
-        P8PLATFORM::CMutex m_epgAccessMutex;
-        HelperThread* m_archiveLoader;
         HttpEngine* m_httpEngine;
         P8PLATFORM::CTimeout m_epgUpdateInterval;
 

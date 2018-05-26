@@ -131,13 +131,8 @@ void SovokPVRClient::CreateCore(bool clenEpgCache)
         m_sovokTV = NULL;
         SAFE_DELETE(ptr);
     }
-    
-    auto pvr = m_pvrHelper;
-    std::function<void(void)> action = [pvr](){
-        pvr->TriggerRecordingUpdate();
-    };
 
-    m_clientCore = m_sovokTV = new SovokTV(m_addonHelper, m_pvrHelper, m_login, m_password, action, clenEpgCache);
+    m_clientCore = m_sovokTV = new SovokTV(m_addonHelper, m_pvrHelper, m_login, m_password, clenEpgCache);
 
     if(m_enableAdult)
         m_sovokTV->SetPinCode(m_pinCode);
@@ -367,7 +362,7 @@ ADDON_STATUS SovokPVRClient::OnReloadRecordings()
         return ADDON_STATUS_LOST_CONNECTION;
     
     ADDON_STATUS retVal = ADDON_STATUS_OK;
-    m_sovokTV->OnEpgUpdateDone();
+    m_sovokTV->ReloadRecordings();
     return retVal;
 }
 
@@ -415,69 +410,6 @@ bool SovokPVRClient::SwitchChannel(const PVR_CHANNEL& channel)
     return PVRClientBase::SwitchChannel(url);
 }
 
-int SovokPVRClient::GetRecordingsAmount(bool deleted)
-{
-    if(!HasCore())
-        return -1;
-
-    if(deleted)
-        return -1;
-    
-    int size = 0;
-    std::function<void(const SovokArchiveEntry&)> f = [&size](const SovokArchiveEntry&){++size;};
-    m_sovokTV->ForEach(f);
-    LogDebug("SovokPVRClient has %d recordings.", size);
-    return size;
-    
-}
-PVR_ERROR SovokPVRClient::GetRecordings(ADDON_HANDLE handle, bool deleted)
-{
-    if(!HasCore())
-        return PVR_ERROR_SERVER_ERROR;
-
-    if(deleted)
-        return PVR_ERROR_NOT_IMPLEMENTED;
-    
-    PVR_ERROR result = PVR_ERROR_NO_ERROR;
-    SovokTV& sTV(*m_sovokTV);
-    CHelper_libXBMC_pvr * pvrHelper = m_pvrHelper;
-    ADDON::CHelper_libXBMC_addon * addonHelper = m_addonHelper;
-    std::function<void(const SovokArchiveEntry&)> f = [&sTV, &handle, pvrHelper, addonHelper ,&result](const SovokArchiveEntry& i)
-    {
-        try {
-            const EpgEntry& epgTag = sTV.GetEpgList().at(i);
-            
-            PVR_RECORDING tag = { 0 };
-            //            memset(&tag, 0, sizeof(PVR_RECORDING));
-            sprintf(tag.strRecordingId, "%d",  i);
-            strncpy(tag.strTitle, epgTag.Title.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
-            strncpy(tag.strPlot, epgTag.Description.c_str(), PVR_ADDON_DESC_STRING_LENGTH - 1);
-            strncpy(tag.strChannelName, sTV.GetChannelList().at(epgTag.ChannelId).Name.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
-            tag.recordingTime = epgTag.StartTime;
-            tag.iLifetime = 0; /* not implemented */
-            
-            tag.iDuration = epgTag.EndTime - epgTag.StartTime;
-            tag.iEpgEventId = i;
-            tag.iChannelUid = epgTag.ChannelId;
-            
-            string dirName = tag.strChannelName;
-            char buff[20];
-            strftime(buff, sizeof(buff), "/%d-%m-%y", localtime(&epgTag.StartTime));
-            dirName += buff;
-            strncpy(tag.strDirectory, dirName.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
-            
-            pvrHelper->TransferRecordingEntry(handle, &tag);
-            
-        }
-        catch (...)  {
-            addonHelper->Log(LOG_ERROR, "%s: failed.", __FUNCTION__);
-            result = PVR_ERROR_FAILED;
-        }
-    };
-    m_sovokTV->ForEach(f);
-    return result;
-}
-
 bool SovokPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
 {
     if(!HasCore())
@@ -485,9 +417,12 @@ bool SovokPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     
     // NOTE: Kodi does NOT provide recording.iChannelUid for unknown reason
     // Worrkaround: use EPG entry
-    PvrClient::ChannelId channelId =  m_sovokTV->GetEpgList().at(stoi(recording.strRecordingId)).ChannelId;
     
-    string url = m_sovokTV->GetArchiveUrl(channelId, recording.recordingTime);
+    EpgEntry epgTag;
+    if(!m_sovokTV->GetEpgEpgEntry(stoi(recording.strRecordingId), epgTag))
+        return false;
+    
+    string url = m_sovokTV->GetArchiveUrl(epgTag.ChannelId, recording.recordingTime);
     return PVRClientBase::OpenRecordedStream(url, nullptr);
 }
 
@@ -590,7 +525,6 @@ void SovokPVRClient::SetCountryFilter()
 
     auto & filter = GetCountryFilter();
     m_sovokTV->SetCountryFilter(filter);
-    m_sovokTV->GetChannelList();
 }
 
 

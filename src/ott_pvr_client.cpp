@@ -98,6 +98,7 @@ void OttPVRClient::CreateCore()
         m_clientCore = NULL;
         SAFE_DELETE(m_core);
     }
+    
     m_clientCore = m_core = new OttEngine::OttPlayer(m_addonHelper, m_pvrHelper, m_playlistUrl, m_key);
 }
 
@@ -176,84 +177,6 @@ bool OttPVRClient::SwitchChannel(const PVR_CHANNEL& channel)
     return PVRClientBase::SwitchChannel(url);
 }
 
-
-
-int OttPVRClient::GetRecordingsAmount(bool deleted)
-{
-    if(NULL == m_core)
-        return -1;
-
-    if(deleted)
-        return -1;
-    
-    int size = 0;
-    std::function<void(const OttEngine::ArchiveList&)> f = [&size](const OttEngine::ArchiveList& list){size = list.size();};
-    m_core->Apply(f);
-    if(size == 0)
-    {
-        std::function<void(void)> action = [=](){
-            m_pvrHelper->TriggerRecordingUpdate();
-        };
-        m_core->StartArchivePollingWithCompletion(action);
-//        m_core->Apply(f);
-//        if(size != 0)
-//            action();
-    
-    }
-    return size;
-    
-    
-    
-}
-PVR_ERROR OttPVRClient::GetRecordings(ADDON_HANDLE handle, bool deleted)
-{
-    if(deleted)
-        return PVR_ERROR_NOT_IMPLEMENTED;
-    
-    PVR_ERROR result = PVR_ERROR_NO_ERROR;
-    OttEngine::OttPlayer& sTV(*m_core);
-    CHelper_libXBMC_pvr * pvrHelper = m_pvrHelper;
-    ADDON::CHelper_libXBMC_addon * addonHelper = m_addonHelper;
-    std::function<void(const OttEngine::ArchiveList&)> f = [&sTV, &handle, pvrHelper, addonHelper ,&result](const OttEngine::ArchiveList& list)
-    {
-        for(const auto &  i :  list) {
-            try {
-                const EpgEntry& epgTag = sTV.GetEpgList().at(i);
-
-                PVR_RECORDING tag = { 0 };
-    //            memset(&tag, 0, sizeof(PVR_RECORDING));
-                sprintf(tag.strRecordingId, "%d",  i);
-                strncpy(tag.strTitle, epgTag.Title.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
-                strncpy(tag.strPlot, epgTag.Description.c_str(), PVR_ADDON_DESC_STRING_LENGTH - 1);
-                strncpy(tag.strChannelName, sTV.GetChannelList().at(epgTag.ChannelId).Name.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
-                tag.recordingTime = epgTag.StartTime;
-                tag.iLifetime = 0; /* not implemented */
-
-                tag.iDuration = epgTag.EndTime - epgTag.StartTime;
-                tag.iEpgEventId = i;
-                tag.iChannelUid = epgTag.ChannelId;
-
-                string dirName = tag.strChannelName;
-                char buff[20];
-                strftime(buff, sizeof(buff), "/%d-%m-%y", localtime(&epgTag.StartTime));
-                dirName += buff;
-                strncpy(tag.strDirectory, dirName.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
-
-                pvrHelper->TransferRecordingEntry(handle, &tag);
-                
-            }
-            catch (...)  {
-                addonHelper->Log(LOG_ERROR, "%s: failed.", __FUNCTION__);
-                result = PVR_ERROR_FAILED;
-            }
-
-        }
-    };
-    m_core->Apply(f);
-    return result;
-}
-
-
 class OttArchiveDelegate : public Buffers::IPlaylistBufferDelegate
 {
 public:
@@ -262,9 +185,18 @@ public:
     , _recordingTime(recording.recordingTime)
     , _core(core)
     {
+        _channelId = 1;
+        
         // NOTE: Kodi does NOT provide recording.iChannelUid for unknown reason
         // Worrkaround: use EPG entry
-        _channelId =  _core->GetEpgList().at(stoi(recording.strRecordingId)).ChannelId;
+        EpgEntry epgTag;
+        int recId = stoi(recording.strRecordingId);
+        if(!_core->GetEpgEpgEntry(recId, epgTag)){
+            _core->LogError("Failed to obtain EPG tag for record ID %d. First channel ID will be used", recId);
+            return;
+        }
+
+        _channelId =  epgTag.ChannelId;
         
     }
     virtual time_t Duration() const

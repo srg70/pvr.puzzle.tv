@@ -48,8 +48,6 @@ public:
     int ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize);
     bool SwitchChannel(const PVR_CHANNEL& channel);
 
-    int GetRecordingsAmount(bool deleted);
-    PVR_ERROR GetRecordings(ADDON_HANDLE handle, bool deleted);
     bool OpenRecordedStream(const PVR_RECORDING &recording);
 protected:
     PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);

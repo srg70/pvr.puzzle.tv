@@ -80,6 +80,8 @@ namespace PvrClient
         bool IsTimeshiftEnabled() { return m_isTimeshiftEnabled; }
         void SetTimeshiftPath(const std::string& path);
         
+        int GetRecordingsAmount(bool deleted);
+        PVR_ERROR GetRecordings(ADDON_HANDLE handle, bool deleted);
         void CloseRecordedStream(void);
         int ReadRecordedStream(unsigned char *pBuffer, unsigned int iBufferSize);
         long long SeekRecordedStream(long long iPosition, int iWhence);

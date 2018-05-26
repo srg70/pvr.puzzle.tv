@@ -473,6 +473,80 @@ void PVRClientBase::SetTimeshiftBufferType(PVRClientBase::TimeshiftBufferType ty
     m_timeshiftBufferType = type;
 }
 
+#pragma mark - Recordings
+
+int PVRClientBase::GetRecordingsAmount(bool deleted)
+{
+    if(NULL == m_clientCore)
+        return -1;
+    
+    if(deleted)
+        return -1;
+    
+    int size = 0;
+    IClientCore::EpgEntryAction action = [&size](const EpgEntryList::value_type& p)
+    {
+        if(p.second.HasArchive)
+            ++size;
+    };
+    m_clientCore->ForEachEpg(action);
+    LogDebug("SovokPVRClient has %d recordings.", size);
+    return size;
+    
+}
+PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
+{
+    if(NULL == m_clientCore)
+        return PVR_ERROR_SERVER_ERROR;
+
+    if(deleted)
+        return PVR_ERROR_NOT_IMPLEMENTED;
+    
+    PVR_ERROR result = PVR_ERROR_NO_ERROR;
+    auto pThis = this;
+    
+    IClientCore::EpgEntryAction action = [&handle, pThis ,&result](const EpgEntryList::value_type& epgEntry)
+    {
+        try {
+            const auto& epgTag = epgEntry.second;
+            
+            if(!epgTag.HasArchive)
+                return;
+            
+            PVR_RECORDING tag = { 0 };
+            //            memset(&tag, 0, sizeof(PVR_RECORDING));
+            sprintf(tag.strRecordingId, "%d",  epgEntry.first);
+            strncpy(tag.strTitle, epgTag.Title.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
+            strncpy(tag.strPlot, epgTag.Description.c_str(), PVR_ADDON_DESC_STRING_LENGTH - 1);
+            strncpy(tag.strChannelName, pThis->m_clientCore->GetChannelList().at(epgTag.ChannelId).Name.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
+            tag.recordingTime = epgTag.StartTime;
+            tag.iLifetime = 0; /* not implemented */
+            
+            tag.iDuration = epgTag.EndTime - epgTag.StartTime;
+            tag.iEpgEventId = epgEntry.first;
+            tag.iChannelUid = epgTag.ChannelId;
+            tag.channelType = PVR_RECORDING_CHANNEL_TYPE_TV;
+            
+            string dirName = tag.strChannelName;
+            char buff[20];
+            strftime(buff, sizeof(buff), "/%d-%m-%y", localtime(&epgTag.StartTime));
+            dirName += buff;
+            strncpy(tag.strDirectory, dirName.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
+            
+            pThis->m_pvrHelper->TransferRecordingEntry(handle, &tag);
+            
+        }
+        catch (...)  {
+            pThis->LogError( "%s: failed.", __FUNCTION__);
+            result = PVR_ERROR_FAILED;
+        }
+    };
+    m_clientCore->ForEachEpg(action);
+    return result;
+}
+
+
+
 bool PVRClientBase::OpenRecordedStream(const std::string& url,  Buffers::IPlaylistBufferDelegate* delegate)
 {
      if (url.empty())

@@ -119,16 +119,22 @@ namespace PvrClient {
     
     typedef unsigned int UniqueBroadcastIdType;
     typedef std::map<UniqueBroadcastIdType, EpgEntry> EpgEntryList;
-    
 
-    
     class IClientCore
     {
     public:
+        typedef std::function<void(void)> RecordingsDelegate;
+        typedef std::function<void(const EpgEntryList::value_type&)> EpgEntryAction;
+        
         virtual const ChannelList& GetChannelList() = 0;
         virtual const GroupList &GetGroupList() = 0;
         virtual void GetEpg(ChannelId  channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries) = 0;
+        virtual bool GetEpgEpgEntry(UniqueBroadcastIdType i,  EpgEntry& enrty) = 0;
+        virtual void ForEachEpg(const EpgEntryAction& action) const = 0;
+
+        
+        virtual void ReloadRecordings() = 0;
     };
-}
+ }
 
 #endif /* pvr_client_types_h */
