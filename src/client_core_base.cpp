@@ -6,6 +6,7 @@
 //  Copyright © 2018 Home. All rights reserved.
 //
 
+#include <algorithm>
 #include <rapidjson/error/en.h>
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
