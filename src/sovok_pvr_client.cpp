@@ -356,16 +356,6 @@ ADDON_STATUS SovokPVRClient::OnReloadEpg()
     return retVal;
 }
 
-ADDON_STATUS SovokPVRClient::OnReloadRecordings()
-{
-    if(!HasCore())
-        return ADDON_STATUS_LOST_CONNECTION;
-    
-    ADDON_STATUS retVal = ADDON_STATUS_OK;
-    m_sovokTV->ReloadRecordings();
-    return retVal;
-}
-
 
 static ChannelId s_lastChannelId = 0;
 bool SovokPVRClient::OpenLiveStream(const PVR_CHANNEL& channel)

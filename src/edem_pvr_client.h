@@ -53,9 +53,10 @@ public:
 
 protected:
     PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
-    
+    ADDON_STATUS OnReloadEpg();
+
 private:
-    void CreateCore();
+    void CreateCore(bool clearEpgCache);
     bool CheckPlaylistUrl();
     void SetPlaylistUrl(const std::string& url) {m_playlistUrl = url;};
 

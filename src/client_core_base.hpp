@@ -43,6 +43,7 @@ namespace PvrClient {
         
         // EPG methods
         static std::string MakeEpgCachePath(const char* cacheFile);
+        void ClearEpgCache(const char* cacheFile);
         void LoadEpgCache(const char* cacheFile);
         void SaveEpgCache(const char* cacheFile, unsigned int daysToPreserve = 7);
         bool AddEpgEntry(UniqueBroadcastIdType id, EpgEntry& entry);

@@ -270,7 +270,12 @@ ADDON_STATUS PVRClientBase::OnReloadEpg()
 
 ADDON_STATUS PVRClientBase::OnReloadRecordings()
 {
-    return ADDON_STATUS_OK;
+    if(NULL == m_clientCore)
+        return ADDON_STATUS_LOST_CONNECTION;
+    
+    ADDON_STATUS retVal = ADDON_STATUS_OK;
+    m_clientCore->ReloadRecordings();
+    return retVal;
 }
 
 #pragma mark - Channels

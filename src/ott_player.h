@@ -74,11 +74,12 @@ namespace OttEngine
     class OttPlayer : public PvrClient::ClientCoreBase
     {
     public:
-        OttPlayer(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper, const std::string &baseUrl, const std::string &key);
+        OttPlayer(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper, const std::string &baseUrl, const std::string &key, bool clearEpgCache);
         ~OttPlayer();
         
         void  GetEpg(PvrClient::ChannelId channelId, time_t startTime, time_t endTime, PvrClient::EpgEntryList& epgEntries);
-        std::string GetArchiveUrl(PvrClient::ChannelId channelId, time_t startTime, int duration);
+        void UpdateEpgForAllChannels(time_t startTime, time_t endTime);
+       std::string GetArchiveUrl(PvrClient::ChannelId channelId, time_t startTime, int duration);
         
         std::string GetUrl(PvrClient::ChannelId channelId);
         
@@ -90,8 +91,7 @@ namespace OttEngine
         
         struct ApiFunctionData;
         
-//        template<class TFunc>
-        void  GetEpgForAllChannels(PvrClient::ChannelId channelId,  time_t startTime, time_t endTime);
+        void  GetEpgForChannel(PvrClient::ChannelId channelId,  time_t startTime, time_t endTime);
 
         void Cleanup();
         

@@ -32,6 +32,7 @@
 #endif
 
 #include <algorithm>
+#include <ctime>
 #include "p8-platform/util/util.h"
 #include "kodi/xbmc_addon_cpp_dll.h"
 
@@ -67,7 +68,7 @@ ADDON_STATUS OttPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_libX
     
     try
     {
-        CreateCore();
+        CreateCore(false);
     }
     catch (OttEngine::AuthFailedException &)
     {
@@ -92,14 +93,14 @@ OttPVRClient::~OttPVRClient()
 
 }
 
-void OttPVRClient::CreateCore()
+void OttPVRClient::CreateCore(bool clearEpgCache)
 {
     if(m_core != NULL) {
         m_clientCore = NULL;
         SAFE_DELETE(m_core);
     }
     
-    m_clientCore = m_core = new OttEngine::OttPlayer(m_addonHelper, m_pvrHelper, m_playlistUrl, m_key);
+    m_clientCore = m_core = new OttEngine::OttPlayer(m_addonHelper, m_pvrHelper, m_playlistUrl, m_key, clearEpgCache);
 }
 
 ADDON_STATUS OttPVRClient::SetSetting(const char *settingName, const void *settingValue)
@@ -110,7 +111,7 @@ ADDON_STATUS OttPVRClient::SetSetting(const char *settingName, const void *setti
         if (!m_playlistUrl.empty() && !m_key.empty() && m_core == NULL)
         {
             try {
-                CreateCore();
+                CreateCore(false);
             }catch (OttEngine::AuthFailedException &) {
                 m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32003));
             }
@@ -122,7 +123,7 @@ ADDON_STATUS OttPVRClient::SetSetting(const char *settingName, const void *setti
         if (!m_playlistUrl.empty() && !m_key.empty() && m_core == NULL)
         {
             try {
-                CreateCore();
+                CreateCore(false);
             }catch (OttEngine::AuthFailedException &) {
                 m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32003));
             }
@@ -158,6 +159,36 @@ PVR_ERROR  OttPVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHO
     return PVRClientBase::MenuHook(menuhook, item);
     
 }
+ADDON_STATUS OttPVRClient::OnReloadEpg()
+{
+    ADDON_STATUS retVal = ADDON_STATUS_OK;
+    try
+    {
+        CreateCore(true);
+    }
+    catch (OttEngine::AuthFailedException &)
+    {
+        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32007));
+    }
+    catch(...)
+    {
+        m_addonHelper->QueueNotification(QUEUE_ERROR, "OTT club: unhandeled exception on reload EPG.");
+        retVal = ADDON_STATUS_PERMANENT_FAILURE;
+    }
+    
+    if(ADDON_STATUS_OK == retVal && nullptr != m_core){
+        std::time_t startTime = std::time(nullptr);
+        startTime = std::mktime(std::gmtime(&startTime));
+        // Request EPG for all channels from -7 to +1 days
+        time_t endTime = startTime + 1 * 24 * 60 * 60;
+        startTime -= 7 * 24 * 60 * 60;
+        
+        m_core->UpdateEpgForAllChannels(startTime, endTime);
+    }
+    
+    return retVal;
+}
+
 
 bool OttPVRClient::OpenLiveStream(const PVR_CHANNEL& channel)
 {

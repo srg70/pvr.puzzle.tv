@@ -99,6 +99,10 @@ namespace PvrClient{
     {
         return string(c_EpgCacheDirPath) + "/" + cacheFile;
     }
+    void ClientCoreBase::ClearEpgCache(const char* cacheFile)
+    {
+        m_addonHelper->DeleteFile(MakeEpgCachePath(cacheFile).c_str());
+    }
     
     void ClientCoreBase::LoadEpgCache(const char* cacheFile)
     {
@@ -244,7 +248,6 @@ namespace PvrClient{
         OnEpgUpdateDone();
     }
     
-
     void ClientCoreBase::ParseJson(const std::string& response, std::function<void(Document&)> parser)
     {
         Document jsonRoot;

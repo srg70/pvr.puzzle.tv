@@ -31,6 +31,7 @@
 #endif
 #endif
 
+#include <ctime>
 #include "p8-platform/util/util.h"
 #include "kodi/xbmc_addon_cpp_dll.h"
 
@@ -65,7 +66,7 @@ ADDON_STATUS PuzzlePVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_l
     
     try
     {
-        CreateCore();
+        CreateCore(false);
         m_puzzleTV->SetServerPort(serverPort);
         m_puzzleTV->SetServerUri(buffer);
     }
@@ -94,13 +95,13 @@ PuzzlePVRClient::~PuzzlePVRClient()
 
 }
 
-void PuzzlePVRClient::CreateCore()
+void PuzzlePVRClient::CreateCore(bool clearEpgCache)
 {
     if(m_puzzleTV != NULL) {
         m_clientCore = NULL;
         SAFE_DELETE(m_puzzleTV);
     }
-    m_clientCore = m_puzzleTV = new PuzzleTV(m_addonHelper, m_pvrHelper);
+    m_clientCore = m_puzzleTV = new PuzzleTV(m_addonHelper, m_pvrHelper, clearEpgCache);
 }
 
 ADDON_STATUS PuzzlePVRClient::SetSetting(const char *settingName, const void *settingValue)
@@ -145,6 +146,44 @@ PVR_ERROR  PuzzlePVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MEN
     return PVRClientBase::MenuHook(menuhook, item);
     
 }
+
+ADDON_STATUS PuzzlePVRClient::OnReloadEpg()
+{
+    ADDON_STATUS retVal = ADDON_STATUS_OK;
+    try
+    {
+        auto port =m_puzzleTV->GetServerPort();
+        string uri = m_puzzleTV->GetServerUri();
+
+        CreateCore(true);
+        m_puzzleTV->SetServerPort(port);
+        m_puzzleTV->SetServerUri(uri.c_str());
+    }
+    catch (std::exception& ex)
+    {
+        m_addonHelper->QueueNotification(QUEUE_ERROR,  m_addonHelper->GetLocalizedString(32005));
+        m_addonHelper->Log(LOG_ERROR, "PuzzlePVRClient:: Can't create Puzzle Server core. Exeption: [%s].", ex.what());
+        retVal = ADDON_STATUS_LOST_CONNECTION;
+    }
+    catch(...)
+    {
+        m_addonHelper->QueueNotification(QUEUE_ERROR, "Puzzle Server: unhandeled exception on reload EPG.");
+        retVal = ADDON_STATUS_PERMANENT_FAILURE;
+    }
+    
+    if(ADDON_STATUS_OK == retVal && nullptr != m_puzzleTV){
+        std::time_t startTime = std::time(nullptr);
+        startTime = std::mktime(std::gmtime(&startTime));
+        // Request EPG for all channels from -7 to +1 days
+        time_t endTime = startTime + 1 * 24 * 60 * 60;
+        startTime -= 7 * 24 * 60 * 60;
+        
+        m_puzzleTV->UpdateEpgForAllChannels(startTime, endTime);
+    }
+    
+    return retVal;
+}
+
 
 string PuzzlePVRClient::GetStreamUrl(const PVR_CHANNEL& channel)
 {

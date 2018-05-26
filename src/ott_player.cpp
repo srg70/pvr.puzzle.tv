@@ -71,7 +71,7 @@ namespace OttEngine
     const ParamList OttPlayer::ApiFunctionData::s_EmptyParams;
     
     OttPlayer::OttPlayer(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,
-                         const std::string &baseUrl, const std::string &key)
+                         const std::string &baseUrl, const std::string &key, bool clearEpgCache)
     : ClientCoreBase(addonHelper, pvrHelper)
     , m_baseUrl(baseUrl)
     , m_key(key)
@@ -79,8 +79,12 @@ namespace OttEngine
         m_httpEngine = new HttpEngine(m_addonHelper);
         m_baseUrl = "http://" + m_baseUrl ;
         BuildChannelAndGroupList();
-        LoadEpgCache(c_EpgCacheFile);
-        OnEpgUpdateDone();
+        if(clearEpgCache){
+            ClearEpgCache(c_EpgCacheFile);
+        } else {
+            LoadEpgCache(c_EpgCacheFile);
+            OnEpgUpdateDone();
+        }
     }
     
     OttPlayer::~OttPlayer()
@@ -259,14 +263,19 @@ namespace OttEngine
         ForEachEpg(action);
  
         if(needMore) {
-            GetEpgForAllChannels(channelId, moreStartTime, endTime);
+            GetEpgForChannel(channelId, moreStartTime, endTime);
         } else {
             OnEpgUpdateDone();
         }
     }
-    
-    //template<class TFunc>
-    void OttPlayer::GetEpgForAllChannels(ChannelId channelId, time_t startTime, time_t endTime)
+    void OttPlayer::UpdateEpgForAllChannels(time_t startTime, time_t endTime)
+    {
+        for (const auto& ch : GetChannelList()) {
+            GetEpgForChannel(ch.second.Id, startTime, endTime);
+        }
+    }
+
+    void OttPlayer::GetEpgForChannel(ChannelId channelId, time_t startTime, time_t endTime)
     {
         try {
             string call = string("channel/") + n_to_string(channelId);

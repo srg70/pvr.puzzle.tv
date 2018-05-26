@@ -79,10 +79,11 @@ namespace EdemEngine
     class Core : public PvrClient::ClientCoreBase
     {
     public:
-        Core(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper, const std::string &playListUrl, const std::string &epgUrl);
+        Core(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper, const std::string &playListUrl, const std::string &epgUrl, bool clearEpgCache);
         ~Core();
         
         void  GetEpg(PvrClient::ChannelId channelId, time_t startTime, time_t endTime, PvrClient::EpgEntryList& epgEntries);
+        void UpdateEpgForAllChannels(time_t startTime, time_t endTime);
         std::string GetArchiveUrl(PvrClient::ChannelId channelId, time_t startTime);
         
         std::string GetUrl(PvrClient::ChannelId channelId);
@@ -98,7 +99,6 @@ namespace EdemEngine
         
         void LoadEpg();
         bool AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
-        void  UpdateEpgForAllChannels(PvrClient::ChannelId channelId,  time_t startTime, time_t endTime);
 
         void Cleanup();
         void ResetArchiveList();

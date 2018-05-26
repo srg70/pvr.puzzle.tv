@@ -32,6 +32,7 @@
 #endif
 
 #include <algorithm>
+#include <ctime>
 #include "p8-platform/util/util.h"
 #include "kodi/xbmc_addon_cpp_dll.h"
 
@@ -52,12 +53,11 @@ static const char* c_playlist_setting = "edem_playlist_url";
 static const char* c_epg_setting = "edem_epg_url";
 static const char* c_seek_archives = "edem_seek_archives";
 
-ADDON_STATUS EdemPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,
-                               PVR_PROPERTIES* pvrprops)
+ADDON_STATUS EdemPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,                               PVR_PROPERTIES* pvrprops)
 {
     ADDON_STATUS retVal = ADDON_STATUS_OK;
     if(ADDON_STATUS_OK != (retVal = PVRClientBase::Init(addonHelper, pvrHelper, pvrprops)))
-       return retVal;
+        return retVal;
     
     char buffer[1024];
     
@@ -68,11 +68,10 @@ ADDON_STATUS EdemPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_lib
     
     m_supportSeek = false;
     m_addonHelper->GetSetting(c_seek_archives, &m_supportSeek);
-
+    
     try
     {
-        if(CheckPlaylistUrl())
-            CreateCore();
+        CreateCore(false);
     }
     catch (AuthFailedException &)
     {
@@ -82,7 +81,7 @@ ADDON_STATUS EdemPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_lib
     //    PVR_MENUHOOK hook = {1, 30020, PVR_MENUHOOK_EPG};
     //    m_pvr->AddMenuHook(&hook);
     return retVal;
-
+    
 }
 
 EdemPVRClient::~EdemPVRClient()
@@ -94,16 +93,17 @@ EdemPVRClient::~EdemPVRClient()
         m_clientCore = NULL;
         SAFE_DELETE(m_core);
     }
-
+    
 }
 
-void EdemPVRClient::CreateCore()
+void EdemPVRClient::CreateCore(bool clearEpgCache)
 {
     if(m_core != NULL) {
         m_clientCore = NULL;
         SAFE_DELETE(m_core);
     }
-    m_clientCore = m_core = new EdemEngine::Core(m_addonHelper, m_pvrHelper, m_playlistUrl, m_epgUrl);
+    if(CheckPlaylistUrl())
+        m_clientCore = m_core = new EdemEngine::Core(m_addonHelper, m_pvrHelper, m_playlistUrl, m_epgUrl, clearEpgCache);
 }
 
 bool EdemPVRClient::CheckPlaylistUrl()
@@ -114,18 +114,18 @@ bool EdemPVRClient::CheckPlaylistUrl()
     }
     return true;
 }
-    
-    ADDON_STATUS EdemPVRClient::SetSetting(const char *settingName, const void *settingValue)
+
+ADDON_STATUS EdemPVRClient::SetSetting(const char *settingName, const void *settingValue)
 {
     ADDON_STATUS result = ADDON_STATUS_OK ;
-
+    
     if (strcmp(settingName,  c_playlist_setting) == 0 && strcmp((const char*) settingValue, m_playlistUrl.c_str()) != 0) {
         m_playlistUrl= (const char*) settingValue;
         if(!CheckPlaylistUrl()) {
             return result;
         } else {
             try {
-                CreateCore();
+                CreateCore(false);
                 result = ADDON_STATUS_NEED_RESTART;
             }catch (AuthFailedException &) {
                 m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32011));
@@ -135,7 +135,7 @@ bool EdemPVRClient::CheckPlaylistUrl()
     else if(strcmp(settingName,  c_epg_setting) == 0 && strcmp((const char*) settingValue, m_epgUrl.c_str()) != 0) {
         m_epgUrl = (const char*) settingValue;
         try {
-            CreateCore();
+            CreateCore(false);
             result = ADDON_STATUS_NEED_RESTART;
         }catch (AuthFailedException &) {
             m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32011));
@@ -174,11 +174,42 @@ PVR_ERROR  EdemPVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUH
     return PVRClientBase::MenuHook(menuhook, item);
 }
 
+ADDON_STATUS EdemPVRClient::OnReloadEpg()
+{
+    ADDON_STATUS retVal = ADDON_STATUS_OK;
+    try
+    {
+        CreateCore(true);
+    }
+    catch (AuthFailedException &)
+    {
+        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32007));
+    }
+    catch(...)
+    {
+        m_addonHelper->QueueNotification(QUEUE_ERROR, "Edem TV: unhandeled exception on reload EPG.");
+        retVal = ADDON_STATUS_PERMANENT_FAILURE;
+    }
+    
+    if(ADDON_STATUS_OK == retVal && nullptr != m_core){
+        std::time_t startTime = std::time(nullptr);
+        startTime = std::mktime(std::gmtime(&startTime));
+        // Request EPG for all channels from -7 to +1 days
+        time_t endTime = startTime + 1 * 24 * 60 * 60;
+        startTime -= 7 * 24 * 60 * 60;
+        
+        m_core->UpdateEpgForAllChannels(startTime, endTime);
+    }
+    
+    return retVal;
+}
+
+
 bool EdemPVRClient::OpenLiveStream(const PVR_CHANNEL& channel)
 {
     if(NULL == m_core)
         return false;
-
+    
     string url = m_core->GetUrl(channel.iUniqueId);
     return PVRClientBase::OpenLiveStream(url);
 }
@@ -187,7 +218,7 @@ bool EdemPVRClient::SwitchChannel(const PVR_CHANNEL& channel)
 {
     if(NULL == m_core)
         return false;
-
+    
     string url = m_core->GetUrl(channel.iUniqueId);
     return PVRClientBase::SwitchChannel(url);
 }
@@ -240,7 +271,7 @@ bool EdemPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
 {
     if(NULL == m_core)
         return false;
-
+    
     auto delegate = new EdemArchiveDelegate(m_core, recording);
     string url = delegate->UrlForTimeshift(0);
     if(m_supportSeek)

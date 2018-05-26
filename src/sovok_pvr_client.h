@@ -52,7 +52,6 @@ public:
 protected:
     PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
     ADDON_STATUS OnReloadEpg();
-    ADDON_STATUS OnReloadRecordings();
 
 private:
     void CreateCore(bool clenEpgCache);

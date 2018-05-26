@@ -58,10 +58,10 @@ public:
     bool OpenRecordedStream(const PVR_RECORDING &recording);
 private:
     PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
-    
+    ADDON_STATUS OnReloadEpg();
 
 private:
-    void CreateCore();
+    void CreateCore(bool clearEpgCache);
     std::string GetStreamUrl(const PVR_CHANNEL& channel);
 
     PuzzleEngine::PuzzleTV* m_puzzleTV;

@@ -74,7 +74,7 @@ namespace PuzzleEngine
     class PuzzleTV : public PvrClient::ClientCoreBase
     {
     public:
-        PuzzleTV(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper);
+        PuzzleTV(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper, bool clearEpgCache);
         ~PuzzleTV();
 
         const PvrClient::EpgEntryList& GetEpgList() const;
@@ -82,6 +82,7 @@ namespace PuzzleEngine
         void Apply(std::function<void(const ArchiveList&)>& action) const;
 
         void  GetEpg(PvrClient::ChannelId channelId, time_t startTime, time_t endTime, PvrClient::EpgEntryList& epgEntries);
+        void  UpdateEpgForAllChannels(time_t startTime, time_t endTime);
 
         std::string GetUrl(PvrClient::ChannelId channelId);
         std::string GetNextStream(PvrClient::ChannelId channelId, int currentChannelIdx);
@@ -104,7 +105,6 @@ namespace PuzzleEngine
         std::string GetArchive(PvrClient::ChannelId channelId, time_t startTime);
         
         bool AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
-        void  UpdateEpgForAllChannels(PvrClient::ChannelId channelId,  time_t startTime, time_t endTime);
         void LoadEpg();
 
         void Cleanup();

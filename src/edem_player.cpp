@@ -70,14 +70,17 @@ namespace EdemEngine
     static void LoadPlaylist(const string& plistUrl, PlaylistContent& channels, CHelper_libXBMC_addon *XBMC);
 
     
-    Core::Core(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper, const std::string &playListUrl,  const std::string &epgUrl)
+    Core::Core(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper, const std::string &playListUrl,  const std::string &epgUrl, bool clearEpgCache)
     : ClientCoreBase(addonHelper, pvrHelper)
     , m_playListUrl(playListUrl)
     , m_epgUrl(epgUrl)
     {
         m_httpEngine = new HttpEngine(m_addonHelper);
         BuildChannelAndGroupList();
-        LoadEpgCache(c_EpgCacheFile);
+        if(clearEpgCache)
+            ClearEpgCache(c_EpgCacheFile);
+        else
+            LoadEpgCache(c_EpgCacheFile);
         LoadEpg();
         OnEpgUpdateDone();
     }
@@ -177,8 +180,7 @@ namespace EdemEngine
         ForEachEpg(action);
 
         if(needMore ) {
-            UpdateEpgForAllChannels(channelId, moreStartTime, endTime);
-            OnEpgUpdateDone();
+            UpdateEpgForAllChannels(moreStartTime, endTime);
         }
     }
     
@@ -203,7 +205,7 @@ namespace EdemEngine
         entry.HasArchive = when > 0 && when < archivePeriod;
     }
    
-    void Core::UpdateEpgForAllChannels(ChannelId channelId, time_t startTime, time_t endTime)
+    void Core::UpdateEpgForAllChannels(time_t startTime, time_t endTime)
     {
         if(m_epgUpdateInterval.IsSet() && m_epgUpdateInterval.TimeLeft() > 0)
             return;
@@ -214,17 +216,19 @@ namespace EdemEngine
         try {
             auto pThis = this;
  
-            bool shouldUpdateEpg = false;
-            EpgEntryCallback onEpgEntry = [&pThis, &shouldUpdateEpg, channelId,  startTime] (const XMLTV::EpgEntry& newEntry) {
-                if(pThis->AddEpgEntry(newEntry))
-                    shouldUpdateEpg = shouldUpdateEpg || (newEntry.iChannelId == channelId && newEntry.startTime >= startTime);
+            set<ChannelId> channelsToUpdate;
+            EpgEntryCallback onEpgEntry = [&pThis, &channelsToUpdate,  startTime] (const XMLTV::EpgEntry& newEntry) {
+                if(pThis->AddEpgEntry(newEntry) && newEntry.startTime >= startTime)
+                    channelsToUpdate.insert(newEntry.iChannelId);
             };
             
             XMLTV::ParseEpg(m_epgUrl, onEpgEntry, m_addonHelper);
             
-            if(shouldUpdateEpg)
-                m_pvrHelper->TriggerEpgUpdate(channelId);
-            
+            for (auto channel : channelsToUpdate) {
+                m_pvrHelper->TriggerEpgUpdate(channel);
+            }
+
+            OnEpgUpdateDone();
             SaveEpgCache(c_EpgCacheFile);
 //        } catch (ServerErrorException& ex) {
 //            m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32002), ex.reason.c_str() );
