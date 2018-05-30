@@ -32,11 +32,6 @@
 #include "p8-platform/threads/mutex.h"
 
 
-namespace ADDON
-{
-    class CHelper_libXBMC_addon;
-}
-
 namespace Buffers
 {
     
@@ -49,7 +44,7 @@ namespace Buffers
         static const  uint32_t CHUNK_FILE_SIZE_LIMIT = (STREAM_READ_BUFFER_SIZE * 1024) * 4; // 128MB chunk
 
         
-        FileCacheBuffer(ADDON::CHelper_libXBMC_addon *addonHelper,  const std::string &bufferCacheDir, uint8_t  sizeFactor);
+        FileCacheBuffer( const std::string &bufferCacheDir, uint8_t  sizeFactor);
         
         virtual  void Init();
         virtual  uint32_t UnitSize();
@@ -87,7 +82,6 @@ namespace Buffers
         int64_t m_position;
         int64_t m_begin;// virtual start of cache
         const int64_t m_maxSize;
-        ADDON::CHelper_libXBMC_addon *m_addonHelper;
         std::string m_bufferDir;
 
 

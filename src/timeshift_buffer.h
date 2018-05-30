@@ -34,17 +34,12 @@
 #include "input_buffer.h"
 #include "cache_buffer.h"
 
-namespace ADDON
-{
-    class CHelper_libXBMC_addon;
-}
-
 namespace Buffers {
     
     class TimeshiftBuffer : public InputBuffer, public P8PLATFORM::CThread
     {
     public:
-        TimeshiftBuffer(ADDON::CHelper_libXBMC_addon *addonHelper, InputBuffer* inputBuffer, ICacheBuffer* cache);
+        TimeshiftBuffer(InputBuffer* inputBuffer, ICacheBuffer* cache);
         ~TimeshiftBuffer();
         
         int64_t GetLength() const;
@@ -64,7 +59,6 @@ namespace Buffers {
         void Init(const std::string &newUrl = std::string());
         void DebugLog(const std::string& message) const;
         
-        ADDON::CHelper_libXBMC_addon *m_addonHelper;
         P8PLATFORM::CEvent m_writeEvent;
         InputBuffer* m_inputBuffer;
         ICacheBuffer* m_cache;

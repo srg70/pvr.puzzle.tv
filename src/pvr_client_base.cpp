@@ -37,7 +37,6 @@
 
 #include "kodi/xbmc_addon_cpp_dll.h"
 
-#include "libXBMC_pvr.h"
 #include "timeshift_buffer.h"
 #include "file_cache_buffer.hpp"
 #include "memory_cache_buffer.hpp"
@@ -45,11 +44,13 @@
 #include "direct_buffer.h"
 #include "helpers.h"
 #include "pvr_client_base.h"
+#include "globals.hpp"
 
 using namespace std;
 using namespace ADDON;
 using namespace Buffers;
 using namespace PvrClient;
+using namespace Globals;
 
 namespace CurlUtils
 {
@@ -61,12 +62,9 @@ const char* s_DefaultCacheDir = "special://temp/pvr-puzzle-tv";
 const int RELOAD_EPG_MENU_HOOK = 1;
 const int RELOAD_RECORDINGS_MENU_HOOK = 2;
 
-ADDON_STATUS PVRClientBase::Init(CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,
-                                  PVR_PROPERTIES* pvrprops)
+ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
 {
     m_clientCore = NULL;
-    m_addonHelper = addonHelper;
-    m_pvrHelper = pvrHelper;
     m_inputBuffer = NULL;
     SetTimeshiftPath(s_DefaultCacheDir);
     
@@ -79,22 +77,22 @@ ADDON_STATUS PVRClientBase::Init(CHelper_libXBMC_addon *addonHelper, CHelper_lib
     char buffer[1024];
     
     int curlTimout = 15;
-    m_addonHelper->GetSetting("curl_timeout", &curlTimout);
+    XBMC->GetSetting("curl_timeout", &curlTimout);
     int channelTimeout = 5;
-     m_addonHelper->GetSetting("channel_reload_timeout", &channelTimeout);
+     XBMC->GetSetting("channel_reload_timeout", &channelTimeout);
    
     
     bool isTimeshiftEnabled;
-    m_addonHelper->GetSetting("enable_timeshift", &isTimeshiftEnabled);
+    XBMC->GetSetting("enable_timeshift", &isTimeshiftEnabled);
     string timeshiftPath;
-    if (m_addonHelper->GetSetting("timeshift_path", &buffer))
+    if (XBMC->GetSetting("timeshift_path", &buffer))
         timeshiftPath = buffer;
     uint64_t timeshiftBufferSize = 0;
-    m_addonHelper->GetSetting("timeshift_size", &timeshiftBufferSize);
+    XBMC->GetSetting("timeshift_size", &timeshiftBufferSize);
     timeshiftBufferSize *= 1024*1024;
     
     TimeshiftBufferType timeshiftBufferType = k_TimeshiftBufferMemory;
-    m_addonHelper->GetSetting("timeshift_type", &timeshiftBufferType);
+    XBMC->GetSetting("timeshift_type", &timeshiftBufferType);
     
     CurlUtils::SetCurlTimeout(curlTimout);
     SetChannelReloadTimeout(channelTimeout);
@@ -104,10 +102,10 @@ ADDON_STATUS PVRClientBase::Init(CHelper_libXBMC_addon *addonHelper, CHelper_lib
     SetTimeshiftBufferType(timeshiftBufferType);
     
     PVR_MENUHOOK hook = {RELOAD_EPG_MENU_HOOK, 32050, PVR_MENUHOOK_EPG};
-    m_pvrHelper->AddMenuHook(&hook);
+    PVR->AddMenuHook(&hook);
 
     hook = {RELOAD_RECORDINGS_MENU_HOOK, 32051, PVR_MENUHOOK_RECORDING};
-    m_pvrHelper->AddMenuHook(&hook);
+    PVR->AddMenuHook(&hook);
 
     return ADDON_STATUS_OK;
     
@@ -239,8 +237,8 @@ ADDON_STATUS PVRClientBase::GetStatus()
 
 void PVRClientBase::SetTimeshiftPath(const std::string& path){
     const char* nonEmptyPath = (path.empty()) ? s_DefaultCacheDir : path.c_str();
-    if(!m_addonHelper->DirectoryExists(nonEmptyPath))
-        if(!m_addonHelper->CreateDirectory(nonEmptyPath))
+    if(!XBMC->DirectoryExists(nonEmptyPath))
+        if(!XBMC->CreateDirectory(nonEmptyPath))
             LogError( "Failed to create cache folder");
     m_CacheDir = nonEmptyPath;
 }
@@ -249,14 +247,14 @@ PVR_ERROR  PVRClientBase::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUH
 {
     
     if(menuhook.iHookId == RELOAD_EPG_MENU_HOOK ) {
-        char* message = m_addonHelper->GetLocalizedString(32012);
-        m_addonHelper->QueueNotification(QUEUE_INFO, message);
-        m_addonHelper->FreeString(message);
+        char* message = XBMC->GetLocalizedString(32012);
+        XBMC->QueueNotification(QUEUE_INFO, message);
+        XBMC->FreeString(message);
         OnReloadEpg();
     } else if(RELOAD_RECORDINGS_MENU_HOOK == menuhook.iHookId) {
-//        char* message = m_addonHelper->GetLocalizedString(32012);
-//        m_addonHelper->QueueNotification(QUEUE_INFO, message);
-//        m_addonHelper->FreeString(message);
+//        char* message = XBMC->GetLocalizedString(32012);
+//        XBMC->QueueNotification(QUEUE_INFO, message);
+//        XBMC->FreeString(message);
         OnReloadRecordings();
     }
     return PVR_ERROR_NO_ERROR;
@@ -297,7 +295,7 @@ PVR_ERROR PVRClientBase::GetChannels(ADDON_HANDLE handle, bool bRadio)
             strncpy(pvrChannel.strChannelName, channel.Name.c_str(), sizeof(pvrChannel.strChannelName));
             strncpy(pvrChannel.strIconPath, channel.IconPath.c_str(), sizeof(pvrChannel.strIconPath));
             
-            m_pvrHelper->TransferChannelEntry(handle, &pvrChannel);
+            PVR->TransferChannelEntry(handle, &pvrChannel);
         }
     }
     
@@ -334,7 +332,7 @@ PVR_ERROR PVRClientBase::GetChannelGroups(ADDON_HANDLE handle, bool bRadio)
         for (auto& itGroup : m_clientCore->GetGroupList())
         {
             strncpy(pvrGroup.strGroupName, itGroup.second.Name.c_str(), sizeof(pvrGroup.strGroupName));
-            m_pvrHelper->TransferChannelGroup(handle, &pvrGroup);
+            PVR->TransferChannelGroup(handle, &pvrGroup);
         }
     }
     
@@ -357,7 +355,7 @@ PVR_ERROR PVRClientBase::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_C
             PVR_CHANNEL_GROUP_MEMBER pvrGroupMember = { 0 };
             strncpy(pvrGroupMember.strGroupName, itGroup->second.Name.c_str(), sizeof(pvrGroupMember.strGroupName));
             pvrGroupMember.iChannelUniqueId = it;
-            m_pvrHelper->TransferChannelGroupMember(handle, &pvrGroupMember);
+            PVR->TransferChannelGroupMember(handle, &pvrGroupMember);
         }
     }
    
@@ -382,7 +380,7 @@ PVR_ERROR PVRClientBase::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL
         tag.strPlot = itEpgEntry->second.Description.c_str();
         tag.startTime = itEpgEntry->second.StartTime;
         tag.endTime = itEpgEntry->second.EndTime;
-        m_pvrHelper->TransferEpgEntry(handle, &tag);
+        PVR->TransferEpgEntry(handle, &tag);
     }
     return PVR_ERROR_NO_ERROR;
 }
@@ -400,15 +398,15 @@ bool PVRClientBase::OpenLiveStream(const std::string& url )
         const std::string m3uExt = ".m3u";
         const std::string m3u8Ext = ".m3u8";
         if( url.find(m3u8Ext) != std::string::npos || url.find(m3uExt) != std::string::npos)
-            buffer = new Buffers::PlaylistBuffer(m_addonHelper, url, NULL);
+            buffer = new Buffers::PlaylistBuffer(url, NULL);
         else
-            buffer = new DirectBuffer(m_addonHelper, url);
+            buffer = new DirectBuffer(url);
         
         if (m_isTimeshiftEnabled){
             if(k_TimeshiftBufferFile == m_timeshiftBufferType) {
-                m_inputBuffer = new Buffers::TimeshiftBuffer(m_addonHelper, buffer, new Buffers::FileCacheBuffer(m_addonHelper, m_CacheDir, m_timshiftBufferSize /  Buffers::FileCacheBuffer::CHUNK_FILE_SIZE_LIMIT));
+                m_inputBuffer = new Buffers::TimeshiftBuffer(buffer, new Buffers::FileCacheBuffer(m_CacheDir, m_timshiftBufferSize /  Buffers::FileCacheBuffer::CHUNK_FILE_SIZE_LIMIT));
             } else {
-                m_inputBuffer = new Buffers::TimeshiftBuffer(m_addonHelper, buffer, new Buffers::MemoryCacheBuffer(m_addonHelper, m_timshiftBufferSize /  Buffers::MemoryCacheBuffer::CHUNK_SIZE_LIMIT));
+                m_inputBuffer = new Buffers::TimeshiftBuffer(buffer, new Buffers::MemoryCacheBuffer(m_timshiftBufferSize /  Buffers::MemoryCacheBuffer::CHUNK_SIZE_LIMIT));
             }
         }
         else
@@ -510,7 +508,8 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
     PVR_ERROR result = PVR_ERROR_NO_ERROR;
     auto pThis = this;
     
-    IClientCore::EpgEntryAction action = [&handle, pThis ,&result](const EpgEntryList::value_type& epgEntry)
+    auto Pvr = PVR;
+    IClientCore::EpgEntryAction action = [&handle, pThis ,&result, Pvr](const EpgEntryList::value_type& epgEntry)
     {
         try {
             const auto& epgTag = epgEntry.second;
@@ -538,11 +537,11 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
             dirName += buff;
             strncpy(tag.strDirectory, dirName.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
             
-            pThis->m_pvrHelper->TransferRecordingEntry(handle, &tag);
+            Pvr->TransferRecordingEntry(handle, &tag);
             
         }
         catch (...)  {
-            pThis->LogError( "%s: failed.", __FUNCTION__);
+            LogError( "%s: failed.", __FUNCTION__);
             result = PVR_ERROR_FAILED;
         }
     };
@@ -566,15 +565,15 @@ bool PVRClientBase::OpenRecordedStream(const std::string& url,  Buffers::IPlayli
         const bool isM3u = url.find(m3u8Ext) != std::string::npos || url.find(m3uExt) != std::string::npos;
         Buffers::PlaylistBufferDelegate plistDelegate(delegate);
         if(isM3u)
-            buffer = new Buffers::PlaylistBuffer(m_addonHelper, url, plistDelegate);
+            buffer = new Buffers::PlaylistBuffer(url, plistDelegate);
         else
-            buffer = new ArchiveBuffer(m_addonHelper, url);
+            buffer = new ArchiveBuffer(url);
         
 //        if (m_isTimeshiftEnabled && isM3u){
 //            if(k_TimeshiftBufferFile == m_timeshiftBufferType) {
-//                m_recordBuffer = new Buffers::TimeshiftBuffer(m_addonHelper, buffer, new Buffers::FileCacheBuffer(m_addonHelper, m_CacheDir, m_timshiftBufferSize /  Buffers::FileCacheBuffer::CHUNK_FILE_SIZE_LIMIT));
+//                m_recordBuffer = new Buffers::TimeshiftBuffer(buffer, new Buffers::FileCacheBuffer(m_CacheDir, m_timshiftBufferSize /  Buffers::FileCacheBuffer::CHUNK_FILE_SIZE_LIMIT));
 //            } else {
-//                m_recordBuffer = new Buffers::TimeshiftBuffer(m_addonHelper, buffer, new Buffers::MemoryCacheBuffer(m_addonHelper, m_timshiftBufferSize /  Buffers::MemoryCacheBuffer::CHUNK_SIZE_LIMIT));
+//                m_recordBuffer = new Buffers::TimeshiftBuffer(buffer, new Buffers::MemoryCacheBuffer(m_timshiftBufferSize /  Buffers::MemoryCacheBuffer::CHUNK_SIZE_LIMIT));
 //            }
 //        }
 //        else
@@ -623,33 +622,5 @@ PVR_ERROR PVRClientBase::CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_ME
     LogDebug( " >>>> !!!! Menu hook !!!! <<<<<");
     return MenuHook(menuhook, item);
 }
-
-# define PrintToLog(loglevel) \
-    std::string strData; \
-    strData.reserve(16384); \
-    va_list va; \
-    va_start(va, format); \
-    strData = StringUtils::FormatV(format,va); \
-    va_end(va); \
-    m_addonHelper->Log(loglevel, strData.c_str()); \
-
-
-void PVRClientBase::LogError(const char *format, ... )
-{
-    PrintToLog(LOG_ERROR);
-}
-void PVRClientBase::LogInfo(const char *format, ... )
-{
-    PrintToLog(LOG_INFO);
-}
-void PVRClientBase::LogNotice(const char *format, ... )
-{
-    PrintToLog(LOG_NOTICE);
-}
-void PVRClientBase::LogDebug(const char *format, ... )
-{
-    PrintToLog(LOG_DEBUG);
-}
-
 
 

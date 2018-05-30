@@ -39,7 +39,9 @@
 #include "helpers.h"
 #include "sovok_tv.h"
 #include "HttpEngine.hpp"
+#include "globals.hpp"
 
+using namespace Globals;
 using namespace std;
 using namespace ADDON;
 using namespace rapidjson;
@@ -47,9 +49,9 @@ using namespace PvrClient;
 
 #define CATCH_API_CALL(msg) \
     catch (ServerErrorException& ex) { \
-        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32009), ex.reason.c_str() ); \
+        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32009), ex.reason.c_str() ); \
     } catch(CurlErrorException& ex) { \
-        m_addonHelper->QueueNotification(QUEUE_ERROR, "CURL fatal error: %s", ex.reason.c_str() ); \
+        XBMC->QueueNotification(QUEUE_ERROR, "CURL fatal error: %s", ex.reason.c_str() ); \
     } catch (...) { \
         LogError(msg); \
     }
@@ -86,15 +88,12 @@ const ParamList SovokTV::ApiFunctionData::s_EmptyParams;
 //tatic         P8PLATFORM::CTimeout TEST_LOGIN_FAILED_timeout(30 * 1000);
 
 
-SovokTV::SovokTV(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,
-                 const string &login, const string &password,
-                 bool cleanEpgCache) :
-    ClientCoreBase(addonHelper, pvrHelper),
+SovokTV::SovokTV(const string &login, const string &password,  bool cleanEpgCache) :
     m_login(login),
     m_password(password),
     m_lastEpgRequestEndTime(0)
 {
-    m_httpEngine = new HttpEngine(m_addonHelper);
+    m_httpEngine = new HttpEngine();
     if (/*TEST_LOGIN_FAILED_timeout.TimeLeft() > 0 ||*/  !Login(true)) {
         Cleanup();
         throw AuthFailedException();
@@ -107,7 +106,7 @@ SovokTV::SovokTV(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr 
     InitArchivesInfo();
     BuildChannelAndGroupList();
     if(cleanEpgCache)
-        m_addonHelper->DeleteFile(MakeEpgCachePath(c_EpgCacheFile).c_str());
+        XBMC->DeleteFile(MakeEpgCachePath(c_EpgCacheFile).c_str());
     else {
         LoadEpgCache(c_EpgCacheFile);
         OnEpgUpdateDone();
@@ -121,7 +120,7 @@ SovokTV::~SovokTV()
 
 void SovokTV::Cleanup()
 {
-    m_addonHelper->Log(LOG_NOTICE, "SovokTV stopping...");
+    XBMC->Log(LOG_NOTICE, "SovokTV stopping...");
 
     if(m_httpEngine)
         m_httpEngine->CancelAllRequests();
@@ -131,7 +130,7 @@ void SovokTV::Cleanup()
     if(m_httpEngine)
         SAFE_DELETE(m_httpEngine);
 
-    m_addonHelper->Log(LOG_NOTICE, "SovokTV stopped.");
+    XBMC->Log(LOG_NOTICE, "SovokTV stopped.");
 }
 
 const StreamerNamesList& SovokTV::GetStreamersList() const
@@ -370,7 +369,7 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
             
             UniqueBroadcastIdType id = epgEntry.StartTime;
             AddEpgEntry(id, epgEntry);
-            m_pvrHelper->TriggerEpgUpdate(currentChannelId);
+            PVR->TriggerEpgUpdate(currentChannelId);
         }
     },
      [this, epgActivityCounter](const CActionQueue::ActionResult& s)
@@ -384,7 +383,7 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
              if(s.exception)
                 rethrow_exception(s.exception);
          } catch (ServerErrorException& ex) {
-             m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32009), ex.reason.c_str() );
+             XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32009), ex.reason.c_str() );
          } catch (...) {
              LogError(" >>>>  FAILED receive EPG for N hours<<<<<");
          }
@@ -476,10 +475,10 @@ bool SovokTV::Login(bool wait)
             ApiFunctionData apiParams("login", params);
             CallApiFunction(apiParams, parser);
         } catch (ServerErrorException& ex) {
-            m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32009), ex.reason.c_str() );
+            XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32009), ex.reason.c_str() );
             return false;
         } catch(CurlErrorException& ex) {
-            m_addonHelper->QueueNotification(QUEUE_ERROR, "CURL fatal error: %s", ex.reason.c_str() );
+            XBMC->QueueNotification(QUEUE_ERROR, "CURL fatal error: %s", ex.reason.c_str() );
             return false;
         } catch (...) {
             LogError(" >>>>  FAILED to LOGIN!!! <<<<<");
@@ -565,8 +564,8 @@ void SovokTV::CallApiAsync(const ApiFunctionData& data, TParser parser, TApiCall
                       auto err = errObj["message"].GetString();
                       const Value & errCode = errObj["code"];
                       auto code = errCode.IsInt() ? errCode.GetInt() : errCode.IsString() ? atoi(errCode.GetString()) : -100;
-                      m_addonHelper->Log(LOG_ERROR, "Sovok TV server responses error:");
-                      m_addonHelper->Log(LOG_ERROR, err);
+                      XBMC->Log(LOG_ERROR, "Sovok TV server responses error:");
+                      XBMC->Log(LOG_ERROR, err);
                       throw ServerErrorException(err,code);
                   });
     };
@@ -606,12 +605,12 @@ bool SovokTV::LoadStreamers()
                 m_streamerIds.push_back((*runner)["id"].GetString());
                 ++runner;
             }
-            m_addonHelper->Log(LOG_DEBUG,"Loaded %d streamers.", m_streamerNames.size());
+            LogDebug("Loaded %d streamers.", m_streamerNames.size());
         });
     } catch (ServerErrorException& ex) {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32009), ex.reason.c_str() );
+        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32009), ex.reason.c_str() );
     } catch(CurlErrorException& ex) {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, "CURL fatal error: %s", ex.reason.c_str() );
+        XBMC->QueueNotification(QUEUE_ERROR, "CURL fatal error: %s", ex.reason.c_str() );
         return false;
     } catch (...) {
         LogError(" >>>>  FAILED to load streamers <<<<<");
@@ -693,7 +692,7 @@ void SovokTV::InitArchivesInfo()
             };
             return true;
         });
-        m_addonHelper->Log(LOG_DEBUG,"Received %d channels with archive.", m_archivesInfo.size());
+        LogDebug("Received %d channels with archive.", m_archivesInfo.size());
     }
     CATCH_API_CALL(" >>>>  FAILED to obtain archive channel list <<<<<")
 

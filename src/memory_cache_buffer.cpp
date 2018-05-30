@@ -1,4 +1,4 @@
-                 //
+//
 //  file_cache_buffer.cpp
 //  pvr.puzzle.tv
 //
@@ -11,13 +11,14 @@
 #include "memory_cache_buffer.hpp"
 #include "libXBMC_addon.h"
 #include "helpers.h"
-
+#include "globals.hpp"
 
 namespace Buffers
 {
     using namespace P8PLATFORM;
     using namespace ADDON;
-  
+    using namespace Globals;
+    
     class CMemoryBlock
     {
     public:
@@ -58,7 +59,7 @@ namespace Buffers
             m_writePos += writtenBytes;
             return writtenBytes;
         }
-
+        
         int64_t ReadPos() const {return m_readPos;}
         int64_t WritePos() const {return m_writePos;}
         int64_t Capacity() const {return m_buffer.size;}
@@ -77,9 +78,8 @@ namespace Buffers
     
     
     
-    MemoryCacheBuffer::MemoryCacheBuffer(ADDON::CHelper_libXBMC_addon *addonHelper, uint8_t  sizeFactor)
-    : m_addonHelper(addonHelper)
-    , m_maxSize(std::max(uint8_t(3), sizeFactor) * CHUNK_SIZE_LIMIT)
+    MemoryCacheBuffer::MemoryCacheBuffer(uint8_t  sizeFactor)
+    : m_maxSize(std::max(uint8_t(3), sizeFactor) * CHUNK_SIZE_LIMIT)
     {
         Init();
     }
@@ -100,7 +100,7 @@ namespace Buffers
         unsigned int idx = -1;
         ChunkPtr chunk = NULL;
         {
-            m_addonHelper->Log(LOG_DEBUG, "MemoryCacheBuffer::Seek. >>> Requested pos %d", iPosition);
+            XBMC->Log(LOG_DEBUG, "MemoryCacheBuffer::Seek. >>> Requested pos %d", iPosition);
             
             CLockObject lock(m_SyncAccess);
             
@@ -117,12 +117,12 @@ namespace Buffers
                 iPosition = m_begin;
             }
             iWhence = SEEK_SET;
-            m_addonHelper->Log(LOG_DEBUG, "MemoryCacheBuffer::Seek. Calculated pos %d", iPosition);
-            m_addonHelper->Log(LOG_DEBUG, "MemoryCacheBuffer::Seek. Begin %d Length %d", m_begin, m_length);
+            XBMC->Log(LOG_DEBUG, "MemoryCacheBuffer::Seek. Calculated pos %d", iPosition);
+            XBMC->Log(LOG_DEBUG, "MemoryCacheBuffer::Seek. Begin %d Length %d", m_begin, m_length);
             
             idx = GetChunkIndexFor(iPosition);
             if(idx >= m_ReadChunks.size()) {
-                m_addonHelper->Log(LOG_ERROR, "MemoryCacheBuffer: seek failed. Wrong chunk index %d", idx);
+                XBMC->Log(LOG_ERROR, "MemoryCacheBuffer: seek failed. Wrong chunk index %d", idx);
                 return m_position;
             }
             chunk = m_ReadChunks[idx];
@@ -130,9 +130,9 @@ namespace Buffers
             auto inPos = GetPositionInChunkFor(iPosition);
             auto pos =  chunk->Seek(inPos);
             m_position = iPosition -  (inPos - pos);
-            m_addonHelper->Log(LOG_DEBUG, "MemoryCacheBuffer::Seek. Chunk idx %d, pos in chunk %d, actual pos %d", idx, inPos, pos);
+            XBMC->Log(LOG_DEBUG, "MemoryCacheBuffer::Seek. Chunk idx %d, pos in chunk %d, actual pos %d", idx, inPos, pos);
         }
-        m_addonHelper->Log(LOG_DEBUG, "MemoryCacheBuffer::Seek. <<< Result pos %d", m_position);
+        XBMC->Log(LOG_DEBUG, "MemoryCacheBuffer::Seek. <<< Result pos %d", m_position);
         return m_position;
         
     }
@@ -141,7 +141,7 @@ namespace Buffers
     int64_t MemoryCacheBuffer::Length() {
         int64_t length = -1;
         {
-//            CLockObject lock(m_SyncAccess);
+            //            CLockObject lock(m_SyncAccess);
             length = m_length;
         }
         return length;
@@ -171,7 +171,7 @@ namespace Buffers
                 unsigned int idx = GetChunkIndexFor(m_position);
                 chunk = (idx >= m_ReadChunks.size()) ? NULL : m_ReadChunks[idx];
                 if(NULL == chunk)  {
-                    m_addonHelper->Log(LOG_ERROR, "MemoryCacheBuffer: failed to obtain chunk for read.");
+                    XBMC->Log(LOG_ERROR, "MemoryCacheBuffer: failed to obtain chunk for read.");
                     break;
                 }
                 chunk->Seek(GetPositionInChunkFor(m_position));
@@ -180,7 +180,7 @@ namespace Buffers
                 m_position += bytesRead;
             }
             if(bytesRead == 0 ) {
-                //m_addonHelper->Log(LOG_DEBUG, "MemoryCacheBuffer: nothing to read.");
+                //XBMC->Log(LOG_DEBUG, "MemoryCacheBuffer: nothing to read.");
                 break;
             }
             //DebugLog(std::string(">>> Read: ") + n_to_string(bytesRead));
@@ -223,7 +223,7 @@ namespace Buffers
                             chunk = CreateChunk();
                             // No room for new data
                             if(NULL == chunk)
-                                return  totalWritten;
+                            return  totalWritten;
                             m_ReadChunks.push_back(chunk);
                         }
                     }
@@ -244,7 +244,7 @@ namespace Buffers
                 }
                 totalWritten += bytesWritten;
                 if(bytesWritten != bytesToWrite) {
-                    m_addonHelper->Log(LOG_INFO, "MemoryCacheBuffer: chunk is full, written (%d) != to write (%d)", bytesWritten,bytesToWrite);
+                    XBMC->Log(LOG_INFO, "MemoryCacheBuffer: chunk is full, written (%d) != to write (%d)", bytesWritten,bytesToWrite);
                     //break;// ???
                 }
                 available -= bytesWritten;
@@ -256,7 +256,7 @@ namespace Buffers
             }
             
         } catch (std::exception&  ex) {
-            m_addonHelper->Log(LOG_ERROR, "MemoryCacheBuffer: generic exception %s", ex.what());
+            XBMC->Log(LOG_ERROR, "MemoryCacheBuffer: generic exception %s", ex.what());
         }
         
         return totalWritten;
@@ -272,10 +272,10 @@ namespace Buffers
         try {
             ChunkPtr newChunk = new CMemoryBlock();
             m_ChunkSwarm.push_back(ChunkSwarm::value_type(newChunk));
-            m_addonHelper->Log(LOG_DEBUG, ">>> MemoryCacheBuffer: new current chunk (for write). Total %d", m_ChunkSwarm.size());
+            XBMC->Log(LOG_DEBUG, ">>> MemoryCacheBuffer: new current chunk (for write). Total %d", m_ChunkSwarm.size());
             return newChunk;
         } catch (std::exception& ex) {
-            m_addonHelper->Log(LOG_DEBUG, ">>> MemoryCacheBuffer: allocation of new chunck failed. Exception: %s", ex.what());
+            XBMC->Log(LOG_DEBUG, ">>> MemoryCacheBuffer: allocation of new chunck failed. Exception: %s", ex.what());
         }
         return NULL;
     }

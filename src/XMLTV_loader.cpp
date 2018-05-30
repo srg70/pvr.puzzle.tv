@@ -33,11 +33,13 @@
 #include "rapidxml/rapidxml.hpp"
 #include <ctime>
 #include <functional>
+#include "globals.hpp"
 
 using namespace std;
 using namespace XMLTV;
-using namespace ADDON;
 using namespace rapidxml;
+using namespace Globals;
+using namespace ADDON;
 
 namespace XMLTV {
     
@@ -78,7 +80,7 @@ namespace XMLTV {
         return true;
     }
     
-    static int GetFileContents(const string& url, string &strContent, CHelper_libXBMC_addon * XBMC)
+    static int GetFileContents(const string& url, string &strContent)
     {
         strContent.clear();
         
@@ -107,7 +109,7 @@ namespace XMLTV {
         return c_CacheFolder + std::to_string(std::hash<std::string>{}(original));
     }
     
-    static int GetCachedFileContents(const std::string &filePath, std::string &strContents, CHelper_libXBMC_addon * XBMC)
+    static int GetCachedFileContents(const std::string &filePath, std::string &strContents)
     {
         bool bNeedReload = false;
         std::string strCachedPath = GetCachedPathFor(filePath);
@@ -135,7 +137,7 @@ namespace XMLTV {
         
         if (bNeedReload)
         {
-            GetFileContents(filePath, strContents, XBMC);
+            GetFileContents(filePath, strContents);
             
             // write to cache
             if (strContents.length() > 0)
@@ -154,7 +156,7 @@ namespace XMLTV {
             return strContents.length();
         }
         
-        return GetFileContents(strCachedPath, strContents, XBMC);
+        return GetFileContents(strCachedPath, strContents);
     }
 
     
@@ -269,7 +271,7 @@ return false;             \
         return true ;
     }
     
-   bool CreateDocument(const std::string& url,  XmlDocumentAndData& xmlDoc, ADDON::CHelper_libXBMC_addon * XBMC)
+   bool CreateDocument(const std::string& url,  XmlDocumentAndData& xmlDoc)
     {
         if (url.empty())
         {
@@ -280,7 +282,7 @@ return false;             \
         string data;
         string decompressed;
         
-        if (GetCachedFileContents(url, data, XBMC) == 0)
+        if (GetCachedFileContents(url, data) == 0)
         {
             XBMC->Log(LOG_ERROR, "Unable to load EPG file '%s':  file is missing or empty.", url.c_str());
             return false;
@@ -341,7 +343,7 @@ return false;             \
         return strId;
     }
     
-    bool ParseChannels(const std::string& url,  const ChannelCallback& onChannelFound, ADDON::CHelper_libXBMC_addon * XBMC)
+    bool ParseChannels(const std::string& url,  const ChannelCallback& onChannelFound)
     {
 
         XmlDocumentAndData xmlDoc;
@@ -349,7 +351,7 @@ return false;             \
         XBMC->Log(LOG_DEBUG, "XMLTV Loader: open document from %s." , url.c_str());
 
         
-        if(!CreateDocument(url, xmlDoc, XBMC))
+        if(!CreateDocument(url, xmlDoc))
            return false;
         
         XBMC->Log(LOG_DEBUG, "XMLTV Loader: start document parsing.");
@@ -400,11 +402,11 @@ return false;             \
     }
 
     
-    bool ParseEpg(const std::string& url,  const EpgEntryCallback& onEpgEntryFound ,ADDON::CHelper_libXBMC_addon * XBMC)
+    bool ParseEpg(const std::string& url,  const EpgEntryCallback& onEpgEntryFound)
     {
         XmlDocumentAndData xmlDoc;
         
-        if(!CreateDocument(url, xmlDoc, XBMC))
+        if(!CreateDocument(url, xmlDoc))
            return false;
            
         xml_node<> *pRootElement = xmlDoc.doc.first_node("tv");

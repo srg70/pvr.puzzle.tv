@@ -39,11 +39,12 @@
 #include "helpers.h"
 #include "ott_player.h"
 #include "HttpEngine.hpp"
-
-
+#include "globals.hpp"
 
 namespace OttEngine
 {
+    
+    using namespace Globals;
     using namespace std;
     using namespace ADDON;
     using namespace rapidjson;
@@ -70,13 +71,11 @@ namespace OttEngine
     
     const ParamList OttPlayer::ApiFunctionData::s_EmptyParams;
     
-    OttPlayer::OttPlayer(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,
-                         const std::string &baseUrl, const std::string &key, bool clearEpgCache)
-    : ClientCoreBase(addonHelper, pvrHelper)
-    , m_baseUrl(baseUrl)
+    OttPlayer::OttPlayer(const std::string &baseUrl, const std::string &key, bool clearEpgCache)
+    : m_baseUrl(baseUrl)
     , m_key(key)
     {
-        m_httpEngine = new HttpEngine(m_addonHelper);
+        m_httpEngine = new HttpEngine();
         m_baseUrl = "http://" + m_baseUrl ;
         BuildChannelAndGroupList();
         if(clearEpgCache){
@@ -93,13 +92,13 @@ namespace OttEngine
     }
     void OttPlayer::Cleanup()
     {
-        m_addonHelper->Log(LOG_NOTICE, "OttPlayer stopping...");
+        LogNotice("OttPlayer stopping...");
         
         if(m_httpEngine){
             SAFE_DELETE(m_httpEngine);
         }
         
-        m_addonHelper->Log(LOG_NOTICE, "OttPlayer stopped.");
+        LogNotice("OttPlayer stopped.");
     }
     
     
@@ -127,20 +126,20 @@ namespace OttEngine
 
             // Download playlist
             string playlistUrl = m_baseUrl + "/ottplayer/playlist.m3u";
-            auto f = m_addonHelper->OpenFile(playlistUrl.c_str(), 0);
+            auto f = XBMC->OpenFile(playlistUrl.c_str(), 0);
             if (!f)
                 throw BadPlaylistFormatException("Failed to obtain playlist from server.");
             bool isEof = false;
             do{
-                auto bytesRead = m_addonHelper->ReadFile(f, buffer, sizeof(buffer));
+                auto bytesRead = XBMC->ReadFile(f, buffer, sizeof(buffer));
                 isEof = bytesRead <= 0;
                 if(!isEof)
                     data.append(&buffer[0], bytesRead);
             }while(!isEof);
-            m_addonHelper->CloseFile(f);
+            XBMC->CloseFile(f);
             f = NULL;
             
-            //m_addonHelper->Log(LOG_ERROR, ">>> DUMP M3U : \n %s", data.c_str() );
+            //LogError(">>> DUMP M3U : \n %s", data.c_str() );
 
             // Parse gloabal variables
             //#EXTM3U url-epg="http://example.com/epg_url/" url-logo="http://example.com/images/"
@@ -171,9 +170,9 @@ namespace OttEngine
                 pos = pos_end;
             }
         } catch (std::exception& ex) {
-            m_addonHelper->Log(LOG_ERROR, "OttPlayer: exception during playlist loading: %s", ex.what());
+            LogError("OttPlayer: exception during playlist loading: %s", ex.what());
             if(NULL != f) {
-                m_addonHelper->CloseFile(f);
+                XBMC->CloseFile(f);
                 f = NULL;
             }
 
@@ -305,7 +304,7 @@ namespace OttEngine
             [this, shouldUpdate, channelId, epgActivityCounter](const CActionQueue::ActionResult& s)
             {
                 if(s.exception == NULL && *shouldUpdate){
-                    m_pvrHelper->TriggerEpgUpdate(channelId);
+                    PVR->TriggerEpgUpdate(channelId);
                 }
                 delete shouldUpdate;
                 if(epgActivityCounter == m_epgActivityCounter){
@@ -315,7 +314,7 @@ namespace OttEngine
             });
             
         } catch (ServerErrorException& ex) {
-            m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32002), ex.reason.c_str() );
+            XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32002), ex.reason.c_str() );
         } catch (...) {
             LogError(" >>>>  FAILED receive EPG <<<<<");
         }
@@ -377,14 +376,14 @@ namespace OttEngine
         std::string strRequest = m_epgUrl;
         strRequest += data.name + query;
         auto start = P8PLATFORM::GetTimeMs();
-        m_addonHelper->Log(LOG_DEBUG, "Calling '%s'.",  data.name.c_str());
+        LogDebug("Calling '%s'.",  data.name.c_str());
         
         std::function<void(const std::string&)> parserWrapper = [=](const std::string& response)
         {
-            m_addonHelper->Log(LOG_DEBUG, "Response in %d ms.",  P8PLATFORM::GetTimeMs() - start);
+            LogDebug("Response in %d ms.",  P8PLATFORM::GetTimeMs() - start);
             
             //            if(data.name.compare( "get_url") == 0)
-            //                m_addonHelper->Log(LOG_DEBUG, response.substr(0, 16380).c_str());
+            //                LogDebug(response.substr(0, 16380).c_str());
             
             ParseJson(response, [&] (Document& jsonRoot)
             {

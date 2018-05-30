@@ -28,7 +28,6 @@
 #define __puzzle_tv_h__
 
 #include "client_core_base.hpp"
-#include "libXBMC_pvr.h"
 #include <string>
 #include <map>
 #include <set>
@@ -74,7 +73,7 @@ namespace PuzzleEngine
     class PuzzleTV : public PvrClient::ClientCoreBase
     {
     public:
-        PuzzleTV(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper, bool clearEpgCache);
+        PuzzleTV(bool clearEpgCache);
         ~PuzzleTV();
 
         const PvrClient::EpgEntryList& GetEpgList() const;
@@ -108,6 +107,9 @@ namespace PuzzleEngine
         void LoadEpg();
 
         void Cleanup();
+
+        template <typename TParser, typename TCompletion>
+        void CallRpcAsync(const std::string & data, TParser parser, TCompletion completion);
 
         template <typename TParser>
         void CallApiFunction(const ApiFunctionData& data, TParser parser);

@@ -45,6 +45,7 @@ message(STATUS "ANDROID_CPP_FEATURES: ${ANDROID_CPP_FEATURES}")
 
 set(IPTV_SOURCES
 src/addon.cpp
+src/globals.cpp
 src/direct_buffer.cpp
 src/helpers.cpp
 src/pvr_client_base.cpp

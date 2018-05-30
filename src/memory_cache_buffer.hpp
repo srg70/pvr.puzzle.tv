@@ -31,12 +31,6 @@
 #include "cache_buffer.h"
 #include "p8-platform/threads/mutex.h"
 
-
-namespace ADDON
-{
-    class CHelper_libXBMC_addon;
-}
-
 namespace Buffers
 {
     
@@ -49,7 +43,7 @@ namespace Buffers
         static const  uint32_t CHUNK_SIZE_LIMIT = (STREAM_READ_BUFFER_SIZE * 1024) * 4; // 128MB chunk
 
         
-        MemoryCacheBuffer(ADDON::CHelper_libXBMC_addon *addonHelper,  uint8_t  sizeFactor);
+        MemoryCacheBuffer(uint8_t  sizeFactor);
         
         virtual  void Init();
         virtual  uint32_t UnitSize();
@@ -87,7 +81,6 @@ namespace Buffers
         int64_t m_position;
         int64_t m_begin;// virtual start of cache
         const int64_t m_maxSize;
-        ADDON::CHelper_libXBMC_addon *m_addonHelper;
     };
 }
 #endif // __memory_cache_buffer_hpp__

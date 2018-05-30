@@ -11,14 +11,15 @@
 #include "file_cache_buffer.hpp"
 #include "libXBMC_addon.h"
 #include "helpers.h"
-
+#include "globals.hpp"
 
 namespace Buffers
 {
     using namespace P8PLATFORM;
     using namespace ADDON;
+    using namespace Globals;
     
-    std::string UniqueFilename(const std::string& dir, ADDON::CHelper_libXBMC_addon*  helper);
+    std::string UniqueFilename(const std::string& dir);
     
     class CAddonFile;
     class CGenericFile
@@ -31,9 +32,8 @@ namespace Buffers
         bool IsOpened() const;
         ~CGenericFile();
     protected:
-        CGenericFile(ADDON::CHelper_libXBMC_addon *addonHelper, void* m_handler);
+        CGenericFile(void* m_handler);
         void* m_handler;
-        ADDON::CHelper_libXBMC_addon * m_helper;
         void Close();
     private:
         CGenericFile(const CGenericFile&) = delete ;                    //disable copy-constructor
@@ -44,14 +44,14 @@ namespace Buffers
     class CFileForWrite : public CGenericFile
     {
     public:
-        CFileForWrite(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &pathToFile);
+        CFileForWrite(const std::string &pathToFile);
         ssize_t Write(const void* lpBuf, size_t uiBufSize);
     };
     
     class CFileForRead : public CGenericFile
     {
     public:
-        CFileForRead(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &pathToFile);
+        CFileForRead(const std::string &pathToFile);
         ssize_t Read(void* lpBuf, size_t uiBufSize);
     };
     class CAddonFile
@@ -60,7 +60,7 @@ namespace Buffers
         CFileForWrite m_writer;
         CFileForRead m_reader;
         
-        CAddonFile(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &pathToFile);
+        CAddonFile(const std::string &pathToFile);
         
         const std::string& Path() const;
         void Reopen();
@@ -71,7 +71,6 @@ namespace Buffers
         CAddonFile(const CAddonFile&) = delete ;                    //disable copy-constructor
         CAddonFile& operator=(const CAddonFile&) = delete;  //disable copy-assignment
         std::string m_path;
-        ADDON::CHelper_libXBMC_addon * m_helper;
         
     };
     
@@ -82,16 +81,15 @@ namespace Buffers
     //              CGenericFile
     //////////////////////////////////////////
     
-    CGenericFile::CGenericFile(ADDON::CHelper_libXBMC_addon *addonHelper, void* handler)
+    CGenericFile::CGenericFile(void* handler)
     : m_handler(handler)
-    , m_helper(addonHelper)
     {
         if(NULL == m_handler)
         throw CacheBufferException("Failed to open timeshift buffer chunk file.");
     }
     int64_t CGenericFile::Seek(int64_t iFilePosition, int iWhence)
     {
-        auto s = m_helper->SeekFile(m_handler, iFilePosition, iWhence);
+        auto s = XBMC->SeekFile(m_handler, iFilePosition, iWhence);
         //    std::stringstream ss;
         //    ss <<">>> SEEK to" << iFilePosition << ". Res=" << s ;
         //    m_helper->Log(LOG_DEBUG, ss.str().c_str());
@@ -100,25 +98,25 @@ namespace Buffers
     
     int64_t CGenericFile::Length()
     {
-        auto l = m_helper->GetFileLength(m_handler);
+        auto l = XBMC->GetFileLength(m_handler);
         //    std::stringstream ss;
         //    ss <<">>> LENGHT=" << l;
-        //    m_helper->Log(LOG_DEBUG, ss.str().c_str());
+        //    XBMC->Log(LOG_DEBUG, ss.str().c_str());
         return l;
     }
     int64_t CGenericFile::Position()
     {
-        auto p = m_helper->GetFilePosition(m_handler);
+        auto p = XBMC->GetFilePosition(m_handler);
         //    std::stringstream ss;
         //    ss <<">>> POSITION=" << p;
-        //    m_helper->Log(LOG_DEBUG, ss.str().c_str());
+        //    XBMC->Log(LOG_DEBUG, ss.str().c_str());
         
         return p;
     }
     
     //int CGenericFile::Truncate(int64_t iSize)
     //{
-    //    return m_helper->TruncateFile(m_handler, iSize);
+    //    return XBMC->TruncateFile(m_handler, iSize);
     //}
     
     bool CGenericFile::IsOpened() const
@@ -128,7 +126,7 @@ namespace Buffers
     
     void CGenericFile::Close()
     {
-        m_helper->CloseFile(m_handler);
+        XBMC->CloseFile(m_handler);
         m_handler = NULL;
     }
     CGenericFile::~CGenericFile()
@@ -145,13 +143,13 @@ namespace Buffers
     //////////////////////////////////////////
     
     
-    CFileForWrite::CFileForWrite(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &pathToFile)
-    : CGenericFile(addonHelper, addonHelper->OpenFileForWrite(pathToFile.c_str(), true))
+    CFileForWrite::CFileForWrite(const std::string &pathToFile)
+    : CGenericFile(XBMC->OpenFileForWrite(pathToFile.c_str(), true))
     {
     }
     ssize_t CFileForWrite::Write(const void* lpBuf, size_t uiBufSize)
     {
-        return m_helper->WriteFile(m_handler, lpBuf, uiBufSize);
+        return XBMC->WriteFile(m_handler, lpBuf, uiBufSize);
         
     }
     
@@ -162,14 +160,14 @@ namespace Buffers
     //////////////////////////////////////////
     
     
-    CFileForRead::CFileForRead(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &pathToFile)
-    : CGenericFile(addonHelper, addonHelper->OpenFile(pathToFile.c_str(), XFILE::READ_AUDIO_VIDEO | XFILE::READ_AFTER_WRITE))
+    CFileForRead::CFileForRead(const std::string &pathToFile)
+    : CGenericFile(XBMC->OpenFile(pathToFile.c_str(), XFILE::READ_AUDIO_VIDEO | XFILE::READ_AFTER_WRITE))
     {
     }
     
     ssize_t CFileForRead::Read(void* lpBuf, size_t uiBufSize)
     {
-        return m_helper->ReadFile(m_handler, lpBuf, uiBufSize);
+        return XBMC->ReadFile(m_handler, lpBuf, uiBufSize);
     }
     
 #pragma mark - CAddonFile
@@ -178,11 +176,10 @@ namespace Buffers
     //////////////////////////////////////////
     
     
-    CAddonFile::CAddonFile(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &pathToFile)
+    CAddonFile::CAddonFile(const std::string &pathToFile)
     : m_path(pathToFile)
-    , m_helper(addonHelper)
-    , m_writer(addonHelper, pathToFile)
-    , m_reader(addonHelper, pathToFile)
+    , m_writer(pathToFile)
+    , m_reader(pathToFile)
     {
     }
     const std::string& CAddonFile::Path() const
@@ -193,9 +190,9 @@ namespace Buffers
     void CAddonFile::Reopen()
     {
         m_writer.~CFileForWrite();
-        new (&m_writer) CFileForWrite(m_helper, m_path);
+        new (&m_writer) CFileForWrite(m_path);
         m_reader.~CFileForRead();
-        new (&m_reader) CFileForRead(m_helper, m_path);
+        new (&m_reader) CFileForRead(m_path);
     }
     
     
@@ -203,7 +200,7 @@ namespace Buffers
     {
         m_reader.Close();
         m_writer.Close();
-        m_helper->DeleteFile(m_path.c_str());
+        XBMC->DeleteFile(m_path.c_str());
     }
     
     
@@ -215,13 +212,12 @@ namespace Buffers
     
     
     
-    FileCacheBuffer::FileCacheBuffer(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string& bufferCacheDir, uint8_t  sizeFactor)
-    : m_addonHelper(addonHelper)
-    , m_bufferDir(bufferCacheDir)
+    FileCacheBuffer::FileCacheBuffer(const std::string& bufferCacheDir, uint8_t  sizeFactor)
+    : m_bufferDir(bufferCacheDir)
     , m_maxSize(std::max(uint8_t(3), sizeFactor) * CHUNK_FILE_SIZE_LIMIT)
     {
-        if(!m_addonHelper->DirectoryExists(m_bufferDir.c_str()))
-        if(!m_addonHelper->CreateDirectory(m_bufferDir.c_str()))
+        if(!XBMC->DirectoryExists(m_bufferDir.c_str()))
+        if(!XBMC->CreateDirectory(m_bufferDir.c_str()))
         throw CacheBufferException("Failed to create cahche directory for timeshift buffer.");
         Init();
     }
@@ -242,7 +238,7 @@ namespace Buffers
         unsigned int idx = -1;
         ChunkFilePtr chunk = NULL;
         {
-//            m_addonHelper->Log(LOG_DEBUG, "TimeshiftBuffer::Sseek. >>> Requested pos %d", iPosition);
+//            XBMC->Log(LOG_DEBUG, "TimeshiftBuffer::Sseek. >>> Requested pos %d", iPosition);
 
             CLockObject lock(m_SyncAccess);
             
@@ -259,12 +255,12 @@ namespace Buffers
                 iPosition = m_begin;
             }
             iWhence = SEEK_SET;
-//            m_addonHelper->Log(LOG_DEBUG, "TimeshiftBuffer::Sseek. Calculated pos %d", iPosition);
-//            m_addonHelper->Log(LOG_DEBUG, "TimeshiftBuffer::Sseek. Begin %d Length %d", m_begin, m_length);
+//            XBMC->Log(LOG_DEBUG, "TimeshiftBuffer::Sseek. Calculated pos %d", iPosition);
+//            XBMC->Log(LOG_DEBUG, "TimeshiftBuffer::Sseek. Begin %d Length %d", m_begin, m_length);
 
             idx = GetChunkIndexFor(iPosition);
             if(idx >= m_ReadChunks.size()) {
-                m_addonHelper->Log(LOG_ERROR, "TimeshiftBuffer: seek failed. Wrong chunk index %d", idx);
+                XBMC->Log(LOG_ERROR, "TimeshiftBuffer: seek failed. Wrong chunk index %d", idx);
                 return -1;
             }
             chunk = m_ReadChunks[idx];
@@ -272,8 +268,8 @@ namespace Buffers
         auto inPos = GetPositionInChunkFor(iPosition);
         auto pos =  chunk->m_reader.Seek(inPos, iWhence);
         m_position = iPosition -  (inPos - pos);
-//        m_addonHelper->Log(LOG_DEBUG, "TimeshiftBuffer::Sseek. Chunk idx %d, pos in chunk %d, actual pos %d", idx, inPos, pos);
-//        m_addonHelper->Log(LOG_DEBUG, "TimeshiftBuffer::Sseek. <<< Result pos %d", m_position);
+//        XBMC->Log(LOG_DEBUG, "TimeshiftBuffer::Sseek. Chunk idx %d, pos in chunk %d, actual pos %d", idx, inPos, pos);
+//        XBMC->Log(LOG_DEBUG, "TimeshiftBuffer::Sseek. <<< Result pos %d", m_position);
         return iPosition;
         
     }
@@ -313,14 +309,14 @@ namespace Buffers
             }
             
             if(NULL == chunk)  {
-                m_addonHelper->Log(LOG_ERROR, "FileCacheBuffer: failed to obtain chunk for read.");
+                XBMC->Log(LOG_ERROR, "FileCacheBuffer: failed to obtain chunk for read.");
                 break;
             }
             
             size_t bytesToRead = bufferSize - totalBytesRead;
             ssize_t bytesRead = chunk->m_reader.Read( ((char*)buffer) + totalBytesRead, bytesToRead);
             if(bytesRead == 0 ) {
-                //m_addonHelper->Log(LOG_NOTICE, "FileCacheBuffer: nothing to read.");
+                //XBMC->Log(LOG_NOTICE, "FileCacheBuffer: nothing to read.");
                 break;
             }
             //DebugLog(std::string(">>> Read: ") + n_to_string(bytesRead));
@@ -382,7 +378,7 @@ namespace Buffers
                 }
                 totalWritten += bytesWritten;
                 if(bytesWritten != bytesToWrite) {
-                    m_addonHelper->Log(LOG_ERROR, "FileCachetBuffer: write cache error, written (%d) != read (%d)", bytesWritten,bytesToWrite);
+                    XBMC->Log(LOG_ERROR, "FileCachetBuffer: write cache error, written (%d) != read (%d)", bytesWritten,bytesToWrite);
                     //break;// ???
                 }
                 available -= bytesWritten;
@@ -395,7 +391,7 @@ namespace Buffers
             }
             
         } catch (std::exception&  ) {
-            m_addonHelper->Log(LOG_ERROR, "Failed to create timeshift chunkfile in directory %s", m_bufferDir.c_str());
+            XBMC->Log(LOG_ERROR, "Failed to create timeshift chunkfile in directory %s", m_bufferDir.c_str());
         }
         
         return totalWritten;
@@ -408,9 +404,9 @@ namespace Buffers
         if(m_length - m_begin >=  m_maxSize ) {
             return NULL;
         }
-        ChunkFilePtr newChunk = new CAddonFile(m_addonHelper, UniqueFilename(m_bufferDir, m_addonHelper).c_str());
+        ChunkFilePtr newChunk = new CAddonFile(UniqueFilename(m_bufferDir).c_str());
         m_ChunkFileSwarm.push_back(ChunkFileSwarm::value_type(newChunk));
-        m_addonHelper->Log(LOG_DEBUG, ">>> TimeshiftBuffer: new current chunk (for write):  %s", + newChunk->Path().c_str());
+        XBMC->Log(LOG_DEBUG, ">>> TimeshiftBuffer: new current chunk (for write):  %s", + newChunk->Path().c_str());
         return newChunk;
     }
     
@@ -428,7 +424,7 @@ namespace Buffers
         m_ReadChunks.clear();
         
     }
-    std::string UniqueFilename(const std::string& dir, ADDON::CHelper_libXBMC_addon*  helper)
+    std::string UniqueFilename(const std::string& dir)
     {
         int cnt = 0;
         std::string candidate;
@@ -439,7 +435,7 @@ namespace Buffers
             candidate +="TimeshiftBuffer-";
             candidate +=n_to_string(cnt++);
             candidate += ".bin";
-        }while(helper->FileExists(candidate.c_str(), false));
+        }while(XBMC->FileExists(candidate.c_str(), false));
         return candidate;
     }
     

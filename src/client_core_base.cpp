@@ -15,12 +15,14 @@
 #include "p8-platform/threads/mutex.h"
 
 #include "client_core_base.hpp"
+#include "globals.hpp"
 
 namespace PvrClient{
     
     using namespace std;
     using namespace ADDON;
     using namespace rapidjson;
+    using namespace Globals;
     
     static const char* c_EpgCacheDirPath = "special://temp/pvr-puzzle-tv";
 
@@ -33,15 +35,12 @@ namespace PvrClient{
         }
     };
     
-    ClientCoreBase::ClientCoreBase(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,
-                                   const IClientCore::RecordingsDelegate& didRecordingsUpadate)
-    : m_addonHelper(addonHelper)
-    , m_pvrHelper(pvrHelper)
-    , m_isRebuildingChannelsAndGroups(false)
+    ClientCoreBase::ClientCoreBase(const IClientCore::RecordingsDelegate& didRecordingsUpadate)
+    : m_isRebuildingChannelsAndGroups(false)
     , m_didRecordingsUpadate(didRecordingsUpadate)
     {
         if(nullptr == m_didRecordingsUpadate) {
-            auto pvr = m_pvrHelper;
+            auto pvr = PVR;
             m_didRecordingsUpadate = [pvr](){ pvr->TriggerRecordingUpdate();};
         }
     }
@@ -102,23 +101,23 @@ namespace PvrClient{
     }
     void ClientCoreBase::ClearEpgCache(const char* cacheFile)
     {
-        m_addonHelper->DeleteFile(MakeEpgCachePath(cacheFile).c_str());
+        XBMC->DeleteFile(MakeEpgCachePath(cacheFile).c_str());
     }
     
     void ClientCoreBase::LoadEpgCache(const char* cacheFile)
     {
         string cacheFilePath = MakeEpgCachePath(cacheFile);
         
-        void* file = m_addonHelper->OpenFile(cacheFilePath.c_str(), 0);
+        void* file = XBMC->OpenFile(cacheFilePath.c_str(), 0);
         if(NULL == file)
             return;
-        int64_t fSize = m_addonHelper->GetFileLength(file);
+        int64_t fSize = XBMC->GetFileLength(file);
         
         char* rawBuf = new char[fSize + 1];
         if(0 == rawBuf)
             return;
-        m_addonHelper->ReadFile(file, rawBuf, fSize);
-        m_addonHelper->CloseFile(file);
+        XBMC->ReadFile(file, rawBuf, fSize);
+        XBMC->CloseFile(file);
         file = NULL;
         
         rawBuf[fSize] = 0;
@@ -176,14 +175,14 @@ namespace PvrClient{
         
         writer.EndObject();
         
-        m_addonHelper->CreateDirectory(c_EpgCacheDirPath);
+        XBMC->CreateDirectory(c_EpgCacheDirPath);
 
-        void* file = m_addonHelper->OpenFileForWrite(cacheFilePath.c_str(), true);
+        void* file = XBMC->OpenFileForWrite(cacheFilePath.c_str(), true);
         if(NULL == file)
             return;
         auto buf = s.GetString();
-        m_addonHelper->WriteFile(file, buf, s.GetSize());
-        m_addonHelper->CloseFile(file);
+        XBMC->WriteFile(file, buf, s.GetSize());
+        XBMC->CloseFile(file);
         
     }
     
@@ -266,37 +265,5 @@ namespace PvrClient{
         }
         parser(jsonRoot);
         return;
-        
     }
-    
-
-#pragma  mark - Logging
-    
-    # define PrintToLog(loglevel) \
-    std::string strData; \
-    strData.reserve(16384); \
-    va_list va; \
-    va_start(va, format); \
-    strData = StringUtils::FormatV(format,va); \
-    va_end(va); \
-    m_addonHelper->Log(loglevel, strData.c_str()); \
-
-    
-    void ClientCoreBase::LogError(const char *format, ... )
-    {
-        PrintToLog(LOG_ERROR);
-    }
-    void ClientCoreBase::LogInfo(const char *format, ... )
-    {
-        PrintToLog(LOG_INFO);
-    }
-    void ClientCoreBase::LogNotice(const char *format, ... )
-    {
-        PrintToLog(LOG_NOTICE);
-    }
-    void ClientCoreBase::LogDebug(const char *format, ... )
-    {
-        PrintToLog(LOG_DEBUG);
-    }
-    
 }

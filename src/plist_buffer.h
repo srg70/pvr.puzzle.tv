@@ -33,11 +33,6 @@
 #include "p8-platform/util/buffer.h"
 #include "input_buffer.h"
 
-namespace ADDON
-{
-    class CHelper_libXBMC_addon;
-}
-
 namespace Buffers
 {
     class IPlaylistBufferDelegate
@@ -51,7 +46,7 @@ namespace Buffers
     class PlaylistBuffer :  public InputBuffer, public P8PLATFORM::CThread
     {
     public:
-        PlaylistBuffer(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &streamUrl,  PlaylistBufferDelegate delegate);
+        PlaylistBuffer(const std::string &streamUrl,  PlaylistBufferDelegate delegate);
         ~PlaylistBuffer();
         
         int64_t GetLength() const;
@@ -70,8 +65,6 @@ namespace Buffers
         class Segment
         {
         public:
-            //        ADDON::CHelper_libXBMC_addon *m_addonHelper;
-            
             Segment(float duration);
             Segment(const uint8_t* buffer, size_t size, float duration);
             void Push(const uint8_t* buffer, size_t size);
@@ -97,7 +90,6 @@ namespace Buffers
         TSegmentUrls m_segmentUrls;
         TSegments m_segments;
         int64_t m_lastSegment;
-        ADDON::CHelper_libXBMC_addon *m_addonHelper;
         std::string  m_playListUrl;
         mutable P8PLATFORM::CMutex m_syncAccess;
         P8PLATFORM::CEvent m_writeEvent;

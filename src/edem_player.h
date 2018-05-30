@@ -79,7 +79,7 @@ namespace EdemEngine
     class Core : public PvrClient::ClientCoreBase
     {
     public:
-        Core(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper, const std::string &playListUrl, const std::string &epgUrl, bool clearEpgCache);
+        Core(const std::string &playListUrl, const std::string &epgUrl, bool clearEpgCache);
         ~Core();
         
         void  GetEpg(PvrClient::ChannelId channelId, time_t startTime, time_t endTime, PvrClient::EpgEntryList& epgEntries);

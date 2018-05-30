@@ -9,11 +9,10 @@
 #ifndef client_core_base_hpp
 #define client_core_base_hpp
 
-#include "libXBMC_pvr.h"
 #include "pvr_client_types.h"
 #include <rapidjson/document.h>
 #include <functional>
-
+#include "globals.hpp"
 
 namespace PvrClient {
     
@@ -31,15 +30,8 @@ namespace PvrClient {
         bool GetEpgEpgEntry(UniqueBroadcastIdType i,  EpgEntry& enrty);
         void ForEachEpg(const EpgEntryAction& action) const;
 
-        // Logging
-        void LogError(const char *format, ... );
-        void LogInfo(const char *format, ... );
-        void LogNotice(const char *format, ... );
-        void LogDebug(const char *format, ... );
     protected:
-        
-        ClientCoreBase(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,
-                       const RecordingsDelegate& didRecordingsUpadate = nullptr);
+        ClientCoreBase(const RecordingsDelegate& didRecordingsUpadate = nullptr);
         
         // EPG methods
         static std::string MakeEpgCachePath(const char* cacheFile);
@@ -63,10 +55,6 @@ namespace PvrClient {
         // Required methods to implement for derived classes
         virtual void UpdateHasArchive(PvrClient::EpgEntry& entry) = 0;
         virtual void BuildChannelAndGroupList() = 0;
-
-        // Members
-        ADDON::CHelper_libXBMC_addon *m_addonHelper;
-        CHelper_libXBMC_pvr *m_pvrHelper;
 
     private:
 

@@ -31,16 +31,12 @@
 #include "p8-platform/threads/mutex.h"
 #include "input_buffer.h"
 
-namespace ADDON
-{
-    class CHelper_libXBMC_addon;
-}
 namespace Buffers {
     
     class DirectBuffer : public InputBuffer
     {
     public:
-        DirectBuffer(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &streamUrl);
+        DirectBuffer(const std::string &streamUrl);
         ~DirectBuffer();
         
         int64_t GetLength() const;
@@ -50,7 +46,6 @@ namespace Buffers {
         bool SwitchStream(const std::string &newUrl);
         
     protected:
-        ADDON::CHelper_libXBMC_addon *m_addonHelper;
         void *m_streamHandle;
         mutable P8PLATFORM::CMutex m_mutex;
     private:
@@ -60,7 +55,7 @@ namespace Buffers {
     class ArchiveBuffer : public DirectBuffer
     {
     public:
-        ArchiveBuffer(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &streamUrl);
+        ArchiveBuffer(const std::string &streamUrl);
         ~ArchiveBuffer();
         
         int64_t GetLength() const;

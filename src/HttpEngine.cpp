@@ -35,8 +35,8 @@ namespace CurlUtils
 static const size_t c_MaxQueueSize = 100000;
 long HttpEngine::c_CurlTimeout = 15; // in sec
 
-HttpEngine::HttpEngine(ADDON::CHelper_libXBMC_addon * addonHelper)
-    :  m_addonHelper(addonHelper),
+HttpEngine::HttpEngine()
+    :  m_addonHelper(Globals::XBMC),
     m_apiCalls(new CActionQueue(c_MaxQueueSize)),
     m_apiCallCompletions(new CActionQueue(c_MaxQueueSize)),
     m_DebugRequestId(1)

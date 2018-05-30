@@ -36,48 +36,48 @@
 #include "p8-platform/util/util.h"
 #include "kodi/xbmc_addon_cpp_dll.h"
 
-#include "libXBMC_pvr.h"
 #include "timeshift_buffer.h"
 #include "direct_buffer.h"
 #include "sovok_pvr_client.h"
 #include "helpers.h"
 #include "sovok_tv.h"
+#include "globals.hpp"
 
 using namespace std;
 using namespace ADDON;
 using namespace PvrClient;
+using namespace Globals;
 
 typedef std::map<string, SovokTV::CountryTemplate*> CountryFilterMap;
 static CountryFilterMap& GetCountryFilterMap();
 static SovokTV::CountryFilter& GetCountryFilter();
 
 
-ADDON_STATUS SovokPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,
-                               PVR_PROPERTIES* pvrprops)
+ADDON_STATUS SovokPVRClient::Init(PVR_PROPERTIES* pvrprops)
 {
     ADDON_STATUS retVal = ADDON_STATUS_OK;
-    if(ADDON_STATUS_OK != (retVal = PVRClientBase::Init(addonHelper, pvrHelper, pvrprops)))
+    if(ADDON_STATUS_OK != (retVal = PVRClientBase::Init(pvrprops)))
        return retVal;
     
     m_lastChannelRestartCount = 0;
     char buffer[1024];
     
-    if (m_addonHelper->GetSetting("login", &buffer))
+    if (XBMC->GetSetting("login", &buffer))
         m_login = buffer;
-    if (m_addonHelper->GetSetting("password", &buffer))
+    if (XBMC->GetSetting("password", &buffer))
         m_password = buffer;
 
-    m_addonHelper->GetSetting("filter_by_country", &GetCountryFilter().IsOn);
+    XBMC->GetSetting("filter_by_country", &GetCountryFilter().IsOn);
     for(auto& f : GetCountryFilterMap())
-        m_addonHelper->GetSetting(f.first.c_str(), &f.second->Hidden);
+        XBMC->GetSetting(f.first.c_str(), &f.second->Hidden);
     
-    m_addonHelper->GetSetting("enable_adult", &m_enableAdult);
-    if(m_enableAdult && m_addonHelper->GetSetting("pin_code", &buffer))
+    XBMC->GetSetting("enable_adult", &m_enableAdult);
+    if(m_enableAdult && XBMC->GetSetting("pin_code", &buffer))
         m_pinCode = buffer;
 
-    m_addonHelper->GetSetting("archive_support", &m_supportArchive);
+    XBMC->GetSetting("archive_support", &m_supportArchive);
     std::string streamer;
-    if (m_addonHelper->GetSetting("streamer", &buffer))
+    if (XBMC->GetSetting("streamer", &buffer))
         m_strimmer = buffer;
     
 
@@ -87,22 +87,22 @@ ADDON_STATUS SovokPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_li
     }
     catch (AuthFailedException &)
     {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32007));
+        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32007));
     }
     
     catch (MissingHttpsSupportException &)
     {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, "Missing HTTPS support.");
+        XBMC->QueueNotification(QUEUE_ERROR, "Missing HTTPS support.");
         retVal = ADDON_STATUS_PERMANENT_FAILURE;
     }
     
     catch(MissingApiException & ex)
     {
-        m_addonHelper->QueueNotification(QUEUE_WARNING, (std::string("Missing Sovok API: ") + ex.reason).c_str());
+        XBMC->QueueNotification(QUEUE_WARNING, (std::string("Missing Sovok API: ") + ex.reason).c_str());
     }
     catch(...)
     {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, "Sovok TV: unhandeled exception");
+        XBMC->QueueNotification(QUEUE_ERROR, "Sovok TV: unhandeled exception");
         retVal = ADDON_STATUS_PERMANENT_FAILURE;
     }
     //    PVR_MENUHOOK hook = {1, 30020, PVR_MENUHOOK_EPG};
@@ -132,7 +132,7 @@ void SovokPVRClient::CreateCore(bool clenEpgCache)
         SAFE_DELETE(ptr);
     }
 
-    m_clientCore = m_sovokTV = new SovokTV(m_addonHelper, m_pvrHelper, m_login, m_password, clenEpgCache);
+    m_clientCore = m_sovokTV = new SovokTV(m_login, m_password, clenEpgCache);
 
     if(m_enableAdult)
         m_sovokTV->SetPinCode(m_pinCode);
@@ -142,26 +142,26 @@ void SovokPVRClient::CreateCore(bool clenEpgCache)
     auto streamersList = m_sovokTV->GetStreamersList();
     string strimmersPath = GetClientPath();
     strimmersPath.append("/").append("resources/").append("streamers/");
-    if(!m_addonHelper->DirectoryExists(strimmersPath.c_str()))
-        m_addonHelper->CreateDirectory(strimmersPath.c_str());
+    if(!XBMC->DirectoryExists(strimmersPath.c_str()))
+        XBMC->CreateDirectory(strimmersPath.c_str());
     
     std::for_each(streamersList.begin(), streamersList.end(), [&](StreamerNamesList::value_type &s)
                   {
                       
                       auto filename = strimmersPath+s;
-                      if(!m_addonHelper->FileExists(filename.c_str(), true))
+                      if(!XBMC->FileExists(filename.c_str(), true))
                       {
-                          void* f = m_addonHelper->OpenFileForWrite(filename.c_str(), true);
-                          if(f) m_addonHelper->CloseFile(f);
+                          void* f = XBMC->OpenFileForWrite(filename.c_str(), true);
+                          if(f) XBMC->CloseFile(f);
                       }
                   });
 
     auto current = streamersList[GetStreamerId()];
     if (current != m_strimmer)
     {
-        char* message  = m_addonHelper->GetLocalizedString(32008);
-        m_addonHelper->QueueNotification(QUEUE_WARNING, message);
-        m_addonHelper->FreeString(message);
+        char* message  = XBMC->GetLocalizedString(32008);
+        XBMC->QueueNotification(QUEUE_WARNING, message);
+        XBMC->FreeString(message);
     }
 
     
@@ -176,7 +176,7 @@ ADDON_STATUS SovokPVRClient::SetSetting(const char *settingName, const void *set
             m_login = (const char*) settingValue;
             if (!m_login.empty() && !m_password.empty()) {
                 if(!HasCore()) {
-                    m_addonHelper->Log(LOG_ERROR, " Failed to create core aftrer login changes");
+                    XBMC->Log(LOG_ERROR, " Failed to create core aftrer login changes");
                 }
             }
             result = ADDON_STATUS_NEED_RESTART;
@@ -187,7 +187,7 @@ ADDON_STATUS SovokPVRClient::SetSetting(const char *settingName, const void *set
             m_password = (const char*) settingValue;
             if (!m_login.empty() && !m_password.empty()) {
                 if(!HasCore()) {
-                    m_addonHelper->Log(LOG_ERROR, " Failed to create core aftrer password changes");
+                    XBMC->Log(LOG_ERROR, " Failed to create core aftrer password changes");
                 }
             }
             result = ADDON_STATUS_NEED_RESTART;
@@ -207,7 +207,7 @@ ADDON_STATUS SovokPVRClient::SetSetting(const char *settingName, const void *set
             });
             if(currentId != GetStreamerId()) {
                 if(currentId == streamersList.size() ) {
-                    m_addonHelper->QueueNotification(QUEUE_WARNING, m_addonHelper->GetLocalizedString(32008));
+                    XBMC->QueueNotification(QUEUE_WARNING, XBMC->GetLocalizedString(32008));
                 }
                 SetStreamerId(currentId);
                 result = ADDON_STATUS_NEED_RESTART;
@@ -220,7 +220,7 @@ ADDON_STATUS SovokPVRClient::SetSetting(const char *settingName, const void *set
         if(newValue != m_enableAdult) {
             m_enableAdult = newValue;
             SetPinCode(m_enableAdult? m_pinCode : "");
-            m_pvrHelper->TriggerChannelUpdate();
+            PVR->TriggerChannelUpdate();
 
             result = ADDON_STATUS_OK;
         }
@@ -232,8 +232,8 @@ ADDON_STATUS SovokPVRClient::SetSetting(const char *settingName, const void *set
             m_pinCode = newValue;
             SetPinCode(m_pinCode);
             
-            m_pvrHelper->TriggerChannelGroupsUpdate();
-            m_pvrHelper->TriggerChannelUpdate();
+            PVR->TriggerChannelGroupsUpdate();
+            PVR->TriggerChannelUpdate();
             result = ADDON_STATUS_OK;
         }
     }
@@ -250,8 +250,8 @@ ADDON_STATUS SovokPVRClient::SetSetting(const char *settingName, const void *set
             GetCountryFilter().IsOn = (*(bool *)(settingValue));
             SetCountryFilter();
 
-            m_pvrHelper->TriggerChannelGroupsUpdate();
-            m_pvrHelper->TriggerChannelUpdate();
+            PVR->TriggerChannelGroupsUpdate();
+            PVR->TriggerChannelUpdate();
             result = ADDON_STATUS_OK;
         }
     }
@@ -264,8 +264,8 @@ ADDON_STATUS SovokPVRClient::SetSetting(const char *settingName, const void *set
             it->second->Hidden = *(bool*)settingValue;
             SetCountryFilter();
             
-            m_pvrHelper->TriggerChannelGroupsUpdate();
-            m_pvrHelper->TriggerChannelUpdate();
+            PVR->TriggerChannelGroupsUpdate();
+            PVR->TriggerChannelUpdate();
             result = ADDON_STATUS_OK;
         }
         
@@ -285,7 +285,7 @@ bool SovokPVRClient::HasCore()
 //            CreateCore(false);
         result = m_sovokTV != NULL;
     }catch (AuthFailedException &) {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32007));
+        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32007));
     }
     return result;
 }
@@ -324,22 +324,22 @@ ADDON_STATUS SovokPVRClient::OnReloadEpg()
     }
     catch (AuthFailedException &)
     {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32007));
+        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32007));
     }
     
     catch (MissingHttpsSupportException &)
     {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, "Missing HTTPS support.");
+        XBMC->QueueNotification(QUEUE_ERROR, "Missing HTTPS support.");
         retVal = ADDON_STATUS_PERMANENT_FAILURE;
     }
     
     catch(MissingApiException & ex)
     {
-        m_addonHelper->QueueNotification(QUEUE_WARNING, (std::string("Missing Sovok API: ") + ex.reason).c_str());
+        XBMC->QueueNotification(QUEUE_WARNING, (std::string("Missing Sovok API: ") + ex.reason).c_str());
     }
     catch(...)
     {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, "Sovok TV: unhandeled exception");
+        XBMC->QueueNotification(QUEUE_ERROR, "Sovok TV: unhandeled exception");
         retVal = ADDON_STATUS_PERMANENT_FAILURE;
     }
     
@@ -375,12 +375,12 @@ int SovokPVRClient::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferS
     // Assuming stream hanging.
     // Try to restart current channel one time.
     if (readBytes != iBufferSize ) {
-        m_addonHelper->Log(LOG_ERROR, "SovokPVRClient:: trying to restart current channel.");
+        LogError("SovokPVRClient:: trying to restart current channel.");
         string url = m_sovokTV->GetUrl(s_lastChannelId);
         if(!url.empty()){
-            char* message = m_addonHelper->GetLocalizedString(32000);
-            m_addonHelper->QueueNotification(QUEUE_INFO, message);
-            m_addonHelper->FreeString(message);
+            char* message = XBMC->GetLocalizedString(32000);
+            XBMC->QueueNotification(QUEUE_INFO, message);
+            XBMC->FreeString(message);
             PVRClientBase::SwitchChannel(url);
             readBytes = PVRClientBase::ReadLiveStream(pBuffer,iBufferSize);
         }

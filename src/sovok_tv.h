@@ -28,7 +28,6 @@
 #define sovok_tv_h
 
 #include "client_core_base.hpp"
-#include "libXBMC_pvr.h"
 #include <string>
 #include <map>
 #include <set>
@@ -93,9 +92,7 @@ public:
         std::vector<CountryTemplate> Filters;
     } CountryFilter;
     
-    SovokTV(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,
-            const std::string &login, const std::string &password,
-            bool cleanEpgCache = false);
+    SovokTV(const std::string &login, const std::string &password,  bool cleanEpgCache = false);
     ~SovokTV();
 
     const StreamerNamesList& GetStreamersList() const;

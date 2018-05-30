@@ -29,7 +29,6 @@
 #ifndef XMLTV_loader_hpp
 #define XMLTV_loader_hpp
 
-#include "libXBMC_pvr.h"
 #include <string>
 #include <functional>
 
@@ -54,8 +53,8 @@ namespace XMLTV {
     typedef std::function<void(const EpgChannel& newChannel)> ChannelCallback;
     typedef std::function<void(const EpgEntry& newEntry)> EpgEntryCallback;
 
-    bool ParseChannels(const std::string& url,  const ChannelCallback& onChannelFound, ADDON::CHelper_libXBMC_addon * XBMC);
-    bool ParseEpg(const std::string& url,  const EpgEntryCallback& onEpgEntryFound ,ADDON::CHelper_libXBMC_addon * XBMC);
+    bool ParseChannels(const std::string& url,  const ChannelCallback& onChannelFound);
+    bool ParseEpg(const std::string& url,  const EpgEntryCallback& onEpgEntryFound);
     
 }
 

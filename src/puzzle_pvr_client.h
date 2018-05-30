@@ -29,7 +29,6 @@
 #include "addon.h"
 #include "pvr_client_base.h"
 
-class CHelper_libXBMC_pvr;
 class InputBuffer;
 namespace PuzzleEngine {
 class PuzzleTV;
@@ -38,7 +37,7 @@ class PuzzleTV;
 class PuzzlePVRClient: public PvrClient::PVRClientBase
 {
 public:
-    ADDON_STATUS Init(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,  PVR_PROPERTIES* pvrprops);
+    ADDON_STATUS Init(PVR_PROPERTIES* pvrprops);
     ~PuzzlePVRClient();
 
     ADDON_STATUS SetSetting(const char *settingName, const void *settingValue);

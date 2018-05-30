@@ -35,8 +35,9 @@
 #include "puzzle_tv.h"
 #include "HttpEngine.hpp"
 #include "XMLTV_loader.hpp"
+#include "globals.hpp"
 
-
+using namespace Globals;
 using namespace std;
 using namespace ADDON;
 using namespace rapidjson;
@@ -60,14 +61,13 @@ struct PuzzleTV::ApiFunctionData
 
 const ParamList PuzzleTV::ApiFunctionData::s_EmptyParams;
 
-PuzzleTV::PuzzleTV(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper, bool clearEpgCache) :
-    ClientCoreBase(addonHelper, pvrHelper),
+PuzzleTV::PuzzleTV(bool clearEpgCache) :
     m_lastEpgRequestStartTime(0),
     m_lastEpgRequestEndTime(0),
     m_lastUniqueBroadcastId(0),
     m_epgUrl("http://api.torrent-tv.ru/ttv.xmltv.xml.gz")
 {
-    m_httpEngine = new HttpEngine(m_addonHelper);
+    m_httpEngine = new HttpEngine();
     
     BuildChannelAndGroupList();
     if(clearEpgCache)
@@ -76,6 +76,20 @@ PuzzleTV::PuzzleTV(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pv
         LoadEpgCache(c_EpgCacheFile);
     LoadEpg();
     OnEpgUpdateDone();
+//    CallRpcAsync("{\"jsonrpc\": \"2.0\", \"method\": \"Files.GetDirectory\", \"params\": {\"directory\": \"plugin://plugin.video.pazl.arhive\"},\"id\": 1}",
+//                 [&] (Document& jsonRoot)
+//                 {
+//                     this->LogDebug("Puzzle Files.GetDirectory respunse. RPC version: %s", jsonRoot["jsonrpc"].GetString());
+//                     for (const auto& ch : jsonRoot["result"]["files"].GetArray()) {
+//                         this->LogDebug("Channel content:");
+//                         this->LogDebug("\t filetype = %s", ch["filetype"].GetString());
+//                         this->LogDebug("\t type =  %s", ch["type"].GetString());
+//                         this->LogDebug("\t file =  %s", ch["file"].GetString());
+//                         this->LogDebug("\t label =  %s", ch["label"].GetString());
+//}
+//                 },
+//                 [&](const CActionQueue::ActionResult& s) {
+//                 });
 }
 
 PuzzleTV::~PuzzleTV()
@@ -84,12 +98,12 @@ PuzzleTV::~PuzzleTV()
 }
 void PuzzleTV::Cleanup()
 {
-    m_addonHelper->Log(LOG_NOTICE, "PuzzleTV stopping...");
+    LogNotice("PuzzleTV stopping...");
 
     if(m_httpEngine)
         SAFE_DELETE(m_httpEngine);
     
-    m_addonHelper->Log(LOG_NOTICE, "PuzzleTV stopped.");
+    LogNotice( "PuzzleTV stopped.");
 }
 
 void PuzzleTV::BuildChannelAndGroupList()
@@ -141,7 +155,7 @@ void PuzzleTV::BuildChannelAndGroupList()
             }
         };
         
-        XMLTV::ParseChannels(m_epgUrl, onNewChannel, m_addonHelper);
+        XMLTV::ParseChannels(m_epgUrl, onNewChannel);
 
         
         for(const auto& channelWithGroup : plistContent)
@@ -165,7 +179,7 @@ void PuzzleTV::BuildChannelAndGroupList()
         }
        
     } catch (ServerErrorException& ex) {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32006), ex.reason.c_str() );
+        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32006), ex.reason.c_str() );
     } catch (...) {
         LogError(">>>>  FAILED to build channel list <<<<<");
     }
@@ -190,7 +204,7 @@ std::string PuzzleTV::GetArchive(    ChannelId channelId, time_t startTime)
             //Log((string(" >>>>  URL: ") + url +  "<<<<<").c_str());
         });
      } catch (ServerErrorException& ex) {
-         m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32006), ex.reason.c_str() );
+         XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32006), ex.reason.c_str() );
      } catch (...) {
          LogError(" >>>>  FAILED receive archive <<<<<");
     }
@@ -257,15 +271,15 @@ void PuzzleTV::UpdateEpgForAllChannels(time_t startTime, time_t endTime)
                 channelsToUpdate.insert(newEntry.iChannelId);
         };
         
-        XMLTV::ParseEpg(m_epgUrl, onEpgEntry, m_addonHelper);
+        XMLTV::ParseEpg(m_epgUrl, onEpgEntry);
         
         for (auto channel : channelsToUpdate) {
-            m_pvrHelper->TriggerEpgUpdate(channel);
+            PVR->TriggerEpgUpdate(channel);
         }
         OnEpgUpdateDone();
         SaveEpgCache(c_EpgCacheFile);
         //        } catch (ServerErrorException& ex) {
-        //            m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32002), ex.reason.c_str() );
+        //            XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32002), ex.reason.c_str() );
     } catch (...) {
         LogError(" >>>>  FAILED receive EPG <<<<<");
     }
@@ -278,7 +292,7 @@ void PuzzleTV::LoadEpg()
     
     EpgEntryCallback onEpgEntry = [&pThis] (const XMLTV::EpgEntry& newEntry) {pThis->AddEpgEntry(newEntry);};
     
-    XMLTV::ParseEpg(m_epgUrl, onEpgEntry, m_addonHelper);
+    XMLTV::ParseEpg(m_epgUrl, onEpgEntry);
 }
 
 string PuzzleTV::GetNextStream(ChannelId channelId, int currentChannelIdx)
@@ -324,7 +338,7 @@ string PuzzleTV::GetUrl(ChannelId channelId)
                                 });
                });
             } catch (ServerErrorException& ex) {
-                m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32006), ex.reason.c_str() );
+                XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32006), ex.reason.c_str() );
             } catch (...) {
                LogError(" >>>>  FAILED to get URL for channel ID=%d <<<<<", channelId);
            }
@@ -361,11 +375,48 @@ void PuzzleTV::CallApiFunction(const ApiFunctionData& data, TParser parser)
             // Probably server doesn'r start yet
             // Wait and retry
             data.attempt += 1;
-            m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32013), data.attempt);
+            XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32013), data.attempt);
             P8PLATFORM::CEvent::Sleep(4000);
            
             CallApiFunction(data, parser);
         }
+}
+
+template <typename TParser, typename TCompletion>
+void PuzzleTV::CallRpcAsync(const std::string & data, TParser parser, TCompletion completion)
+{
+    // Build HTTP request
+    std::string strRequest = string("http://") + m_serverUri + ":";
+    strRequest += n_to_string(8080);
+    strRequest +="/jsonrpc?request=";
+    strRequest += data;
+    auto start = P8PLATFORM::GetTimeMs();
+    
+//    LogDebug("Calling '%s'.",  data.name.c_str());
+    
+    std::function<void(const std::string&)> parserWrapper = [=](const std::string& response) {
+        LogDebug("Response in %d ms.",  P8PLATFORM::GetTimeMs() - start);
+        
+        //            if(data.name.compare( "get_url") == 0)
+        //                LogDebug(response.substr(0, 16380).c_str());
+        
+        ParseJson(response, [&] (Document& jsonRoot)
+                  {
+                      if (!jsonRoot.HasMember("error"))
+                      {
+                          parser(jsonRoot);
+                          return;
+                      }
+                      const Value & errObj = jsonRoot["error"];
+                      auto err = errObj["message"].GetString();
+                      auto code = errObj["code"].GetInt();
+                      LogError("Puzzle TV server responses error:");
+                      LogError(err);
+                      throw ServerErrorException(err,code);
+                  });
+    };
+    
+    m_httpEngine->CallApiAsync(strRequest, parserWrapper,  [=](const CActionQueue::ActionResult& ss){completion(ss);});
 }
 
 template <typename TParser, typename TCompletion>
@@ -407,8 +458,8 @@ void PuzzleTV::CallApiAsync(const ApiFunctionData& data, TParser parser, TComple
                       const Value & errObj = jsonRoot["error"];
                       auto err = errObj["message"].GetString();
                       auto code = errObj["code"].GetInt();
-                      m_addonHelper->Log(LOG_ERROR, "Puzzle TV server responses error:");
-                      m_addonHelper->Log(LOG_ERROR, err);
+                      LogError("Puzzle TV server responses error:");
+                      LogError(err);
                       throw ServerErrorException(err,code);
                   });
     };
@@ -457,19 +508,19 @@ void PuzzleTV::LoadArchiveList()
                           });
             return true;
         });
-        m_addonHelper->Log(LOG_DEBUG,"Received %d channels with archive.", archives.size());
+        LogDebug("Received %d channels with archive.", archives.size());
         time_t now = time(nullptr);
         std::for_each(archives.begin(), archives.end(), [&]  (std::vector<ChannelArchive>::value_type & i) {
           BuildRecordingsFor(i.ChannelId, now - i.ArchiveHours * 60 * 60, now);
         });
 
     } catch (ServerErrorException& ex) {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32006), ex.reason.c_str() );
+        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32006), ex.reason.c_str() );
     } catch (std::exception ex) {
-        m_addonHelper->Log(LOG_ERROR, "Failed to load archive list. Reason: %s", ex.what());
+        LogError("Failed to load archive list. Reason: %s", ex.what());
     }
     catch (...){
-        m_addonHelper->Log(LOG_ERROR, "Failed to load archive list. Reason unknown");
+        LogError("Failed to load archive list. Reason unknown");
     }
 }
 
@@ -477,7 +528,7 @@ void PuzzleTV::BuildRecordingsFor(ChannelId channelId, time_t from, time_t to)
 {
     EpgEntryList epgEntries;
     GetEpg(channelId, from, to, epgEntries);
-    m_addonHelper->Log(LOG_DEBUG,"Building archives for channel %d (%d hours).", channelId, (to - from)/(60*60));
+    LogDebug("Building archives for channel %d (%d hours).", channelId, (to - from)/(60*60));
     
      int cnt = 0;
     for(const auto & i : epgEntries)

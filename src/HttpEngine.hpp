@@ -35,11 +35,11 @@
 
 #include <curl/curl.h>
 
-#include "libXBMC_pvr.h"
 #include <map>
+#include <string>
 #include <exception>
 #include "ActionQueue.hpp"
-
+#include "globals.hpp"
 
 class QueueNotRunningException : public std::exception
 {
@@ -65,7 +65,7 @@ class HttpEngine
 public:
     typedef std::map<std::string, std::string> TCoocies;
     
-    HttpEngine (ADDON::CHelper_libXBMC_addon * addonHelper);
+    HttpEngine ();
     ~HttpEngine();
     
     template <typename TParser, typename TCompletion>

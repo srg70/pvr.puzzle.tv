@@ -28,7 +28,6 @@
 #define _ott_player_h_
 
 #include "client_core_base.hpp"
-#include "libXBMC_pvr.h"
 #include <vector>
 #include <functional>
 #include <list>
@@ -74,7 +73,7 @@ namespace OttEngine
     class OttPlayer : public PvrClient::ClientCoreBase
     {
     public:
-        OttPlayer(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper, const std::string &baseUrl, const std::string &key, bool clearEpgCache);
+        OttPlayer(const std::string &baseUrl, const std::string &key, bool clearEpgCache);
         ~OttPlayer();
         
         void  GetEpg(PvrClient::ChannelId channelId, time_t startTime, time_t endTime, PvrClient::EpgEntryList& epgEntries);

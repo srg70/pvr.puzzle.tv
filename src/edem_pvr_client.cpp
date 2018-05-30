@@ -36,14 +36,15 @@
 #include "p8-platform/util/util.h"
 #include "kodi/xbmc_addon_cpp_dll.h"
 
-#include "libXBMC_pvr.h"
 #include "timeshift_buffer.h"
 #include "direct_buffer.h"
 #include "edem_pvr_client.h"
 #include "helpers.h"
 #include "edem_player.h"
 #include "plist_buffer.h"
+#include "globals.hpp"
 
+using namespace Globals;
 using namespace std;
 using namespace ADDON;
 using namespace EdemEngine;
@@ -53,21 +54,21 @@ static const char* c_playlist_setting = "edem_playlist_url";
 static const char* c_epg_setting = "edem_epg_url";
 static const char* c_seek_archives = "edem_seek_archives";
 
-ADDON_STATUS EdemPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,                               PVR_PROPERTIES* pvrprops)
+ADDON_STATUS EdemPVRClient::Init(PVR_PROPERTIES* pvrprops)
 {
     ADDON_STATUS retVal = ADDON_STATUS_OK;
-    if(ADDON_STATUS_OK != (retVal = PVRClientBase::Init(addonHelper, pvrHelper, pvrprops)))
+    if(ADDON_STATUS_OK != (retVal = PVRClientBase::Init(pvrprops)))
         return retVal;
     
     char buffer[1024];
     
-    if (m_addonHelper->GetSetting(c_playlist_setting, &buffer))
+    if (XBMC->GetSetting(c_playlist_setting, &buffer))
         m_playlistUrl = buffer;
-    if (m_addonHelper->GetSetting(c_epg_setting, &buffer))
+    if (XBMC->GetSetting(c_epg_setting, &buffer))
         m_epgUrl = buffer;
     
     m_supportSeek = false;
-    m_addonHelper->GetSetting(c_seek_archives, &m_supportSeek);
+    XBMC->GetSetting(c_seek_archives, &m_supportSeek);
     
     try
     {
@@ -75,7 +76,7 @@ ADDON_STATUS EdemPVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_lib
     }
     catch (AuthFailedException &)
     {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32003));
+        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32003));
     }
     
     //    PVR_MENUHOOK hook = {1, 30020, PVR_MENUHOOK_EPG};
@@ -103,13 +104,13 @@ void EdemPVRClient::CreateCore(bool clearEpgCache)
         SAFE_DELETE(m_core);
     }
     if(CheckPlaylistUrl())
-        m_clientCore = m_core = new EdemEngine::Core(m_addonHelper, m_pvrHelper, m_playlistUrl, m_epgUrl, clearEpgCache);
+        m_clientCore = m_core = new EdemEngine::Core(m_playlistUrl, m_epgUrl, clearEpgCache);
 }
 
 bool EdemPVRClient::CheckPlaylistUrl()
 {
     if (m_playlistUrl.empty() || m_playlistUrl.find("***") != string::npos) {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32010));
+        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32010));
         return false;
     }
     return true;
@@ -128,7 +129,7 @@ ADDON_STATUS EdemPVRClient::SetSetting(const char *settingName, const void *sett
                 CreateCore(false);
                 result = ADDON_STATUS_NEED_RESTART;
             }catch (AuthFailedException &) {
-                m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32011));
+                XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32011));
             }
         }
     }
@@ -138,7 +139,7 @@ ADDON_STATUS EdemPVRClient::SetSetting(const char *settingName, const void *sett
             CreateCore(false);
             result = ADDON_STATUS_NEED_RESTART;
         }catch (AuthFailedException &) {
-            m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32011));
+            XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32011));
         }
     }
     else if(strcmp(settingName,  c_seek_archives) == 0) {
@@ -183,11 +184,11 @@ ADDON_STATUS EdemPVRClient::OnReloadEpg()
     }
     catch (AuthFailedException &)
     {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32007));
+        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32007));
     }
     catch(...)
     {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, "Edem TV: unhandeled exception on reload EPG.");
+        XBMC->QueueNotification(QUEUE_ERROR, "Edem TV: unhandeled exception on reload EPG.");
         retVal = ADDON_STATUS_PERMANENT_FAILURE;
     }
     
@@ -238,7 +239,7 @@ public:
         EpgEntry epgTag;
         int recId = stoi(recording.strRecordingId);
         if(!_core->GetEpgEpgEntry(recId, epgTag)){
-            _core->LogError("Failed to obtain EPG tag for record ID %d. First channel ID will be used", recId);
+            LogError("Failed to obtain EPG tag for record ID %d. First channel ID will be used", recId);
             return;
         }
         

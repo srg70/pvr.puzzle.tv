@@ -36,18 +36,18 @@
 #include "helpers.h"
 #include <sstream>
 #include <functional>
-
 #include "libXBMC_addon.h"
+#include "globals.hpp"
 
 namespace Buffers {
     
     using namespace std;
     using namespace ADDON;
     using namespace P8PLATFORM;
+    using namespace Globals;
     
-    TimeshiftBuffer::TimeshiftBuffer(CHelper_libXBMC_addon *addonHelper, InputBuffer* inputBuffer, ICacheBuffer* cache)
-    : m_addonHelper(addonHelper)
-    , m_inputBuffer(inputBuffer)
+    TimeshiftBuffer::TimeshiftBuffer(InputBuffer* inputBuffer, ICacheBuffer* cache)
+    : m_inputBuffer(inputBuffer)
     , m_cache(cache)
     {
         if (!m_inputBuffer)
@@ -69,9 +69,9 @@ namespace Buffers {
     }
     void TimeshiftBuffer::DebugLog(const std::string& message ) const
     {
-        //    char* msg = m_addonHelper->UnknownToUTF8(message.c_str());
-        m_addonHelper->Log(LOG_DEBUG, message.c_str());
-        //    m_addonHelper->FreeString(msg);
+        //    char* msg = XBMC->UnknownToUTF8(message.c_str());
+        XBMC->Log(LOG_DEBUG, message.c_str());
+        //    XBMC->FreeString(msg);
     }
     
     TimeshiftBuffer::~TimeshiftBuffer()
@@ -91,10 +91,10 @@ namespace Buffers {
         while(!(retVal = this->CThread::StopThread(iWaitMs))){
             if(stopCounter++ > 3)
                 break;
-            m_addonHelper->Log(LOG_NOTICE, "TimeshiftBuffer: can't stop thread in %d ms", iWaitMs);
+            XBMC->Log(LOG_NOTICE, "TimeshiftBuffer: can't stop thread in %d ms", iWaitMs);
         }
         if(!retVal)
-            m_addonHelper->Log(LOG_ERROR, "TimeshiftBuffer: can't stop thread in %d ms", stopCounter*iWaitMs);
+            XBMC->Log(LOG_ERROR, "TimeshiftBuffer: can't stop thread in %d ms", stopCounter*iWaitMs);
         
         return retVal;
     }
@@ -120,14 +120,14 @@ namespace Buffers {
                     // Allow write errors. Cache may be full.
                     //isError |= bytesWritten != bytesRead;
                     if(bytesWritten != bytesRead) {
-                        m_addonHelper->Log(LOG_ERROR, "TimeshiftBuffer: write cache error written (%d) != read (%d)", bytesWritten,bytesRead);
+                        XBMC->Log(LOG_ERROR, "TimeshiftBuffer: write cache error written (%d) != read (%d)", bytesWritten,bytesRead);
                     }
                     m_writeEvent.Signal();
                 }
             }
             
         } catch (std::exception& ex ) {
-            m_addonHelper->Log(LOG_ERROR, "Exception in timshift background thread: %s", ex.what());
+            XBMC->Log(LOG_ERROR, "Exception in timshift background thread: %s", ex.what());
         }
 
 		if (NULL != buffer)
@@ -149,7 +149,7 @@ namespace Buffers {
                 isTimeout = !m_writeEvent.Wait(timeoutMs); //timeout
             }
             if(isTimeout){
-                m_addonHelper->Log(LOG_NOTICE, "TimeshiftBuffer: nothing to read within %d msec.", timeoutMs);
+                XBMC->Log(LOG_NOTICE, "TimeshiftBuffer: nothing to read within %d msec.", timeoutMs);
                 totalBytesRead = -1;
                 break;
             }
@@ -183,7 +183,7 @@ namespace Buffers {
             Init(newUrl);
             succeeded = true;
         } catch (const InputBufferException& ex) {
-            m_addonHelper->Log(LOG_ERROR, "Failed to switch streams. Error: %s", ex.what());
+            XBMC->Log(LOG_ERROR, "Failed to switch streams. Error: %s", ex.what());
         }
         
         return succeeded;

@@ -35,32 +35,32 @@
 #include "p8-platform/util/util.h"
 #include "kodi/xbmc_addon_cpp_dll.h"
 
-#include "libXBMC_pvr.h"
 #include "timeshift_buffer.h"
 #include "direct_buffer.h"
 #include "puzzle_pvr_client.h"
 #include "helpers.h"
 #include "puzzle_tv.h"
+#include "globals.hpp"
 
+using namespace Globals;
 using namespace std;
 using namespace ADDON;
 using namespace PuzzleEngine;
 using namespace PvrClient;
 
-ADDON_STATUS PuzzlePVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,
-                               PVR_PROPERTIES* pvrprops)
+ADDON_STATUS PuzzlePVRClient::Init(PVR_PROPERTIES* pvrprops)
 {
     ADDON_STATUS retVal = ADDON_STATUS_OK;
-    if(ADDON_STATUS_OK != (retVal = PVRClientBase::Init(addonHelper, pvrHelper, pvrprops)))
+    if(ADDON_STATUS_OK != (retVal = PVRClientBase::Init(pvrprops)))
        return retVal;
     
     char buffer[1024];
     
     m_currentChannelStreamIdx = -1;
     int serverPort = 8089;
-    m_addonHelper->GetSetting("puzzle_server_port", &serverPort);
+    XBMC->GetSetting("puzzle_server_port", &serverPort);
     
-    m_addonHelper->GetSetting("puzzle_server_uri", &buffer);
+    XBMC->GetSetting("puzzle_server_uri", &buffer);
     
    
     
@@ -72,8 +72,8 @@ ADDON_STATUS PuzzlePVRClient::Init(CHelper_libXBMC_addon *addonHelper, CHelper_l
     }
     catch (std::exception& ex)
     {
-        m_addonHelper->QueueNotification(QUEUE_ERROR,  m_addonHelper->GetLocalizedString(32005));
-        m_addonHelper->Log(LOG_ERROR, "PuzzlePVRClient:: Can't create Puzzle Server core. Exeption: [%s].", ex.what());
+        XBMC->QueueNotification(QUEUE_ERROR,  XBMC->GetLocalizedString(32005));
+        LogError("PuzzlePVRClient:: Can't create Puzzle Server core. Exeption: [%s].", ex.what());
         retVal = ADDON_STATUS_LOST_CONNECTION;
     }
     
@@ -101,7 +101,7 @@ void PuzzlePVRClient::CreateCore(bool clearEpgCache)
         m_clientCore = NULL;
         SAFE_DELETE(m_puzzleTV);
     }
-    m_clientCore = m_puzzleTV = new PuzzleTV(m_addonHelper, m_pvrHelper, clearEpgCache);
+    m_clientCore = m_puzzleTV = new PuzzleTV(clearEpgCache);
 }
 
 ADDON_STATUS PuzzlePVRClient::SetSetting(const char *settingName, const void *settingValue)
@@ -161,13 +161,13 @@ ADDON_STATUS PuzzlePVRClient::OnReloadEpg()
     }
     catch (std::exception& ex)
     {
-        m_addonHelper->QueueNotification(QUEUE_ERROR,  m_addonHelper->GetLocalizedString(32005));
-        m_addonHelper->Log(LOG_ERROR, "PuzzlePVRClient:: Can't create Puzzle Server core. Exeption: [%s].", ex.what());
+        XBMC->QueueNotification(QUEUE_ERROR,  XBMC->GetLocalizedString(32005));
+        LogError("PuzzlePVRClient:: Can't create Puzzle Server core. Exeption: [%s].", ex.what());
         retVal = ADDON_STATUS_LOST_CONNECTION;
     }
     catch(...)
     {
-        m_addonHelper->QueueNotification(QUEUE_ERROR, "Puzzle Server: unhandeled exception on reload EPG.");
+        XBMC->QueueNotification(QUEUE_ERROR, "Puzzle Server: unhandeled exception on reload EPG.");
         retVal = ADDON_STATUS_PERMANENT_FAILURE;
     }
     
@@ -197,7 +197,7 @@ bool PuzzlePVRClient::OpenLiveStream(const PVR_CHANNEL& channel)
     bool succeeded = PVRClientBase::OpenLiveStream(GetStreamUrl(channel));
     bool tryToRecover = !succeeded;
     while(tryToRecover) {
-        m_addonHelper->Log(LOG_ERROR, "PuzzlePVRClient:: trying to move to next stream from [%d].", m_currentChannelStreamIdx);
+        LogError("PuzzlePVRClient:: trying to move to next stream from [%d].", m_currentChannelStreamIdx);
         string url = m_puzzleTV->GetNextStream(m_currentChannelId,m_currentChannelStreamIdx);
         if(url.empty()) // nomore streams
             break;
@@ -214,7 +214,7 @@ int PuzzlePVRClient::ReadLiveStream(unsigned char* pBuffer, unsigned int iBuffer
     int readBytes = PVRClientBase::ReadLiveStream(pBuffer,iBufferSize);
     bool tryToRecover = readBytes < 0;
     while(tryToRecover) {
-        m_addonHelper->Log(LOG_ERROR, "PuzzlePVRClient:: trying to move to next stream from [%d].", m_currentChannelStreamIdx);
+        LogError("PuzzlePVRClient:: trying to move to next stream from [%d].", m_currentChannelStreamIdx);
         string url = m_puzzleTV->GetNextStream(m_currentChannelId,m_currentChannelStreamIdx);
         if(url.empty()) // nomore streams
             break;
@@ -274,7 +274,7 @@ PVR_ERROR PuzzlePVRClient::GetRecordings(ADDON_HANDLE handle, bool deleted)
 //    PVR_ERROR result = PVR_ERROR_NO_ERROR;
 //    SovokTV& sTV(*m_sovokTV);
 //    CHelper_libXBMC_pvr * pvrHelper = m_pvrHelper;
-//    ADDON::CHelper_libXBMC_addon * addonHelper = m_addonHelper;
+//    ADDON::CHelper_libXBMC_addon * addonHelper = XBMC;
 //    std::function<void(const ArchiveList&)> f = [&sTV, &handle, pvrHelper, addonHelper ,&result](const ArchiveList& list){
 //        for(const auto &  i :  list) {
 //            try {

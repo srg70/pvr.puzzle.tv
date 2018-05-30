@@ -31,9 +31,11 @@
 #include "helpers.h"
 #include "plist_buffer.h"
 #include "libXBMC_addon.h"
+#include "globals.hpp"
 
 using namespace P8PLATFORM;
 using namespace ADDON;
+using namespace Globals;
 
 namespace Buffers {
     
@@ -56,9 +58,8 @@ namespace Buffers {
         return url;
         
     }
-    PlaylistBuffer::PlaylistBuffer(ADDON::CHelper_libXBMC_addon *addonHelper, const std::string &playListUrl,  PlaylistBufferDelegate delegate)
-    : m_addonHelper(addonHelper)
-    , m_totalLength(0)
+    PlaylistBuffer::PlaylistBuffer(const std::string &playListUrl,  PlaylistBufferDelegate delegate)
+    : m_totalLength(0)
     , m_totalDuration(0.0)
     , m_delegate(delegate)
     {
@@ -124,8 +125,8 @@ namespace Buffers {
             ParsePlaylist(data);
             return;
         }
-        //    m_addonHelper->Log(LOG_DEBUG, "Variant playlist URL: \n %s", playlistUrl.c_str() );
-        //    m_addonHelper->Log(LOG_DEBUG, "Variant playlist: \n %s", data.c_str() );
+        //    XBMC->Log(LOG_DEBUG, "Variant playlist URL: \n %s", playlistUrl.c_str() );
+        //    XBMC->Log(LOG_DEBUG, "Variant playlist: \n %s", data.c_str() );
         
         uint64_t bestRate = 0;
         while(std::string::npos != pos)
@@ -145,7 +146,7 @@ namespace Buffers {
                 bestRate = rate;
             }
         }
-        //    m_addonHelper->Log(LOG_DEBUG, "Best URL (%d): \n %s", bestRate, m_playListUrl.c_str() );
+        //    XBMC->Log(LOG_DEBUG, "Best URL (%d): \n %s", bestRate, m_playListUrl.c_str() );
         
     }
     
@@ -210,17 +211,17 @@ namespace Buffers {
                 auto url = body.substr(urlPos, urlLen);
                 trim(url);
                 url = ToAbsoluteUrl(url, m_playListUrl);
-                //            m_addonHelper->Log(LOG_NOTICE, "IDX: %u Duration: %f. URL: %s", mediaIndex, duration, url.c_str());
+                //            XBMC->Log(LOG_NOTICE, "IDX: %u Duration: %f. URL: %s", mediaIndex, duration, url.c_str());
                 m_segmentUrls[mediaIndex++]  = TSegmentUrls::mapped_type(duration, url);
             }
-            m_addonHelper->Log(LOG_DEBUG, "m_segmentUrls.size = %d, %s", m_segmentUrls.size(), hasContent ? "Not empty." : "Empty."  );
+            XBMC->Log(LOG_DEBUG, "m_segmentUrls.size = %d, %s", m_segmentUrls.size(), hasContent ? "Not empty." : "Empty."  );
             return hasContent;
         } catch (std::exception& ex) {
-            m_addonHelper->Log(LOG_ERROR, "Bad M3U : parser error %s", ex.what() );
-            m_addonHelper->Log(LOG_ERROR, "M3U data : \n %s", data.c_str() );
+            XBMC->Log(LOG_ERROR, "Bad M3U : parser error %s", ex.what() );
+            XBMC->Log(LOG_ERROR, "M3U data : \n %s", data.c_str() );
             throw;
         } catch (...) {
-            m_addonHelper->Log(LOG_ERROR, "Bad M3U : \n %s", data.c_str() );
+            XBMC->Log(LOG_ERROR, "Bad M3U : \n %s", data.c_str() );
             throw;
         }
     }
@@ -229,41 +230,40 @@ namespace Buffers {
     {
         char buffer[1024];
 
-        m_addonHelper->Log(LOG_DEBUG, ">>> PlaylistBuffer: (re)loading playlist %s.", m_playListUrl.c_str());
+        XBMC->Log(LOG_DEBUG, ">>> PlaylistBuffer: (re)loading playlist %s.", m_playListUrl.c_str());
 
-        auto f = m_addonHelper->OpenFile(m_playListUrl.c_str(), XFILE::READ_NO_CACHE);
+        auto f = XBMC->OpenFile(m_playListUrl.c_str(), XFILE::READ_NO_CACHE);
         if (!f)
             throw PlistBufferException("Failed to obtain playlist from server.");
         bool isEof = false;
         do{
             buffer[0]= 0;
-            auto bytesRead = m_addonHelper->ReadFile(f, buffer, sizeof(buffer));
+            auto bytesRead = XBMC->ReadFile(f, buffer, sizeof(buffer));
             isEof = bytesRead <= 0;
             data.append(&buffer[0], bytesRead);
         }while(!isEof);
-        m_addonHelper->CloseFile(f);
+        XBMC->CloseFile(f);
 
-        m_addonHelper->Log(LOG_DEBUG, ">>> PlaylistBuffer: (re)loading done. Content: \n%s", data.size()> 16000 ? "[More that 16K]" : data.c_str());
+        XBMC->Log(LOG_DEBUG, ">>> PlaylistBuffer: (re)loading done. Content: \n%s", data.size()> 16000 ? "[More that 16K]" : data.c_str());
 
     }
     
     bool PlaylistBuffer::FillSegment(const PlaylistBuffer::TSegmentUrls::mapped_type& segmentUrl)
     {
         unsigned char buffer[8196];
-        void* f = m_addonHelper->OpenFile(segmentUrl.second.c_str(), XFILE::READ_NO_CACHE | XFILE::READ_CHUNKED); //XFILE::READ_AUDIO_VIDEO);
+        void* f = XBMC->OpenFile(segmentUrl.second.c_str(), XFILE::READ_NO_CACHE | XFILE::READ_CHUNKED); //XFILE::READ_AUDIO_VIDEO);
         if(!f)
             throw PlistBufferException("Failed to download playlist media segment.");
         
         auto segmentData = TSegments::mapped_type(new TSegments::mapped_type::element_type(segmentUrl.first));
-        //    segmentData->m_addonHelper = m_addonHelper;
         ssize_t  bytesRead;
         do {
-            bytesRead = m_addonHelper->ReadFile(f, buffer, sizeof(buffer));
+            bytesRead = XBMC->ReadFile(f, buffer, sizeof(buffer));
             segmentData->Push(buffer, bytesRead);
-            //        m_addonHelper->Log(LOG_DEBUG, ">>> Write: %d", bytesRead);
+            //        XBMC->Log(LOG_DEBUG, ">>> Write: %d", bytesRead);
         }while (bytesRead > 0 && !IsStopped());
         
-        m_addonHelper->CloseFile(f);
+        XBMC->CloseFile(f);
         
         float bitrate = 0.0;
         size_t segmantsSize = 0;
@@ -278,8 +278,8 @@ namespace Buffers {
                 segmantsSize = m_segments.size();
             }
         }
-        m_addonHelper->Log(LOG_DEBUG, ">>> Segment added at %d. Total %d segs. Bitrate %f", m_writeTimshift, segmantsSize, segmentData->Bitrate());
-        m_addonHelper->Log(LOG_DEBUG, ">>> Average bitrate: %f", bitrate);
+        XBMC->Log(LOG_DEBUG, ">>> Segment added at %d. Total %d segs. Bitrate %f", m_writeTimshift, segmantsSize, segmentData->Bitrate());
+        XBMC->Log(LOG_DEBUG, ">>> Average bitrate: %f", bitrate);
 
         return bytesRead < 0; // 0 (i.e. EOF) means no error, caller may continue with next chunk
     }
@@ -305,10 +305,10 @@ namespace Buffers {
 //                        time_t adjustedTimeshift = m_writeTimshift;
 //                        std::string newPlistUrl = m_delegate->UrlForTimeshift(m_writeTimshift, &adjustedTimeshift);
 //                        if(m_writeTimshift == adjustedTimeshift) {
-//                            m_addonHelper->Log(LOG_DEBUG, ">>> PlaylistBuffer: update url from %s to %s.", m_playListUrl.c_str(), newPlistUrl.c_str());
+//                            XBMC->Log(LOG_DEBUG, ">>> PlaylistBuffer: update url from %s to %s.", m_playListUrl.c_str(), newPlistUrl.c_str());
 //                            m_playListUrl = newPlistUrl;
 //                        } else {
-//                            m_addonHelper->Log(LOG_DEBUG, ">>> PlaylistBuffer: received all archive stream. Write is done.");
+//                            XBMC->Log(LOG_DEBUG, ">>> PlaylistBuffer: received all archive stream. Write is done.");
 //                            break;
 //                        }
 //
@@ -328,7 +328,7 @@ namespace Buffers {
 
                     auto duration = segmentUrl.first;
                     sleepTime = duration;
-                    m_addonHelper->Log(LOG_DEBUG, ">>> Segment duration: %f", duration);
+                    XBMC->Log(LOG_DEBUG, ">>> Segment duration: %f", duration);
                     ++it;
                     if(!IsStopped())
                         m_writeEvent.Signal();
@@ -337,14 +337,14 @@ namespace Buffers {
                     m_segmentUrls.clear();
 
                 if(m_isVod) {
-                    m_addonHelper->Log(LOG_DEBUG, ">>> PlaylistBuffer: received all VOD stream. Write is done.");
+                    XBMC->Log(LOG_DEBUG, ">>> PlaylistBuffer: received all VOD stream. Write is done.");
                     break;
                 }
                 IsStopped(sleepTime);
             }
             
         } catch (InputBufferException& ex ) {
-            m_addonHelper->Log(LOG_ERROR, "Playlist download thread failed with error: %s", ex.what());
+            XBMC->Log(LOG_ERROR, "Playlist download thread failed with error: %s", ex.what());
         }
         
         return NULL;
@@ -373,7 +373,7 @@ namespace Buffers {
             if(NULL == segment)
             {
                 //            StopThread();
-                m_addonHelper->Log(LOG_NOTICE, "PlaylistBuffer: no segment for read.");
+                XBMC->Log(LOG_NOTICE, "PlaylistBuffer: no segment for read.");
                 break;
             }
             size_t bytesToRead;
@@ -388,7 +388,7 @@ namespace Buffers {
 
             if(segment->BytesReady() <= 0){
                 m_readTimshift += segment->Duration();
-                m_addonHelper->Log(LOG_DEBUG, ">>> PlaylistBuffer: Segment been read. Read/write timeshift (%d/%d)", m_readTimshift, m_writeTimshift);
+                XBMC->Log(LOG_DEBUG, ">>> PlaylistBuffer: Segment been read. Read/write timeshift (%d/%d)", m_readTimshift, m_writeTimshift);
                 // Reset segment position for next usage.
                 segment->Seek(0);
 
@@ -406,12 +406,12 @@ namespace Buffers {
                         segToRemove = seg.first;
                     }
                     m_segments.erase(segToRemove);
-                    m_addonHelper->Log(LOG_DEBUG, ">>> PlaylistBuffer: Segment removed at %d sec. Total %d segs.", segToRemove, m_segments.size());
+                    XBMC->Log(LOG_DEBUG, ">>> PlaylistBuffer: Segment removed at %d sec. Total %d segs.", segToRemove, m_segments.size());
                 }
             }
         }
         m_position += totalBytesRead;
-//        m_addonHelper->Log(LOG_DEBUG, ">>> PlaylistBuffer::Read(): totalBytesRead %d, position %lld", totalBytesRead, m_position);
+//        XBMC->Log(LOG_DEBUG, ">>> PlaylistBuffer::Read(): totalBytesRead %d, position %lld", totalBytesRead, m_position);
 
         bool hasMoreData = false;
         {
@@ -419,7 +419,7 @@ namespace Buffers {
             hasMoreData = m_segments.count(m_readTimshift) > 0  ||  (!IsStopped() && IsRunning());
         }
         if(!hasMoreData)
-            m_addonHelper->Log(LOG_DEBUG, ">>> PlaylistBuffer: read is done. No more data.");
+            XBMC->Log(LOG_DEBUG, ">>> PlaylistBuffer: read is done. No more data.");
         
         if (hasMoreData)
             return totalBytesRead;
@@ -433,8 +433,8 @@ namespace Buffers {
             Init(newUrl);
             succeeded = true;
         } catch (const InputBufferException& ex) {
-            m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32004), ex.what());
-            m_addonHelper->Log(LOG_ERROR, "PlaylistBuffer: Failed to switch streams to %s.\n Error: %s", newUrl.c_str(), ex.what());
+            XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32004), ex.what());
+            XBMC->Log(LOG_ERROR, "PlaylistBuffer: Failed to switch streams to %s.\n Error: %s", newUrl.c_str(), ex.what());
         }
         
         return succeeded;
@@ -443,7 +443,7 @@ namespace Buffers {
     int64_t PlaylistBuffer::GetLength() const
     {
         if(m_delegate == nullptr) {
-            m_addonHelper->Log(LOG_DEBUG, "Plist archive lenght -1");
+            XBMC->Log(LOG_DEBUG, "Plist archive lenght -1");
             return -1;
         }
         float bitrate = 0.0;
@@ -452,17 +452,17 @@ namespace Buffers {
             bitrate = Bitrate();
          }
         int64_t retVal = m_delegate->Duration() * bitrate;
-       m_addonHelper->Log(LOG_DEBUG, "Plist archive lenght %lld (bitrate %f)", retVal, bitrate);
+       XBMC->Log(LOG_DEBUG, "Plist archive lenght %lld (bitrate %f)", retVal, bitrate);
         return retVal;
     }
     
     int64_t PlaylistBuffer::GetPosition() const
     {
         if(m_delegate == nullptr) {
-            m_addonHelper->Log(LOG_DEBUG, "Plist archive position =1");
+            XBMC->Log(LOG_DEBUG, "Plist archive position =1");
             return -1;
         }
-        m_addonHelper->Log(LOG_DEBUG, "Plist archive position %lld", m_position);
+        XBMC->Log(LOG_DEBUG, "Plist archive position %lld", m_position);
         return m_position;
     }
     
@@ -471,7 +471,7 @@ namespace Buffers {
         if(m_delegate == nullptr)
             return -1;
         
-        m_addonHelper->Log(LOG_DEBUG, "PlaylistBuffer::Seek. >>> Requested pos %lld, from %d", iPosition, iWhence);
+        XBMC->Log(LOG_DEBUG, "PlaylistBuffer::Seek. >>> Requested pos %lld, from %d", iPosition, iWhence);
         
         // Translate position to offset from start of buffer.
         int64_t length = GetLength();
@@ -483,7 +483,7 @@ namespace Buffers {
             iPosition = length + iPosition;
         }
         if(iPosition < 0 )
-            m_addonHelper->Log(LOG_DEBUG, "PlaylistBuffer::Seek. Can't be pos %lld", iPosition);
+            XBMC->Log(LOG_DEBUG, "PlaylistBuffer::Seek. Can't be pos %lld", iPosition);
 
         if(iPosition > length) {
             iPosition = length;
@@ -492,7 +492,7 @@ namespace Buffers {
             iPosition = begin;
         }
         iWhence = SEEK_SET;
-        m_addonHelper->Log(LOG_DEBUG, "PlaylistBuffer::Seek. Calculated pos %lld", iPosition);
+        XBMC->Log(LOG_DEBUG, "PlaylistBuffer::Seek. Calculated pos %lld", iPosition);
         
         int64_t seekDelta =  iPosition - m_position;
         if(seekDelta == 0)
@@ -515,7 +515,7 @@ namespace Buffers {
                 // We have a segment
                 haveCachedSeg = true;
                 readTimshift = seg.first;
-                m_addonHelper->Log(LOG_DEBUG, "PlaylistBuffer::Seek. Found cached segment. timeshift %d", readTimshift);
+                XBMC->Log(LOG_DEBUG, "PlaylistBuffer::Seek. Found cached segment. timeshift %d", readTimshift);
                 size_t posInSegment = requestedTimeshit - seg.first * bitrate;
                 seg.second->Seek(posInSegment);
                 
@@ -537,7 +537,7 @@ namespace Buffers {
                 writeTimeshift = adjustedTimeshift;
             }
 
-            m_addonHelper->Log(LOG_DEBUG, "PlaylistBuffer::Seek. Restart write from %lld sec. Read at %lld sec", writeTimeshift, readTimshift);
+            XBMC->Log(LOG_DEBUG, "PlaylistBuffer::Seek. Restart write from %lld sec. Read at %lld sec", writeTimeshift, readTimshift);
             
             Init(newUrl, false,  iPosition, writeTimeshift);
         }
@@ -550,7 +550,7 @@ namespace Buffers {
         try {
 //            if(s_SeekTimeout.TimeLeft() > 0)
 //            {
-//                m_addonHelper->Log(LOG_DEBUG, "PlaylistBuffer::Seek. >>> Can't seek now, wait %d ms", s_SeekTimeout.TimeLeft());
+//                XBMC->Log(LOG_DEBUG, "PlaylistBuffer::Seek. >>> Can't seek now, wait %d ms", s_SeekTimeout.TimeLeft());
 //                CEvent::Sleep(s_SeekTimeout.TimeLeft());
 //            }
 
@@ -560,7 +560,7 @@ namespace Buffers {
                 iPosition = adjustedTimeshift * bitrate;
                 requestedTimeshit = adjustedTimeshift;
             }
-            m_addonHelper->Log(LOG_DEBUG, "PlaylistBuffer::Seek. Delta %f Mb, %lld(%lld) sec", seekDelta/1024.0/1024.0, (requestedTimeshit - curTimeshift), requestedTimeshit);
+            XBMC->Log(LOG_DEBUG, "PlaylistBuffer::Seek. Delta %f Mb, %lld(%lld) sec", seekDelta/1024.0/1024.0, (requestedTimeshit - curTimeshift), requestedTimeshit);
 
             // Flour to segment duration (10 sec)
             time_t segTimeshift = requestedTimeshit / 10 * 10;
@@ -568,7 +568,7 @@ namespace Buffers {
 
             // If we can't read from strean in 60 sec - report error
             if(!m_writeEvent.Wait(60000)) {
-                m_addonHelper->Log(LOG_ERROR, "PlaylistBuffer::Seek. failed to read after seek in 60 sec.");
+                XBMC->Log(LOG_ERROR, "PlaylistBuffer::Seek. failed to read after seek in 60 sec.");
                 return -1;
             }
             {
@@ -578,16 +578,16 @@ namespace Buffers {
                 seg->Seek(posInSegment);
                 m_position = iPosition;
             }
-            m_addonHelper->Log(LOG_DEBUG, "PlaylistBuffer::Seek. pos after seek %lld", m_position);
+            XBMC->Log(LOG_DEBUG, "PlaylistBuffer::Seek. pos after seek %lld", m_position);
             return m_position;
 
         } catch (std::exception&  ex) {
-            m_addonHelper->Log(LOG_ERROR, "PlaylistBuffer::Seek. Exception thrown. Reason: %s. Reset position!", ex.what());
+            XBMC->Log(LOG_ERROR, "PlaylistBuffer::Seek. Exception thrown. Reason: %s. Reset position!", ex.what());
             m_position = 0;
             return -1;
 
         }catch (...) {
-            m_addonHelper->Log(LOG_ERROR, "PlaylistBuffer::Seek. Unknown exception. Reset position!");
+            XBMC->Log(LOG_ERROR, "PlaylistBuffer::Seek. Unknown exception. Reset position!");
             m_position = 0;
             return -1;
         }
@@ -600,10 +600,10 @@ namespace Buffers {
         while(!(retVal = this->CThread::StopThread(iWaitMs))){
             if(++stopCounter > 3)
                 break;
-            m_addonHelper->Log(LOG_NOTICE, "PlaylistBuffer: can't stop thread in %d ms (%d)", iWaitMs, stopCounter);
+            XBMC->Log(LOG_NOTICE, "PlaylistBuffer: can't stop thread in %d ms (%d)", iWaitMs, stopCounter);
         }
         if(!retVal)
-            m_addonHelper->Log(LOG_ERROR, "PlaylistBuffer: failed to stop thread in %d ms", stopCounter*iWaitMs);
+            XBMC->Log(LOG_ERROR, "PlaylistBuffer: failed to stop thread in %d ms", stopCounter*iWaitMs);
         
         return retVal;
     }
@@ -636,7 +636,7 @@ namespace Buffers {
         _data = (uint8_t*) ptr;
         memcpy(&_data[_size], buffer, size);
         _size += size;
-        //    m_addonHelper->Log(LOG_DEBUG, ">>> Size: %d", _size);
+        //    XBMC->Log(LOG_DEBUG, ">>> Size: %d", _size);
     }
     
     const uint8_t* PlaylistBuffer::Segment::Pop(size_t requesred, size_t*  actual)
@@ -663,7 +663,7 @@ namespace Buffers {
         if(_begin == NULL)
             _begin = &_data[0];
         size_t actual = std::min(size, BytesReady());
-        //    m_addonHelper->Log(LOG_DEBUG, ">>> Available: %d  Actual: %d", available, actual);
+        //    XBMC->Log(LOG_DEBUG, ">>> Available: %d  Actual: %d", available, actual);
         memcpy(buffer, _begin, actual);
         _begin += actual;
         return actual;

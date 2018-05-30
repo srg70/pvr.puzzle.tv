@@ -41,10 +41,11 @@
 #include "edem_player.h"
 #include "HttpEngine.hpp"
 #include "XMLTV_loader.hpp"
-
+#include "globals.hpp"
 
 namespace EdemEngine
 {
+    using namespace Globals;
     using namespace std;
     using namespace ADDON;
     using namespace rapidjson;
@@ -67,15 +68,14 @@ namespace EdemEngine
 
     typedef map<string, pair<Channel, string>, NoCaseComparator> PlaylistContent;
     static void ParseChannelAndGroup(const std::string& data, unsigned int plistIndex, PlaylistContent& channels);
-    static void LoadPlaylist(const string& plistUrl, PlaylistContent& channels, CHelper_libXBMC_addon *XBMC);
+    static void LoadPlaylist(const string& plistUrl, PlaylistContent& channels);
 
     
-    Core::Core(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper, const std::string &playListUrl,  const std::string &epgUrl, bool clearEpgCache)
-    : ClientCoreBase(addonHelper, pvrHelper)
-    , m_playListUrl(playListUrl)
+    Core::Core(const std::string &playListUrl,  const std::string &epgUrl, bool clearEpgCache)
+    : m_playListUrl(playListUrl)
     , m_epgUrl(epgUrl)
     {
-        m_httpEngine = new HttpEngine(m_addonHelper);
+        m_httpEngine = new HttpEngine();
         BuildChannelAndGroupList();
         if(clearEpgCache)
             ClearEpgCache(c_EpgCacheFile);
@@ -91,20 +91,20 @@ namespace EdemEngine
     }
     void Core::Cleanup()
     {
-        m_addonHelper->Log(LOG_NOTICE, "EdemPlayer stopping...");
+        LogNotice("EdemPlayer stopping...");
         
         if(m_httpEngine){
             SAFE_DELETE(m_httpEngine);
         }
         
-        m_addonHelper->Log(LOG_NOTICE, "EdemPlayer stopped.");
+        LogNotice("EdemPlayer stopped.");
     }
     
     void Core::BuildChannelAndGroupList()
     {
         using namespace XMLTV;
         PlaylistContent plistContent;
-        LoadPlaylist(m_playListUrl, plistContent, m_addonHelper);
+        LoadPlaylist(m_playListUrl, plistContent);
         
         
         ChannelCallback onNewChannel = [&plistContent](const EpgChannel& newChannel){
@@ -115,7 +115,7 @@ namespace EdemEngine
             }
         };
         
-        XMLTV::ParseChannels(m_epgUrl, onNewChannel, m_addonHelper);
+        XMLTV::ParseChannels(m_epgUrl, onNewChannel);
 
         for(const auto& channelWithGroup : plistContent)
         {
@@ -222,10 +222,10 @@ namespace EdemEngine
                     channelsToUpdate.insert(newEntry.iChannelId);
             };
             
-            XMLTV::ParseEpg(m_epgUrl, onEpgEntry, m_addonHelper);
+            XMLTV::ParseEpg(m_epgUrl, onEpgEntry);
             
             for (auto channel : channelsToUpdate) {
-                m_pvrHelper->TriggerEpgUpdate(channel);
+                PVR->TriggerEpgUpdate(channel);
             }
 
             OnEpgUpdateDone();
@@ -244,7 +244,7 @@ namespace EdemEngine
 
         EpgEntryCallback onEpgEntry = [&pThis] (const XMLTV::EpgEntry& newEntry) {pThis->AddEpgEntry(newEntry);};
         
-        XMLTV::ParseEpg(m_epgUrl, onEpgEntry, m_addonHelper);
+        XMLTV::ParseEpg(m_epgUrl, onEpgEntry);
     }
     
     string Core::GetUrl(ChannelId channelId)
@@ -254,7 +254,7 @@ namespace EdemEngine
     }
     
     
-    static void LoadPlaylist(const string& plistUrl, PlaylistContent& channels, CHelper_libXBMC_addon *XBMC)
+    static void LoadPlaylist(const string& plistUrl, PlaylistContent& channels)
     {
         void* f = NULL;
         

@@ -27,11 +27,11 @@
 #include "xbmc_pvr_types.h"
 #include <string>
 #include "addon.h"
+#include "globals.hpp"
 
-class CHelper_libXBMC_pvr;
 namespace Buffers {
-    class InputBuffer;
     class IPlaylistBufferDelegate;
+    class InputBuffer;
 }
 
 namespace PvrClient
@@ -46,7 +46,7 @@ namespace PvrClient
             k_TimeshiftBufferFile = 1
         }TimeshiftBufferType;
         
-        ADDON_STATUS Init(ADDON::CHelper_libXBMC_addon *addonHelper, CHelper_libXBMC_pvr *pvrHelper,  PVR_PROPERTIES* pvrprops);
+        ADDON_STATUS Init(PVR_PROPERTIES* pvrprops);
         virtual ~PVRClientBase();
         
         int GetSettings(ADDON_StructSetting ***sSet);
@@ -88,11 +88,16 @@ namespace PvrClient
         long long PositionRecordedStream(void);
         long long LengthRecordedStream(void);
         
+        PVR_ERROR AddTimer(const PVR_TIMER &timer) { return PVR_ERROR_NOT_IMPLEMENTED; }
+        int GetTimersAmount(void) { return -1; }
+        PVR_ERROR GetTimers(ADDON_HANDLE handle) { return PVR_ERROR_NOT_IMPLEMENTED; }
+        PVR_ERROR DeleteTimer(const PVR_TIMER &timer, bool bForceDelete) { return PVR_ERROR_NOT_IMPLEMENTED; }
+        PVR_ERROR UpdateTimer(const PVR_TIMER &timer) { return PVR_ERROR_NOT_IMPLEMENTED; }
+
+        
         PVR_ERROR CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
         
     protected:
-        ADDON::CHelper_libXBMC_addon *m_addonHelper;
-        CHelper_libXBMC_pvr *m_pvrHelper;
         IClientCore* m_clientCore;
         
         virtual PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
@@ -105,11 +110,6 @@ namespace PvrClient
         const std::string& GetClientPath() const { return m_clientPath;}
         const std::string& GetUserPath() const { return m_userPath;}
         
-        void LogError(const char *format, ... );
-        void LogInfo(const char *format, ... );
-        void LogNotice(const char *format, ... );
-        void LogDebug(const char *format, ... );
-
     private:
         
         void SetChannelReloadTimeout(int timeout);
