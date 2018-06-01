@@ -1,3 +1,11 @@
+0.6.2
+- XML TV EPG for Puzzle Server
+- Major code refactoring
+
+0.5.9
+- Reloading EPG and recordings with context menu
+- No background recordings refresh.
+
 0.5.7
 - XML TV loader: bug fixes
 
