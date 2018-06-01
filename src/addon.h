@@ -72,15 +72,21 @@ public:
     virtual long long PositionRecordedStream(void) = 0;
     virtual long long LengthRecordedStream(void) = 0;
 
+    virtual PVR_ERROR CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item) = 0;
+    
+    virtual ~IPvrIptvDataSource(){}
+};
+
+class ITimersEngine
+{
+public:
     virtual int GetTimersAmount(void) = 0;
     virtual PVR_ERROR AddTimer(const PVR_TIMER &timer) = 0;
     virtual PVR_ERROR GetTimers(ADDON_HANDLE handle) = 0;
     virtual PVR_ERROR DeleteTimer(const PVR_TIMER &timer, bool bForceDelete) = 0;
     virtual PVR_ERROR UpdateTimer(const PVR_TIMER &timer) = 0;
+    virtual ~ITimersEngine() {}
 
-    virtual PVR_ERROR CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item) = 0;
-    
-    virtual ~IPvrIptvDataSource(){}
 };
 
 #endif /* __Iptv_Pvr_Addoin_h__ */

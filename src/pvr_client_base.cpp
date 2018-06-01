@@ -493,7 +493,7 @@ int PVRClientBase::GetRecordingsAmount(bool deleted)
             ++size;
     };
     m_clientCore->ForEachEpg(action);
-    LogDebug("SovokPVRClient has %d recordings.", size);
+    LogDebug("PVRClientBase: found %d recordings.", size);
     return size;
     
 }

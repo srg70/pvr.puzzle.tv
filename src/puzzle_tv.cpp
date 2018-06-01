@@ -259,6 +259,16 @@ void PuzzleTV::UpdateHasArchive(PvrClient::EpgEntry& entry)
 {
     auto channel = GetChannelList().find(entry.ChannelId);
     entry.HasArchive = channel != GetChannelList().end() &&  channel->second.HasArchive;
+    
+    if(!entry.HasArchive)
+        return;
+
+    time_t now = time(nullptr);
+    const time_t archivePeriod = 3 * 24 * 60 * 60; //3 days in secs
+    time_t from = now - archivePeriod;
+    entry.HasArchive = entry.StartTime > from && entry.StartTime < now;
+
+
 }
 
 void PuzzleTV::UpdateEpgForAllChannels(time_t startTime, time_t endTime)

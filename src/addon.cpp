@@ -364,27 +364,27 @@ extern "C" {
     /** T I M E R S **/
     PVR_ERROR AddTimer(const PVR_TIMER &timer)
     {
-        return m_DataSource->AddTimer (timer);
+        return Globals::TIMERS->AddTimer (timer);
     }
     
     PVR_ERROR DeleteTimer(const PVR_TIMER &timer, bool bForceDelete)
     {
-        return m_DataSource->DeleteTimer (timer,bForceDelete);
+        return Globals::TIMERS->DeleteTimer (timer,bForceDelete);
     }
     
     PVR_ERROR UpdateTimer(const PVR_TIMER &timer)
     {
-        return m_DataSource->UpdateTimer (timer);
+        return Globals::TIMERS->UpdateTimer (timer);
     }
     
     PVR_ERROR GetTimers(ADDON_HANDLE handle)
     {
-        return m_DataSource->GetTimers(handle);
+        return Globals::TIMERS->GetTimers(handle);
     }
     
     int GetTimersAmount(void)
     {
-        return  m_DataSource->GetTimersAmount();
+        return  Globals::TIMERS->GetTimersAmount();
     }
 
     PVR_ERROR GetTimerTypes(PVR_TIMER_TYPE types[], int *size) { return PVR_ERROR_NOT_IMPLEMENTED; }

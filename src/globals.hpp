@@ -25,11 +25,14 @@
 
 #include "kodi/libXBMC_pvr.h"
 #include "kodi/libXBMC_addon.h"
+#include "addon.h"
 
 namespace Globals {
 
-    extern CHelper_libXBMC_pvr* const PVR;
-    extern ADDON::CHelper_libXBMC_addon* const XBMC;
+    extern CHelper_libXBMC_pvr* const& PVR;
+    extern ADDON::CHelper_libXBMC_addon* const& XBMC;
+    
+    extern ITimersEngine* const TIMERS;
     
     void LogError(const char *format, ... );
     void LogInfo(const char *format, ... );

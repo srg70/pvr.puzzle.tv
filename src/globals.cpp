@@ -24,14 +24,16 @@
 #include "globals.hpp"
 #include "p8-platform/util/util.h"
 #include "p8-platform/util/StringUtils.h"
+#include "TimersEngine.hpp"
 
 namespace Globals
 {
     static CHelper_libXBMC_pvr* __pvr = nullptr;
     static ADDON::CHelper_libXBMC_addon* __xbmc = nullptr;
-    CHelper_libXBMC_pvr* const PVR(__pvr);
-    ADDON::CHelper_libXBMC_addon* const XBMC(__xbmc);
-
+    CHelper_libXBMC_pvr* const& PVR(__pvr);
+    ADDON::CHelper_libXBMC_addon* const& XBMC(__xbmc);
+    ITimersEngine* const TIMERS(new Engines::TimersEngine());
+    
     static ADDON::addon_log_t  __debugLogLevel = ADDON::LOG_DEBUG;
     void Cleanup();
     
@@ -52,11 +54,7 @@ namespace Globals
             SAFE_DELETE(__xbmc);
             return false;
         }
-        CHelper_libXBMC_pvr** pPVR = (CHelper_libXBMC_pvr**)&PVR;
-        *pPVR = __pvr;
-        ADDON::CHelper_libXBMC_addon**  pXBMC = ( ADDON::CHelper_libXBMC_addon** )&XBMC;
-        *pXBMC = __xbmc;
-        
+
         return true;
     }
     
