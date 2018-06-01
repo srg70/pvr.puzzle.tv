@@ -48,8 +48,6 @@ namespace PuzzleEngine
 {
 
     typedef std::map<std::string, std::string> ParamList;
-    typedef PvrClient::UniqueBroadcastIdType  ArchiveEntry;
-    typedef std::set<ArchiveEntry> ArchiveList;
 
     class AuthFailedException : public PvrClient::ExceptionBase
     {
@@ -73,12 +71,10 @@ namespace PuzzleEngine
     class PuzzleTV : public PvrClient::ClientCoreBase
     {
     public:
-        PuzzleTV(bool clearEpgCache);
+        PuzzleTV(const char* serverUrl, int serverPort, bool clearEpgCache);
         ~PuzzleTV();
 
         const PvrClient::EpgEntryList& GetEpgList() const;
-        
-        void Apply(std::function<void(const ArchiveList&)>& action) const;
 
         void  GetEpg(PvrClient::ChannelId channelId, time_t startTime, time_t endTime, PvrClient::EpgEntryList& epgEntries);
         void  UpdateEpgForAllChannels(time_t startTime, time_t endTime);
@@ -86,10 +82,7 @@ namespace PuzzleEngine
         std::string GetUrl(PvrClient::ChannelId channelId);
         std::string GetNextStream(PvrClient::ChannelId channelId, int currentChannelIdx);
 
-        void SetServerPort(uint16_t port) {m_serverPort = port;}
         uint16_t GetServerPort() const {return m_serverPort;}
-
-        void SetServerUri(const char* uri) {m_serverUri = uri;}
         const std::string& GetServerUri() const {return m_serverUri;}
 
     protected:
@@ -99,12 +92,9 @@ namespace PuzzleEngine
         typedef std::vector<std::string> StreamerIdsList;
 
         struct ApiFunctionData;
-        class HelperThread;
-        
-        std::string GetArchive(PvrClient::ChannelId channelId, time_t startTime);
-        
         bool AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
         void LoadEpg();
+        void UpdateArhivesAsync();
 
         void Cleanup();
 
@@ -115,16 +105,10 @@ namespace PuzzleEngine
         void CallApiFunction(const ApiFunctionData& data, TParser parser);
         template <typename TParser, typename TCompletion>
         void CallApiAsync(const ApiFunctionData& data, TParser parser, TCompletion completion);
-        
-        void LoadArchiveList();
-        void ResetArchiveList();
 
-        void BuildRecordingsFor(PvrClient::ChannelId channelId, time_t from, time_t to);
-
-        uint16_t m_serverPort;
-        std::string m_serverUri;
+        const uint16_t m_serverPort;
+        const std::string m_serverUri;
         
-        ArchiveList m_archiveList;
         std::string m_epgUrl;
         time_t m_lastEpgRequestStartTime;
         time_t m_lastEpgRequestEndTime;
@@ -132,6 +116,7 @@ namespace PuzzleEngine
         long m_serverTimeShift;
         HttpEngine* m_httpEngine;
         P8PLATFORM::CTimeout m_epgUpdateInterval;
+        std::map<PvrClient::ChannelId, PvrClient::ChannelId> m_epgToServerLut;
 
     };
 }

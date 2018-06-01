@@ -224,7 +224,7 @@ msgstr "Загружаю программу передач ..."
 
 msgctxt "#32013"
 msgid "Waiting for Puzzle Server (%d)..."
-msgid "Ожидание Puzzle Server (%d)..."
+msgstr "Ожидание Puzzle Server (%d)..."
 
 #============= Menus ================
 

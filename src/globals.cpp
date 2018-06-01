@@ -1,10 +1,25 @@
-//
-//  globals.cpp
-//  comple.test
-//
-//  Created by Sergey Shramchenko on 29/05/2018.
-//  Copyright © 2018 Home. All rights reserved.
-//
+/*
+*
+*   Copyright (C) 2017 Sergey Shramchenko
+*   https://github.com/srg70/pvr.puzzle.tv
+*
+*  This Program is free software; you can redistribute it and/or modify
+*  it under the terms of the GNU General Public License as published by
+*  the Free Software Foundation; either version 2, or (at your option)
+*  any later version.
+*
+*  This Program is distributed in the hope that it will be useful,
+*  but WITHOUT ANY WARRANTY; without even the implied warranty of
+*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+*  GNU General Public License for more details.
+*
+*  You should have received a copy of the GNU General Public License
+*  along with XBMC; see the file COPYING.  If not, write to
+*  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+*  http://www.gnu.org/copyleft/gpl.html
+*
+*/
+
 
 #include "globals.hpp"
 #include "p8-platform/util/util.h"
@@ -17,8 +32,12 @@ namespace Globals
     CHelper_libXBMC_pvr* const PVR(__pvr);
     ADDON::CHelper_libXBMC_addon* const XBMC(__xbmc);
 
+    static ADDON::addon_log_t  __debugLogLevel = ADDON::LOG_DEBUG;
+    void Cleanup();
+    
     bool CreateWithHandle(void* hdl)
     {
+        Cleanup();
         __xbmc = new ADDON::CHelper_libXBMC_addon();
         if (!__xbmc->RegisterMe(hdl))
         {
@@ -33,14 +52,20 @@ namespace Globals
             SAFE_DELETE(__xbmc);
             return false;
         }
+        CHelper_libXBMC_pvr** pPVR = (CHelper_libXBMC_pvr**)&PVR;
+        *pPVR = __pvr;
+        ADDON::CHelper_libXBMC_addon**  pXBMC = ( ADDON::CHelper_libXBMC_addon** )&XBMC;
+        *pXBMC = __xbmc;
         
-        return ADDON_STATUS_OK;
+        return true;
     }
     
     void Cleanup()
     {
-        SAFE_DELETE(__pvr);
-        SAFE_DELETE(__xbmc);
+        if(__pvr)
+            SAFE_DELETE(__pvr);
+        if(__xbmc)
+            SAFE_DELETE(__xbmc);
     }
     
 # define PrintToLog(loglevel) \
@@ -67,7 +92,7 @@ XBMC->Log(loglevel, strData.c_str()); \
     }
     void LogDebug(const char *format, ... )
     {
-        PrintToLog(ADDON::LOG_DEBUG);
+        PrintToLog(__debugLogLevel);
     }
     
 

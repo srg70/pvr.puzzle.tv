@@ -66,9 +66,7 @@ ADDON_STATUS PuzzlePVRClient::Init(PVR_PROPERTIES* pvrprops)
     
     try
     {
-        CreateCore(false);
-        m_puzzleTV->SetServerPort(serverPort);
-        m_puzzleTV->SetServerUri(buffer);
+        CreateCore(buffer, serverPort, false );
     }
     catch (std::exception& ex)
     {
@@ -95,26 +93,22 @@ PuzzlePVRClient::~PuzzlePVRClient()
 
 }
 
-void PuzzlePVRClient::CreateCore(bool clearEpgCache)
+void PuzzlePVRClient::CreateCore(const char* serverUrl, int serverPort, bool clearEpgCache)
 {
     if(m_puzzleTV != NULL) {
         m_clientCore = NULL;
         SAFE_DELETE(m_puzzleTV);
     }
-    m_clientCore = m_puzzleTV = new PuzzleTV(clearEpgCache);
+    m_clientCore = m_puzzleTV = new PuzzleTV(serverUrl, serverPort, clearEpgCache);
 }
 
 ADDON_STATUS PuzzlePVRClient::SetSetting(const char *settingName, const void *settingValue)
 {
     if (strcmp(settingName, "puzzle_server_port") == 0)
     {
-        if(m_puzzleTV)
-            m_puzzleTV->SetServerPort(*(int *)(settingValue));
     }
-    else if (strcmp(settingName, "puzzle_server_uri") == 0 )//&& strcmp((const char*) settingValue, m_password.c_str()) != 0)
+    else if (strcmp(settingName, "puzzle_server_uri") == 0 )
     {
-        if(m_puzzleTV)
-            m_puzzleTV->SetServerUri((const char *)(settingValue));
     }
     else {
         return PVRClientBase::SetSetting(settingName, settingValue);
@@ -155,9 +149,7 @@ ADDON_STATUS PuzzlePVRClient::OnReloadEpg()
         auto port =m_puzzleTV->GetServerPort();
         string uri = m_puzzleTV->GetServerUri();
 
-        CreateCore(true);
-        m_puzzleTV->SetServerPort(port);
-        m_puzzleTV->SetServerUri(uri.c_str());
+        CreateCore(uri.c_str(), port, true);
     }
     catch (std::exception& ex)
     {
@@ -230,87 +222,6 @@ int PuzzlePVRClient::ReadLiveStream(unsigned char* pBuffer, unsigned int iBuffer
 bool PuzzlePVRClient::SwitchChannel(const PVR_CHANNEL& channel)
 {
     return PVRClientBase::SwitchChannel(GetStreamUrl(channel));
-}
-
-//void PuzzlePVRClient::SetAddFavoritesGroup(bool shouldAddFavoritesGroup)
-//{
-//    if (shouldAddFavoritesGroup != m_shouldAddFavoritesGroup)
-//    {
-//        m_shouldAddFavoritesGroup = shouldAddFavoritesGroup;
-//        m_pvrHelper->TriggerChannelGroupsUpdate();
-//    }
-//}
-
-
-int PuzzlePVRClient::GetRecordingsAmount(bool deleted)
-{
-    return -1;
-//    if(deleted)
-//        return -1;
-//    
-//    int size = 0;
-//    std::function<void(const ArchiveList&)> f = [&size](const ArchiveList& list){size = list.size();};
-//    m_sovokTV->Apply(f);
-//    if(size == 0)
-//    {
-//        std::function<void(void)> action = [=](){
-//            m_pvrHelper->TriggerRecordingUpdate();
-//        };
-//        m_sovokTV->StartArchivePollingWithCompletion(action);
-////            m_sovokTV->Apply(f);
-////            if(size != 0)
-////                action();
-    
-//    }
-//    return size;
-    
-}
-PVR_ERROR PuzzlePVRClient::GetRecordings(ADDON_HANDLE handle, bool deleted)
-{
-    return PVR_ERROR_NOT_IMPLEMENTED;
-//    if(deleted)
-//        return PVR_ERROR_NOT_IMPLEMENTED;
-//    
-//    PVR_ERROR result = PVR_ERROR_NO_ERROR;
-//    SovokTV& sTV(*m_sovokTV);
-//    CHelper_libXBMC_pvr * pvrHelper = m_pvrHelper;
-//    ADDON::CHelper_libXBMC_addon * addonHelper = XBMC;
-//    std::function<void(const ArchiveList&)> f = [&sTV, &handle, pvrHelper, addonHelper ,&result](const ArchiveList& list){
-//        for(const auto &  i :  list) {
-//            try {
-//                const SovokEpgEntry& epgTag = sTV.GetEpgList().at(i);
-//
-//                PVR_RECORDING tag = { 0 };
-//    //            memset(&tag, 0, sizeof(PVR_RECORDING));
-//                sprintf(tag.strRecordingId, "%d",  i);
-//                strncpy(tag.strTitle, epgTag.Title.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
-//                strncpy(tag.strPlot, epgTag.Description.c_str(), PVR_ADDON_DESC_STRING_LENGTH - 1);
-//                strncpy(tag.strChannelName, sTV.GetChannelList().at(epgTag.ChannelId).Name.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
-//                tag.recordingTime = epgTag.StartTime;
-//                tag.iLifetime = 0; /* not implemented */
-//
-//                tag.iDuration = epgTag.EndTime - epgTag.StartTime;
-//                tag.iEpgEventId = i;
-//                tag.iChannelUid = epgTag.ChannelId;
-//
-//                string dirName = tag.strChannelName;
-//                char buff[20];
-//                strftime(buff, sizeof(buff), "/%d-%m-%y", localtime(&epgTag.StartTime));
-//                dirName += buff;
-//                strncpy(tag.strDirectory, dirName.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
-//
-//                pvrHelper->TransferRecordingEntry(handle, &tag);
-//                
-//            }
-//            catch (...)  {
-//                addonHelper->Log(LOG_ERROR, "%s: failed.", __FUNCTION__);
-//                result = PVR_ERROR_FAILED;
-//            }
-//
-//        }
-//    };
-//    m_sovokTV->Apply(f);
-//    return result;
 }
 
 bool PuzzlePVRClient::OpenRecordedStream(const PVR_RECORDING &recording)

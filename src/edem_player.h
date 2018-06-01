@@ -94,14 +94,11 @@ namespace EdemEngine
     private:
         
         struct ApiFunctionData;
-        class HelperThread;
-        
-        
+
         void LoadEpg();
         bool AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
 
         void Cleanup();
-        void ResetArchiveList();
 
         std::string m_playListUrl;
         std::string m_epgUrl;
