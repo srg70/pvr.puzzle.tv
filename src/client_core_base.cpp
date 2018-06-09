@@ -95,6 +95,7 @@ namespace PvrClient{
                     } catch (...) {
                         LogError("ClientPhase::Action() failed!");
                     }
+                    return nullptr;
                 };
             };
             
