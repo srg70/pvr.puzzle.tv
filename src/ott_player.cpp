@@ -250,7 +250,7 @@ namespace OttEngine
         for (const auto& ch : m_channelList) {
             GetEpgForChannel(ch.second.Id, startTime, endTime);
         }
-        SaveEpgCache(c_EpgCacheFile);
+        //SaveEpgCache(c_EpgCacheFile);
     }
 
     void Core::GetEpgForChannel(ChannelId channelId, time_t startTime, time_t endTime)
@@ -259,26 +259,39 @@ namespace OttEngine
             string call = string("channel/") + n_to_string(channelId);
             ApiFunctionData apiParams(call.c_str());
             bool* shouldUpdate = new bool(false);
-
-            //unsigned int epgActivityCounter = ++m_epgActivityCounter;
-
-            CallApiFunction(apiParams,  [this, startTime, shouldUpdate] (Document& jsonRoot)
-            {
-                for (auto& m : jsonRoot.GetObject()) {
-                    if(std::stol(m.name.GetString()) < startTime) {
-                        continue;
-                    }
-                    *shouldUpdate = true;
-                    EpgEntry epgEntry;
-                    epgEntry.ChannelId = stoul(m.value["ch_id"].GetString()) ;
-                    epgEntry.Title = m.value["name"].GetString();
-                    epgEntry.Description = m.value["descr"].GetString();
-                    epgEntry.StartTime = m.value["time"].GetInt() ;
-                    epgEntry.EndTime = m.value["time_to"].GetInt();
-                    UniqueBroadcastIdType id = epgEntry.StartTime;
-                    AddEpgEntry(id, epgEntry);
-                }
-            });
+            
+            unsigned int epgActivityCounter = ++m_epgActivityCounter;
+            
+            //CallApiFunction(apiParams,  [this, startTime, shouldUpdate] (Document& jsonRoot)
+            CallApiAsync(apiParams,  [this, startTime, shouldUpdate] (Document& jsonRoot)
+                         {
+                             for (auto& m : jsonRoot.GetObject()) {
+                                 if(std::stol(m.name.GetString()) < startTime) {
+                                     continue;
+                                 }
+                                 *shouldUpdate = true;
+                                 EpgEntry epgEntry;
+                                 epgEntry.ChannelId = stoul(m.value["ch_id"].GetString()) ;
+                                 epgEntry.Title = m.value["name"].GetString();
+                                 epgEntry.Description = m.value["descr"].GetString();
+                                 epgEntry.StartTime = m.value["time"].GetInt() ;
+                                 epgEntry.EndTime = m.value["time_to"].GetInt();
+                                 UniqueBroadcastIdType id = epgEntry.StartTime;
+                                 AddEpgEntry(id, epgEntry);
+                                 
+                             }
+                         },
+                         [this, shouldUpdate, channelId, epgActivityCounter](const CActionQueue::ActionResult& s)
+                         {
+                             if(s.exception == NULL && *shouldUpdate){
+                                 PVR->TriggerEpgUpdate(channelId);
+                             }
+                             delete shouldUpdate;
+                             if(epgActivityCounter == m_epgActivityCounter){
+//                                 OnEpgUpdateDone();
+                                 SaveEpgCache(c_EpgCacheFile);
+                             }
+                         });
             
         } catch (ServerErrorException& ex) {
             XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32002), ex.reason.c_str() );

@@ -379,7 +379,7 @@ namespace PvrClient{
     }
     void ClientCoreBase::_UpdateEpgForAllChannels(time_t startTime, time_t endTime)
     {
-        if(startTime < m_lastEpgRequestEndTime || endTime <= startTime)
+        if(startTime <= m_lastEpgRequestEndTime || endTime <= startTime)
             return;
         
         m_lastEpgRequestEndTime = endTime;

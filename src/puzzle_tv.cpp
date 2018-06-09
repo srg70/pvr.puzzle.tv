@@ -347,8 +347,9 @@ void PuzzleTV::CallApiFunction(const ApiFunctionData& data, TParser parser)
             std::rethrow_exception(ex);
         } catch (JsonParserException jex) {
             LogError("Puzzle server JSON error: %s",  jex.what());
+        } catch (CurlErrorException cex) {
             if(data.attempt > 2)
-                throw jex;
+                throw cex;
             // Probably server doesn'r start yet
             // Wait and retry
             data.attempt += 1;
