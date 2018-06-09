@@ -88,12 +88,10 @@ const ParamList SovokTV::ApiFunctionData::s_EmptyParams;
 //tatic         P8PLATFORM::CTimeout TEST_LOGIN_FAILED_timeout(30 * 1000);
 
 
-SovokTV::SovokTV(const string &login, const string &password,  bool cleanEpgCache) :
+SovokTV::SovokTV(const string &login, const string &password) :
     m_login(login),
-    m_password(password),
-    m_lastEpgRequestEndTime(0)
+    m_password(password)
 {
-    m_httpEngine = new HttpEngine();
     if (/*TEST_LOGIN_FAILED_timeout.TimeLeft() > 0 ||*/  !Login(true)) {
         Cleanup();
         throw AuthFailedException();
@@ -103,13 +101,16 @@ SovokTV::SovokTV(const string &login, const string &password,  bool cleanEpgCach
         throw MissingApiException("streamers");
     }
     LoadSettings();
+}
+
+void SovokTV::Init(bool clearEpgCache)
+{
     InitArchivesInfo();
-    BuildChannelAndGroupList();
-    if(cleanEpgCache)
-        XBMC->DeleteFile(MakeEpgCachePath(c_EpgCacheFile).c_str());
-    else {
+    RebuildChannelAndGroupList();
+    if(clearEpgCache) {
+        ClearEpgCache(c_EpgCacheFile);
+     } else {
         LoadEpgCache(c_EpgCacheFile);
-        OnEpgUpdateDone();
     }
 }
 
@@ -141,7 +142,7 @@ const StreamerNamesList& SovokTV::GetStreamersList() const
 void SovokTV::SetCountryFilter(const CountryFilter& filter)
 {
     m_countryFilter = filter;
-    RebuildChannelAndGroupList();
+    //RebuildChannelAndGroupList();
 }
 void SovokTV::BuildChannelAndGroupList()
 {
@@ -245,38 +246,8 @@ std::string SovokTV::GetArchiveUrl(ChannelId channelId, time_t startTime)
     return url;
 }
 
-void SovokTV::GetEpg(ChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries)
-{
 
-    bool needMore = true;
-    time_t moreStartTime = startTime;
-    IClientCore::EpgEntryAction action = [&needMore, &moreStartTime, &epgEntries, channelId, startTime, endTime] (const EpgEntryList::value_type& i)
-    {
-        auto entryStartTime = i.second.StartTime;
-        if (i.second.ChannelId == channelId  &&
-            entryStartTime >= startTime &&
-            entryStartTime < endTime)
-        {
-            moreStartTime = i.second.EndTime;
-            needMore = moreStartTime < endTime;
-            epgEntries.insert(i);
-        }
-    };
-    ForEachEpg(action);
-    
-    if(!needMore)
-        return;
-    
-    auto epgRequestStart = max(moreStartTime, m_lastEpgRequestEndTime);
-
-    if(endTime > epgRequestStart) {
-        m_lastEpgRequestEndTime = endTime;
-        GetEpgForAllChannels(epgRequestStart, endTime);
-    }
-}
-
-
-void SovokTV::GetEpgForAllChannels(time_t startTime, time_t endTime)
+void SovokTV::UpdateEpgForAllChannels(time_t startTime, time_t endTime)
 {
 
     int64_t totalNumberOfHours = (endTime - startTime) / secondsPerHour;
@@ -293,6 +264,7 @@ void SovokTV::GetEpgForAllChannels(time_t startTime, time_t endTime)
         hoursRemaining -= requestNumberOfHours;
         startTime += requestNumberOfHours * secondsPerHour;
     }
+    SaveEpgCache(c_EpgCacheFile, 14);
 
 }
 
@@ -300,11 +272,11 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
 {
     // For queries over 24 hours Sovok.TV returns incomplete results.
     assert(numberOfHours > 0 && numberOfHours <= 24);
-
+    
     ParamList params;
     params["dtime"] = n_to_string(startTime + m_serverTimeShift);
     params["period"] = n_to_string(numberOfHours);
-
+    
     
     char       buf[80];
     struct tm  tstruct;
@@ -312,88 +284,78 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
     // Visit http://en.cppreference.com/w/cpp/chrono/c/strftime
     // for more information about date/time format
     strftime(buf, sizeof(buf), "%Y-%m-%d.%X", &tstruct);
-
+    
     LogDebug("Scheduled EPG upfdate (all channels) from %s for %d hours.", buf, numberOfHours);
-
+    
     ApiFunctionData apiParams("epg3", params);
     unsigned int epgActivityCounter = ++m_epgActivityCounter;
-    CallApiAsync(apiParams, [this, numberOfHours, startTime] (Document& jsonRoot)
-    {
-        const Value &channels = jsonRoot["epg3"];
-        for (const auto& channel : channels.GetArray())
-        {
-            const auto currentChannelId = stoul(channel["id"].GetString());
-            // Check last EPG entrie for missing end time
-            const EpgEntry* lastEpgForChannel = nullptr;
-            IClientCore::EpgEntryAction action = [&lastEpgForChannel, currentChannelId] (const EpgEntryList::value_type& i)
+    try {
+        CallApiFunction(apiParams, [this, numberOfHours, startTime] (Document& jsonRoot) {
+            const Value &channels = jsonRoot["epg3"];
+            for (const auto& channel : channels.GetArray())
             {
-                if(lastEpgForChannel &&
-                   i.second.ChannelId == currentChannelId &&
-                   lastEpgForChannel->StartTime <= i.second.StartTime)
+                const auto currentChannelId = stoul(channel["id"].GetString());
+                // Check last EPG entrie for missing end time
+                const EpgEntry* lastEpgForChannel = nullptr;
+                IClientCore::EpgEntryAction action = [&lastEpgForChannel, currentChannelId] (const EpgEntryList::value_type& i)
+                {
+                    if(!lastEpgForChannel)
+                        lastEpgForChannel = &i.second;
+                    else if(currentChannelId == i.second.ChannelId  &&
+                       lastEpgForChannel->StartTime < i.second.StartTime)
+                        
+                        lastEpgForChannel = &i.second;
+                };
+                ForEachEpg(action);
+                
+                
+                const Value& jsonChannelEpg = channel["epg"];
+                Value::ConstValueIterator itJsonEpgEntry1 = jsonChannelEpg.Begin();
+                Value::ConstValueIterator itJsonEpgEntry2  = itJsonEpgEntry1;
+                itJsonEpgEntry2++;
+                // Fix end time of last enrty for the channel
+                // It can't be calculated during previous iteation.
+                if(lastEpgForChannel) {
+                    EpgEntry* fixMe = const_cast<EpgEntry*>(lastEpgForChannel);
+                    fixMe->EndTime = stol((*itJsonEpgEntry1)["ut_start"].GetString()) - m_serverTimeShift;
+                }
+                for (; itJsonEpgEntry2 != jsonChannelEpg.End(); ++itJsonEpgEntry1, ++itJsonEpgEntry2)
+                {
+                    EpgEntry epgEntry;
+                    epgEntry.ChannelId = currentChannelId;
+                    epgEntry.Title = (*itJsonEpgEntry1)["progname"].GetString();
+                    epgEntry.Description = (*itJsonEpgEntry1)["description"].GetString();
+                    epgEntry.StartTime = stol((*itJsonEpgEntry1)["ut_start"].GetString()) - m_serverTimeShift;
+                    epgEntry.EndTime = stol((*itJsonEpgEntry2)["ut_start"].GetString()) - m_serverTimeShift;
                     
-                    lastEpgForChannel = &i.second;
-            };
-            ForEachEpg(action);
-            
-            
-            const Value& jsonChannelEpg = channel["epg"];
-            Value::ConstValueIterator itJsonEpgEntry1 = jsonChannelEpg.Begin();
-            Value::ConstValueIterator itJsonEpgEntry2  = itJsonEpgEntry1;
-            itJsonEpgEntry2++;
-            // Fix end time of last enrty for the channel
-            // It can't be calculated during previous iteation.
-            if(lastEpgForChannel) {
-                auto fixMe = const_cast<EpgEntry*>(lastEpgForChannel);
-                fixMe->EndTime = stol((*itJsonEpgEntry1)["ut_start"].GetString()) - m_serverTimeShift;
-            }
-            for (; itJsonEpgEntry2 != jsonChannelEpg.End(); ++itJsonEpgEntry1, ++itJsonEpgEntry2)
-            {
+                    UniqueBroadcastIdType id = epgEntry.StartTime;
+                    AddEpgEntry(id, epgEntry);
+                }
+                // Last EPG entrie  missing end time.
+                // Put end of requested interval
                 EpgEntry epgEntry;
                 epgEntry.ChannelId = currentChannelId;
                 epgEntry.Title = (*itJsonEpgEntry1)["progname"].GetString();
                 epgEntry.Description = (*itJsonEpgEntry1)["description"].GetString();
                 epgEntry.StartTime = stol((*itJsonEpgEntry1)["ut_start"].GetString()) - m_serverTimeShift;
-                epgEntry.EndTime = stol((*itJsonEpgEntry2)["ut_start"].GetString()) - m_serverTimeShift;
+                epgEntry.EndTime = startTime + numberOfHours * 60 * 60;
                 
                 UniqueBroadcastIdType id = epgEntry.StartTime;
                 AddEpgEntry(id, epgEntry);
+               // PVR->TriggerEpgUpdate(currentChannelId);
             }
-            // Last EPG entrie  missing end time.
-            // Put end of requested interval
-            EpgEntry epgEntry;
-            epgEntry.ChannelId = currentChannelId;
-            epgEntry.Title = (*itJsonEpgEntry1)["progname"].GetString();
-            epgEntry.Description = (*itJsonEpgEntry1)["description"].GetString();
-            epgEntry.StartTime = stol((*itJsonEpgEntry1)["ut_start"].GetString()) - m_serverTimeShift;
-            epgEntry.EndTime = startTime + numberOfHours * 60 * 60;
-            
-            UniqueBroadcastIdType id = epgEntry.StartTime;
-            AddEpgEntry(id, epgEntry);
-            PVR->TriggerEpgUpdate(currentChannelId);
-        }
-    },
-     [this, epgActivityCounter](const CActionQueue::ActionResult& s)
-     {
-         if(epgActivityCounter == m_epgActivityCounter){
-             OnEpgUpdateDone();
-             SaveEpgCache(c_EpgCacheFile, 14);
-         }
-
-         try {
-             if(s.exception)
-                rethrow_exception(s.exception);
-         } catch (ServerErrorException& ex) {
-             XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32009), ex.reason.c_str() );
-         } catch (...) {
-             LogError(" >>>>  FAILED receive EPG for N hours<<<<<");
-         }
-     });
+        });
+    } catch (ServerErrorException& ex) {
+        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32009), ex.reason.c_str() );
+    } catch (...) {
+        LogError(" >>>>  FAILED receive EPG for N hours<<<<<");
+    }
 }
 
 void SovokTV::UpdateHasArchive(EpgEntry& entry)
 {
-    auto channel = GetChannelList().find(entry.ChannelId);
-    entry.HasArchive = channel != GetChannelList().end() &&  channel->second.HasArchive;
+    auto channel = m_channelList.find(entry.ChannelId);
+    entry.HasArchive = channel != m_channelList.end() &&  channel->second.HasArchive;
     
     if(!entry.HasArchive)
         return;

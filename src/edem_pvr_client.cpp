@@ -103,8 +103,10 @@ void EdemPVRClient::CreateCore(bool clearEpgCache)
         m_clientCore = NULL;
         SAFE_DELETE(m_core);
     }
-    if(CheckPlaylistUrl())
-        m_clientCore = m_core = new EdemEngine::Core(m_playlistUrl, m_epgUrl, clearEpgCache);
+    if(CheckPlaylistUrl()) {
+        m_clientCore = m_core = new EdemEngine::Core(m_playlistUrl, m_epgUrl);
+        m_core->InitAsync(clearEpgCache);
+    }
 }
 
 bool EdemPVRClient::CheckPlaylistUrl()
@@ -238,7 +240,7 @@ public:
         // Worrkaround: use EPG entry
         EpgEntry epgTag;
         int recId = stoi(recording.strRecordingId);
-        if(!_core->GetEpgEpgEntry(recId, epgTag)){
+        if(!_core->GetEpgEntry(recId, epgTag)){
             LogError("Failed to obtain EPG tag for record ID %d. First channel ID will be used", recId);
             return;
         }

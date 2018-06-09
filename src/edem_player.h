@@ -40,7 +40,6 @@ namespace XMLTV {
     struct EpgChannel;
 }
 
-class HttpEngine;
 namespace EdemEngine
 {
     typedef std::map<std::string, std::string> ParamList;
@@ -79,15 +78,15 @@ namespace EdemEngine
     class Core : public PvrClient::ClientCoreBase
     {
     public:
-        Core(const std::string &playListUrl, const std::string &epgUrl, bool clearEpgCache);
+        Core(const std::string &playListUrl, const std::string &epgUrl);
         ~Core();
         
-        void  GetEpg(PvrClient::ChannelId channelId, time_t startTime, time_t endTime, PvrClient::EpgEntryList& epgEntries);
-        void UpdateEpgForAllChannels(time_t startTime, time_t endTime);
         std::string GetArchiveUrl(PvrClient::ChannelId channelId, time_t startTime);
-        
+        void  UpdateEpgForAllChannels(time_t startTime, time_t endTime);
+
         std::string GetUrl(PvrClient::ChannelId channelId);
     protected:
+        virtual void Init(bool clearEpgCache);
         virtual void UpdateHasArchive(PvrClient::EpgEntry& entry);
         virtual void BuildChannelAndGroupList();
 
@@ -102,7 +101,6 @@ namespace EdemEngine
 
         std::string m_playListUrl;
         std::string m_epgUrl;
-        HttpEngine* m_httpEngine;
         P8PLATFORM::CTimeout m_epgUpdateInterval;
     };
 }

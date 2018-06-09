@@ -30,7 +30,7 @@
 
 class InputBuffer;
 namespace OttEngine {
-    class OttPlayer;
+    class Core;
 }
 
 class OttPVRClient: public PvrClient::PVRClientBase
@@ -64,7 +64,7 @@ private:
 //    const std::string& code SetKey();
 
     bool m_supportSeek;
-    OttEngine::OttPlayer* m_core;
+    OttEngine::Core* m_core;
     std::string m_playlistUrl;
     std::string m_key;
 };

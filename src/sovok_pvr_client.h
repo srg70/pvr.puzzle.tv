@@ -52,7 +52,7 @@ protected:
     ADDON_STATUS OnReloadEpg();
 
 private:
-    void CreateCore(bool clenEpgCache);
+    void CreateCore(bool clearEpgCache);
     bool HasCore();
     void SetStreamerId(int streamerIdx);
     int GetStreamerId();

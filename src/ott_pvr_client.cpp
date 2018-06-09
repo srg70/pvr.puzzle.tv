@@ -100,7 +100,9 @@ void OttPVRClient::CreateCore(bool clearEpgCache)
         SAFE_DELETE(m_core);
     }
     
-    m_clientCore = m_core = new OttEngine::OttPlayer(m_playlistUrl, m_key, clearEpgCache);
+    m_clientCore = m_core = new OttEngine::Core(m_playlistUrl, m_key);
+    m_core->InitAsync(clearEpgCache);
+
 }
 
 ADDON_STATUS OttPVRClient::SetSetting(const char *settingName, const void *settingValue)
@@ -211,7 +213,7 @@ bool OttPVRClient::SwitchChannel(const PVR_CHANNEL& channel)
 class OttArchiveDelegate : public Buffers::IPlaylistBufferDelegate
 {
 public:
-    OttArchiveDelegate(OttEngine::OttPlayer* core, const PVR_RECORDING &recording)
+    OttArchiveDelegate(OttEngine::Core* core, const PVR_RECORDING &recording)
     : _duration(recording.iDuration)
     , _recordingTime(recording.recordingTime)
     , _core(core)
@@ -222,7 +224,7 @@ public:
         // Worrkaround: use EPG entry
         EpgEntry epgTag;
         int recId = stoi(recording.strRecordingId);
-        if(!_core->GetEpgEpgEntry(recId, epgTag)){
+        if(!_core->GetEpgEntry(recId, epgTag)){
             LogError("Failed to obtain EPG tag for record ID %d. First channel ID will be used", recId);
             return;
         }
@@ -249,7 +251,7 @@ private:
     const time_t _duration;
     const time_t _recordingTime;
     PvrClient::ChannelId _channelId;
-    OttEngine::OttPlayer* _core;
+    OttEngine::Core* _core;
 };
 
 

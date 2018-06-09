@@ -34,7 +34,6 @@
 #include <memory>
 
 
-class HttpEngine;
 namespace OttEngine
 {
     typedef std::map<std::string, std::string> ParamList;
@@ -70,19 +69,18 @@ namespace OttEngine
     
     
     
-    class OttPlayer : public PvrClient::ClientCoreBase
+    class Core : public PvrClient::ClientCoreBase
     {
     public:
-        OttPlayer(const std::string &baseUrl, const std::string &key, bool clearEpgCache);
-        ~OttPlayer();
+        Core(const std::string &baseUrl, const std::string &key);
+        ~Core();
         
-        void  GetEpg(PvrClient::ChannelId channelId, time_t startTime, time_t endTime, PvrClient::EpgEntryList& epgEntries);
-        void UpdateEpgForAllChannels(time_t startTime, time_t endTime);
+       void  UpdateEpgForAllChannels(time_t startTime, time_t endTime);
        std::string GetArchiveUrl(PvrClient::ChannelId channelId, time_t startTime, int duration);
-        
-        std::string GetUrl(PvrClient::ChannelId channelId);
+       std::string GetUrl(PvrClient::ChannelId channelId);
         
     protected:
+        virtual void Init(bool clearEpgCache);
         virtual void UpdateHasArchive(PvrClient::EpgEntry& entry);
         virtual void BuildChannelAndGroupList();
 
@@ -105,7 +103,6 @@ namespace OttEngine
         std::string m_epgUrl;
         std::string m_logoUrl;
         std::string m_key;
-        HttpEngine* m_httpEngine;
         unsigned int m_epgActivityCounter;
     };
 }

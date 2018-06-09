@@ -54,7 +54,7 @@ namespace OttEngine
     static const int secondsPerHour = 60 * 60;
     static const char* c_EpgCacheFile = "ott_epg_cache.txt";
 
-    struct OttPlayer::ApiFunctionData
+    struct Core::ApiFunctionData
     {
         //    ApiFunctionData(const char* _name)
         //    : name(_name) , params(s_EmptyParams), api_ver (API_2_2)
@@ -69,28 +69,30 @@ namespace OttEngine
     };
     
     
-    const ParamList OttPlayer::ApiFunctionData::s_EmptyParams;
+    const ParamList Core::ApiFunctionData::s_EmptyParams;
     
-    OttPlayer::OttPlayer(const std::string &baseUrl, const std::string &key, bool clearEpgCache)
+    Core::Core(const std::string &baseUrl, const std::string &key)
     : m_baseUrl(baseUrl)
     , m_key(key)
     {
-        m_httpEngine = new HttpEngine();
         m_baseUrl = "http://" + m_baseUrl ;
-        BuildChannelAndGroupList();
-        if(clearEpgCache){
+    }
+    
+    void Core::Init(bool clearEpgCache)
+    {
+        RebuildChannelAndGroupList();
+        if(clearEpgCache) {
             ClearEpgCache(c_EpgCacheFile);
         } else {
             LoadEpgCache(c_EpgCacheFile);
-            OnEpgUpdateDone();
         }
     }
     
-    OttPlayer::~OttPlayer()
+    Core::~Core()
     {
         Cleanup();
     }
-    void OttPlayer::Cleanup()
+    void Core::Cleanup()
     {
         LogNotice("OttPlayer stopping...");
         
@@ -116,7 +118,7 @@ namespace OttEngine
 
     }
     
-    void OttPlayer::BuildChannelAndGroupList()
+    void Core::BuildChannelAndGroupList()
     {
         void* f = NULL;
 
@@ -179,7 +181,7 @@ namespace OttEngine
         }
     }
     
-    void OttPlayer::ParseChannelAndGroup(const string& data, unsigned int plistIndex)
+    void Core::ParseChannelAndGroup(const string& data, unsigned int plistIndex)
     {
         //-1 tvg-id="131" tvg-logo="perviy.png" group-title="Общие" tvg-rec="1" ,Первый канал HD
         //http://ott.watch/stream/{KEY}/131.m3u8
@@ -221,7 +223,7 @@ namespace OttEngine
         
         std::string groupName = FindVar(vars, 0, c_GROUP);
         
-        const auto& groupList = GetGroupList();
+        const auto& groupList = m_groupList;
         auto itGroup =  std::find_if(groupList.begin(), groupList.end(), [&](const GroupList::value_type& v ){
             return groupName ==  v.second.Name;
         });
@@ -234,7 +236,7 @@ namespace OttEngine
         AddChannelToGroup(itGroup->first, channel.Id);
     }
     
-    std::string OttPlayer::GetArchiveUrl(ChannelId channelId, time_t startTime, int duration)
+    std::string Core::GetArchiveUrl(ChannelId channelId, time_t startTime, int duration)
     {
         string url = GetUrl(channelId);
         if(url.empty())
@@ -243,47 +245,24 @@ namespace OttEngine
         return  url;
     }
     
-    void OttPlayer::GetEpg(ChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries)
+    void Core::UpdateEpgForAllChannels(time_t startTime, time_t endTime)
     {
-        bool needMore = true;
-        time_t moreStartTime = startTime;
-        IClientCore::EpgEntryAction action = [&needMore, &moreStartTime, &epgEntries, channelId, startTime, endTime] (const EpgEntryList::value_type& i)
-        {
-            auto entryStartTime = i.second.StartTime;
-            if (i.second.ChannelId == channelId  &&
-                entryStartTime >= startTime &&
-                entryStartTime < endTime)
-            {
-                moreStartTime = i.second.EndTime;
-                needMore = moreStartTime < endTime;
-                epgEntries.insert(i);
-            }
-        };
-        ForEachEpg(action);
- 
-        if(needMore) {
-            GetEpgForChannel(channelId, moreStartTime, endTime);
-        } else {
-            OnEpgUpdateDone();
-        }
-    }
-    void OttPlayer::UpdateEpgForAllChannels(time_t startTime, time_t endTime)
-    {
-        for (const auto& ch : GetChannelList()) {
+        for (const auto& ch : m_channelList) {
             GetEpgForChannel(ch.second.Id, startTime, endTime);
         }
+        SaveEpgCache(c_EpgCacheFile);
     }
 
-    void OttPlayer::GetEpgForChannel(ChannelId channelId, time_t startTime, time_t endTime)
+    void Core::GetEpgForChannel(ChannelId channelId, time_t startTime, time_t endTime)
     {
         try {
             string call = string("channel/") + n_to_string(channelId);
             ApiFunctionData apiParams(call.c_str());
             bool* shouldUpdate = new bool(false);
 
-            unsigned int epgActivityCounter = ++m_epgActivityCounter;
+            //unsigned int epgActivityCounter = ++m_epgActivityCounter;
 
-            CallApiAsync(apiParams,  [this, startTime, shouldUpdate] (Document& jsonRoot)
+            CallApiFunction(apiParams,  [this, startTime, shouldUpdate] (Document& jsonRoot)
             {
                 for (auto& m : jsonRoot.GetObject()) {
                     if(std::stol(m.name.GetString()) < startTime) {
@@ -298,18 +277,6 @@ namespace OttEngine
                     epgEntry.EndTime = m.value["time_to"].GetInt();
                     UniqueBroadcastIdType id = epgEntry.StartTime;
                     AddEpgEntry(id, epgEntry);
- 
-                }
-            },
-            [this, shouldUpdate, channelId, epgActivityCounter](const CActionQueue::ActionResult& s)
-            {
-                if(s.exception == NULL && *shouldUpdate){
-                    PVR->TriggerEpgUpdate(channelId);
-                }
-                delete shouldUpdate;
-                if(epgActivityCounter == m_epgActivityCounter){
-                    OnEpgUpdateDone();
-                    SaveEpgCache(c_EpgCacheFile);
                 }
             });
             
@@ -320,10 +287,10 @@ namespace OttEngine
         }
     }
     
-    void OttPlayer::UpdateHasArchive(PvrClient::EpgEntry& entry)
+    void Core::UpdateHasArchive(PvrClient::EpgEntry& entry)
     {
-        auto channel = GetChannelList().find(entry.ChannelId);
-        entry.HasArchive = channel != GetChannelList().end() &&  channel->second.HasArchive;
+        auto channel = m_channelList.find(entry.ChannelId);
+        entry.HasArchive = channel != m_channelList.end() &&  channel->second.HasArchive;
         
         if(!entry.HasArchive)
             return;
@@ -333,9 +300,9 @@ namespace OttEngine
 
     }
     
-    string OttPlayer::GetUrl(ChannelId channelId)
+    string Core::GetUrl(ChannelId channelId)
     {
-        string url = GetChannelList().at(channelId).Urls[0];
+        string url = m_channelList.at(channelId).Urls[0];
         const char* c_KEY = "{KEY}";
         auto pos = url.find(c_KEY);
         if(string::npos == pos) {
@@ -346,7 +313,7 @@ namespace OttEngine
     }
     
     template <typename TParser>
-    void OttPlayer::CallApiFunction(const ApiFunctionData& data, TParser parser)
+    void Core::CallApiFunction(const ApiFunctionData& data, TParser parser)
     {
         P8PLATFORM::CEvent event;
         std::exception_ptr ex = nullptr;
@@ -360,7 +327,7 @@ namespace OttEngine
     }
     
     template <typename TParser, typename TCompletion>
-    void OttPlayer::CallApiAsync(const ApiFunctionData& data, TParser parser, TCompletion completion)
+    void Core::CallApiAsync(const ApiFunctionData& data, TParser parser, TCompletion completion)
     {
         
         // Build HTTP request

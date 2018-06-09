@@ -28,21 +28,30 @@
 #include <functional>
 #include "globals.hpp"
 
+class HttpEngine;
+
 namespace PvrClient {
     
-   class ClientCoreBase :  public IClientCore
+    class ClientPhase;
+    class ClientCoreBase :  public IClientCore
     {
     public:
+        void InitAsync(bool clearEpgCache);
+        
+        virtual IPhase* GetPhase(Phase phase);
         
         virtual ~ClientCoreBase();
         
         const PvrClient::ChannelList &GetChannelList();
         const PvrClient::GroupList &GetGroupList();
-        
+        void RebuildChannelAndGroupList();
+
         void ReloadRecordings();
         
-        bool GetEpgEpgEntry(UniqueBroadcastIdType i,  EpgEntry& enrty);
+        bool GetEpgEntry(UniqueBroadcastIdType i,  EpgEntry& enrty);
         void ForEachEpg(const EpgEntryAction& action) const;
+        void GetEpg(ChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries);
+        virtual void UpdateEpgForAllChannels(time_t startTime, time_t endTime) = 0;
 
     protected:
         ClientCoreBase(const RecordingsDelegate& didRecordingsUpadate = nullptr);
@@ -53,35 +62,48 @@ namespace PvrClient {
         void LoadEpgCache(const char* cacheFile);
         void SaveEpgCache(const char* cacheFile, unsigned int daysToPreserve = 7);
         bool AddEpgEntry(UniqueBroadcastIdType id, EpgEntry& entry);
-
+        
         // Channel & group lists
-        void RebuildChannelAndGroupList();
         void AddChannel(const Channel& channel);
         void AddGroup(GroupId groupId, const Group& group);
         void AddChannelToGroup(GroupId groupId, ChannelId channelId);
-
-        // Recordings
-        void OnEpgUpdateDone();
+        
 
         void ParseJson(const std::string& response, std::function<void(rapidjson::Document&)> parser);
-
-
+        
+        
         // Required methods to implement for derived classes
+        virtual void Init(bool clearEpgCache) = 0;
         virtual void UpdateHasArchive(PvrClient::EpgEntry& entry) = 0;
+        // Do not call directly, only through RebuildChannelAndGroupList()
         virtual void BuildChannelAndGroupList() = 0;
 
+        
+        HttpEngine* m_httpEngine;
+        const PvrClient::ChannelList & m_channelList;
+        const PvrClient::GroupList& m_groupList;
+        
+        
     private:
+        
+        // Recordings
+        void OnEpgUpdateDone();
+        void ScheduleRecordingsUpdate();
+        void _UpdateEpgForAllChannels(time_t startTime, time_t endTime);
 
-        PvrClient::ChannelList m_channelList;
-        PvrClient::GroupList m_groupList;
-        bool m_isRebuildingChannelsAndGroups;
+
+        PvrClient::ChannelList m_mutableChannelList;
+        PvrClient::GroupList m_mutableGroupList;
         
         PvrClient::EpgEntryList m_epgEntries;
         mutable P8PLATFORM::CMutex m_epgAccessMutex;
-
         
         RecordingsDelegate m_didRecordingsUpadate;
+        std::map<IClientCore::Phase, ClientPhase*> m_phases;
+        time_t m_lastEpgRequestEndTime;
+        P8PLATFORM::CTimeout m_recordingsUpdateDelay;
 
+        
     };
     
     class ExceptionBase : public std::exception

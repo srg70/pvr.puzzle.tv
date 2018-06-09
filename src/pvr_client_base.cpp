@@ -123,42 +123,6 @@ static int g_sovokSettingsSize = 0;
 int PVRClientBase::GetSettings(ADDON_StructSetting ***sSet)
 {
     return 0;
-    /*
-     if(NULL == g_sovokSettings)
-     {
-     std::vector<DllSetting> sovokSettings;
-     
-     DllSetting timeshift(DllSetting::CHECK, "enable_timeshift", "Enable Timeshift" );
-     timeshift.current =  (m_sovokTV) ? IsTimeshiftEnabled() : 0;
-     sovokSettings.push_back(timeshift);
-     
-     DllSetting addFaorites(DllSetting::CHECK, "add_favorites_group", "Add Favorites Group" );
-     addFaorites.current =  (m_sovokTV) ? ShouldAddFavoritesGroup() : 0;
-     sovokSettings.push_back(addFaorites);
-     
-     DllSetting streamer(DllSetting::SPIN, "streamer", "Streamer" );
-     streamer.current =  0;//GetStreamerId();
-     if(m_sovokTV)
-     {
-     auto streamersList = GetStreamersList();
-     auto current = streamersList[GetStreamerId()];
-     int counter = 0;
-     std::for_each(streamersList.begin(), streamersList.end(), [&](StreamerNamesList::value_type &s)
-     {
-     if (s == current)
-     streamer.current = counter;
-     ++counter;
-     
-     streamer.AddEntry(s.c_str());
-     });
-     }
-     sovokSettings.push_back(streamer);
-     
-     g_sovokSettingsSize = DllUtils::VecToStruct(sovokSettings, &g_sovokSettings);
-     }
-     *sSet = g_sovokSettings;
-     return g_sovokSettingsSize;
-     */
 }
 
 ADDON_STATUS PVRClientBase::SetSetting(const char *settingName, const void *settingValue)
@@ -362,12 +326,15 @@ PVR_ERROR PVRClientBase::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_C
     return PVR_ERROR_NO_ERROR;
 }
 
+#pragma mark - EPG
 
 PVR_ERROR PVRClientBase::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL& channel, time_t iStart, time_t iEnd)
 {
     if(NULL == m_clientCore)
         return PVR_ERROR_SERVER_ERROR;
     
+    m_clientCore->GetPhase(IClientCore::k_InitPhase)->Wait();
+   
     EpgEntryList epgEntries;
     m_clientCore->GetEpg(channel.iUniqueId, iStart, iEnd, epgEntries);
     EpgEntryList::const_iterator itEpgEntry = epgEntries.begin();
@@ -486,6 +453,9 @@ int PVRClientBase::GetRecordingsAmount(bool deleted)
     if(deleted)
         return -1;
     
+    if(!m_clientCore->GetPhase(IClientCore::k_EpgLoadingPhase)->IsDone())
+        return 0;
+    
     int size = 0;
     IClientCore::EpgEntryAction action = [&size](const EpgEntryList::value_type& p)
     {
@@ -493,17 +463,27 @@ int PVRClientBase::GetRecordingsAmount(bool deleted)
             ++size;
     };
     m_clientCore->ForEachEpg(action);
+//    if(size == 0){
+//        m_clientCore->ReloadRecordings();
+//        m_clientCore->ForEachEpg(action);
+//    }
+    
     LogDebug("PVRClientBase: found %d recordings.", size);
     return size;
     
 }
 PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
 {
+
     if(NULL == m_clientCore)
         return PVR_ERROR_SERVER_ERROR;
 
     if(deleted)
         return PVR_ERROR_NOT_IMPLEMENTED;
+    
+    if(!m_clientCore->GetPhase(IClientCore::k_EpgLoadingPhase)->IsDone())
+        return PVR_ERROR_NO_ERROR;
+
     
     PVR_ERROR result = PVR_ERROR_NO_ERROR;
     auto pThis = this;

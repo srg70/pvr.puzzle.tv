@@ -37,7 +37,6 @@
 #include <memory>
 #include "p8-platform/util/timeutils.h"
 
-class HttpEngine;
 
 namespace XMLTV {
     struct EpgEntry;
@@ -71,12 +70,10 @@ namespace PuzzleEngine
     class PuzzleTV : public PvrClient::ClientCoreBase
     {
     public:
-        PuzzleTV(const char* serverUrl, int serverPort, bool clearEpgCache);
+        PuzzleTV(const char* serverUrl, int serverPort);
         ~PuzzleTV();
 
         const PvrClient::EpgEntryList& GetEpgList() const;
-
-        void  GetEpg(PvrClient::ChannelId channelId, time_t startTime, time_t endTime, PvrClient::EpgEntryList& epgEntries);
         void  UpdateEpgForAllChannels(time_t startTime, time_t endTime);
 
         std::string GetUrl(PvrClient::ChannelId channelId);
@@ -86,8 +83,10 @@ namespace PuzzleEngine
         const std::string& GetServerUri() const {return m_serverUri;}
 
     protected:
+        void Init(bool clearEpgCache);
         virtual void UpdateHasArchive(PvrClient::EpgEntry& entry);
         void BuildChannelAndGroupList();
+
     private:
         typedef std::vector<std::string> StreamerIdsList;
 
@@ -110,11 +109,7 @@ namespace PuzzleEngine
         const std::string m_serverUri;
         
         std::string m_epgUrl;
-        time_t m_lastEpgRequestStartTime;
-        time_t m_lastEpgRequestEndTime;
-        unsigned int m_lastUniqueBroadcastId;
         long m_serverTimeShift;
-        HttpEngine* m_httpEngine;
         P8PLATFORM::CTimeout m_epgUpdateInterval;
         std::map<PvrClient::ChannelId, PvrClient::ChannelId> m_epgToServerLut;
 

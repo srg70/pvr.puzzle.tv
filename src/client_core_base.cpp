@@ -1,35 +1,39 @@
 /*
-*
-*   Copyright (C) 2017 Sergey Shramchenko
-*   https://github.com/srg70/pvr.puzzle.tv
-*
-*  This Program is free software; you can redistribute it and/or modify
-*  it under the terms of the GNU General Public License as published by
-*  the Free Software Foundation; either version 2, or (at your option)
-*  any later version.
-*
-*  This Program is distributed in the hope that it will be useful,
-*  but WITHOUT ANY WARRANTY; without even the implied warranty of
-*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-*  GNU General Public License for more details.
-*
-*  You should have received a copy of the GNU General Public License
-*  along with XBMC; see the file COPYING.  If not, write to
-*  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
-*  http://www.gnu.org/copyleft/gpl.html
-*
-*/
+ *
+ *   Copyright (C) 2017 Sergey Shramchenko
+ *   https://github.com/srg70/pvr.puzzle.tv
+ *
+ *  This Program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2, or (at your option)
+ *  any later version.
+ *
+ *  This Program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with XBMC; see the file COPYING.  If not, write to
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ *  http://www.gnu.org/copyleft/gpl.html
+ *
+ */
 
 #include <algorithm>
+#include <ctime>
 #include <rapidjson/error/en.h>
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
 
 #include "p8-platform/util/StringUtils.h"
 #include "p8-platform/threads/mutex.h"
+#include "p8-platform/util/util.h"
 
 #include "client_core_base.hpp"
 #include "globals.hpp"
+#include "HttpEngine.hpp"
+
 
 namespace PvrClient{
     
@@ -39,7 +43,6 @@ namespace PvrClient{
     using namespace Globals;
     
     static const char* c_EpgCacheDirPath = "special://temp/pvr-puzzle-tv";
-
     
     template< typename ContainerT, typename PredicateT >
     void erase_if( ContainerT& items, const PredicateT& predicate ) {
@@ -47,65 +50,171 @@ namespace PvrClient{
             if( predicate(*it) ) it = items.erase(it);
             else ++it;
         }
+    }
+    
+    class ClientPhase : public IClientCore::IPhase
+    {
+    public:
+        ClientPhase()
+        : m_event(new P8PLATFORM::CEvent(false))
+        , m_thread(NULL)
+        , m_isDone(false)
+        {}
+        ~ClientPhase() {
+            Cleanup();
+        }
+        void Wait() {
+            if(m_isDone)
+                return;
+            m_event->Wait();
+            Cleanup();
+        }
+        bool IsDone() { return m_isDone;}
+        void Broadcast() {
+            if(m_isDone)
+                return;
+            m_isDone = true;
+            m_event->Broadcast();
+            // m_thread calls Broadcast()
+            // avoid to call Cleanup() since it deletes m_thread (deadlock)
+            //Cleanup();
+        }
+        void RunAndSignalAsync(std::function<void(void)> action)
+        {
+            if(m_isDone)
+                return;
+            
+            class Action : public P8PLATFORM::CThread
+            {
+                std::function<void(void)> m_action;
+            public:
+                Action(std::function<void(void)> action) : m_action(action){}
+                void *Process(void) {
+                    try {
+                        m_action();
+                    } catch (...) {
+                        LogError("ClientPhase::Action() failed!");
+                    }
+                };
+            };
+            
+            m_thread = new Action([this, action] {
+                if(action)
+                    action();
+                Broadcast();
+            });
+            m_thread->CreateThread();
+        }
+    private:
+        void Cleanup() {
+            m_isDone = true;
+            
+            if(m_thread)
+                SAFE_DELETE(m_thread);
+            if(m_event) {
+                m_event->Broadcast();
+                SAFE_DELETE(m_event);
+            }
+        }
+        
+        bool m_isDone;
+        P8PLATFORM::CEvent* m_event;
+        P8PLATFORM::CThread* m_thread;
     };
     
+    
     ClientCoreBase::ClientCoreBase(const IClientCore::RecordingsDelegate& didRecordingsUpadate)
-    : m_isRebuildingChannelsAndGroups(false)
-    , m_didRecordingsUpadate(didRecordingsUpadate)
+    : m_didRecordingsUpadate(didRecordingsUpadate)
+    , m_groupList(m_mutableGroupList)
+    , m_channelList(m_mutableChannelList)
+    , m_lastEpgRequestEndTime(0)
     {
         if(nullptr == m_didRecordingsUpadate) {
             auto pvr = PVR;
             m_didRecordingsUpadate = [pvr](){ pvr->TriggerRecordingUpdate();};
         }
+        m_httpEngine = new HttpEngine();
+        m_phases[k_ChannelsLoadingPhase] =  new ClientPhase();
+        m_phases[k_InitPhase] =  new ClientPhase();
+        m_phases[k_EpgLoadingPhase] =  new ClientPhase();
+        
+    }
+    
+    void ClientCoreBase::InitAsync(bool clearEpgCache)
+    {
+        m_phases[k_InitPhase]->RunAndSignalAsync([this, clearEpgCache] {
+            Init(clearEpgCache);
+            std::time_t now = std::time(nullptr);
+            now = std::mktime(std::gmtime(&now));
+//            // Request EPG for all channels from max archive info to +1 days
+//            int max_archive = 0;
+//            for (const auto& ai  : m_archivesInfo) {
+//                max_archive = std::max(ai.second, max_archive);
+//            }
+//            startTime -= max_archive *  60 * 60; // archive info in hours
+            time_t startTime = now - 7 *24 *  60 * 60;
+            startTime = std::max(startTime, m_lastEpgRequestEndTime);
+            time_t endTime = now + 1 * 24 * 60 * 60;
+            _UpdateEpgForAllChannels(startTime, endTime);
+            m_recordingsUpdateDelay.Init(5 * 1000);
+            ScheduleRecordingsUpdate();
+        });
+        
+    }
+    
+    IClientCore::IPhase* ClientCoreBase::GetPhase(Phase phase)
+    {
+        if(m_phases.count(phase) > 0) {
+            return m_phases[phase];
+        }
+        return nullptr;
     }
     
     ClientCoreBase::~ClientCoreBase()
     {
+        for (auto& ph : m_phases) {
+            if(ph.second) {
+                delete ph.second;
+            }
+        }
         P8PLATFORM::CLockObject lock(m_epgAccessMutex);
         m_epgEntries.clear();
     };
     
 #pragma mark - Channels & Groups
-
+    
     const ChannelList& ClientCoreBase::GetChannelList()
     {
-        if (m_channelList.empty() && !m_isRebuildingChannelsAndGroups)
-        {
-            RebuildChannelAndGroupList();
-        }
-        
+        m_phases[k_ChannelsLoadingPhase]->Wait();
         return m_channelList;
     }
     
     const GroupList &ClientCoreBase::GetGroupList()
     {
-        if (m_groupList.empty()&& !m_isRebuildingChannelsAndGroups)
-            RebuildChannelAndGroupList();
-        
+        m_phases[k_ChannelsLoadingPhase]->Wait();
         return m_groupList;
     }
     
     void ClientCoreBase::RebuildChannelAndGroupList()
     {
-        m_isRebuildingChannelsAndGroups = true;
-        m_channelList.clear();
-        m_groupList.clear();
+        m_mutableChannelList.clear();
+        m_mutableGroupList.clear();
         BuildChannelAndGroupList();
-        m_isRebuildingChannelsAndGroups = false;
+        m_phases[k_ChannelsLoadingPhase]->Broadcast();
     }
     
     void ClientCoreBase::AddChannel(const Channel& channel)
     {
-        m_channelList[channel.Id] = channel;
+        m_mutableChannelList[channel.Id] = channel;
     }
-
+    
     void ClientCoreBase::AddGroup(GroupId groupId, const Group& group)
     {
-        m_groupList[groupId] = group;
+        m_mutableGroupList[groupId] = group;
     }
     void ClientCoreBase::AddChannelToGroup(GroupId groupId, ChannelId channelId)
     {
-        m_groupList[groupId].Channels.insert(channelId);
+        m_mutableGroupList[groupId].Channels.insert(channelId);
     }
     
 #pragma mark - EPG
@@ -148,6 +257,7 @@ namespace PvrClient{
                     EpgEntryList::key_type k = (*it)["k"].GetInt64();
                     EpgEntryList::mapped_type e;
                     e.Deserialize((*it)["v"]);
+                    m_lastEpgRequestEndTime = std::max(m_lastEpgRequestEndTime, e.EndTime);
                     AddEpgEntry(k,e);
                 }
             });
@@ -155,13 +265,14 @@ namespace PvrClient{
         } catch (...) {
             LogError(" >>>>  FAILED load EPG cache <<<<<");
             m_epgEntries.clear();
+            m_lastEpgRequestEndTime = 0;
         }
     }
     
     void ClientCoreBase::SaveEpgCache(const char* cacheFile, unsigned int daysToPreserve)
     {
         string cacheFilePath = MakeEpgCachePath(cacheFile);
-
+        
         // Leave epg entries not older then 1 weeks from now
         time_t now = time(nullptr);
         auto oldest = now - daysToPreserve*24*60*60;
@@ -190,7 +301,7 @@ namespace PvrClient{
         writer.EndObject();
         
         XBMC->CreateDirectory(c_EpgCacheDirPath);
-
+        
         void* file = XBMC->OpenFileForWrite(cacheFilePath.c_str(), true);
         if(NULL == file)
             return;
@@ -203,11 +314,11 @@ namespace PvrClient{
     bool ClientCoreBase::AddEpgEntry(UniqueBroadcastIdType id, EpgEntry& entry)
     {
         // Do not add EPG for unknown channels
-        if(m_channelList.count(entry.ChannelId) != 1)
+        if(m_mutableChannelList.count(entry.ChannelId) != 1)
             return false;
-
+        
         UpdateHasArchive(entry);
-
+        
         P8PLATFORM::CLockObject lock(m_epgAccessMutex);
         while(m_epgEntries.count(id) != 0) {
             // Check duplicates.
@@ -218,8 +329,8 @@ namespace PvrClient{
         m_epgEntries[id] =  entry;
         return true;
     }
-
-    bool ClientCoreBase::GetEpgEpgEntry(UniqueBroadcastIdType i,  EpgEntry& entry)
+    
+    bool ClientCoreBase::GetEpgEntry(UniqueBroadcastIdType i,  EpgEntry& entry)
     {
         P8PLATFORM::CLockObject lock(m_epgAccessMutex);
         bool result = m_epgEntries.count(i) > 0;
@@ -227,7 +338,7 @@ namespace PvrClient{
             entry = m_epgEntries[i];
         return result;
     }
-
+    
     void ClientCoreBase::ForEachEpg(const EpgEntryAction& action) const
     {
         P8PLATFORM::CLockObject lock(m_epgAccessMutex);
@@ -235,8 +346,66 @@ namespace PvrClient{
             action(i);
         }
     }
-
+    
+    void ClientCoreBase::GetEpg(ChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries)
+    {
+        bool needMore = true;
+        time_t moreStartTime = startTime;
+        IClientCore::EpgEntryAction action = [&needMore, &moreStartTime, &epgEntries, channelId, startTime, endTime] (const EpgEntryList::value_type& i)
+        {
+            auto entryStartTime = i.second.StartTime;
+            if (i.second.ChannelId == channelId  &&
+                entryStartTime >= startTime &&
+                entryStartTime < endTime)
+            {
+                moreStartTime = i.second.EndTime;
+                needMore = moreStartTime < endTime;
+                epgEntries.insert(i);
+            }
+        };
+        ForEachEpg(action);
+        
+        if(needMore) {
+            
+            auto epgRequestStart = max(moreStartTime, m_lastEpgRequestEndTime);
+            
+            if(endTime > epgRequestStart) {
+                _UpdateEpgForAllChannels(epgRequestStart, endTime);
+            }
+        }
+        m_recordingsUpdateDelay.Init(5 * 1000);
+        ScheduleRecordingsUpdate();
+    }
+    void ClientCoreBase::_UpdateEpgForAllChannels(time_t startTime, time_t endTime)
+    {
+        if(startTime < m_lastEpgRequestEndTime || endTime <= startTime)
+            return;
+        
+        m_lastEpgRequestEndTime = endTime;
+        char mbstr[100];
+        if (std::strftime(mbstr, sizeof(mbstr), "%d/%m %H:%M - ", std::localtime(&startTime))) {
+            int dec = strlen(mbstr);
+            if (std::strftime(mbstr + dec, sizeof(mbstr) - dec, "%d/%m %H:%M", std::localtime(&endTime))) {
+                LogDebug("Requested all cahnnel EPG update %s", mbstr);
+            }
+        }
+        UpdateEpgForAllChannels(startTime, endTime);
+    }
+    
 #pragma  mark - Recordings
+    void ClientCoreBase::ScheduleRecordingsUpdate()
+    {
+        m_httpEngine->RunOnCompletionQueueAsync([this] {
+            if(m_recordingsUpdateDelay.TimeLeft()) {
+                ScheduleRecordingsUpdate();
+            } else {
+                if(!m_phases[k_EpgLoadingPhase]->IsDone()) {
+                    m_phases[k_EpgLoadingPhase]->Broadcast();
+                    ReloadRecordings();
+                }
+            }
+        }, [] (CActionQueue::ActionResult ){});
+    }
     
     void ClientCoreBase::OnEpgUpdateDone()
     {
@@ -262,6 +431,7 @@ namespace PvrClient{
         OnEpgUpdateDone();
     }
     
+#pragma mark -
     void ClientCoreBase::ParseJson(const std::string& response, std::function<void(Document&)> parser)
     {
         Document jsonRoot;

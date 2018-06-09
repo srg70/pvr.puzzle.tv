@@ -60,39 +60,37 @@ struct PuzzleTV::ApiFunctionData
 
 const ParamList PuzzleTV::ApiFunctionData::s_EmptyParams;
 
-PuzzleTV::PuzzleTV(const char* serverUrl, int serverPort, bool clearEpgCache) :
-    m_lastEpgRequestStartTime(0),
-    m_lastEpgRequestEndTime(0),
-    m_lastUniqueBroadcastId(0),
+PuzzleTV::PuzzleTV(const char* serverUrl, int serverPort) :
     m_serverUri(serverUrl),
     m_serverPort(serverPort),
     m_epgUrl("http://api.torrent-tv.ru/ttv.xmltv.xml.gz")
 {
-    m_httpEngine = new HttpEngine();
-    
-    BuildChannelAndGroupList();
+}
+
+void PuzzleTV::Init(bool clearEpgCache)
+{
+    RebuildChannelAndGroupList();
     if(clearEpgCache)
         ClearEpgCache(c_EpgCacheFile);
     else
         LoadEpgCache(c_EpgCacheFile);
     LoadEpg();
-    OnEpgUpdateDone();
     UpdateArhivesAsync();
     
-//    CallRpcAsync("{\"jsonrpc\": \"2.0\", \"method\": \"Files.GetDirectory\", \"params\": {\"directory\": \"plugin://plugin.video.pazl.arhive\"},\"id\": 1}",
-//                 [&] (Document& jsonRoot)
-//                 {
-//                     this->LogDebug("Puzzle Files.GetDirectory respunse. RPC version: %s", jsonRoot["jsonrpc"].GetString());
-//                     for (const auto& ch : jsonRoot["result"]["files"].GetArray()) {
-//                         this->LogDebug("Channel content:");
-//                         this->LogDebug("\t filetype = %s", ch["filetype"].GetString());
-//                         this->LogDebug("\t type =  %s", ch["type"].GetString());
-//                         this->LogDebug("\t file =  %s", ch["file"].GetString());
-//                         this->LogDebug("\t label =  %s", ch["label"].GetString());
-//}
-//                 },
-//                 [&](const CActionQueue::ActionResult& s) {
-//                 });
+    //    CallRpcAsync("{\"jsonrpc\": \"2.0\", \"method\": \"Files.GetDirectory\", \"params\": {\"directory\": \"plugin://plugin.video.pazl.arhive\"},\"id\": 1}",
+    //                 [&] (Document& jsonRoot)
+    //                 {
+    //                     this->LogDebug("Puzzle Files.GetDirectory respunse. RPC version: %s", jsonRoot["jsonrpc"].GetString());
+    //                     for (const auto& ch : jsonRoot["result"]["files"].GetArray()) {
+    //                         this->LogDebug("Channel content:");
+    //                         this->LogDebug("\t filetype = %s", ch["filetype"].GetString());
+    //                         this->LogDebug("\t type =  %s", ch["type"].GetString());
+    //                         this->LogDebug("\t file =  %s", ch["file"].GetString());
+    //                         this->LogDebug("\t label =  %s", ch["label"].GetString());
+    //}
+    //                 },
+    //                 [&](const CActionQueue::ActionResult& s) {
+    //                 });
 }
 
 PuzzleTV::~PuzzleTV()
@@ -172,7 +170,7 @@ void PuzzleTV::BuildChannelAndGroupList()
             
             AddChannel(channel);
             
-            const auto& groupList = GetGroupList();
+            const auto& groupList = m_groupList;
             auto itGroup =  std::find_if(groupList.begin(), groupList.end(), [&](const GroupList::value_type& v ){
                 return groupName ==  v.second.Name;
             });
@@ -217,31 +215,6 @@ void PuzzleTV::BuildChannelAndGroupList()
 //    return url;
 //}
 
-void PuzzleTV::GetEpg(ChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries)
-{
-    bool needMore = true;
-    time_t moreStartTime = startTime;
-    IClientCore::EpgEntryAction action = [&needMore, &moreStartTime, &epgEntries, channelId, startTime, endTime] (const EpgEntryList::value_type& i)
-    {
-        auto entryStartTime = i.second.StartTime;
-        if (i.second.ChannelId == channelId  &&
-            entryStartTime >= startTime &&
-            entryStartTime < endTime)
-        {
-            moreStartTime = i.second.EndTime;
-            needMore = moreStartTime < endTime;
-            epgEntries.insert(i);
-        }
-    };
-    ForEachEpg(action);
-
-    
-    if(needMore ) {
-        UpdateEpgForAllChannels(moreStartTime, endTime);
-    }
-
-}
-
 bool PuzzleTV::AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry)
 {
     unsigned int id = xmlEpgEntry.startTime;
@@ -257,8 +230,8 @@ bool PuzzleTV::AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry)
 
 void PuzzleTV::UpdateHasArchive(PvrClient::EpgEntry& entry)
 {
-    auto channel = GetChannelList().find(entry.ChannelId);
-    entry.HasArchive = channel != GetChannelList().end() &&  channel->second.HasArchive;
+    auto channel = m_channelList.find(entry.ChannelId);
+    entry.HasArchive = channel != m_channelList.end() &&  channel->second.HasArchive;
     
     if(!entry.HasArchive)
         return;
@@ -282,18 +255,12 @@ void PuzzleTV::UpdateEpgForAllChannels(time_t startTime, time_t endTime)
     try {
         auto pThis = this;
         
-        set<ChannelId> channelsToUpdate;
-        EpgEntryCallback onEpgEntry = [&pThis, &channelsToUpdate,  startTime] (const XMLTV::EpgEntry& newEntry) {
-            if(pThis->AddEpgEntry(newEntry) && newEntry.startTime >= startTime)
-                channelsToUpdate.insert(pThis->m_epgToServerLut[newEntry.iChannelId]);
+        EpgEntryCallback onEpgEntry = [&pThis,  startTime] (const XMLTV::EpgEntry& newEntry) {
+            pThis->AddEpgEntry(newEntry);
         };
         
         XMLTV::ParseEpg(m_epgUrl, onEpgEntry);
         
-        for (auto channel : channelsToUpdate) {
-            PVR->TriggerEpgUpdate(channel);
-        }
-        OnEpgUpdateDone();
         SaveEpgCache(c_EpgCacheFile);
         //        } catch (ServerErrorException& ex) {
         //            XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32002), ex.reason.c_str() );
@@ -314,7 +281,7 @@ void PuzzleTV::LoadEpg()
 
 string PuzzleTV::GetNextStream(ChannelId channelId, int currentChannelIdx)
 {
-    auto& channelList = GetChannelList();
+    auto& channelList = m_channelList;
     if(channelList.count( channelId ) != 1) {
         LogError(" >>>>   PuzzleTV::GetNextStream: Unknown channel ID= %d <<<<<", channelId);
         return string();
@@ -327,7 +294,7 @@ string PuzzleTV::GetNextStream(ChannelId channelId, int currentChannelIdx)
 }
 string PuzzleTV::GetUrl(ChannelId channelId)
 {
-    auto& channelList = GetChannelList();
+    auto& channelList = m_channelList;
     if(channelList.count( channelId ) != 1) {
         LogError(" >>>>   PuzzleTV::GetNextStream: Unknown channel ID= %d <<<<<", channelId);
         return string();
@@ -478,7 +445,7 @@ void PuzzleTV::CallApiAsync(const ApiFunctionData& data, TParser parser, TComple
 
 void PuzzleTV::UpdateArhivesAsync()
 {
-    const auto& channelList = GetChannelList();
+    const auto& channelList = m_channelList;
     std::set<ChannelId>* cahnnelsWithArchive = new std::set<ChannelId>();
     auto pThis = this;
     ApiFunctionData data("/arh/json");

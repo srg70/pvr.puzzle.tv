@@ -123,7 +123,7 @@ SovokPVRClient::~SovokPVRClient()
 
 }
 
-void SovokPVRClient::CreateCore(bool clenEpgCache)
+void SovokPVRClient::CreateCore(bool clearEpgCache)
 {
     if(m_sovokTV != NULL) {
         m_clientCore = NULL;
@@ -132,12 +132,12 @@ void SovokPVRClient::CreateCore(bool clenEpgCache)
         SAFE_DELETE(ptr);
     }
 
-    m_clientCore = m_sovokTV = new SovokTV(m_login, m_password, clenEpgCache);
-
+    m_clientCore = m_sovokTV = new SovokTV(m_login, m_password);
     if(m_enableAdult)
         m_sovokTV->SetPinCode(m_pinCode);
-    
     SetCountryFilter();
+    m_sovokTV->InitAsync(clearEpgCache);
+
     
     auto streamersList = m_sovokTV->GetStreamersList();
     string strimmersPath = GetClientPath();
@@ -249,7 +249,8 @@ ADDON_STATUS SovokPVRClient::SetSetting(const char *settingName, const void *set
         if(newValue != GetCountryFilter().IsOn) {
             GetCountryFilter().IsOn = (*(bool *)(settingValue));
             SetCountryFilter();
-
+            m_sovokTV->RebuildChannelAndGroupList();
+            
             PVR->TriggerChannelGroupsUpdate();
             PVR->TriggerChannelUpdate();
             result = ADDON_STATUS_OK;
@@ -263,7 +264,8 @@ ADDON_STATUS SovokPVRClient::SetSetting(const char *settingName, const void *set
         {
             it->second->Hidden = *(bool*)settingValue;
             SetCountryFilter();
-            
+            m_sovokTV->RebuildChannelAndGroupList();
+
             PVR->TriggerChannelGroupsUpdate();
             PVR->TriggerChannelUpdate();
             result = ADDON_STATUS_OK;
@@ -343,16 +345,6 @@ ADDON_STATUS SovokPVRClient::OnReloadEpg()
         retVal = ADDON_STATUS_PERMANENT_FAILURE;
     }
     
-    if(ADDON_STATUS_OK == retVal && HasCore()){
-        std::time_t startTime = std::time(nullptr);
-        startTime = std::mktime(std::gmtime(&startTime));
-        // Request EPG for all channels from -7 to +1 days
-        time_t endTime = startTime + 1 * 24 * 60 * 60;
-        startTime -= 7 * 24 * 60 * 60;
-        
-        m_sovokTV->GetEpgForAllChannels(startTime, endTime);
-    }
-    
     return retVal;
 }
 
@@ -409,7 +401,7 @@ bool SovokPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     // Worrkaround: use EPG entry
     
     EpgEntry epgTag;
-    if(!m_sovokTV->GetEpgEpgEntry(stoi(recording.strRecordingId), epgTag))
+    if(!m_sovokTV->GetEpgEntry(stoi(recording.strRecordingId), epgTag))
         return false;
     
     string url = m_sovokTV->GetArchiveUrl(epgTag.ChannelId, recording.recordingTime);

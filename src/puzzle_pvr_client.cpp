@@ -99,7 +99,8 @@ void PuzzlePVRClient::CreateCore(const char* serverUrl, int serverPort, bool cle
         m_clientCore = NULL;
         SAFE_DELETE(m_puzzleTV);
     }
-    m_clientCore = m_puzzleTV = new PuzzleTV(serverUrl, serverPort, clearEpgCache);
+    m_clientCore = m_puzzleTV = new PuzzleTV(serverUrl, serverPort);
+    m_puzzleTV->InitAsync(clearEpgCache);
 }
 
 ADDON_STATUS PuzzlePVRClient::SetSetting(const char *settingName, const void *settingValue)

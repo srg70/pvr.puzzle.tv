@@ -36,8 +36,6 @@
 #include <memory>
 #include "ActionQueue.hpp"
 
-class HttpEngine;
-
 typedef std::map<std::string, std::string> ParamList;
 typedef std::vector<std::string> StreamerNamesList;
 
@@ -92,13 +90,12 @@ public:
         std::vector<CountryTemplate> Filters;
     } CountryFilter;
     
-    SovokTV(const std::string &login, const std::string &password,  bool cleanEpgCache = false);
+    SovokTV(const std::string &login, const std::string &password);
     ~SovokTV();
 
     const StreamerNamesList& GetStreamersList() const;
     
-    void GetEpg(PvrClient::ChannelId  channelId, time_t startTime, time_t endTime, PvrClient::EpgEntryList& epgEntries);
-    void GetEpgForAllChannels(time_t startTime, time_t endTime);
+    void UpdateEpgForAllChannels(time_t startTime, time_t endTime);
 
     std::string GetUrl(PvrClient::ChannelId  channelId);
     std::string GetArchiveUrl(PvrClient::ChannelId  channelId, time_t startTime);
@@ -112,6 +109,7 @@ public:
     void SetCountryFilter(const CountryFilter& filter);
 
 protected:
+    void Init(bool clearEpgCache);
     void UpdateHasArchive(PvrClient::EpgEntry& entry);
     void BuildChannelAndGroupList();
 
@@ -154,14 +152,12 @@ private:
         std::vector<PvrClient::GroupList::key_type>  Groups;
     }m_countryFilter;
    
-    time_t m_lastEpgRequestEndTime;
     int m_streammerId;
     long m_serverTimeShift;
     StreamerNamesList m_streamerNames;
     StreamerIdsList m_streamerIds;
     unsigned int m_epgActivityCounter;
     std::string m_pinCode;
-    HttpEngine* m_httpEngine;
 };
 
 #endif //sovok_tv_h

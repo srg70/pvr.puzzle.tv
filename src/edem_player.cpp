@@ -71,19 +71,23 @@ namespace EdemEngine
     static void LoadPlaylist(const string& plistUrl, PlaylistContent& channels);
 
     
-    Core::Core(const std::string &playListUrl,  const std::string &epgUrl, bool clearEpgCache)
+    Core::Core(const std::string &playListUrl,  const std::string &epgUrl)
     : m_playListUrl(playListUrl)
     , m_epgUrl(epgUrl)
     {
-        m_httpEngine = new HttpEngine();
-        BuildChannelAndGroupList();
-        if(clearEpgCache)
-            ClearEpgCache(c_EpgCacheFile);
-        else
-            LoadEpgCache(c_EpgCacheFile);
-        LoadEpg();
-        OnEpgUpdateDone();
     }
+    
+    void Core::Init(bool clearEpgCache)
+    {
+        RebuildChannelAndGroupList();
+        if(clearEpgCache) {
+            ClearEpgCache(c_EpgCacheFile);
+        } else {
+            LoadEpgCache(c_EpgCacheFile);
+        }
+        LoadEpg();
+    }
+    
     
     Core::~Core()
     {
@@ -124,7 +128,7 @@ namespace EdemEngine
             
             AddChannel(channel);
             
-            const auto& groupList = GetGroupList();
+            const auto& groupList = m_groupList;
             auto itGroup =  std::find_if(groupList.begin(), groupList.end(), [&](const GroupList::value_type& v ){
                 return groupName ==  v.second.Name;
             });
@@ -160,30 +164,7 @@ namespace EdemEngine
         url += "?utc=" + n_to_string(startTime)+"&lutc=" + n_to_string(time(nullptr));
         return  url;
     }
-    
-    void Core::GetEpg(ChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries)
-    {
-        bool needMore = true;
-        time_t moreStartTime = startTime;
-        IClientCore::EpgEntryAction action = [&needMore, &moreStartTime, &epgEntries, channelId, startTime, endTime] (const EpgEntryList::value_type& i)
-        {
-            auto entryStartTime = i.second.StartTime;
-            if (i.second.ChannelId == channelId  &&
-                entryStartTime >= startTime &&
-                entryStartTime < endTime)
-            {
-                moreStartTime = i.second.EndTime;
-                needMore = moreStartTime < endTime;
-                epgEntries.insert(i);
-            }
-        };
-        ForEachEpg(action);
-
-        if(needMore ) {
-            UpdateEpgForAllChannels(moreStartTime, endTime);
-        }
-    }
-    
+        
     bool Core::AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry)
     {
         unsigned int id = xmlEpgEntry.startTime;
@@ -224,11 +205,10 @@ namespace EdemEngine
             
             XMLTV::ParseEpg(m_epgUrl, onEpgEntry);
             
-            for (auto channel : channelsToUpdate) {
-                PVR->TriggerEpgUpdate(channel);
-            }
+//            for (auto channel : channelsToUpdate) {
+//                PVR->TriggerEpgUpdate(channel);
+//            }
 
-            OnEpgUpdateDone();
             SaveEpgCache(c_EpgCacheFile);
 //        } catch (ServerErrorException& ex) {
 //            m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32002), ex.reason.c_str() );
@@ -249,7 +229,7 @@ namespace EdemEngine
     
     string Core::GetUrl(ChannelId channelId)
     {
-        string url = GetChannelList().at(channelId).Urls[0];
+        string url = m_channelList.at(channelId).Urls[0];
         return url;
     }
     
