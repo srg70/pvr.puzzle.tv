@@ -31,10 +31,12 @@
 #include <string>
 #include<stdint.h>
 #include <cctype>
+#include <ctime>
 #include <algorithm>
 
 std::string n_to_string(int64_t n);
 std::string n_to_string_hex(uint64_t n);
+std:: string time_t_to_string(const time_t& time);
 //int strtoi(const std::string &str);
 
 // trim from start (in place)

@@ -21,7 +21,6 @@
  */
 
 #include <algorithm>
-#include <ctime>
 #include <rapidjson/error/en.h>
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
@@ -33,6 +32,7 @@
 #include "client_core_base.hpp"
 #include "globals.hpp"
 #include "HttpEngine.hpp"
+#include "helpers.h"
 
 
 namespace PvrClient{
@@ -350,39 +350,46 @@ namespace PvrClient{
     
     void ClientCoreBase::GetEpg(ChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries)
     {
-        bool needMore = true;
-        time_t moreStartTime = startTime;
-        IClientCore::EpgEntryAction action = [&needMore, &moreStartTime, &epgEntries, channelId, startTime, endTime] (const EpgEntryList::value_type& i)
+        time_t lastEndTime = 0;
+        IClientCore::EpgEntryAction action = [&lastEndTime, &epgEntries, channelId, startTime, endTime] (const EpgEntryList::value_type& i)
         {
             auto entryStartTime = i.second.StartTime;
             if (i.second.ChannelId == channelId  &&
                 entryStartTime >= startTime &&
                 entryStartTime < endTime)
             {
-                moreStartTime = i.second.EndTime;
-                needMore = moreStartTime < endTime;
+                lastEndTime = i.second.EndTime;
                 epgEntries.insert(i);
             }
         };
         ForEachEpg(action);
         
-        if(needMore) {
+        if(lastEndTime < endTime) {
             
-            auto epgRequestStart = max(moreStartTime, m_lastEpgRequestEndTime);
+            LogDebug("GetEPG(%d): last Epg  %s -> requested by Kodi %s",
+                     channelId, time_t_to_string(lastEndTime).c_str(), time_t_to_string(endTime).c_str());
+            
+            auto epgRequestStart = max(lastEndTime, m_lastEpgRequestEndTime);
             
             if(endTime > epgRequestStart) {
+                // First EPG loading may be long. Delay recordings update for 90 sec
+                m_recordingsUpdateDelay.Init(90 * 1000);
                 _UpdateEpgForAllChannels(epgRequestStart, endTime);
+
+                LogDebug("GetEPG(): m_lastEpgRequestEndTime (after) = %s", time_t_to_string(m_lastEpgRequestEndTime).c_str());
             }
         }
         m_recordingsUpdateDelay.Init(5 * 1000);
-        ScheduleRecordingsUpdate();
+        //ScheduleRecordingsUpdate();
     }
     void ClientCoreBase::_UpdateEpgForAllChannels(time_t startTime, time_t endTime)
     {
-        if(startTime <= m_lastEpgRequestEndTime || endTime <= startTime)
+        if(endTime <= m_lastEpgRequestEndTime || endTime <= startTime)
             return;
         
+        startTime = std::max(startTime, m_lastEpgRequestEndTime);
         m_lastEpgRequestEndTime = endTime;
+        
         char mbstr[100];
         if (std::strftime(mbstr, sizeof(mbstr), "%d/%m %H:%M - ", std::localtime(&startTime))) {
             int dec = strlen(mbstr);
@@ -390,6 +397,7 @@ namespace PvrClient{
                 LogDebug("Requested all cahnnel EPG update %s", mbstr);
             }
         }
+        
         UpdateEpgForAllChannels(startTime, endTime);
     }
     
