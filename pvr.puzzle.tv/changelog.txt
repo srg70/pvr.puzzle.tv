@@ -1,3 +1,6 @@
+0.6.6
+- Fixed crash on changing of streamer ID
+
 0.6.5
 - Fixed EPG loading issue
 
