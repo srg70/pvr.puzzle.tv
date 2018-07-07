@@ -566,8 +566,10 @@ bool SovokTV::LoadStreamers()
                 m_streamerNames.push_back((*runner)["name"].GetString());
                 m_streamerIds.push_back((*runner)["id"].GetString());
                 ++runner;
+                LogDebug("Streamer %s - %s",
+                         m_streamerIds[m_streamerIds.size() -1].c_str(),
+                         m_streamerNames[m_streamerNames.size() -1].c_str());
             }
-            LogDebug("Loaded %d streamers.", m_streamerNames.size());
         });
     } catch (ServerErrorException& ex) {
         XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32009), ex.reason.c_str() );

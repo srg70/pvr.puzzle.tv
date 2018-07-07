@@ -262,16 +262,19 @@ ADDON_STATUS SovokPVRClient::SetSetting(const char *settingName, const void *set
         auto it = filters.find(settingName);
         if (it != filters.end())
         {
-            it->second->Hidden = *(bool*)settingValue;
-            SetCountryFilter();
-            m_sovokTV->RebuildChannelAndGroupList();
-
-            PVR->TriggerChannelGroupsUpdate();
-            PVR->TriggerChannelUpdate();
-            result = ADDON_STATUS_OK;
-        }
-        
-        else {
+            bool newValue = *(bool*)settingValue;
+            if(it->second->Hidden == newValue) {
+                result = ADDON_STATUS_OK;
+            }
+            else {
+                it->second->Hidden = newValue;
+                SetCountryFilter();
+                m_sovokTV->RebuildChannelAndGroupList();
+                PVR->TriggerChannelGroupsUpdate();
+                PVR->TriggerChannelUpdate();
+                result = ADDON_STATUS_OK;
+            }
+        } else {
             return PVRClientBase::SetSetting(settingName, settingValue);
         }
     }
