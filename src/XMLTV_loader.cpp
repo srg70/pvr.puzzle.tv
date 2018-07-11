@@ -333,14 +333,24 @@ return false;             \
 
     }
     
-    std::string& PatchChannelId(std::string& strId)
+    unsigned long PatchChannelId(std::string& strId)
     {
         const char * c_TTVChannelidPrefix = "ttv";
         auto idPrefixPos = strId.find(c_TTVChannelidPrefix);
         if(idPrefixPos != std::string::npos) {
             strId = strId.substr(idPrefixPos + strlen(c_TTVChannelidPrefix));
         }
-        return strId;
+        unsigned long id;
+        try {
+            id = stoul(strId.c_str());
+        }
+        catch (const std::invalid_argument& ia) {
+            LogNotice("Channel ID %s -  is not a number! Using hash instead", strId.c_str());
+            id = std::hash<std::string>{}(strId);
+            strId = std::to_string(id);
+        }
+
+        return id;
     }
     
     bool ParseChannels(const std::string& url,  const ChannelCallback& onChannelFound)
@@ -419,29 +429,34 @@ return false;             \
         xml_node<> *pChannelNode = NULL;
         for(pChannelNode = pRootElement->first_node("programme"); pChannelNode; pChannelNode = pChannelNode->next_sibling("programme"))
         {
-            string strId;
-            if (!GetAttributeValue(pChannelNode, "channel", strId))
-                continue;
-            
-            string strStart, strStop;
-            if ( !GetAttributeValue(pChannelNode, "start", strStart)
-                || !GetAttributeValue(pChannelNode, "stop", strStop))
-                continue;
-            
-            int iTmpStart = ParseDateTime(strStart);
-            int iTmpEnd = ParseDateTime(strStop);
-            
-            PatchChannelId(strId);
+            try {
+                string strId;
+                if (!GetAttributeValue(pChannelNode, "channel", strId))
+                    continue;
+                
+                string strStart, strStop;
+                if ( !GetAttributeValue(pChannelNode, "start", strStart)
+                    || !GetAttributeValue(pChannelNode, "stop", strStop))
+                    continue;
+                
+                int iTmpStart = ParseDateTime(strStart);
+                int iTmpEnd = ParseDateTime(strStop);
+                
+                unsigned long id = PatchChannelId(strId);
+                
+                EpgEntry entry;
+                entry.iChannelId = id;
+                entry.startTime = iTmpStart;
+                entry.endTime = iTmpEnd;
+                
+                GetNodeValue(pChannelNode, "title", entry.strTitle);
+                GetNodeValue(pChannelNode, "desc", entry.strPlot);
+                
+                onEpgEntryFound(entry);
 
-            EpgEntry entry;
-            entry.iChannelId = stoul(strId.c_str());
-            entry.startTime = iTmpStart;
-            entry.endTime = iTmpEnd;
-            
-            GetNodeValue(pChannelNode, "title", entry.strTitle);
-            GetNodeValue(pChannelNode, "desc", entry.strPlot);
-            
-            onEpgEntryFound(entry);
+            } catch (...) {
+                LogError("Bad XML EPG entry.");
+            }
         }
         
         xmlDoc.doc.clear();
