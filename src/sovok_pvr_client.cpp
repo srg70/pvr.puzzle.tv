@@ -35,6 +35,7 @@
 #include <ctime>
 #include "p8-platform/util/util.h"
 #include "kodi/xbmc_addon_cpp_dll.h"
+#include "kodi/kodi_vfs_utils.hpp"
 
 #include "timeshift_buffer.h"
 #include "direct_buffer.h"
@@ -144,7 +145,17 @@ void SovokPVRClient::CreateCore(bool clearEpgCache)
     strimmersPath.append("/").append("resources/").append("streamers/");
     if(!XBMC->DirectoryExists(strimmersPath.c_str()))
         XBMC->CreateDirectory(strimmersPath.c_str());
-    
+    // Cleanup streamers list
+//    if(XBMC->DirectoryExists(strimmersPath.c_str()))
+//    {
+//        std::vector<CVFSDirEntry> files;
+//        VFSUtils::GetDirectory(XBMC, strimmersPath, "*.*", files);
+//        for (auto& f : files) {
+//            if(!f.IsFolder())
+//                if(!XBMC->DeleteFile(f.Path().c_str()))
+//                    LogError( "Failed to delete streamer from addon settings. %s", f.Path().c_str());
+//        }
+//    }
     std::for_each(streamersList.begin(), streamersList.end(), [&](StreamerNamesList::value_type &s)
                   {
                       

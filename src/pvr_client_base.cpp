@@ -36,6 +36,7 @@
 #include "p8-platform/util/StringUtils.h"
 
 #include "kodi/xbmc_addon_cpp_dll.h"
+#include "kodi/kodi_vfs_utils.hpp"
 
 #include "timeshift_buffer.h"
 #include "file_cache_buffer.hpp"
@@ -204,6 +205,18 @@ void PVRClientBase::SetTimeshiftPath(const std::string& path){
     if(!XBMC->DirectoryExists(nonEmptyPath))
         if(!XBMC->CreateDirectory(nonEmptyPath))
             LogError( "Failed to create cache folder");
+    // Cleanup chache
+    if(XBMC->DirectoryExists(nonEmptyPath))
+    {
+        std::vector<CVFSDirEntry> files;
+        VFSUtils::GetDirectory(XBMC, nonEmptyPath, "*.bin", files);
+        for (auto& f : files) {
+            if(!f.IsFolder())
+                if(!XBMC->DeleteFile(f.Path().c_str()))
+                    LogError( "Failed to delete timeshift folder entry %s", f.Path().c_str());
+        }
+    }
+
     m_CacheDir = nonEmptyPath;
 }
 
@@ -365,7 +378,7 @@ bool PVRClientBase::OpenLiveStream(const std::string& url )
         const std::string m3uExt = ".m3u";
         const std::string m3u8Ext = ".m3u8";
         if( url.find(m3u8Ext) != std::string::npos || url.find(m3uExt) != std::string::npos)
-            buffer = new Buffers::PlaylistBuffer(url, NULL);
+            buffer = new Buffers::PlaylistBuffer(url, NULL, 0); // No segments cache for live playlist
         else
             buffer = new DirectBuffer(url);
         
@@ -545,19 +558,11 @@ bool PVRClientBase::OpenRecordedStream(const std::string& url,  Buffers::IPlayli
         const bool isM3u = url.find(m3u8Ext) != std::string::npos || url.find(m3uExt) != std::string::npos;
         Buffers::PlaylistBufferDelegate plistDelegate(delegate);
         if(isM3u)
-            buffer = new Buffers::PlaylistBuffer(url, plistDelegate);
+            buffer = new Buffers::PlaylistBuffer(url, plistDelegate, 20); // Cache 20 segments for archive seek optimization
         else
             buffer = new ArchiveBuffer(url);
-        
-//        if (m_isTimeshiftEnabled && isM3u){
-//            if(k_TimeshiftBufferFile == m_timeshiftBufferType) {
-//                m_recordBuffer = new Buffers::TimeshiftBuffer(buffer, new Buffers::FileCacheBuffer(m_CacheDir, m_timshiftBufferSize /  Buffers::FileCacheBuffer::CHUNK_FILE_SIZE_LIMIT));
-//            } else {
-//                m_recordBuffer = new Buffers::TimeshiftBuffer(buffer, new Buffers::MemoryCacheBuffer(m_timshiftBufferSize /  Buffers::MemoryCacheBuffer::CHUNK_SIZE_LIMIT));
-//            }
-//        }
-//        else
-            m_recordBuffer = buffer;
+
+        m_recordBuffer = buffer;
     }
     catch (InputBufferException & ex)
     {

@@ -109,8 +109,9 @@ namespace Buffers {
                 // Fill read buffer
                 ssize_t bytesRead = 0;
                 do {
-                    bytesRead += m_inputBuffer->Read(buffer + bytesRead, bufferLenght - bytesRead, 0);
-                    isError = bytesRead < 0;
+                    ssize_t loacalBytesRad = m_inputBuffer->Read(buffer + bytesRead, bufferLenght - bytesRead, 1000);
+                    bytesRead += loacalBytesRad;
+                    isError = loacalBytesRad < 0;
                 }while (!isError && bytesRead < bufferLenght && !IsStopped());
                 
                 if(bytesRead > 0) {

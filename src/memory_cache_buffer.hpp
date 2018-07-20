@@ -66,7 +66,7 @@ namespace Buffers
         
     private:
         typedef CMemoryBlock* ChunkPtr;
-        typedef std::deque<ChunkPtr > Chunks;
+        typedef std::deque<ChunkPtr> Chunks;
         typedef std::deque<std::unique_ptr<CMemoryBlock> > ChunkSwarm;
 
         ChunkPtr CreateChunk();

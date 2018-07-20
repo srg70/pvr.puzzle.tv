@@ -226,14 +226,17 @@ namespace Buffers
     //////////////////////////////////////////
     
     
+#pragma mark - FileCacheBuffer
     
     FileCacheBuffer::FileCacheBuffer(const std::string& bufferCacheDir, uint8_t  sizeFactor)
     : m_bufferDir(bufferCacheDir)
     , m_maxSize(std::max(uint8_t(3), sizeFactor) * CHUNK_FILE_SIZE_LIMIT)
     {
-        if(!XBMC->DirectoryExists(m_bufferDir.c_str()))
-        if(!XBMC->CreateDirectory(m_bufferDir.c_str()))
-        throw CacheBufferException("Failed to create cahche directory for timeshift buffer.");
+        if(!XBMC->DirectoryExists(m_bufferDir.c_str())) {
+            if(!XBMC->CreateDirectory(m_bufferDir.c_str())) {
+                throw CacheBufferException("Failed to create cahche  directory for timeshift buffer.");
+            }
+        }
         Init();
     }
     void FileCacheBuffer::Init() {
