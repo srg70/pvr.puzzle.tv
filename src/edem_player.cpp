@@ -181,7 +181,7 @@ namespace EdemEngine
     void Core::UpdateHasArchive(PvrClient::EpgEntry& entry)
     {
         time_t now = time(nullptr);
-        const time_t archivePeriod = 4 * 24 * 60 * 60; //4 days in secs
+        const time_t archivePeriod = 3 * 24 * 60 * 60; //3 days in secs
         auto when = now - entry.StartTime;
         entry.HasArchive = when > 0 && when < archivePeriod;
     }
