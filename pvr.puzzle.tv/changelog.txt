@@ -1,3 +1,6 @@
+0.6.7
+- Fixed double over-buffering in case of time-shifted playlist mode (Edem, OTT)
+
 0.6.6
 - Fixed crash on changing of streamer ID
 
