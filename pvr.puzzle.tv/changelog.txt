@@ -1,5 +1,8 @@
-0.6.7
+0.6.8
 - Fixed double over-buffering in case of time-shifted playlist mode (Edem, OTT)
+
+0.6.7
+- Fixed crash of XML-TV parser in case of wrong channel ID format.
 
 0.6.6
 - Fixed crash on changing of streamer ID
