@@ -292,12 +292,13 @@ namespace Buffers {
     
     bool PlaylistBuffer::IsStopped(uint32_t timeoutInSec) {
         P8PLATFORM::CTimeout timeout(timeoutInSec * 1000);
-        bool isStoppedOrTimeout = P8PLATFORM::CThread::IsStopped() || timeout.TimeLeft() == 0;
-        while(!isStoppedOrTimeout) {
-            isStoppedOrTimeout = P8PLATFORM::CThread::IsStopped() || timeout.TimeLeft() == 0;
+        do{
+            bool isStopped = P8PLATFORM::CThread::IsStopped();
+            if(isStopped || timeout.TimeLeft() == 0)
+                return isStopped;
             Sleep(1000);//1sec
-        }
-        return P8PLATFORM::CThread::IsStopped();
+        }while (true);
+        return false;
     }
     
     void *PlaylistBuffer::Process()
