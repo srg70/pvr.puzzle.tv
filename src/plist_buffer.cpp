@@ -335,7 +335,7 @@ namespace Buffers {
                     LogDebug(">>> End fill segment.");
 
                     auto duration = segmentUrl.first;
-                    sleepTime = std::min(duration / 2.0, 1.0);
+                    sleepTime = std::max(duration / 2.0, 1.0);
                     LogDebug(">>> Segment duration: %f", duration);
                     ++it;
                     if(!IsStopped())
