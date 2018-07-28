@@ -20,6 +20,8 @@
  *
  */
 
+#define NOMINMAX
+
 #include "TimersEngine.hpp"
 #include "globals.hpp"
 
