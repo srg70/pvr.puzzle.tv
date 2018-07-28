@@ -116,7 +116,7 @@ namespace PvrClient
     private:
         
         void SetChannelReloadTimeout(int timeout);
-        void FillRecording(const EpgEntryList::value_type& epgEntry, PVR_RECORDING& tag);
+        void FillRecording(const EpgEntryList::value_type& epgEntry, PVR_RECORDING& tag, const char* dirPrefix);
         std::string DirectoryForRecording(unsigned int epgId) const;
         std::string PathForRecordingInfo(unsigned int epgId) const;
         static Buffers::InputBuffer*  BufferForUrl(const std::string& url );

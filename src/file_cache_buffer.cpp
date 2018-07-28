@@ -28,6 +28,7 @@
 #include "libXBMC_addon.h"
 #include "helpers.h"
 #include "globals.hpp"
+#include "neutral_sorting.h"
 
 namespace Buffers
 {
@@ -271,6 +272,15 @@ namespace Buffers
         // Load *.bin files
         std::vector<CVFSDirEntry> files;
         VFSUtils::GetDirectory(XBMC, m_bufferDir, "*.bin", files);
+        // run "neutral sorting" on files list
+        struct cvf_alphanum_less : public std::binary_function<CVFSDirEntry, CVFSDirEntry, bool>
+        {
+            bool operator()(const CVFSDirEntry& left, const CVFSDirEntry& right) const
+            {
+                return doj::alphanum_comp(left.Path(), right.Path()) < 0;
+            }
+        } neutral_sorter;
+        std::sort(files.begin(), files.end(), neutral_sorter);
         for (auto& f : files) {
             if(!f.IsFolder()) {
                 ChunkFilePtr newChunk = new CAddonFile(f.Path().c_str(), m_autoDelete);

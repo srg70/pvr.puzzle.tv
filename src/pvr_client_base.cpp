@@ -61,7 +61,8 @@ namespace CurlUtils
 // NOTE: avoid '.' (dot) char in path. Causes to deadlock in Kodi code.
 static const char* s_DefaultCacheDir = "special://temp/pvr-puzzle-tv";
 static const char* s_DefaultRecordingsDir = "special://temp/pvr-puzzle-tv/recordings";
-static const char* s_LocalRecPrefix = "_Local/";
+static std::string s_LocalRecPrefix = "Local";
+static std::string s_RemoteRecPrefix = "On Server";
 
 const int RELOAD_EPG_MENU_HOOK = 1;
 const int RELOAD_RECORDINGS_MENU_HOOK = 2;
@@ -113,6 +114,15 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
 
     hook = {RELOAD_RECORDINGS_MENU_HOOK, 32051, PVR_MENUHOOK_RECORDING};
     PVR->AddMenuHook(&hook);
+
+    // Local recordings path prefix
+    char* localizedString  = XBMC->GetLocalizedString(32014);
+    s_LocalRecPrefix = localizedString;
+    XBMC->FreeString(localizedString);
+    // Remote recordings path prefix
+    localizedString  = XBMC->GetLocalizedString(32015);
+    s_RemoteRecPrefix = localizedString;
+    XBMC->FreeString(localizedString);
 
     return ADDON_STATUS_OK;
     
@@ -524,7 +534,7 @@ int PVRClientBase::GetRecordingsAmount(bool deleted)
     
 }
 
-void PVRClientBase::FillRecording(const EpgEntryList::value_type& epgEntry, PVR_RECORDING& tag)
+void PVRClientBase::FillRecording(const EpgEntryList::value_type& epgEntry, PVR_RECORDING& tag, const char* dirPrefix)
 {
     const auto& epgTag = epgEntry.second;
     
@@ -540,7 +550,9 @@ void PVRClientBase::FillRecording(const EpgEntryList::value_type& epgEntry, PVR_
     tag.iChannelUid = epgTag.ChannelId;
     tag.channelType = PVR_RECORDING_CHANNEL_TYPE_TV;
     
-    string dirName = tag.strChannelName;
+    string dirName(dirPrefix);
+    dirName += '/';
+    dirName += tag.strChannelName;
     char buff[20];
     strftime(buff, sizeof(buff), "/%d-%m-%y", localtime(&epgTag.StartTime));
     dirName += buff;
@@ -571,7 +583,7 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
                 return true;
 
             PVR_RECORDING tag = { 0 };
-            pThis->FillRecording(epgEntry, tag);
+            pThis->FillRecording(epgEntry, tag, s_RemoteRecPrefix.c_str());
             
             Pvr->TransferRecordingEntry(handle, &tag);
             return true;
@@ -604,10 +616,6 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
             if(!isValid)
                 continue;
 
-            std::string vDir = s_LocalRecPrefix;
-            vDir += tag.strDirectory;
-            strncpy(tag.strDirectory, vDir.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
-
             PVR->TransferRecordingEntry(handle, &tag);
         }
     }
@@ -619,7 +627,7 @@ PVR_ERROR PVRClientBase::DeleteRecording(const PVR_RECORDING &recording)
 {
     PVR_ERROR result = PVR_ERROR_NO_ERROR;
     // Is recording local?
-    if(!StringUtils::StartsWith(recording.strDirectory, s_LocalRecPrefix))
+    if(!IsLocalRecording(recording))
         return PVR_ERROR_REJECTED;
     std::string dir = DirectoryForRecording(stoul(recording.strRecordingId));
     if(!XBMC->DirectoryExists(dir.c_str()))
@@ -641,7 +649,7 @@ PVR_ERROR PVRClientBase::DeleteRecording(const PVR_RECORDING &recording)
 
 bool PVRClientBase::IsLocalRecording(const PVR_RECORDING &recording) const
 {
-    return StringUtils::StartsWith(recording.strDirectory, s_LocalRecPrefix);
+    return StringUtils::StartsWith(recording.strDirectory, s_LocalRecPrefix.c_str());
 }
 bool PVRClientBase::OpenRecordedStream(const PVR_RECORDING &recording)
 {
@@ -750,7 +758,7 @@ bool PVRClientBase::StartRecordingFor(const PVR_TIMER &timer)
             if(epgEntry.first != timer.iEpgUid)
                 return true;
            
-            pThis->FillRecording(epgEntry, tag);
+            pThis->FillRecording(epgEntry, tag, s_LocalRecPrefix.c_str());
             tag.recordingTime = time(nullptr);
             tag.iDuration = timer.endTime - tag.recordingTime;
             hasEpg = true;
@@ -765,8 +773,10 @@ bool PVRClientBase::StartRecordingFor(const PVR_TIMER &timer)
     };
     m_clientCore->ForEachEpg(action);
     
-    if(!hasEpg)
+    if(!hasEpg) {
+        LogError("StartRecordingFor(): timers without EPG are not supported.");
         return false;
+    }
     
     std::string recordingDir = DirectoryForRecording(timer.iEpgUid);
     

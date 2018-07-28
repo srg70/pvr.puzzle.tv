@@ -230,6 +230,14 @@ msgctxt "#32013"
 msgid "Waiting for Puzzle Server (%d)..."
 msgstr "Waiting for Puzzle Server (%d)..."
 
+msgctxt "#32014"
+msgid "Local"
+msgstr "Local"
+
+msgctxt "#32015"
+msgid "On Server"
+msgstr "On Server"
+
 #============= Menus ================
 
 msgctxt "#32050"

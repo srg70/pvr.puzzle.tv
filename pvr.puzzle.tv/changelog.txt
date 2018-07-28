@@ -1,3 +1,6 @@
+0.7.0
+- Basic timers support for all providers.
+
 0.6.8
 - Fixed double over-buffering in case of time-shifted playlist mode (Edem, OTT)
 

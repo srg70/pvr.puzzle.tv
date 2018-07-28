@@ -150,6 +150,7 @@
 		4C08C7F91D81E34A004CAAE3 /* input_buffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = input_buffer.h; sourceTree = "<group>"; };
 		4C08C7FD1D8290F6004CAAE3 /* addon.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = addon.cpp; sourceTree = "<group>"; };
 		4C08C7FF1D829449004CAAE3 /* addon.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = addon.h; sourceTree = "<group>"; };
+		4C3EEDBE210C670B001C0DB8 /* neutral_sorting.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = neutral_sorting.h; sourceTree = "<group>"; };
 		4C49D1901E27C4BF0026F43E /* AEChannelData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AEChannelData.h; sourceTree = "<group>"; };
 		4C49D1911E27C4BF0026F43E /* DVDDemuxPacket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DVDDemuxPacket.h; sourceTree = "<group>"; };
 		4C49D1921E27C4BF0026F43E /* IFileTypes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IFileTypes.h; sourceTree = "<group>"; };
@@ -320,6 +321,7 @@
 				4CFEAA8E1E4DA81A002C2BA4 /* ActionQueue.hpp */,
 				4C8506E61F0E25DF00213131 /* HttpEngine.cpp */,
 				4C8506E71F0E25DF00213131 /* HttpEngine.hpp */,
+				4C3EEDBE210C670B001C0DB8 /* neutral_sorting.h */,
 			);
 			path = src;
 			sourceTree = "<group>";
