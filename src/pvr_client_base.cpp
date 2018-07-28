@@ -661,7 +661,7 @@ bool PVRClientBase::OpenRecordedStream(const PVR_RECORDING &recording)
         if(m_recordBuffer)
             SAFE_DELETE(m_recordBuffer);
         m_recordBuffer = buffer;
-    } catch (InputBufferException ex) {
+    } catch (std::exception ex) {
         LogError("OpenRecordedStream (local) exception: %s", ex.what());
     }
     
@@ -731,7 +731,8 @@ long long PVRClientBase::LengthRecordedStream(void)
 std::string PVRClientBase::DirectoryForRecording(unsigned int epgId) const
 {
     std::string recordingDir = m_recordingsDir;
-    recordingDir += PATH_SEPARATOR_CHAR;
+    if(recordingDir[recordingDir.length() -1] != PATH_SEPARATOR_CHAR)
+        recordingDir += PATH_SEPARATOR_CHAR;
     recordingDir += n_to_string(epgId);
     return recordingDir;
 }
