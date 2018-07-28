@@ -22,6 +22,7 @@
 
 #define NOMINMAX
 
+#include <algorithm>
 #include "TimersEngine.hpp"
 #include "globals.hpp"
 
