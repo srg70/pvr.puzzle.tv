@@ -56,8 +56,8 @@ static const char* c_seek_archives = "edem_seek_archives";
 
 ADDON_STATUS EdemPVRClient::Init(PVR_PROPERTIES* pvrprops)
 {
-    ADDON_STATUS retVal = ADDON_STATUS_OK;
-    if(ADDON_STATUS_OK != (retVal = PVRClientBase::Init(pvrprops)))
+    ADDON_STATUS retVal = PVRClientBase::Init(pvrprops);
+    if(ADDON_STATUS_OK != retVal)
         return retVal;
     
     char buffer[1024];
@@ -274,6 +274,9 @@ bool EdemPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
 {
     if(NULL == m_core)
         return false;
+    
+    if(IsLocalRecording(recording))
+        return PVRClientBase::OpenRecordedStream(recording);
     
     auto delegate = new EdemArchiveDelegate(m_core, recording);
     string url = delegate->UrlForTimeshift(0);

@@ -56,6 +56,10 @@ msgctxt "#10008"
 msgid "Channel reload timeout (sec)"
 msgstr "Время ожидания сигнала (sec)"
 
+msgctxt "#10009"
+msgid "Recordings path"
+msgstr "Папка для записей"
+
 #============ Puzzle Server Settings ============
 
 msgctxt "#20000"

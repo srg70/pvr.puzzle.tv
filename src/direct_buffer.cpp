@@ -34,59 +34,75 @@
 #include "direct_buffer.h"
 #include "libXBMC_addon.h"
 #include "globals.hpp"
+#include "cache_buffer.h"
 
 namespace Buffers {
     
     using namespace P8PLATFORM;
     using namespace Globals;
+
+    void* DirectBuffer::Open(const std::string & path){
+        return XBMC->OpenFile(path.c_str(), XFILE::READ_AUDIO_VIDEO | XFILE::READ_AFTER_WRITE);
+    }
+
     
     DirectBuffer::DirectBuffer(const std::string &streamUrl)
+    : m_streamHandle(Open(streamUrl))
+    , m_cacheBuffer(nullptr)
     {
-        Open(streamUrl.c_str());
         if (!m_streamHandle)
-        throw InputBufferException();
+            throw InputBufferException();
     }
+    DirectBuffer::DirectBuffer(ICacheBuffer* cacheBuffer)
+    : m_streamHandle(nullptr)
+    , m_cacheBuffer(cacheBuffer)
+    {
+        if (!m_cacheBuffer)
+            throw InputBufferException();
+    }
+
     
     DirectBuffer::~DirectBuffer()
     {
-        XBMC->CloseFile(m_streamHandle);
+        if(m_streamHandle)
+            XBMC->CloseFile(m_streamHandle);
+        if(m_cacheBuffer)
+            delete m_cacheBuffer;
     }
-    
-    void DirectBuffer::Open(const char* path)
-    {
-        m_streamHandle = XBMC->OpenFile(path, XFILE::READ_AUDIO_VIDEO | XFILE::READ_AFTER_WRITE) ;
-    }
-    
     
     int64_t DirectBuffer::GetLength() const
     {
-        return -1;
+        return m_cacheBuffer ? m_cacheBuffer->Length() : -1;
     }
     
     int64_t DirectBuffer::GetPosition() const
     {
-        return -1;
+        return m_cacheBuffer ? m_cacheBuffer->Position() :-1;
     }
     
     ssize_t DirectBuffer::Read(unsigned char *buffer, size_t bufferSize, uint32_t timeoutMs)
     {
+        if(m_cacheBuffer)
+            return m_cacheBuffer->Read(buffer, bufferSize);
+
         //CLockObject lock(m_mutex);
-        
         return XBMC->ReadFile(m_streamHandle, buffer, bufferSize);
     }
     
     int64_t DirectBuffer::Seek(int64_t iPosition, int iWhence)
     {
-        return -1;
+        return m_cacheBuffer ? m_cacheBuffer->Seek(iPosition, iWhence) : -1;
     }
     
     bool DirectBuffer::SwitchStream(const std::string &newUrl)
     {
+        if(m_cacheBuffer)
+            return false;
+        
         //CLockObject lock(m_mutex);
         
         XBMC->CloseFile(m_streamHandle);
-        Open(newUrl.c_str());
-        
+        Open(newUrl);
         return m_streamHandle != NULL;
     }
     

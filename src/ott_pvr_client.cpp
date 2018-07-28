@@ -54,8 +54,8 @@ static const char* c_key_setting = "ott_key";
 
 ADDON_STATUS OttPVRClient::Init(PVR_PROPERTIES* pvrprops)
 {
-    ADDON_STATUS retVal = ADDON_STATUS_OK;
-    if(ADDON_STATUS_OK != (retVal = PVRClientBase::Init(pvrprops)))
+    ADDON_STATUS retVal = PVRClientBase::Init(pvrprops);
+    if(ADDON_STATUS_OK != retVal)
        return retVal;
     
     char buffer[1024];
@@ -259,6 +259,9 @@ bool OttPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
 {
     if(NULL == m_core)
         return false;
+    
+    if(IsLocalRecording(recording))
+        return PVRClientBase::OpenRecordedStream(recording);
     
     auto delegate = new OttArchiveDelegate(m_core, recording);
     string url = delegate->UrlForTimeshift(0);

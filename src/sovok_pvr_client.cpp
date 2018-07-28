@@ -56,8 +56,8 @@ static SovokTV::CountryFilter& GetCountryFilter();
 
 ADDON_STATUS SovokPVRClient::Init(PVR_PROPERTIES* pvrprops)
 {
-    ADDON_STATUS retVal = ADDON_STATUS_OK;
-    if(ADDON_STATUS_OK != (retVal = PVRClientBase::Init(pvrprops)))
+    ADDON_STATUS retVal = PVRClientBase::Init(pvrprops);
+    if(ADDON_STATUS_OK != retVal)
        return retVal;
     
     m_lastChannelRestartCount = 0;
@@ -411,7 +411,10 @@ bool SovokPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     if(!HasCore())
         return false;
     
-    // NOTE: Kodi does NOT provide recording.iChannelUid for unknown reason
+    if(IsLocalRecording(recording))
+        return PVRClientBase::OpenRecordedStream(recording);
+    
+  // NOTE: Kodi does NOT provide recording.iChannelUid for unknown reason
     // Worrkaround: use EPG entry
     
     EpgEntry epgTag;

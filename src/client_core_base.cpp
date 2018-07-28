@@ -1,4 +1,4 @@
-/*
+	/*
  *
  *   Copyright (C) 2017 Sergey Shramchenko
  *   https://github.com/srg70/pvr.puzzle.tv
@@ -344,7 +344,8 @@ namespace PvrClient{
     {
         P8PLATFORM::CLockObject lock(m_epgAccessMutex);
         for(const auto& i : m_epgEntries) {
-            action(i);
+            if(!action(i))
+                return;
         }
     }
     
@@ -361,6 +362,7 @@ namespace PvrClient{
                 lastEndTime = i.second.EndTime;
                 epgEntries.insert(i);
             }
+            return true;
         };
         ForEachEpg(action);
         

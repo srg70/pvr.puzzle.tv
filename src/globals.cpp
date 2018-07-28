@@ -24,7 +24,6 @@
 #include "globals.hpp"
 #include "p8-platform/util/util.h"
 #include "p8-platform/util/StringUtils.h"
-#include "TimersEngine.hpp"
 
 namespace Globals
 {
@@ -32,8 +31,7 @@ namespace Globals
     static ADDON::CHelper_libXBMC_addon* __xbmc = nullptr;
     CHelper_libXBMC_pvr* const& PVR(__pvr);
     ADDON::CHelper_libXBMC_addon* const& XBMC(__xbmc);
-    ITimersEngine* const TIMERS(new Engines::TimersEngine());
-    
+
     static ADDON::addon_log_t  __debugLogLevel = ADDON::LOG_DEBUG;
     void Cleanup();
     
@@ -64,6 +62,7 @@ namespace Globals
             SAFE_DELETE(__pvr);
         if(__xbmc)
             SAFE_DELETE(__xbmc);
+        
     }
     
 # define PrintToLog(loglevel) \

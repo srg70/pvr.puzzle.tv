@@ -35,12 +35,13 @@
 #include "xbmc_pvr_dll.h"
 #include "p8-platform/util/util.h"
 #include "kodi/xbmc_addon_cpp_dll.h"
-
+#include "TimersEngine.hpp"
 
 #ifdef TARGET_WINDOWS
 #define snprintf _snprintf
 #endif
 
+static ITimersEngine* m_timersEngine = NULL;
 static IPvrIptvDataSource* m_DataSource = NULL;
 static int m_clientType = 1;
 
@@ -105,7 +106,9 @@ extern "C" {
             return ADDON_STATUS_NEED_SETTINGS;
         }
         
-        return m_DataSource->Init(pvrprops);
+        ADDON_STATUS result = m_DataSource->Init(pvrprops);
+        m_timersEngine = new Engines::TimersEngine(m_DataSource);
+        return result;
     }
     
     ADDON_STATUS ADDON_GetStatus()
@@ -115,8 +118,11 @@ extern "C" {
     
     void ADDON_Destroy()
     {
-        SAFE_DELETE(m_DataSource);
-        
+        if(m_DataSource)
+            SAFE_DELETE(m_DataSource);
+        if(m_timersEngine)
+            SAFE_DELETE(m_timersEngine);
+
         Globals::Cleanup();
     }
     
@@ -332,7 +338,11 @@ extern "C" {
         return m_DataSource->GetRecordings(handle,  deleted);
     }
     
-    
+    PVR_ERROR DeleteRecording(const PVR_RECORDING &recording)
+    {
+        return m_DataSource->DeleteRecording(recording);
+    }
+
     bool OpenRecordedStream(const PVR_RECORDING &recording)
     {
         return m_DataSource->OpenRecordedStream(recording);
@@ -364,27 +374,27 @@ extern "C" {
     /** T I M E R S **/
     PVR_ERROR AddTimer(const PVR_TIMER &timer)
     {
-        return Globals::TIMERS->AddTimer (timer);
+        return m_timersEngine ? m_timersEngine->AddTimer (timer) : PVR_ERROR_FAILED;
     }
     
     PVR_ERROR DeleteTimer(const PVR_TIMER &timer, bool bForceDelete)
     {
-        return Globals::TIMERS->DeleteTimer (timer,bForceDelete);
+        return m_timersEngine ? m_timersEngine->DeleteTimer (timer,bForceDelete) : PVR_ERROR_FAILED;
     }
     
     PVR_ERROR UpdateTimer(const PVR_TIMER &timer)
     {
-        return Globals::TIMERS->UpdateTimer (timer);
+        return m_timersEngine ? m_timersEngine->UpdateTimer (timer) : PVR_ERROR_FAILED;
     }
     
     PVR_ERROR GetTimers(ADDON_HANDLE handle)
     {
-        return Globals::TIMERS->GetTimers(handle);
+        return m_timersEngine ? m_timersEngine->GetTimers(handle) : PVR_ERROR_FAILED;
     }
     
     int GetTimersAmount(void)
     {
-        return  Globals::TIMERS->GetTimersAmount();
+        return  m_timersEngine ? m_timersEngine->GetTimersAmount() : PVR_ERROR_FAILED;
     }
 
     PVR_ERROR GetTimerTypes(PVR_TIMER_TYPE types[], int *size) { return PVR_ERROR_NOT_IMPLEMENTED; }
@@ -400,7 +410,6 @@ extern "C" {
     PVR_ERROR OpenDialogChannelAdd(const PVR_CHANNEL &channel) { return PVR_ERROR_NOT_IMPLEMENTED; }
     void DemuxReset(void) {}
     void DemuxFlush(void) {}
-    PVR_ERROR DeleteRecording(const PVR_RECORDING &recording) { return PVR_ERROR_NOT_IMPLEMENTED; }
     PVR_ERROR RenameRecording(const PVR_RECORDING &recording) { return PVR_ERROR_NOT_IMPLEMENTED; }
     PVR_ERROR SetRecordingPlayCount(const PVR_RECORDING &recording, int count) { return PVR_ERROR_NOT_IMPLEMENTED; }
     PVR_ERROR SetRecordingLastPlayedPosition(const PVR_RECORDING &recording, int lastplayedposition) { return PVR_ERROR_NOT_IMPLEMENTED; }

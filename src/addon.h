@@ -31,7 +31,16 @@
 #include "xbmc_addon_types.h"
 #include "xbmc_pvr_types.h"
 
-class IPvrIptvDataSource
+class ITimersEngineDelegate{
+public:
+    virtual bool StartRecordingFor(const PVR_TIMER &timer) = 0;
+    virtual bool StopRecordingFor(const PVR_TIMER &timer) = 0;
+    virtual bool FindEpgFor(const PVR_TIMER &timer) = 0;
+protected:
+    virtual ~ITimersEngineDelegate() {}
+};
+
+class IPvrIptvDataSource : public ITimersEngineDelegate
 {
 public:
     virtual ADDON_STATUS Init(PVR_PROPERTIES* pvrprops) = 0;
@@ -65,6 +74,7 @@ public:
     
     virtual int GetRecordingsAmount(bool deleted) = 0;
     virtual PVR_ERROR GetRecordings(ADDON_HANDLE handle, bool deleted) = 0;
+    virtual PVR_ERROR DeleteRecording(const PVR_RECORDING &recording) = 0;
     virtual bool OpenRecordedStream(const PVR_RECORDING &recording) = 0;
     virtual void CloseRecordedStream(void) = 0;
     virtual int ReadRecordedStream(unsigned char *pBuffer, unsigned int iBufferSize) = 0;

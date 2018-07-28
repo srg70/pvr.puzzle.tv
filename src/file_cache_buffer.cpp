@@ -23,6 +23,7 @@
 
 #define NOMINMAX
 #include <algorithm>
+#include "kodi/kodi_vfs_utils.hpp"
 #include "file_cache_buffer.hpp"
 #include "libXBMC_addon.h"
 #include "helpers.h"
@@ -75,7 +76,7 @@ namespace Buffers
         CFileForWrite m_writer;
         CFileForRead m_reader;
         
-        CAddonFile(const std::string &pathToFile);
+        CAddonFile(const std::string &pathToFile, bool autoDelete);
         
         const std::string& Path() const;
         void Reopen();
@@ -86,7 +87,8 @@ namespace Buffers
         CAddonFile(const CAddonFile&) = delete ;                    //disable copy-constructor
         CAddonFile& operator=(const CAddonFile&) = delete;  //disable copy-assignment
         std::string m_path;
-        
+        const bool m_autoDelete;
+
     };
     
     
@@ -159,7 +161,7 @@ namespace Buffers
     
     
     CFileForWrite::CFileForWrite(const std::string &pathToFile)
-    : CGenericFile(XBMC->OpenFileForWrite(pathToFile.c_str(), true))
+    : CGenericFile(XBMC->OpenFileForWrite(pathToFile.c_str(), false))
     {
     }
     ssize_t CFileForWrite::Write(const void* lpBuf, size_t uiBufSize)
@@ -191,10 +193,11 @@ namespace Buffers
     //////////////////////////////////////////
     
     
-    CAddonFile::CAddonFile(const std::string &pathToFile)
+    CAddonFile::CAddonFile(const std::string &pathToFile, bool autoDelete)
     : m_path(pathToFile)
     , m_writer(pathToFile)
     , m_reader(pathToFile)
+    , m_autoDelete(autoDelete)
     {
     }
     const std::string& CAddonFile::Path() const
@@ -215,7 +218,8 @@ namespace Buffers
     {
         m_reader.Close();
         m_writer.Close();
-        XBMC->DeleteFile(m_path.c_str());
+        if(m_autoDelete)
+            XBMC->DeleteFile(m_path.c_str());
     }
     
     
@@ -228,9 +232,11 @@ namespace Buffers
     
 #pragma mark - FileCacheBuffer
     
-    FileCacheBuffer::FileCacheBuffer(const std::string& bufferCacheDir, uint8_t  sizeFactor)
+    FileCacheBuffer::FileCacheBuffer(const std::string& bufferCacheDir, uint8_t  sizeFactor,  bool autoDelete)
     : m_bufferDir(bufferCacheDir)
     , m_maxSize(std::max(uint8_t(3), sizeFactor) * CHUNK_FILE_SIZE_LIMIT)
+    , m_autoDelete(autoDelete)
+    , m_isReadOnly(false)
     {
         if(!XBMC->DirectoryExists(m_bufferDir.c_str())) {
             if(!XBMC->CreateDirectory(m_bufferDir.c_str())) {
@@ -239,6 +245,43 @@ namespace Buffers
         }
         Init();
     }
+
+    static int64_t CalculateDataSize(const std::string& bufferCacheDir)
+    {
+        int64_t result = 0;
+        std::vector<CVFSDirEntry> files;
+        VFSUtils::GetDirectory(XBMC, bufferCacheDir, "*.bin", files);
+        for (auto& f : files) {
+            if(!f.IsFolder())
+                result += f.Size();
+        }
+        return result;
+    }
+    
+    FileCacheBuffer::FileCacheBuffer(const std::string& bufferCacheDir)
+    : m_bufferDir(bufferCacheDir)
+    , m_maxSize(CalculateDataSize(bufferCacheDir))
+    , m_autoDelete(false)
+    , m_isReadOnly(true)
+    {
+        if(!XBMC->DirectoryExists(m_bufferDir.c_str())) {
+            throw CacheBufferException("Directory for timeshift buffer (read mode) does not exist.");
+        }
+        Init();
+        // Load *.bin files
+        std::vector<CVFSDirEntry> files;
+        VFSUtils::GetDirectory(XBMC, m_bufferDir, "*.bin", files);
+        for (auto& f : files) {
+            if(!f.IsFolder()) {
+                ChunkFilePtr newChunk = new CAddonFile(f.Path().c_str(), m_autoDelete);
+                m_length += f.Size();
+                m_ChunkFileSwarm.push_back(ChunkFileSwarm::value_type(newChunk));
+                m_ReadChunks.push_back(newChunk);
+            }
+        }
+
+    }
+
     void FileCacheBuffer::Init() {
         m_length = 0;
         m_position = 0;
@@ -344,7 +387,7 @@ namespace Buffers
                 chunk = NULL;
             }
         }
-        if(NULL == chunk) {
+        if(NULL == chunk && !m_isReadOnly) {
             CLockObject lock(m_SyncAccess);
             while(m_length - m_begin >=  m_maxSize)
             {
@@ -359,6 +402,8 @@ namespace Buffers
     
     // Write interface
     ssize_t FileCacheBuffer::Write(const void* buf, size_t bufferSize) {
+        if(m_isReadOnly)
+            return 0;
         
         const uint8_t* buffer = (const uint8_t*)  buf;
         ssize_t totalWritten = 0;
@@ -422,7 +467,7 @@ namespace Buffers
         if(m_length - m_begin >=  m_maxSize ) {
             return NULL;
         }
-        ChunkFilePtr newChunk = new CAddonFile(UniqueFilename(m_bufferDir).c_str());
+        ChunkFilePtr newChunk = new CAddonFile(UniqueFilename(m_bufferDir).c_str(), m_autoDelete);
         m_ChunkFileSwarm.push_back(ChunkFileSwarm::value_type(newChunk));
         XBMC->Log(LOG_DEBUG, ">>> TimeshiftBuffer: new current chunk (for write):  %s", + newChunk->Path().c_str());
         return newChunk;

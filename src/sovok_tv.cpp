@@ -299,12 +299,13 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
                 const EpgEntry* lastEpgForChannel = nullptr;
                 IClientCore::EpgEntryAction action = [&lastEpgForChannel, currentChannelId] (const EpgEntryList::value_type& i)
                 {
-                    if(!lastEpgForChannel)
+                    if(!lastEpgForChannel) {
                         lastEpgForChannel = &i.second;
-                    else if(currentChannelId == i.second.ChannelId  &&
-                       lastEpgForChannel->StartTime < i.second.StartTime)
-                        
+                    } else if(currentChannelId == i.second.ChannelId  &&
+                              lastEpgForChannel->StartTime < i.second.StartTime) {
                         lastEpgForChannel = &i.second;
+                    }
+                    return true;
                 };
                 ForEachEpg(action);
                 

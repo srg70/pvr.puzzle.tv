@@ -43,9 +43,10 @@ namespace Buffers
         static const uint32_t STREAM_READ_BUFFER_SIZE = 1024 * 32; // 32K input read buffer
         static const  uint32_t CHUNK_FILE_SIZE_LIMIT = (STREAM_READ_BUFFER_SIZE * 1024) * 4; // 128MB chunk
 
-        
-        FileCacheBuffer( const std::string &bufferCacheDir, uint8_t  sizeFactor);
-        
+        // Read-Write
+        FileCacheBuffer( const std::string &bufferCacheDir, uint8_t  sizeFactor , bool autoDelete = true);
+        // ReadOnly
+        FileCacheBuffer(const std::string& bufferCacheDir);
         virtual  void Init();
         virtual  uint32_t UnitSize();
 
@@ -83,8 +84,8 @@ namespace Buffers
         int64_t m_begin;// virtual start of cache
         const int64_t m_maxSize;
         std::string m_bufferDir;
-
-
+        const bool m_autoDelete;
+        const bool m_isReadOnly;
     };
 }
 #endif // __file_cache_buffer_hpp__

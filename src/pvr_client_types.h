@@ -142,7 +142,7 @@ namespace PvrClient {
         };
 
         typedef std::function<void(void)> RecordingsDelegate;
-        typedef std::function<void(const EpgEntryList::value_type&)> EpgEntryAction;
+        typedef std::function<bool(const EpgEntryList::value_type&)> EpgEntryAction;
         
         virtual IPhase* GetPhase(Phase phase) = 0;
 
@@ -151,7 +151,7 @@ namespace PvrClient {
         virtual void GetEpg(ChannelId  channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries) = 0;
         virtual bool GetEpgEntry(UniqueBroadcastIdType i,  EpgEntry& enrty) = 0;
         virtual void ForEachEpg(const EpgEntryAction& action) const = 0;
-
+        virtual std::string GetUrl(PvrClient::ChannelId channelId) = 0;
         
         virtual void ReloadRecordings() = 0;
         virtual ~IClientCore(){}

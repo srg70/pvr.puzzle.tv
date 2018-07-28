@@ -32,8 +32,6 @@ namespace Globals {
     extern CHelper_libXBMC_pvr* const& PVR;
     extern ADDON::CHelper_libXBMC_addon* const& XBMC;
     
-    extern ITimersEngine* const TIMERS;
-    
     void LogError(const char *format, ... );
     void LogInfo(const char *format, ... );
     void LogNotice(const char *format, ... );

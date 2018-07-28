@@ -10,6 +10,7 @@
     <setting id="timeshift_path" type="folder" label="10002" default="" visible="eq(-1,1) + eq(-3,true)" subsetting="true"/>
     <setting id="curl_timeout" type="number" label="10007" default="15" option="int"/>
     <setting id="channel_reload_timeout" type="slider" label="10008" default="5" range="1,1,30" option="int"/>
+    <setting id="recordings_path" type="folder" label="10009" default="" />
 </category>
 
 <!-- Puzzle TV -->

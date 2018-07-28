@@ -79,14 +79,21 @@ namespace PvrClient
         void SetTimeshiftBufferType(TimeshiftBufferType type);
         bool IsTimeshiftEnabled() { return m_isTimeshiftEnabled; }
         void SetTimeshiftPath(const std::string& path);
-        
+        void SetRecordingsPath(const std::string& path);
+
         int GetRecordingsAmount(bool deleted);
         PVR_ERROR GetRecordings(ADDON_HANDLE handle, bool deleted);
+        PVR_ERROR DeleteRecording(const PVR_RECORDING &recording);
         void CloseRecordedStream(void);
         int ReadRecordedStream(unsigned char *pBuffer, unsigned int iBufferSize);
         long long SeekRecordedStream(long long iPosition, int iWhence);
         long long PositionRecordedStream(void);
         long long LengthRecordedStream(void);
+        
+        bool StartRecordingFor(const PVR_TIMER &timer);
+        bool StopRecordingFor(const PVR_TIMER &timer);
+        bool FindEpgFor(const PVR_TIMER &timer);
+
         
         PVR_ERROR CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
         
@@ -99,6 +106,9 @@ namespace PvrClient
 
         bool OpenLiveStream(const std::string& url );
         bool OpenRecordedStream(const std::string& url, Buffers::IPlaylistBufferDelegate* delegate);
+        bool IsLocalRecording(const PVR_RECORDING &recording) const;
+        // Implemented for local recordings. Should be defined by derived class
+        virtual bool OpenRecordedStream(const PVR_RECORDING &recording) = 0;
         bool SwitchChannel(const std::string& url);
         const std::string& GetClientPath() const { return m_clientPath;}
         const std::string& GetUserPath() const { return m_userPath;}
@@ -106,13 +116,19 @@ namespace PvrClient
     private:
         
         void SetChannelReloadTimeout(int timeout);
-        
+        void FillRecording(const EpgEntryList::value_type& epgEntry, PVR_RECORDING& tag);
+        std::string DirectoryForRecording(unsigned int epgId) const;
+        std::string PathForRecordingInfo(unsigned int epgId) const;
+        static Buffers::InputBuffer*  BufferForUrl(const std::string& url );
+
         Buffers::InputBuffer *m_inputBuffer;
         Buffers::InputBuffer *m_recordBuffer;
+        Buffers::InputBuffer *m_localRecordBuffer;
         bool m_isTimeshiftEnabled;
         uint64_t m_timshiftBufferSize;
         TimeshiftBufferType m_timeshiftBufferType;
-        std::string m_CacheDir;
+        std::string m_cacheDir;
+        std::string m_recordingsDir;
         std::string m_clientPath;
         std::string m_userPath;
         int m_channelReloadTimeout;

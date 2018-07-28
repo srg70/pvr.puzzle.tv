@@ -50,8 +50,8 @@ using namespace PvrClient;
 
 ADDON_STATUS PuzzlePVRClient::Init(PVR_PROPERTIES* pvrprops)
 {
-    ADDON_STATUS retVal = ADDON_STATUS_OK;
-    if(ADDON_STATUS_OK != (retVal = PVRClientBase::Init(pvrprops)))
+    ADDON_STATUS retVal = PVRClientBase::Init(pvrprops);
+    if(ADDON_STATUS_OK != retVal)
        return retVal;
     
     char buffer[1024];
@@ -227,7 +227,10 @@ bool PuzzlePVRClient::SwitchChannel(const PVR_CHANNEL& channel)
 
 bool PuzzlePVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
 {
-    return false;
+    if(IsLocalRecording(recording))
+        return PVRClientBase::OpenRecordedStream(recording);
+    
+   return false;
 }
 
 PVR_ERROR PuzzlePVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)

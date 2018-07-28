@@ -33,10 +33,12 @@
 
 namespace Buffers {
     
+    class ICacheBuffer;
     class DirectBuffer : public InputBuffer
     {
     public:
         DirectBuffer(const std::string &streamUrl);
+        DirectBuffer(ICacheBuffer* cacheBuffer);
         ~DirectBuffer();
         
         int64_t GetLength() const;
@@ -49,7 +51,8 @@ namespace Buffers {
         void *m_streamHandle;
         mutable P8PLATFORM::CMutex m_mutex;
     private:
-        void Open(const char* path);
+        static void* Open(const std::string &path);
+        ICacheBuffer* m_cacheBuffer;
     };
     
     class ArchiveBuffer : public DirectBuffer
