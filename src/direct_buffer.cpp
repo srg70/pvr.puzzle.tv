@@ -102,7 +102,7 @@ namespace Buffers {
         //CLockObject lock(m_mutex);
         
         XBMC->CloseFile(m_streamHandle);
-        Open(newUrl);
+        m_streamHandle = Open(newUrl);
         return m_streamHandle != NULL;
     }
     

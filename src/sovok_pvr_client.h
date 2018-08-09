@@ -67,7 +67,7 @@ private:
     std::string m_pinCode;
     bool m_enableAdult;
     bool m_supportArchive;
-    int m_lastChannelRestartCount;
+    int m_lastBytesRead;
 };
 
 #endif //__sovok_pvr_client_h__

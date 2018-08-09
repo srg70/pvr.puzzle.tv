@@ -60,7 +60,7 @@ ADDON_STATUS SovokPVRClient::Init(PVR_PROPERTIES* pvrprops)
     if(ADDON_STATUS_OK != retVal)
        return retVal;
     
-    m_lastChannelRestartCount = 0;
+    m_lastBytesRead = 1;
     char buffer[1024];
     
     if (XBMC->GetSetting("login", &buffer))
@@ -369,7 +369,7 @@ bool SovokPVRClient::OpenLiveStream(const PVR_CHANNEL& channel)
     if(!HasCore())
         return false;
     s_lastChannelId = channel.iUniqueId;
-    m_lastChannelRestartCount = 0;
+    m_lastBytesRead = 1;
     
     string url = m_sovokTV->GetUrl(channel.iUniqueId);
     return PVRClientBase::OpenLiveStream(url);
@@ -377,10 +377,10 @@ bool SovokPVRClient::OpenLiveStream(const PVR_CHANNEL& channel)
 
 int SovokPVRClient::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize)
 {
-    int readBytes = PVRClientBase::ReadLiveStream(pBuffer,iBufferSize);
+    int bytesRead = PVRClientBase::ReadLiveStream(pBuffer,iBufferSize);
     // Assuming stream hanging.
-    // Try to restart current channel one time.
-    if (readBytes != iBufferSize ) {
+    // Try to restart current channel only when previous read operation succeeded.
+    if (bytesRead != iBufferSize && m_lastBytesRead > 0 ) {
         LogError("SovokPVRClient:: trying to restart current channel.");
         string url = m_sovokTV->GetUrl(s_lastChannelId);
         if(!url.empty()){
@@ -388,11 +388,11 @@ int SovokPVRClient::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferS
             XBMC->QueueNotification(QUEUE_INFO, message);
             XBMC->FreeString(message);
             PVRClientBase::SwitchChannel(url);
-            readBytes = PVRClientBase::ReadLiveStream(pBuffer,iBufferSize);
+            bytesRead = PVRClientBase::ReadLiveStream(pBuffer,iBufferSize);
         }
     }
-    
-    return readBytes;
+    m_lastBytesRead = bytesRead;
+    return bytesRead;
 }
 
 
