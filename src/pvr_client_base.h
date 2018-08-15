@@ -23,9 +23,10 @@
 #ifndef pvr_client_base_h
 #define pvr_client_base_h
 
+#include <string>
 #include "pvr_client_types.h"
 #include "xbmc_pvr_types.h"
-#include <string>
+#include "p8-platform/threads/mutex.h"
 #include "addon.h"
 #include "globals.hpp"
 
@@ -67,12 +68,14 @@ namespace PvrClient
         PVR_ERROR GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL& channel, time_t iStart, time_t iEnd);
         ADDON_STATUS GetStatus();
         
+        bool OpenLiveStream(const PVR_CHANNEL& channel);
         void CloseLiveStream();
         int ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize);
         long long SeekLiveStream(long long iPosition, int iWhence);
         long long PositionLiveStream();
         long long LengthLiveStream();
-        
+        bool SwitchChannel(const PVR_CHANNEL& channel);
+
         
         void SetTimeshiftEnabled(bool enable);
         void SetTimeshiftBufferSize(uint64_t size);
@@ -104,15 +107,19 @@ namespace PvrClient
         virtual ADDON_STATUS OnReloadEpg();
         virtual ADDON_STATUS OnReloadRecordings();
 
-        bool OpenLiveStream(const std::string& url );
+        virtual std::string GetStreamUrl(ChannelId channelId) = 0;
+        virtual std::string GetNextStreamUrl(ChannelId channelId) {return std::string();}
+        ChannelId GetLiveChannelId() { return  m_liveChannelId;}
+        bool IsLiveInRecording() const {return m_inputBuffer == m_localRecordBuffer;}
+        bool SwitchChannel(ChannelId channelId, const std::string& url);
+
         bool OpenRecordedStream(const std::string& url, Buffers::IPlaylistBufferDelegate* delegate);
         bool IsLocalRecording(const PVR_RECORDING &recording) const;
         // Implemented for local recordings. Should be defined by derived class
         virtual bool OpenRecordedStream(const PVR_RECORDING &recording) = 0;
-        bool SwitchChannel(const std::string& url);
         const std::string& GetClientPath() const { return m_clientPath;}
         const std::string& GetUserPath() const { return m_userPath;}
-        
+
     private:
         
         void SetChannelReloadTimeout(int timeout);
@@ -120,7 +127,9 @@ namespace PvrClient
         std::string DirectoryForRecording(unsigned int epgId) const;
         std::string PathForRecordingInfo(unsigned int epgId) const;
         static Buffers::InputBuffer*  BufferForUrl(const std::string& url );
+        bool OpenLiveStream(ChannelId channelId, const std::string& url );
 
+        ChannelId m_liveChannelId;
         Buffers::InputBuffer *m_inputBuffer;
         Buffers::InputBuffer *m_recordBuffer;
         Buffers::InputBuffer *m_localRecordBuffer;
@@ -132,6 +141,9 @@ namespace PvrClient
         std::string m_clientPath;
         std::string m_userPath;
         int m_channelReloadTimeout;
+        mutable P8PLATFORM::CMutex m_mutex;
+        int m_lastBytesRead;
+
     };
 }
 #endif //pvr_client_base_h

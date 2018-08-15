@@ -42,12 +42,9 @@ public:
 
     PVR_ERROR SignalStatus(PVR_SIGNAL_STATUS &signalStatus);
 
-    bool OpenLiveStream(const PVR_CHANNEL& channel);
-    int ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize);
-    bool SwitchChannel(const PVR_CHANNEL& channel);
-
     bool OpenRecordedStream(const PVR_RECORDING &recording);
 protected:
+    std::string GetStreamUrl(PvrClient::ChannelId channelId);
     PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
     ADDON_STATUS OnReloadEpg();
 
@@ -67,7 +64,6 @@ private:
     std::string m_pinCode;
     bool m_enableAdult;
     bool m_supportArchive;
-    int m_lastBytesRead;
 };
 
 #endif //__sovok_pvr_client_h__

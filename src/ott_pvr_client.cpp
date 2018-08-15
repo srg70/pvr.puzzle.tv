@@ -191,23 +191,11 @@ ADDON_STATUS OttPVRClient::OnReloadEpg()
     return retVal;
 }
 
-
-bool OttPVRClient::OpenLiveStream(const PVR_CHANNEL& channel)
+string OttPVRClient::GetStreamUrl(PvrClient::ChannelId channelId)
 {
     if(NULL == m_core)
-        return false;
-
-    string url = m_core->GetUrl(channel.iUniqueId);
-    return PVRClientBase::OpenLiveStream(url);
-}
-
-bool OttPVRClient::SwitchChannel(const PVR_CHANNEL& channel)
-{
-    if(NULL == m_core)
-        return false;
-
-    string url = m_core->GetUrl(channel.iUniqueId);
-    return PVRClientBase::SwitchChannel(url);
+        return string();
+   return  m_core->GetUrl(channelId);
 }
 
 class OttArchiveDelegate : public Buffers::IPlaylistBufferDelegate

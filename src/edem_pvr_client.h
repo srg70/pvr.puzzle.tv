@@ -40,17 +40,12 @@ public:
     ~EdemPVRClient();
 
     ADDON_STATUS SetSetting(const char *settingName, const void *settingValue);
-    
     PVR_ERROR GetAddonCapabilities(PVR_ADDON_CAPABILITIES* pCapabilities);
-
     PVR_ERROR SignalStatus(PVR_SIGNAL_STATUS &signalStatus);
-    
-    bool OpenLiveStream(const PVR_CHANNEL& channel);
-    bool SwitchChannel(const PVR_CHANNEL& channel);
-
     bool OpenRecordedStream(const PVR_RECORDING &recording);
 
 protected:
+    std::string GetStreamUrl(PvrClient::ChannelId channel);
     PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
     ADDON_STATUS OnReloadEpg();
 

@@ -31,8 +31,9 @@
 #include <functional>
 
 namespace PvrClient {
-    typedef unsigned int ChannelId;
     
+    typedef unsigned int ChannelId;
+    const ChannelId UnknownChannelId = (ChannelId) -1;
     struct Channel
     {
         typedef std::vector<std::string> UrlList;

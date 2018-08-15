@@ -53,6 +53,7 @@ using namespace ADDON;
 using namespace Buffers;
 using namespace PvrClient;
 using namespace Globals;
+using namespace P8PLATFORM;
 
 namespace CurlUtils
 {
@@ -123,6 +124,9 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     localizedString  = XBMC->GetLocalizedString(32015);
     s_RemoteRecPrefix = localizedString;
     XBMC->FreeString(localizedString);
+    
+    m_liveChannelId = -1;
+    m_lastBytesRead = 1;
 
     return ADDON_STATUS_OK;
     
@@ -410,14 +414,37 @@ InputBuffer*  PVRClientBase::BufferForUrl(const std::string& url )
     return buffer;
 }
 
-bool PVRClientBase::OpenLiveStream(const std::string& url )
+bool PVRClientBase::OpenLiveStream(const PVR_CHANNEL& channel)
 {
+    m_lastBytesRead = 1;
+    bool succeeded = OpenLiveStream(channel.iUniqueId, GetStreamUrl(channel.iUniqueId));
+    bool tryToRecover = !succeeded;
+    while(tryToRecover) {
+        string url = GetNextStreamUrl(channel.iUniqueId);
+        if(url.empty()) // nomore streams
+            break;
+        succeeded = OpenLiveStream(channel.iUniqueId, url);
+        tryToRecover = !succeeded;
+    }
+    
+    return succeeded;
+
+}
+
+bool PVRClientBase::OpenLiveStream(ChannelId channelId, const std::string& url )
+{
+    
+    if(channelId == m_liveChannelId && IsLiveInRecording())
+        return true; // Do not change url of local recording stream
+
+    m_liveChannelId = UnknownChannelId;
+    
     if (url.empty())
         return false;
     try
     {
         InputBuffer* buffer = BufferForUrl(url);
-        
+        CLockObject lock(m_mutex);
         if (m_isTimeshiftEnabled){
             if(k_TimeshiftBufferFile == m_timeshiftBufferType) {
                 m_inputBuffer = new Buffers::TimeshiftBuffer(buffer, new Buffers::FileCacheBuffer(m_cacheDir, m_timshiftBufferSize /  Buffers::FileCacheBuffer::CHUNK_FILE_SIZE_LIMIT));
@@ -434,42 +461,77 @@ bool PVRClientBase::OpenLiveStream(const std::string& url )
         LogError(  "PVRClientBase: input buffer error in OpenLiveStream: %s", ex.what());
         return false;
     }
-    
+    m_liveChannelId = channelId;
     return true;
 }
 
 void PVRClientBase::CloseLiveStream()
 {
-    if(m_inputBuffer) {
+    CLockObject lock(m_mutex);
+    m_liveChannelId = UnknownChannelId;
+    if(m_inputBuffer && !IsLiveInRecording()) {
         LogNotice("PVRClientBase: closing input sream...");
         SAFE_DELETE(m_inputBuffer);
         LogNotice("PVRClientBase: input sream closed.");
+    } else{
+        m_inputBuffer = nullptr;
     }
 }
 
 int PVRClientBase::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize)
 {
-    return m_inputBuffer->Read(pBuffer, iBufferSize, m_channelReloadTimeout * 1000);
+    CLockObject lock(m_mutex);
+
+    int bytesRead = m_inputBuffer->Read(pBuffer, iBufferSize, m_channelReloadTimeout * 1000);
+    // Assuming stream hanging.
+    // Try to restart current channel only when previous read operation succeeded.
+    if (bytesRead != iBufferSize && m_lastBytesRead > 0 && !IsLiveInRecording()) {
+        LogError("PVRClientBase:: trying to restart current channel.");
+
+        string url = GetStreamUrl(GetLiveChannelId());
+        if(!url.empty()){
+            char* message = XBMC->GetLocalizedString(32000);
+            XBMC->QueueNotification(QUEUE_INFO, message);
+            XBMC->FreeString(message);
+            SwitchChannel(GetLiveChannelId(), url);
+            bytesRead = m_inputBuffer->Read(pBuffer, iBufferSize, m_channelReloadTimeout * 1000);
+        }
+   }
+    m_lastBytesRead = bytesRead;
+    return bytesRead;
 }
 
 long long PVRClientBase::SeekLiveStream(long long iPosition, int iWhence)
 {
+    CLockObject lock(m_mutex);
     return m_inputBuffer->Seek(iPosition, iWhence);
 }
 
 long long PVRClientBase::PositionLiveStream()
 {
+    CLockObject lock(m_mutex);
     return m_inputBuffer->GetPosition();
 }
 
 long long PVRClientBase::LengthLiveStream()
 {
+    CLockObject lock(m_mutex);
     return m_inputBuffer->GetLength();
 }
 
-bool PVRClientBase::SwitchChannel(const std::string& url)
+bool PVRClientBase::SwitchChannel(const PVR_CHANNEL& channel)
 {
-    return m_inputBuffer->SwitchStream(url);
+    return SwitchChannel(channel.iUniqueId, GetStreamUrl(channel.iUniqueId));
+}
+
+bool PVRClientBase::SwitchChannel(ChannelId channelId, const std::string& url)
+{
+    if(url.empty())
+        return false;
+    CLockObject lock(m_mutex);
+    if(IsLiveInRecording())
+        return OpenLiveStream(channelId, url); // Split live and recording streams (when nesessry)
+    return m_inputBuffer->SwitchStream(url); // Just change live stream
 }
 
 void PVRClientBase::SetTimeshiftEnabled(bool enable)
@@ -800,9 +862,17 @@ bool PVRClientBase::StartRecordingFor(const PVR_TIMER &timer)
     XBMC->CloseFile(infoFile);
     
     std::string url = m_clientCore ->GetUrl(timer.iClientChannelUid);
-    InputBuffer* buffer = BufferForUrl(url);
-    
-    m_localRecordBuffer = new Buffers::TimeshiftBuffer(buffer, new Buffers::FileCacheBuffer(recordingDir, 0, false));
+    // When recording channel is same to live channel
+    // merge live buffer with local recording
+    if(m_liveChannelId == timer.iClientChannelUid){
+        CLockObject lock(m_mutex);
+        CloseLiveStream();
+        m_inputBuffer = m_localRecordBuffer = new Buffers::TimeshiftBuffer(BufferForUrl(url), new Buffers::FileCacheBuffer(recordingDir, 0, false));
+        m_liveChannelId = timer.iClientChannelUid;
+        return true;
+    }
+    // otherwise just open new recording stream
+    m_localRecordBuffer = new Buffers::TimeshiftBuffer(BufferForUrl(url), new Buffers::FileCacheBuffer(recordingDir, 0, false));
 
     return true;
 }
@@ -835,6 +905,15 @@ bool PVRClientBase::StopRecordingFor(const PVR_TIMER &timer)
     if(nullptr != infoFile)
         XBMC->CloseFile(infoFile);
     
+    // When recording channel is same to live channel
+    // merge live buffer with local recording
+    if(m_liveChannelId == timer.iClientChannelUid){
+        CLockObject lock(m_mutex);
+        if(m_localRecordBuffer)
+            SAFE_DELETE(m_localRecordBuffer);
+        if(!OpenLiveStream(timer.iClientChannelUid, GetStreamUrl(timer.iClientChannelUid)))
+            LogError("Failed to re-open live channel %d during stopping of recording", timer.iClientChannelUid);
+    }
     if(m_localRecordBuffer)
         SAFE_DELETE(m_localRecordBuffer);
     

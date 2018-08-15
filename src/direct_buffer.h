@@ -28,7 +28,6 @@
 #define direct_buffer_h
 
 #include <string>
-#include "p8-platform/threads/mutex.h"
 #include "input_buffer.h"
 
 namespace Buffers {
@@ -49,7 +48,6 @@ namespace Buffers {
         
     protected:
         void *m_streamHandle;
-        mutable P8PLATFORM::CMutex m_mutex;
     private:
         static void* Open(const std::string &path);
         ICacheBuffer* m_cacheBuffer;

@@ -208,22 +208,11 @@ ADDON_STATUS EdemPVRClient::OnReloadEpg()
 }
 
 
-bool EdemPVRClient::OpenLiveStream(const PVR_CHANNEL& channel)
+string EdemPVRClient::GetStreamUrl(ChannelId channel)
 {
     if(NULL == m_core)
-        return false;
-    
-    string url = m_core->GetUrl(channel.iUniqueId);
-    return PVRClientBase::OpenLiveStream(url);
-}
-
-bool EdemPVRClient::SwitchChannel(const PVR_CHANNEL& channel)
-{
-    if(NULL == m_core)
-        return false;
-    
-    string url = m_core->GetUrl(channel.iUniqueId);
-    return PVRClientBase::SwitchChannel(url);
+        return string();
+    return  m_core->GetUrl(channel);
 }
 
 class EdemArchiveDelegate : public Buffers::IPlaylistBufferDelegate

@@ -38,7 +38,6 @@
 
 namespace Buffers {
     
-    using namespace P8PLATFORM;
     using namespace Globals;
 
     void* DirectBuffer::Open(const std::string & path){
@@ -85,7 +84,6 @@ namespace Buffers {
         if(m_cacheBuffer)
             return m_cacheBuffer->Read(buffer, bufferSize);
 
-        //CLockObject lock(m_mutex);
         return XBMC->ReadFile(m_streamHandle, buffer, bufferSize);
     }
     
@@ -98,8 +96,6 @@ namespace Buffers {
     {
         if(m_cacheBuffer)
             return false;
-        
-        //CLockObject lock(m_mutex);
         
         XBMC->CloseFile(m_streamHandle);
         m_streamHandle = Open(newUrl);
@@ -115,21 +111,18 @@ namespace Buffers {
     
     int64_t ArchiveBuffer::GetLength() const
     {
-        CLockObject lock(m_mutex);
         auto retVal =  XBMC->GetFileLength(m_streamHandle);
         //XBMC->Log(ADDON::LOG_DEBUG, "ArchiveBuffer: length = %d", retVal);
         return retVal;
     }
     int64_t ArchiveBuffer::GetPosition() const
     {
-        CLockObject lock(m_mutex);
         auto retVal =  XBMC->GetFilePosition(m_streamHandle);
         //XBMC->Log(ADDON::LOG_DEBUG, "ArchiveBuffer: position = %d", retVal);
         return retVal;
     }
     int64_t ArchiveBuffer::Seek(int64_t iPosition, int iWhence)
     {
-        CLockObject lock(m_mutex);
         auto retVal =  XBMC->SeekFile(m_streamHandle, iPosition, iWhence);
         //XBMC->Log(ADDON::LOG_DEBUG, "ArchiveBuffer: Seek = %d(requested %d from %d)", retVal, iPosition, iWhence);
         return retVal;

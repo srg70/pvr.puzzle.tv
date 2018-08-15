@@ -178,52 +178,37 @@ ADDON_STATUS PuzzlePVRClient::OnReloadEpg()
 }
 
 
-string PuzzlePVRClient::GetStreamUrl(const PVR_CHANNEL& channel)
+string PuzzlePVRClient::GetStreamUrl(ChannelId channelId)
 {
-    m_currentChannelId = channel.iUniqueId;
-    string url = m_puzzleTV->GetUrl(m_currentChannelId);
+    if(m_puzzleTV == nullptr)
+        return string();
     m_currentChannelStreamIdx = 0;
-    return url;
+    return m_puzzleTV->GetUrl(channelId);
 }
-bool PuzzlePVRClient::OpenLiveStream(const PVR_CHANNEL& channel)
+
+string PuzzlePVRClient::GetNextStreamUrl(ChannelId channelId)
 {
-    bool succeeded = PVRClientBase::OpenLiveStream(GetStreamUrl(channel));
-    bool tryToRecover = !succeeded;
-    while(tryToRecover) {
-        LogError("PuzzlePVRClient:: trying to move to next stream from [%d].", m_currentChannelStreamIdx);
-        string url = m_puzzleTV->GetNextStream(m_currentChannelId,m_currentChannelStreamIdx);
-        if(url.empty()) // nomore streams
-            break;
-        ++m_currentChannelStreamIdx;
-        succeeded = PVRClientBase::OpenLiveStream(url);
-        tryToRecover = !succeeded;
-    }
-
-    return succeeded;
+    if(m_puzzleTV == nullptr)
+        return string();
+    LogError("PuzzlePVRClient:: trying to move to next stream from [%d].", m_currentChannelStreamIdx);
+   return m_puzzleTV->GetNextStream(channelId, m_currentChannelStreamIdx++);
 }
 
-int PuzzlePVRClient::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize)
-{
-    int readBytes = PVRClientBase::ReadLiveStream(pBuffer,iBufferSize);
-    bool tryToRecover = readBytes < 0;
-    while(tryToRecover) {
-        LogError("PuzzlePVRClient:: trying to move to next stream from [%d].", m_currentChannelStreamIdx);
-        string url = m_puzzleTV->GetNextStream(m_currentChannelId,m_currentChannelStreamIdx);
-        if(url.empty()) // nomore streams
-            break;
-        ++m_currentChannelStreamIdx;
-        PVRClientBase::SwitchChannel(url);
-        readBytes = PVRClientBase::ReadLiveStream(pBuffer,iBufferSize);
-        tryToRecover = readBytes < 0;
-    }
-
-    return readBytes;
-}
-
-bool PuzzlePVRClient::SwitchChannel(const PVR_CHANNEL& channel)
-{
-    return PVRClientBase::SwitchChannel(GetStreamUrl(channel));
-}
+//int PuzzlePVRClient::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize)
+//{
+//    int readBytes = PVRClientBase::ReadLiveStream(pBuffer,iBufferSize);
+//    bool tryToRecover = readBytes < 0;
+//    while(tryToRecover) {
+//        string url = GetNextStreamUrl(GetLiveChannelId());
+//        if(url.empty()) // nomore streams
+//            break;
+//        SwitchChannel(GetLiveChannelId(), url);
+//        readBytes = PVRClientBase::ReadLiveStream(pBuffer,iBufferSize);
+//        tryToRecover = readBytes < 0;
+//    }
+//
+//    return readBytes;
+//}
 
 bool PuzzlePVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
 {
