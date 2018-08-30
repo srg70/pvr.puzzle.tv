@@ -1,3 +1,8 @@
+0.7.2
+- Single stream on recording of watching live channel.
+- Fixed crash on reloading hanging channel.
+- New cache implementation.
+
 0.7.0
 - Basic timers support for all providers.
 
