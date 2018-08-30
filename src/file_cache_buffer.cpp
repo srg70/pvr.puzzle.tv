@@ -245,13 +245,14 @@ namespace Buffers
     , m_maxSize(std::max(uint8_t(3), sizeFactor) * CHUNK_FILE_SIZE_LIMIT)
     , m_autoDelete(autoDelete)
     , m_isReadOnly(false)
+    , m_chunkForLock(new uint8_t[STREAM_READ_BUFFER_SIZE])
     {
         if(!XBMC->DirectoryExists(m_bufferDir.c_str())) {
             if(!XBMC->CreateDirectory(m_bufferDir.c_str())) {
                 throw CacheBufferException("Failed to create cahche  directory for timeshift buffer.");
             }
         }
-        Init();
+        //Init();
     }
 
     static int64_t CalculateDataSize(const std::string& bufferCacheDir)
@@ -418,6 +419,18 @@ namespace Buffers
     }
     
     // Write interface
+    bool FileCacheBuffer::LockUnitForWrite(uint8_t** pBuf) {
+        *pBuf = m_chunkForLock.get();
+        return true;
+    }
+    void FileCacheBuffer::UnlockAfterWriten(uint8_t* pBuf, ssize_t writtenBytes) {
+        if(m_chunkForLock.get() != pBuf) {
+            LogError("Error: FileCacheBuffer::UnlockUnit() wrong buffer to unlock.");
+            return;
+        }
+        Write(pBuf, writtenBytes < 0 ? UnitSize() : writtenBytes);
+    }
+
     ssize_t FileCacheBuffer::Write(const void* buf, size_t bufferSize) {
         if(m_isReadOnly)
             return 0;

@@ -47,6 +47,12 @@ namespace Buffers {
         ssize_t Read(unsigned char *buffer, size_t bufferSize, uint32_t timeoutMs);
         int64_t Seek(int64_t iPosition, int iWhence);
         bool SwitchStream(const std::string &newUrl);
+        
+        void SwapCache(ICacheBuffer* cache){
+            m_cacheToSwap = cache;
+            m_cacheSwapEvent.Wait();
+        }
+        
         /*!
          * @brief Stop the thread
          * @param iWaitMs negative = don't wait, 0 = infinite, or the amount of ms to wait
@@ -57,11 +63,16 @@ namespace Buffers {
         void *Process();
         
         void Init(const std::string &newUrl = std::string());
-        void DebugLog(const std::string& message) const;
+        void CheckAndWaitForSwap();
+        void CheckAndSwap();
         
         P8PLATFORM::CEvent m_writeEvent;
+        P8PLATFORM::CEvent m_cacheSwapEvent;
+        bool m_writerWaitingForCacheSwap;
         InputBuffer* m_inputBuffer;
         ICacheBuffer* m_cache;
+        ICacheBuffer* m_cacheToSwap;
+        
     };
 }
 

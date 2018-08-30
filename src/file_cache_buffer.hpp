@@ -62,8 +62,9 @@ namespace Buffers
         virtual ssize_t Read(void* lpBuf, size_t uiBufSize);
         
         // Write interface
-        virtual ssize_t Write(const void* lpBuf, size_t uiBufSize);
-        
+        virtual bool LockUnitForWrite(uint8_t** pBuf);
+        virtual void UnlockAfterWriten(uint8_t* pBuf, ssize_t writtenBytes = -1);
+
         ~FileCacheBuffer();
         
     private:
@@ -74,7 +75,7 @@ namespace Buffers
         ChunkFilePtr CreateChunk();
         unsigned int GetChunkIndexFor(int64_t position);
         int64_t GetPositionInChunkFor(int64_t position);
-
+        ssize_t Write(const void* buf, size_t bufferSize);
         
         mutable FileChunks m_ReadChunks;
         ChunkFileSwarm m_ChunkFileSwarm;
@@ -86,6 +87,7 @@ namespace Buffers
         std::string m_bufferDir;
         const bool m_autoDelete;
         const bool m_isReadOnly;
+        std::unique_ptr<uint8_t> m_chunkForLock;
     };
 }
 #endif // __file_cache_buffer_hpp__

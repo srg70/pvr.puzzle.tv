@@ -44,6 +44,7 @@
 #include "memory_cache_buffer.hpp"
 #include "plist_buffer.h"
 #include "direct_buffer.h"
+#include "simple_cyclic_buffer.hpp"
 #include "helpers.h"
 #include "pvr_client_base.h"
 #include "globals.hpp"
@@ -71,7 +72,8 @@ const int RELOAD_RECORDINGS_MENU_HOOK = 2;
 ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
 {
     m_clientCore = NULL;
-    m_inputBuffer = m_recordBuffer = m_localRecordBuffer = NULL;
+    m_inputBuffer = NULL;
+    m_recordBuffer = m_localRecordBuffer = NULL;
     
     LogDebug( "User path: %s", pvrprops->strUserPath);
     LogDebug( "Client path: %s", pvrprops->strClientPath);
@@ -95,9 +97,15 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     string recordingsPath;
     if (XBMC->GetSetting("recordings_path", &buffer))
         recordingsPath = buffer;
+    
     uint64_t timeshiftBufferSize = 0;
     XBMC->GetSetting("timeshift_size", &timeshiftBufferSize);
     timeshiftBufferSize *= 1024*1024;
+    
+    uint64_t cacheSizeLimit = 0;
+    XBMC->GetSetting("timeshift_off_cache_limit", &cacheSizeLimit);
+    cacheSizeLimit *= 1024*1024;
+    
     
     TimeshiftBufferType timeshiftBufferType = k_TimeshiftBufferMemory;
     XBMC->GetSetting("timeshift_type", &timeshiftBufferType);
@@ -109,6 +117,7 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     SetRecordingsPath(recordingsPath);
     SetTimeshiftBufferSize(timeshiftBufferSize);
     SetTimeshiftBufferType(timeshiftBufferType);
+    SetCacheLimit(cacheSizeLimit);
     
     PVR_MENUHOOK hook = {RELOAD_EPG_MENU_HOOK, 32050, PVR_MENUHOOK_EPG};
     PVR->AddMenuHook(&hook);
@@ -176,6 +185,12 @@ ADDON_STATUS PVRClientBase::SetSetting(const char *settingName, const void *sett
         auto size = *(int32_t *)(settingValue);
         size *= 1024*1024;
         SetTimeshiftBufferSize(size);
+    }
+    else if (strcmp(settingName, "timeshift_off_cache_limit") == 0)
+    {
+        auto size = *(int32_t *)(settingValue);
+        size *= 1024*1024;
+        SetCacheLimit(size);
     }
     else if (strcmp(settingName, "curl_timeout") == 0)
     {
@@ -431,6 +446,19 @@ bool PVRClientBase::OpenLiveStream(const PVR_CHANNEL& channel)
 
 }
 
+Buffers::ICacheBuffer* PVRClientBase::CreateLiveCache() const {
+    if (m_isTimeshiftEnabled){
+        if(k_TimeshiftBufferFile == m_timeshiftBufferType) {
+            return new Buffers::FileCacheBuffer(m_cacheDir, m_timshiftBufferSize /  Buffers::FileCacheBuffer::CHUNK_FILE_SIZE_LIMIT);
+        } else {
+            return new Buffers::MemoryCacheBuffer(m_timshiftBufferSize /  Buffers::MemoryCacheBuffer::CHUNK_SIZE_LIMIT);
+        }
+    }
+    else
+        return new Buffers::SimpleCyclicBuffer(m_cacheSizeLimit / Buffers::SimpleCyclicBuffer::CHUNK_SIZE_LIMIT);
+
+}
+
 bool PVRClientBase::OpenLiveStream(ChannelId channelId, const std::string& url )
 {
     
@@ -445,15 +473,7 @@ bool PVRClientBase::OpenLiveStream(ChannelId channelId, const std::string& url )
     {
         InputBuffer* buffer = BufferForUrl(url);
         CLockObject lock(m_mutex);
-        if (m_isTimeshiftEnabled){
-            if(k_TimeshiftBufferFile == m_timeshiftBufferType) {
-                m_inputBuffer = new Buffers::TimeshiftBuffer(buffer, new Buffers::FileCacheBuffer(m_cacheDir, m_timshiftBufferSize /  Buffers::FileCacheBuffer::CHUNK_FILE_SIZE_LIMIT));
-            } else {
-                m_inputBuffer = new Buffers::TimeshiftBuffer(buffer, new Buffers::MemoryCacheBuffer(m_timshiftBufferSize /  Buffers::MemoryCacheBuffer::CHUNK_SIZE_LIMIT));
-            }
-        }
-        else
-            m_inputBuffer = buffer;
+        m_inputBuffer = new Buffers::TimeshiftBuffer(buffer, CreateLiveCache());
 
     }
     catch (InputBufferException &ex)
@@ -542,6 +562,11 @@ void PVRClientBase::SetTimeshiftEnabled(bool enable)
 void PVRClientBase::SetChannelReloadTimeout(int timeout)
 {
     m_channelReloadTimeout = timeout;
+}
+
+void PVRClientBase::SetCacheLimit(uint64_t size)
+{
+    m_cacheSizeLimit = size;
 }
 
 void PVRClientBase::SetTimeshiftBufferSize(uint64_t size)
@@ -709,10 +734,17 @@ PVR_ERROR PVRClientBase::DeleteRecording(const PVR_RECORDING &recording)
     return PVR_ERROR_NO_ERROR;
 }
 
+bool PVRClientBase::IsLiveInRecording() const
+{
+    return m_inputBuffer == m_localRecordBuffer;
+}
+
+
 bool PVRClientBase::IsLocalRecording(const PVR_RECORDING &recording) const
 {
     return StringUtils::StartsWith(recording.strDirectory, s_LocalRecPrefix.c_str());
 }
+
 bool PVRClientBase::OpenRecordedStream(const PVR_RECORDING &recording)
 {
     if(!IsLocalRecording(recording))
@@ -865,9 +897,10 @@ bool PVRClientBase::StartRecordingFor(const PVR_TIMER &timer)
     // When recording channel is same to live channel
     // merge live buffer with local recording
     if(m_liveChannelId == timer.iClientChannelUid){
-        CLockObject lock(m_mutex);
-        CloseLiveStream();
-        m_inputBuffer = m_localRecordBuffer = new Buffers::TimeshiftBuffer(BufferForUrl(url), new Buffers::FileCacheBuffer(recordingDir, 0, false));
+//        CLockObject lock(m_mutex);
+//        CloseLiveStream();
+        m_inputBuffer->SwapCache( new Buffers::FileCacheBuffer(recordingDir, 0, false));
+        m_localRecordBuffer = m_inputBuffer;
         m_liveChannelId = timer.iClientChannelUid;
         return true;
     }
@@ -908,14 +941,13 @@ bool PVRClientBase::StopRecordingFor(const PVR_TIMER &timer)
     // When recording channel is same to live channel
     // merge live buffer with local recording
     if(m_liveChannelId == timer.iClientChannelUid){
-        CLockObject lock(m_mutex);
+        //CLockObject lock(m_mutex);
+        m_inputBuffer->SwapCache(CreateLiveCache());
+        m_localRecordBuffer = nullptr;
+    } else {
         if(m_localRecordBuffer)
             SAFE_DELETE(m_localRecordBuffer);
-        if(!OpenLiveStream(timer.iClientChannelUid, GetStreamUrl(timer.iClientChannelUid)))
-            LogError("Failed to re-open live channel %d during stopping of recording", timer.iClientChannelUid);
     }
-    if(m_localRecordBuffer)
-        SAFE_DELETE(m_localRecordBuffer);
     
     // trigger Kodi recordings update
     PVR->TriggerRecordingUpdate();

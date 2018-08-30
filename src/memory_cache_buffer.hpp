@@ -40,10 +40,10 @@ namespace Buffers
     {
     public:
         static const uint32_t STREAM_READ_BUFFER_SIZE = 1024 * 32; // 32K input read buffer
-        static const  uint32_t CHUNK_SIZE_LIMIT = (STREAM_READ_BUFFER_SIZE * 1024) * 4; // 128MB chunk
+        static const  uint32_t CHUNK_SIZE_LIMIT = STREAM_READ_BUFFER_SIZE; //(STREAM_READ_BUFFER_SIZE * 1024) * 4; // 128MB chunk
 
         
-        MemoryCacheBuffer(uint8_t  sizeFactor);
+        MemoryCacheBuffer(uint32_t  sizeFactor);
         
         virtual  void Init();
         virtual  uint32_t UnitSize();
@@ -60,8 +60,9 @@ namespace Buffers
         virtual ssize_t Read(void* lpBuf, size_t uiBufSize);
         
         // Write interface
-        virtual ssize_t Write(const void* lpBuf, size_t uiBufSize);
-        
+        virtual bool LockUnitForWrite(uint8_t** pBuf);
+        virtual void UnlockAfterWriten(uint8_t* pBuf, ssize_t writtenBytes = -1);
+
         ~MemoryCacheBuffer();
         
     private:
@@ -81,6 +82,7 @@ namespace Buffers
         int64_t m_position;
         int64_t m_begin;// virtual start of cache
         const int64_t m_maxSize;
+        ChunkPtr m_lockedChunk;
     };
 }
 #endif // __memory_cache_buffer_hpp__

@@ -33,6 +33,8 @@
 namespace Buffers {
     class IPlaylistBufferDelegate;
     class InputBuffer;
+    class TimeshiftBuffer;
+    class ICacheBuffer;
 }
 
 namespace PvrClient
@@ -110,7 +112,7 @@ namespace PvrClient
         virtual std::string GetStreamUrl(ChannelId channelId) = 0;
         virtual std::string GetNextStreamUrl(ChannelId channelId) {return std::string();}
         ChannelId GetLiveChannelId() { return  m_liveChannelId;}
-        bool IsLiveInRecording() const {return m_inputBuffer == m_localRecordBuffer;}
+        bool IsLiveInRecording() const;
         bool SwitchChannel(ChannelId channelId, const std::string& url);
 
         bool OpenRecordedStream(const std::string& url, Buffers::IPlaylistBufferDelegate* delegate);
@@ -122,19 +124,23 @@ namespace PvrClient
 
     private:
         
+        void SetCacheLimit(uint64_t size);
         void SetChannelReloadTimeout(int timeout);
+        
         void FillRecording(const EpgEntryList::value_type& epgEntry, PVR_RECORDING& tag, const char* dirPrefix);
         std::string DirectoryForRecording(unsigned int epgId) const;
         std::string PathForRecordingInfo(unsigned int epgId) const;
         static Buffers::InputBuffer*  BufferForUrl(const std::string& url );
         bool OpenLiveStream(ChannelId channelId, const std::string& url );
+        Buffers::ICacheBuffer* CreateLiveCache() const;
 
         ChannelId m_liveChannelId;
-        Buffers::InputBuffer *m_inputBuffer;
+        Buffers::TimeshiftBuffer *m_inputBuffer;
         Buffers::InputBuffer *m_recordBuffer;
-        Buffers::InputBuffer *m_localRecordBuffer;
+        Buffers::TimeshiftBuffer *m_localRecordBuffer;
         bool m_isTimeshiftEnabled;
         uint64_t m_timshiftBufferSize;
+        uint64_t m_cacheSizeLimit;
         TimeshiftBufferType m_timeshiftBufferType;
         std::string m_cacheDir;
         std::string m_recordingsDir;

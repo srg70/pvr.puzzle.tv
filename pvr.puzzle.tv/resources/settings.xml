@@ -5,9 +5,10 @@
 <category label="10010">
     <setting id="provider_type" type="enum" label="10000" lvalues="20010|30010|40010|50010" default="1" />
     <setting id="enable_timeshift" type="bool" label="10001" default="false" />
-    <setting id="timeshift_size" type="slider" label="10003" default="512" range="384,128,32640" option="int" visible="eq(-1,true)" subsetting="true"/>
+    <setting id="timeshift_size" type="slider" label="10003" default="50" range="30,5,32640" option="int" visible="eq(-1,true)" subsetting="true"/>
     <setting id="timeshift_type" type="enum" label="10004" lvalues="10005|10006" default="0"  visible="eq(-2,true)" subsetting="true"/>
     <setting id="timeshift_path" type="folder" label="10002" default="" visible="eq(-1,1) + eq(-3,true)" subsetting="true"/>
+    <setting id="timeshift_off_cache_limit" type="slider" label="10011" default="30" range="10,5,100" option="int" visible="eq(-4,false)" subsetting="true"/>
     <setting id="curl_timeout" type="number" label="10007" default="15" option="int"/>
     <setting id="channel_reload_timeout" type="slider" label="10008" default="5" range="1,1,30" option="int"/>
     <setting id="recordings_path" type="folder" label="10009" default="" />

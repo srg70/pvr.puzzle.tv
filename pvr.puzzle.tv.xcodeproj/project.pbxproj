@@ -125,6 +125,7 @@
 		4CAAE732200691A600A866C9 /* XMLTV_loader.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4CAAE730200691A600A866C9 /* XMLTV_loader.hpp */; };
 		4CBC4B8320C149F700BA0CFF /* TimersEngine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CBC4B8120C149F700BA0CFF /* TimersEngine.cpp */; };
 		4CBC4B8420C149F700BA0CFF /* TimersEngine.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4CBC4B8220C149F700BA0CFF /* TimersEngine.hpp */; };
+		4CC18CE4212B2046005E64B8 /* simple_cyclic_buffer.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4CC18CE2212B2046005E64B8 /* simple_cyclic_buffer.hpp */; };
 		4CD394B61F2258610073E2DF /* plist_buffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD394B41F2258610073E2DF /* plist_buffer.cpp */; };
 		4CD394B71F2258610073E2DF /* plist_buffer.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CD394B51F2258610073E2DF /* plist_buffer.h */; };
 		4CDC11E020B4531900EA9E2B /* client_core_base.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CDC11DE20B4531900EA9E2B /* client_core_base.cpp */; };
@@ -267,6 +268,7 @@
 		4CAAE730200691A600A866C9 /* XMLTV_loader.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = XMLTV_loader.hpp; sourceTree = "<group>"; };
 		4CBC4B8120C149F700BA0CFF /* TimersEngine.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TimersEngine.cpp; sourceTree = "<group>"; };
 		4CBC4B8220C149F700BA0CFF /* TimersEngine.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = TimersEngine.hpp; sourceTree = "<group>"; };
+		4CC18CE2212B2046005E64B8 /* simple_cyclic_buffer.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = simple_cyclic_buffer.hpp; sourceTree = "<group>"; };
 		4CD394B41F2258610073E2DF /* plist_buffer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = plist_buffer.cpp; sourceTree = "<group>"; };
 		4CD394B51F2258610073E2DF /* plist_buffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = plist_buffer.h; sourceTree = "<group>"; };
 		4CDC11DE20B4531900EA9E2B /* client_core_base.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = client_core_base.cpp; sourceTree = "<group>"; };
@@ -538,6 +540,7 @@
 				4C534CD11F418BB50038539D /* memory_cache_buffer.hpp */,
 				4C534CC11F347CD50038539D /* file_cache_buffer.cpp */,
 				4C534CC21F347CD50038539D /* file_cache_buffer.hpp */,
+				4CC18CE2212B2046005E64B8 /* simple_cyclic_buffer.hpp */,
 			);
 			name = Cache;
 			sourceTree = "<group>";
@@ -736,6 +739,7 @@
 				4C49D2031E27C4BF0026F43E /* libKODI_peripheral.h in Headers */,
 				4C49D2311E27C4BF0026F43E /* itoa.h in Headers */,
 				4C49D22E1E27C4BF0026F43E /* diyfp.h in Headers */,
+				4CC18CE4212B2046005E64B8 /* simple_cyclic_buffer.hpp in Headers */,
 				4C49D20A1E27C4BF0026F43E /* xbmc_addon_types.h in Headers */,
 				4C49D2271E27C4BF0026F43E /* encodedstream.h in Headers */,
 				4C49D2291E27C4BF0026F43E /* en.h in Headers */,

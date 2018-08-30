@@ -55,8 +55,9 @@ namespace Buffers
         virtual ssize_t Read(void* lpBuf, size_t uiBufSize) = 0;
         
         // Write interface
-        virtual ssize_t Write(const void* lpBuf, size_t uiBufSize) = 0;
-        
+        virtual bool LockUnitForWrite(uint8_t** pBuf) = 0;
+        virtual void UnlockAfterWriten(uint8_t* pBuf, ssize_t writtenBytes = -1) = 0;
+
         virtual ~ICacheBuffer() {};
         
     private:

@@ -60,6 +60,10 @@ msgctxt "#10009"
 msgid "Recordings path"
 msgstr "Recordings path"
 
+msgctxt "#10011"
+msgid "Cache limit (MB)"
+msgstr "Cache limit (MB)"
+
 #============ Puzzle Server Settings ============
 
 msgctxt "#20000"
