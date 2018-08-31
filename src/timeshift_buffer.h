@@ -50,7 +50,7 @@ namespace Buffers {
         
         void SwapCache(ICacheBuffer* cache){
             m_cacheToSwap = cache;
-            m_cacheSwapEvent.Wait();
+//            m_cacheSwapEvent.Wait();
         }
         
         /*!
