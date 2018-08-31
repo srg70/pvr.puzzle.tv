@@ -137,6 +137,7 @@ namespace PvrClient
         ChannelId m_liveChannelId;
         Buffers::TimeshiftBuffer *m_inputBuffer;
         Buffers::InputBuffer *m_recordBuffer;
+        ChannelId m_localRecordChannelId;
         Buffers::TimeshiftBuffer *m_localRecordBuffer;
         bool m_isTimeshiftEnabled;
         uint64_t m_timshiftBufferSize;

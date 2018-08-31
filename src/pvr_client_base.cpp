@@ -134,7 +134,7 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     s_RemoteRecPrefix = localizedString;
     XBMC->FreeString(localizedString);
     
-    m_liveChannelId = -1;
+    m_liveChannelId =  m_localRecordChannelId = UnknownChannelId;
     m_lastBytesRead = 1;
 
     return ADDON_STATUS_OK;
@@ -465,8 +465,14 @@ bool PVRClientBase::OpenLiveStream(ChannelId channelId, const std::string& url )
     if(channelId == m_liveChannelId && IsLiveInRecording())
         return true; // Do not change url of local recording stream
 
+    if(channelId == m_localRecordChannelId) {
+        CLockObject lock(m_mutex);
+        m_liveChannelId = m_localRecordChannelId;
+        m_inputBuffer = m_localRecordBuffer;
+        return true;
+    }
+
     m_liveChannelId = UnknownChannelId;
-    
     if (url.empty())
         return false;
     try
@@ -549,8 +555,8 @@ bool PVRClientBase::SwitchChannel(ChannelId channelId, const std::string& url)
     if(url.empty())
         return false;
     CLockObject lock(m_mutex);
-    if(IsLiveInRecording())
-        return OpenLiveStream(channelId, url); // Split live and recording streams (when nesessry)
+    if(IsLiveInRecording() || channelId == m_localRecordChannelId)
+        return OpenLiveStream(channelId, url); // Split/join live and recording streams (when nesessry)
     return m_inputBuffer->SwitchStream(url); // Just change live stream
 }
 
@@ -894,6 +900,7 @@ bool PVRClientBase::StartRecordingFor(const PVR_TIMER &timer)
     XBMC->CloseFile(infoFile);
     
     std::string url = m_clientCore ->GetUrl(timer.iClientChannelUid);
+    m_localRecordChannelId = timer.iClientChannelUid;
     // When recording channel is same to live channel
     // merge live buffer with local recording
     if(m_liveChannelId == timer.iClientChannelUid){
@@ -901,7 +908,7 @@ bool PVRClientBase::StartRecordingFor(const PVR_TIMER &timer)
 //        CloseLiveStream();
         m_inputBuffer->SwapCache( new Buffers::FileCacheBuffer(recordingDir, 0, false));
         m_localRecordBuffer = m_inputBuffer;
-        m_liveChannelId = timer.iClientChannelUid;
+        m_liveChannelId = m_localRecordChannelId;
         return true;
     }
     // otherwise just open new recording stream
@@ -945,8 +952,10 @@ bool PVRClientBase::StopRecordingFor(const PVR_TIMER &timer)
         m_inputBuffer->SwapCache(CreateLiveCache());
         m_localRecordBuffer = nullptr;
     } else {
-        if(m_localRecordBuffer)
+        if(m_localRecordBuffer) {
+            m_localRecordChannelId = UnknownChannelId;
             SAFE_DELETE(m_localRecordBuffer);
+        }
     }
     
     // trigger Kodi recordings update
