@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<addon id="pvr.puzzle.tv" version="0.7.2" name="PVR Puzzle TV" provider-name="srg70">
+<addon id="pvr.puzzle.tv" version="0.7.3" name="PVR Puzzle TV" provider-name="srg70">
   <requires>
     <c-pluff version="0.1"/>
     <import addon="xbmc.pvr" version="5.2.1"/>
