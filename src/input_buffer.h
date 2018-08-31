@@ -27,6 +27,8 @@
 #ifndef input_buffer_h
 #define input_buffer_h
 
+#include "p8-platform/os.h"
+#include <stdint.h>
 #include <exception>
 
 namespace Buffers {
