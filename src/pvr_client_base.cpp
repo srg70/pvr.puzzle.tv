@@ -906,13 +906,13 @@ bool PVRClientBase::StartRecordingFor(const PVR_TIMER &timer)
     if(m_liveChannelId == timer.iClientChannelUid){
 //        CLockObject lock(m_mutex);
 //        CloseLiveStream();
-        m_inputBuffer->SwapCache( new Buffers::FileCacheBuffer(recordingDir, 0, false));
+        m_inputBuffer->SwapCache( new Buffers::FileCacheBuffer(recordingDir, 255, false));
         m_localRecordBuffer = m_inputBuffer;
         m_liveChannelId = m_localRecordChannelId;
         return true;
     }
     // otherwise just open new recording stream
-    m_localRecordBuffer = new Buffers::TimeshiftBuffer(BufferForUrl(url), new Buffers::FileCacheBuffer(recordingDir, 0, false));
+    m_localRecordBuffer = new Buffers::TimeshiftBuffer(BufferForUrl(url), new Buffers::FileCacheBuffer(recordingDir, 255, false));
 
     return true;
 }
