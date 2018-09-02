@@ -379,15 +379,19 @@ namespace Buffers
         
         size_t totalBytesRead = 0;
         
-        ChunkFilePtr chunk = NULL;
+        ChunkFilePtr chunk = nullptr;
         while (totalBytesRead < bufferSize) {
             unsigned int idx = GetChunkIndexFor(m_position);
             {
+                chunk = nullptr;
                 CLockObject lock(m_SyncAccess);
-                chunk = (idx >= m_ReadChunks.size()) ? NULL : m_ReadChunks[idx];
+                if(idx < m_ReadChunks.size()) {
+                    chunk = m_ReadChunks[idx];
+                    chunk->m_reader.Seek(GetPositionInChunkFor(m_position), SEEK_SET);
+                }
             }
             
-            if(NULL == chunk)  {
+            if(nullptr == chunk)  {
                 XBMC->Log(LOG_ERROR, "FileCacheBuffer: failed to obtain chunk for read.");
                 break;
             }
@@ -402,10 +406,10 @@ namespace Buffers
             totalBytesRead += bytesRead;
             m_position += bytesRead;
             if(chunk->m_reader.Length() >= CHUNK_FILE_SIZE_LIMIT && chunk->m_reader.Position() == chunk->m_reader.Length()) {
-                chunk = NULL;
+                chunk = nullptr;
             }
         }
-        if(NULL == chunk && !m_isReadOnly) {
+        if(nullptr == chunk && !m_isReadOnly) {
             CLockObject lock(m_SyncAccess);
             while(m_length - m_begin >=  m_maxSize)
             {
