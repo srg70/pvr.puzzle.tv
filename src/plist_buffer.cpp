@@ -62,7 +62,7 @@ namespace Buffers {
     : m_totalLength(0)
     , m_totalDuration(0.0)
     , m_delegate(delegate)
-    , m_segmentsCacheSize(segmentsCacheSize)
+    , m_segmentsCacheSize(delegate == nullptr ? 0 : segmentsCacheSize) // No seek - no cache.
     {
         Init(playListUrl);
     }
@@ -282,9 +282,20 @@ namespace Buffers {
             }
         }
         // If added?
-        if(segmentTimeshift > 0) {
+        if(segmantsSize > 0) {
             LogDebug(">>> Segment added at %d. Total %d segs. Bitrate %f", segmentTimeshift, segmantsSize, segmentData->Bitrate());
             LogDebug(">>> Average bitrate: %f", bitrate);
+            // for VOD plist limit segments size to 20
+            // to avoid memory overflow
+            if(m_isVod){
+                bool segsCacheFull = segmantsSize > 20;
+                while(segsCacheFull && !IsStopped()){
+                    P8PLATFORM::CEvent::Sleep(1*1000);
+                    CLockObject lock(m_syncAccess);
+                    segsCacheFull = m_segments.size() > 20;
+                };
+                
+            }
         }
 
         return bytesRead < 0; // 0 (i.e. EOF) means no error, caller may continue with next chunk
