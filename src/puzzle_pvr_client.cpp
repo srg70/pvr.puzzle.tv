@@ -55,13 +55,15 @@ ADDON_STATUS PuzzlePVRClient::Init(PVR_PROPERTIES* pvrprops)
        return retVal;
     
     char buffer[1024];
-    
     m_currentChannelStreamIdx = -1;
     int serverPort = 8089;
+    m_maxServerRetries = 4;
+    
     XBMC->GetSetting("puzzle_server_port", &serverPort);
-    
     XBMC->GetSetting("puzzle_server_uri", &buffer);
-    
+    XBMC->GetSetting("puzzle_server_retries", &m_maxServerRetries);
+    if(m_maxServerRetries < 4)
+        m_maxServerRetries = 4;
    
     
     try
@@ -100,6 +102,8 @@ void PuzzlePVRClient::CreateCore(const char* serverUrl, int serverPort, bool cle
         SAFE_DELETE(m_puzzleTV);
     }
     m_clientCore = m_puzzleTV = new PuzzleTV(serverUrl, serverPort);
+    m_puzzleTV->SetMaxServerRetries(m_maxServerRetries);
+    
     m_puzzleTV->InitAsync(clearEpgCache);
 }
 
@@ -109,6 +113,9 @@ ADDON_STATUS PuzzlePVRClient::SetSetting(const char *settingName, const void *se
     {
     }
     else if (strcmp(settingName, "puzzle_server_uri") == 0 )
+    {
+    }
+    else if (strcmp(settingName, "puzzle_server_retries") == 0 )
     {
     }
     else {

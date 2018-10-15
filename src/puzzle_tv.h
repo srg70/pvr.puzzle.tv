@@ -81,7 +81,7 @@ namespace PuzzleEngine
 
         uint16_t GetServerPort() const {return m_serverPort;}
         const std::string& GetServerUri() const {return m_serverUri;}
-
+        void SetMaxServerRetries(int maxServerRetries) {m_maxServerRetries = maxServerRetries;}
     protected:
         void Init(bool clearEpgCache);
         virtual void UpdateHasArchive(PvrClient::EpgEntry& entry);
@@ -107,7 +107,8 @@ namespace PuzzleEngine
 
         const uint16_t m_serverPort;
         const std::string m_serverUri;
-        
+        int m_maxServerRetries;
+
         std::string m_epgUrl;
         long m_serverTimeShift;
         P8PLATFORM::CTimeout m_epgUpdateInterval;

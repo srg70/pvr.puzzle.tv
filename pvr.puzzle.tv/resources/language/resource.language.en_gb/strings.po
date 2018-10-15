@@ -75,6 +75,10 @@ msgctxt "#20001"
 msgid "Port"
 msgstr "Port"
 
+msgctxt "#20002"
+msgid "Retries on startup (4 sec each)"
+msgstr "Retries on startup (4 sec each)"
+
 msgctxt "#20010"
 msgid "Puzzle TV"
 msgstr "Puzzle TV"

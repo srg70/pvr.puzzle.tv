@@ -61,6 +61,7 @@ private:
 
     PuzzleEngine::PuzzleTV* m_puzzleTV;
     int m_currentChannelStreamIdx;
+    int m_maxServerRetries;
     //    bool m_shouldAddFavoritesGroup;
 };
 

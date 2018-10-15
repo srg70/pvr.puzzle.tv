@@ -348,7 +348,7 @@ void PuzzleTV::CallApiFunction(const ApiFunctionData& data, TParser parser)
         } catch (JsonParserException jex) {
             LogError("Puzzle server JSON error: %s",  jex.what());
         } catch (CurlErrorException cex) {
-            if(data.attempt > 2)
+            if(data.attempt >= m_maxServerRetries -1)
                 throw cex;
             // Probably server doesn'r start yet
             // Wait and retry
