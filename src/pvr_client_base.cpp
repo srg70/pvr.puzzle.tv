@@ -143,12 +143,26 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
 
 PVRClientBase::~PVRClientBase()
 {
+    Cleanup();
+}
+void PVRClientBase::Cleanup()
+{
     CloseLiveStream();
     CloseRecordedStream();
     if(m_localRecordBuffer)
         SAFE_DELETE(m_localRecordBuffer);
-
 }
+
+void PVRClientBase::OnSystemSleep()
+{
+    Cleanup();
+    DestroyCoreSafe();
+}
+void PVRClientBase::OnSystemWake()
+{
+    CreateCoreSafe(false);
+}
+
 
 static ADDON_StructSetting ** g_sovokSettings = NULL;
 static int g_sovokSettingsSize = 0;

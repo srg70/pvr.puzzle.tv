@@ -52,6 +52,9 @@ protected:
     PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
     ADDON_STATUS OnReloadEpg();
 
+    ADDON_STATUS CreateCoreSafe(bool clearEpgCache);
+    void DestroyCoreSafe();
+
 private:
     void CreateCore(bool clearEpgCache);
 

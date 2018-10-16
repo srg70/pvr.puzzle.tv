@@ -79,8 +79,6 @@ namespace PuzzleEngine
         std::string GetUrl(PvrClient::ChannelId channelId);
         std::string GetNextStream(PvrClient::ChannelId channelId, int currentChannelIdx);
 
-        uint16_t GetServerPort() const {return m_serverPort;}
-        const std::string& GetServerUri() const {return m_serverUri;}
         void SetMaxServerRetries(int maxServerRetries) {m_maxServerRetries = maxServerRetries;}
     protected:
         void Init(bool clearEpgCache);

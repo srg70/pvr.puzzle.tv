@@ -55,12 +55,17 @@ protected:
     std::string GetNextStreamUrl(PvrClient::ChannelId channelId);
     PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
     ADDON_STATUS OnReloadEpg();
+    
+    ADDON_STATUS CreateCoreSafe(bool clearEpgCache);
+    void DestroyCoreSafe();
 
 private:
-    void CreateCore(const char* serverUrl, int serverPort, bool clearEpgCache);
+    void CreateCore(bool clearEpgCache);
 
     PuzzleEngine::PuzzleTV* m_puzzleTV;
     int m_currentChannelStreamIdx;
+    uint16_t m_serverPort;
+    std::string m_serverUri;
     int m_maxServerRetries;
     //    bool m_shouldAddFavoritesGroup;
 };

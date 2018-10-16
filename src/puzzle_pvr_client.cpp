@@ -58,24 +58,16 @@ ADDON_STATUS PuzzlePVRClient::Init(PVR_PROPERTIES* pvrprops)
     m_currentChannelStreamIdx = -1;
     int serverPort = 8089;
     m_maxServerRetries = 4;
-    
-    XBMC->GetSetting("puzzle_server_port", &serverPort);
-    XBMC->GetSetting("puzzle_server_uri", &buffer);
+
+    XBMC->GetSetting("puzzle_server_port", &m_serverPort);
+    if(XBMC->GetSetting("puzzle_server_uri", &buffer))
+        m_serverUri =buffer;
     XBMC->GetSetting("puzzle_server_retries", &m_maxServerRetries);
     if(m_maxServerRetries < 4)
         m_maxServerRetries = 4;
    
     
-    try
-    {
-        CreateCore(buffer, serverPort, false );
-    }
-    catch (std::exception& ex)
-    {
-        XBMC->QueueNotification(QUEUE_ERROR,  XBMC->GetLocalizedString(32005));
-        LogError("PuzzlePVRClient:: Can't create Puzzle Server core. Exeption: [%s].", ex.what());
-        retVal = ADDON_STATUS_LOST_CONNECTION;
-    }
+    retVal = CreateCoreSafe(false);
     
     //    PVR_MENUHOOK hook = {1, 30020, PVR_MENUHOOK_EPG};
     //    m_pvr->AddMenuHook(&hook);
@@ -88,20 +80,45 @@ PuzzlePVRClient::~PuzzlePVRClient()
     // Probably is better to close streams before engine destruction
     CloseLiveStream();
     CloseRecordedStream();
-    if(m_puzzleTV != NULL) {
-        m_clientCore = NULL;
-        SAFE_DELETE(m_puzzleTV);
-    }
+    DestroyCoreSafe();
 
 }
-
-void PuzzlePVRClient::CreateCore(const char* serverUrl, int serverPort, bool clearEpgCache)
+ADDON_STATUS PuzzlePVRClient::CreateCoreSafe(bool clearEpgCache)
+{
+    ADDON_STATUS retVal = ADDON_STATUS_OK;
+    try
+    {
+        CreateCore(clearEpgCache);
+    }
+    catch (std::exception& ex)
+    {
+        char* message  = XBMC->GetLocalizedString(32005);
+        XBMC->QueueNotification(QUEUE_ERROR,  message);
+        XBMC->FreeString(message);
+        
+        LogError("PuzzlePVRClient:: Can't create Puzzle Server core. Exeption: [%s].", ex.what());
+        retVal = ADDON_STATUS_LOST_CONNECTION;
+    }
+    catch(...)
+    {
+        XBMC->QueueNotification(QUEUE_ERROR, "Puzzle Server: unhandeled exception on reload EPG.");
+        retVal = ADDON_STATUS_PERMANENT_FAILURE;
+    }
+    return retVal;
+}
+void PuzzlePVRClient::DestroyCoreSafe()
 {
     if(m_puzzleTV != NULL) {
         m_clientCore = NULL;
         SAFE_DELETE(m_puzzleTV);
     }
-    m_clientCore = m_puzzleTV = new PuzzleTV(serverUrl, serverPort);
+}
+
+void PuzzlePVRClient::CreateCore(bool clearEpgCache)
+{
+    DestroyCoreSafe();
+    
+    m_clientCore = m_puzzleTV = new PuzzleTV(m_serverUri.c_str(), m_serverPort);
     m_puzzleTV->SetMaxServerRetries(m_maxServerRetries);
     
     m_puzzleTV->InitAsync(clearEpgCache);
@@ -151,25 +168,7 @@ PVR_ERROR  PuzzlePVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MEN
 
 ADDON_STATUS PuzzlePVRClient::OnReloadEpg()
 {
-    ADDON_STATUS retVal = ADDON_STATUS_OK;
-    try
-    {
-        auto port =m_puzzleTV->GetServerPort();
-        string uri = m_puzzleTV->GetServerUri();
-
-        CreateCore(uri.c_str(), port, true);
-    }
-    catch (std::exception& ex)
-    {
-        XBMC->QueueNotification(QUEUE_ERROR,  XBMC->GetLocalizedString(32005));
-        LogError("PuzzlePVRClient:: Can't create Puzzle Server core. Exeption: [%s].", ex.what());
-        retVal = ADDON_STATUS_LOST_CONNECTION;
-    }
-    catch(...)
-    {
-        XBMC->QueueNotification(QUEUE_ERROR, "Puzzle Server: unhandeled exception on reload EPG.");
-        retVal = ADDON_STATUS_PERMANENT_FAILURE;
-    }
+    ADDON_STATUS retVal = CreateCoreSafe(true);
     
     if(ADDON_STATUS_OK == retVal && nullptr != m_puzzleTV){
         std::time_t startTime = std::time(nullptr);

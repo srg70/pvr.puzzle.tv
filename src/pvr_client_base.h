@@ -102,6 +102,9 @@ namespace PvrClient
         
         PVR_ERROR CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
         
+        void OnSystemSleep();
+        void OnSystemWake();
+
     protected:
         IClientCore* m_clientCore;
         
@@ -121,9 +124,13 @@ namespace PvrClient
         virtual bool OpenRecordedStream(const PVR_RECORDING &recording) = 0;
         const std::string& GetClientPath() const { return m_clientPath;}
         const std::string& GetUserPath() const { return m_userPath;}
+        
+        virtual ADDON_STATUS CreateCoreSafe(bool clearEpgCache) = 0;
+        virtual void DestroyCoreSafe() = 0;
 
     private:
         
+        void Cleanup();
         void SetCacheLimit(uint64_t size);
         void SetChannelReloadTimeout(int timeout);
         

@@ -118,10 +118,10 @@ extern "C" {
     
     void ADDON_Destroy()
     {
-        if(m_DataSource)
-            SAFE_DELETE(m_DataSource);
         if(m_timersEngine)
             SAFE_DELETE(m_timersEngine);
+        if(m_DataSource)
+            SAFE_DELETE(m_DataSource);
 
         Globals::Cleanup();
     }
@@ -167,10 +167,22 @@ extern "C" {
     
     void OnSystemSleep()
     {
+        Globals::LogDebug("Energy: OnSystemSleep() called.");
+        if(m_timersEngine){
+            SAFE_DELETE(m_timersEngine);
+        }
+        if(m_DataSource){
+            m_DataSource->OnSystemSleep();
+        }
     }
     
     void OnSystemWake()
     {
+        Globals::LogDebug("Energy: OnSystemWake() called.");
+        if(m_DataSource) {
+            m_DataSource->OnSystemWake();
+            m_timersEngine = new Engines::TimersEngine(m_DataSource);
+        }
     }
     
     void OnPowerSavingActivated()

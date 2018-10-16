@@ -80,31 +80,8 @@ ADDON_STATUS SovokPVRClient::Init(PVR_PROPERTIES* pvrprops)
     if (XBMC->GetSetting("streamer", &buffer))
         m_strimmer = buffer;
     
-
-    try
-    {
-        CreateCore(false);
-    }
-    catch (AuthFailedException &)
-    {
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32007));
-    }
+    retVal = CreateCoreSafe(false);
     
-    catch (MissingHttpsSupportException &)
-    {
-        XBMC->QueueNotification(QUEUE_ERROR, "Missing HTTPS support.");
-        retVal = ADDON_STATUS_PERMANENT_FAILURE;
-    }
-    
-    catch(MissingApiException & ex)
-    {
-        XBMC->QueueNotification(QUEUE_WARNING, (std::string("Missing Sovok API: ") + ex.reason).c_str());
-    }
-    catch(...)
-    {
-        XBMC->QueueNotification(QUEUE_ERROR, "Sovok TV: unhandeled exception");
-        retVal = ADDON_STATUS_PERMANENT_FAILURE;
-    }
     //    PVR_MENUHOOK hook = {1, 30020, PVR_MENUHOOK_EPG};
     //    m_pvr->AddMenuHook(&hook);
     return retVal;
@@ -116,14 +93,38 @@ SovokPVRClient::~SovokPVRClient()
     // Probably is better to close streams before engine destruction
     CloseLiveStream();
     CloseRecordedStream();
-    if(m_sovokTV != NULL) {
-        m_clientCore = NULL;
-        SAFE_DELETE(m_sovokTV);
-    }
+    DestroyCoreSafe();
 
 }
 
-void SovokPVRClient::CreateCore(bool clearEpgCache)
+ADDON_STATUS SovokPVRClient::CreateCoreSafe(bool clearEpgCache)
+{
+    ADDON_STATUS retVal = ADDON_STATUS_OK;
+    
+    try
+    {
+        CreateCore(clearEpgCache);
+    }
+    catch (AuthFailedException &) {
+        char* message  = XBMC->GetLocalizedString(32007);
+        XBMC->QueueNotification(QUEUE_ERROR, message);
+        XBMC->FreeString(message);
+    }
+    catch (MissingHttpsSupportException &) {
+        XBMC->QueueNotification(QUEUE_ERROR, "Missing HTTPS support.");
+        retVal = ADDON_STATUS_PERMANENT_FAILURE;
+    }
+    catch(MissingApiException & ex) {
+        XBMC->QueueNotification(QUEUE_WARNING, (std::string("Missing Sovok API: ") + ex.reason).c_str());
+    }
+    catch(...) {
+        XBMC->QueueNotification(QUEUE_ERROR, "Sovok TV: unhandeled exception");
+        retVal = ADDON_STATUS_PERMANENT_FAILURE;
+    }
+    return retVal;
+}
+
+void SovokPVRClient::DestroyCoreSafe()
 {
     if(m_sovokTV != NULL) {
         m_clientCore = NULL;
@@ -131,7 +132,12 @@ void SovokPVRClient::CreateCore(bool clearEpgCache)
         m_sovokTV = NULL;
         SAFE_DELETE(ptr);
     }
+}
 
+void SovokPVRClient::CreateCore(bool clearEpgCache)
+{
+    DestroyCoreSafe();
+    
     m_clientCore = m_sovokTV = new SovokTV(m_login, m_password);
     if(m_enableAdult)
         m_sovokTV->SetPinCode(m_pinCode);
@@ -185,9 +191,9 @@ ADDON_STATUS SovokPVRClient::SetSetting(const char *settingName, const void *set
         if(strcmp((const char*) settingValue, m_login.c_str()) != 0) {
             m_login = (const char*) settingValue;
             if (!m_login.empty() && !m_password.empty()) {
-                if(!HasCore()) {
-                    XBMC->Log(LOG_ERROR, " Failed to create core aftrer login changes");
-                }
+//                if(!HasCore()) {
+//                    XBMC->Log(LOG_ERROR, " Failed to create core aftrer login changes");
+//                }
             }
             result = ADDON_STATUS_NEED_RESTART;
         }
@@ -196,9 +202,9 @@ ADDON_STATUS SovokPVRClient::SetSetting(const char *settingName, const void *set
         if(strcmp((const char*) settingValue, m_password.c_str()) != 0){
             m_password = (const char*) settingValue;
             if (!m_login.empty() && !m_password.empty()) {
-                if(!HasCore()) {
-                    XBMC->Log(LOG_ERROR, " Failed to create core aftrer password changes");
-                }
+//                if(!HasCore()) {
+//                    XBMC->Log(LOG_ERROR, " Failed to create core aftrer password changes");
+//                }
             }
             result = ADDON_STATUS_NEED_RESTART;
         }
@@ -217,7 +223,9 @@ ADDON_STATUS SovokPVRClient::SetSetting(const char *settingName, const void *set
             });
             if(currentId != GetStreamerId()) {
                 if(currentId == streamersList.size() ) {
-                    XBMC->QueueNotification(QUEUE_WARNING, XBMC->GetLocalizedString(32008));
+                    char* message  = XBMC->GetLocalizedString(32008);
+                    XBMC->QueueNotification(QUEUE_WARNING, message);
+                    XBMC->FreeString(message);
                 }
                 SetStreamerId(currentId);
                 result = ADDON_STATUS_NEED_RESTART;
@@ -295,13 +303,13 @@ bool SovokPVRClient::HasCore()
 {
     bool result = m_sovokTV != NULL;
     
-    try {
+//    try {
 //        if(!result)
 //            CreateCore(false);
-        result = m_sovokTV != NULL;
-    }catch (AuthFailedException &) {
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32007));
-    }
+//        result = m_sovokTV != NULL;
+//    }catch (AuthFailedException &) {
+//        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32007));
+//    }
     return result;
 }
 
@@ -331,34 +339,7 @@ PVR_ERROR  SovokPVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENU
 }
 ADDON_STATUS SovokPVRClient::OnReloadEpg()
 {
-    ADDON_STATUS retVal = ADDON_STATUS_OK;
-
-    try
-    {
-        CreateCore(true);
-    }
-    catch (AuthFailedException &)
-    {
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32007));
-    }
-    
-    catch (MissingHttpsSupportException &)
-    {
-        XBMC->QueueNotification(QUEUE_ERROR, "Missing HTTPS support.");
-        retVal = ADDON_STATUS_PERMANENT_FAILURE;
-    }
-    
-    catch(MissingApiException & ex)
-    {
-        XBMC->QueueNotification(QUEUE_WARNING, (std::string("Missing Sovok API: ") + ex.reason).c_str());
-    }
-    catch(...)
-    {
-        XBMC->QueueNotification(QUEUE_ERROR, "Sovok TV: unhandeled exception");
-        retVal = ADDON_STATUS_PERMANENT_FAILURE;
-    }
-    
-    return retVal;
+   return CreateCoreSafe(true);
 }
 
 std::string SovokPVRClient::GetStreamUrl(ChannelId channelId)

@@ -84,6 +84,9 @@ public:
 
     virtual PVR_ERROR CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item) = 0;
     
+    virtual  void OnSystemSleep() = 0;
+    virtual void OnSystemWake() = 0;
+    
     virtual ~IPvrIptvDataSource(){}
 };
 

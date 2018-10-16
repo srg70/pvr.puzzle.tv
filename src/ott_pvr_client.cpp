@@ -66,14 +66,7 @@ ADDON_STATUS OttPVRClient::Init(PVR_PROPERTIES* pvrprops)
         m_key = buffer;
     m_supportSeek = false;
     
-    try
-    {
-        CreateCore(false);
-    }
-    catch (OttEngine::AuthFailedException &)
-    {
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32003));
-    }
+    retVal = CreateCoreSafe(false);
     
     //    PVR_MENUHOOK hook = {1, 30020, PVR_MENUHOOK_EPG};
     //    m_pvr->AddMenuHook(&hook);
@@ -86,19 +79,39 @@ OttPVRClient::~OttPVRClient()
     // Probably is better to close streams before engine destruction
     CloseLiveStream();
     CloseRecordedStream();
-    if(m_core != NULL) {
-        m_clientCore = NULL;
-        SAFE_DELETE(m_core);
-    }
-
+    
+    DestroyCoreSafe();
 }
 
-void OttPVRClient::CreateCore(bool clearEpgCache)
+ADDON_STATUS OttPVRClient::CreateCoreSafe(bool clearEpgCache)
+{
+    ADDON_STATUS retVal = ADDON_STATUS_OK;
+    try
+    {
+        CreateCore(clearEpgCache);
+    }
+    catch (OttEngine::AuthFailedException &)
+    {
+        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32007));
+    }
+    catch(...)
+    {
+        XBMC->QueueNotification(QUEUE_ERROR, "OTT club: unhandeled exception on reload EPG.");
+        retVal = ADDON_STATUS_PERMANENT_FAILURE;
+    }
+    return retVal;
+}
+void OttPVRClient::DestroyCoreSafe()
 {
     if(m_core != NULL) {
         m_clientCore = NULL;
         SAFE_DELETE(m_core);
     }
+}
+
+void OttPVRClient::CreateCore(bool clearEpgCache)
+{
+    DestroyCoreSafe();
     
     m_clientCore = m_core = new OttEngine::Core(m_playlistUrl, m_key);
     m_core->InitAsync(clearEpgCache);
@@ -110,25 +123,15 @@ ADDON_STATUS OttPVRClient::SetSetting(const char *settingName, const void *setti
     if (strcmp(settingName,  c_playlist_setting) == 0 && strcmp((const char*) settingValue, m_playlistUrl.c_str()) != 0)
     {
         m_playlistUrl = (const char*) settingValue;
-        if (!m_playlistUrl.empty() && !m_key.empty() && m_core == NULL)
-        {
-            try {
-                CreateCore(false);
-            }catch (OttEngine::AuthFailedException &) {
-                XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32003));
-            }
+        if (!m_playlistUrl.empty() && !m_key.empty() && m_core == NULL){
+            CreateCoreSafe(false);
         }
     }
     else if (strcmp(settingName,  c_key_setting) == 0  && strcmp((const char*) settingValue, m_key.c_str()) != 0)
     {
         m_key = (const char*) settingValue;
-        if (!m_playlistUrl.empty() && !m_key.empty() && m_core == NULL)
-        {
-            try {
-                CreateCore(false);
-            }catch (OttEngine::AuthFailedException &) {
-                XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32003));
-            }
+        if (!m_playlistUrl.empty() && !m_key.empty() && m_core == NULL){
+            CreateCoreSafe(false);
         }
     }
     else {
@@ -163,20 +166,7 @@ PVR_ERROR  OttPVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHO
 }
 ADDON_STATUS OttPVRClient::OnReloadEpg()
 {
-    ADDON_STATUS retVal = ADDON_STATUS_OK;
-    try
-    {
-        CreateCore(true);
-    }
-    catch (OttEngine::AuthFailedException &)
-    {
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32007));
-    }
-    catch(...)
-    {
-        XBMC->QueueNotification(QUEUE_ERROR, "OTT club: unhandeled exception on reload EPG.");
-        retVal = ADDON_STATUS_PERMANENT_FAILURE;
-    }
+    ADDON_STATUS retVal = CreateCoreSafe(true);
     
     if(ADDON_STATUS_OK == retVal && nullptr != m_core){
         std::time_t startTime = std::time(nullptr);

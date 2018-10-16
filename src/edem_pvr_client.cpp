@@ -70,14 +70,7 @@ ADDON_STATUS EdemPVRClient::Init(PVR_PROPERTIES* pvrprops)
     m_supportSeek = false;
     XBMC->GetSetting(c_seek_archives, &m_supportSeek);
     
-    try
-    {
-        CreateCore(false);
-    }
-    catch (AuthFailedException &)
-    {
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32003));
-    }
+    retVal = CreateCoreSafe(false);
     
     //    PVR_MENUHOOK hook = {1, 30020, PVR_MENUHOOK_EPG};
     //    m_pvr->AddMenuHook(&hook);
@@ -90,19 +83,43 @@ EdemPVRClient::~EdemPVRClient()
     // Probably is better to close streams before engine destruction
     CloseLiveStream();
     CloseRecordedStream();
-    if(m_core != NULL) {
-        m_clientCore = NULL;
-        SAFE_DELETE(m_core);
-    }
-    
+    DestroyCoreSafe();
 }
 
-void EdemPVRClient::CreateCore(bool clearEpgCache)
+ADDON_STATUS EdemPVRClient::	(bool clearEpgCache)
+{
+    ADDON_STATUS retVal = ADDON_STATUS_OK;
+    try
+    {
+        CreateCore(clearEpgCache);
+    }
+    catch (AuthFailedException &)
+    {
+        char* message = XBMC->GetLocalizedString(32011);
+        XBMC->QueueNotification(QUEUE_ERROR, message);
+        XBMC->FreeString(message);
+    }
+    catch(...)
+    {
+        XBMC->QueueNotification(QUEUE_ERROR, "Edem TV: unhandeled exception on reload EPG.");
+        retVal = ADDON_STATUS_PERMANENT_FAILURE;
+    }
+    return retVal;
+}
+
+void EdemPVRClient::DestroyCoreSafe()
 {
     if(m_core != NULL) {
         m_clientCore = NULL;
         SAFE_DELETE(m_core);
     }
+
+}
+
+void EdemPVRClient::CreateCore(bool clearEpgCache)
+{
+    DestroyCoreSafe();
+    
     if(CheckPlaylistUrl()) {
         m_clientCore = m_core = new EdemEngine::Core(m_playlistUrl, m_epgUrl);
         m_core->InitAsync(clearEpgCache);
@@ -112,7 +129,9 @@ void EdemPVRClient::CreateCore(bool clearEpgCache)
 bool EdemPVRClient::CheckPlaylistUrl()
 {
     if (m_playlistUrl.empty() || m_playlistUrl.find("***") != string::npos) {
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32010));
+        char* message = XBMC->GetLocalizedString(32010);
+        XBMC->QueueNotification(QUEUE_ERROR, message);
+        XBMC->FreeString(message);
         return false;
     }
     return true;
@@ -127,22 +146,12 @@ ADDON_STATUS EdemPVRClient::SetSetting(const char *settingName, const void *sett
         if(!CheckPlaylistUrl()) {
             return result;
         } else {
-            try {
-                CreateCore(false);
-                result = ADDON_STATUS_NEED_RESTART;
-            }catch (AuthFailedException &) {
-                XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32011));
-            }
+            result = CreateCoreSafe(false);
         }
     }
     else if(strcmp(settingName,  c_epg_setting) == 0 && strcmp((const char*) settingValue, m_epgUrl.c_str()) != 0) {
         m_epgUrl = (const char*) settingValue;
-        try {
-            CreateCore(false);
-            result = ADDON_STATUS_NEED_RESTART;
-        }catch (AuthFailedException &) {
-            XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32011));
-        }
+        result = CreateCoreSafe(false);
     }
     else if(strcmp(settingName,  c_seek_archives) == 0) {
         m_supportSeek = *(const bool*) settingValue;
@@ -179,20 +188,7 @@ PVR_ERROR  EdemPVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUH
 
 ADDON_STATUS EdemPVRClient::OnReloadEpg()
 {
-    ADDON_STATUS retVal = ADDON_STATUS_OK;
-    try
-    {
-        CreateCore(true);
-    }
-    catch (AuthFailedException &)
-    {
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32007));
-    }
-    catch(...)
-    {
-        XBMC->QueueNotification(QUEUE_ERROR, "Edem TV: unhandeled exception on reload EPG.");
-        retVal = ADDON_STATUS_PERMANENT_FAILURE;
-    }
+    ADDON_STATUS retVal = CreateCoreSafe(true);
     
     if(ADDON_STATUS_OK == retVal && nullptr != m_core){
         std::time_t startTime = std::time(nullptr);
