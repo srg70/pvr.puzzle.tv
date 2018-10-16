@@ -40,6 +40,7 @@ namespace Buffers
     public:
         virtual time_t Duration() const= 0;
         virtual std::string UrlForTimeshift(time_t timeshift, time_t* timeshiftAdjusted) const = 0;
+        virtual ~IPlaylistBufferDelegate() {}
     };
     typedef  std::shared_ptr<IPlaylistBufferDelegate> PlaylistBufferDelegate;
     

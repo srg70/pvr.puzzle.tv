@@ -86,7 +86,7 @@ EdemPVRClient::~EdemPVRClient()
     DestroyCoreSafe();
 }
 
-ADDON_STATUS EdemPVRClient::	(bool clearEpgCache)
+ADDON_STATUS EdemPVRClient::CreateCoreSafe(bool clearEpgCache)
 {
     ADDON_STATUS retVal = ADDON_STATUS_OK;
     try
