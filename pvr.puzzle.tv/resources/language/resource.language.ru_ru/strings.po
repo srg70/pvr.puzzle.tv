@@ -64,6 +64,10 @@ msgctxt "#10011"
 msgid "Cache limit (MB)"
 msgstr "Макс. размер кэша (MB)"
 
+msgctxt "#10012"
+msgid "RPC local port"
+msgstr "Локальный порт RPC"
+
 #============ Puzzle Server Settings ============
 
 msgctxt "#20000"

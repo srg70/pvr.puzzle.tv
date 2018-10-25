@@ -101,17 +101,20 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     if (XBMC->GetSetting("recordings_path", &buffer))
         recordingsPath = buffer;
     
-    uint64_t timeshiftBufferSize = 0;
+    int timeshiftBufferSize = 0;
     XBMC->GetSetting("timeshift_size", &timeshiftBufferSize);
     timeshiftBufferSize *= 1024*1024;
     
-    uint64_t cacheSizeLimit = 0;
+    int cacheSizeLimit = 0;
     XBMC->GetSetting("timeshift_off_cache_limit", &cacheSizeLimit);
     cacheSizeLimit *= 1024*1024;
     
     
     TimeshiftBufferType timeshiftBufferType = k_TimeshiftBufferMemory;
     XBMC->GetSetting("timeshift_type", &timeshiftBufferType);
+    
+    m_rpcPort = 8080;
+    XBMC->GetSetting("rpc_local_port", &m_rpcPort);
     
     CurlUtils::SetCurlTimeout(curlTimout);
     SetChannelReloadTimeout(channelTimeout);
@@ -199,19 +202,23 @@ ADDON_STATUS PVRClientBase::SetSetting(const char *settingName, const void *sett
     }
     else if (strcmp(settingName, "timeshift_size") == 0)
     {
-        auto size = *(int32_t *)(settingValue);
+        auto size = *(int *)(settingValue);
         size *= 1024*1024;
         SetTimeshiftBufferSize(size);
     }
     else if (strcmp(settingName, "timeshift_off_cache_limit") == 0)
     {
-        auto size = *(int32_t *)(settingValue);
+        auto size = *(int *)(settingValue);
         size *= 1024*1024;
         SetCacheLimit(size);
     }
     else if (strcmp(settingName, "curl_timeout") == 0)
     {
         CurlUtils::SetCurlTimeout(*(int *)(settingValue));
+    }
+    else if (strcmp(settingName, "rpc_local_port") == 0)
+    {
+        m_rpcPort = *(int *)(settingValue);
     }
 
     return ADDON_STATUS_OK;

@@ -157,7 +157,8 @@ namespace PvrClient
         int m_channelReloadTimeout;
         mutable P8PLATFORM::CMutex m_mutex;
         int m_lastBytesRead;
-
+        
+        int m_rpcPort;
     };
 }
 #endif //pvr_client_base_h

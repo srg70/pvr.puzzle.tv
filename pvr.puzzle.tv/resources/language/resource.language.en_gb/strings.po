@@ -65,6 +65,10 @@ msgctxt "#10011"
 msgid "Cache limit (MB)"
 msgstr "Cache limit (MB)"
 
+msgctxt "#10012"
+msgid "RPC local port"
+msgstr "RPC local port"
+
 #============ Puzzle Server Settings ============
 
 msgctxt "#20000"

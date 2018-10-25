@@ -129,6 +129,7 @@ namespace PvrClient{
     , m_groupList(m_mutableGroupList)
     , m_channelList(m_mutableChannelList)
     , m_lastEpgRequestEndTime(0)
+    , m_rpcPort(8080)
     {
         if(nullptr == m_didRecordingsUpadate) {
             auto pvr = PVR;
@@ -468,7 +469,7 @@ namespace PvrClient{
     {
         // Build HTTP request
         std::string strRequest = string("http://") + "127.0.0.1" + ":";
-        strRequest += "8080";
+        strRequest += n_to_string(m_rpcPort);
         strRequest +="/jsonrpc?request=";
         strRequest += data;
         auto start = P8PLATFORM::GetTimeMs();

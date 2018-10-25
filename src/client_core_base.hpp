@@ -53,6 +53,7 @@ namespace PvrClient {
         void ForEachEpg(const EpgEntryAction& action) const;
         void GetEpg(ChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries);
         
+        void SetRpcPort(int port) {m_rpcPort = port;}
         void CallRpcAsync(const std::string & data, std::function<void(rapidjson::Document&)>  parser,
                           ActionQueue::TCompletion completion);
         
@@ -109,7 +110,7 @@ namespace PvrClient {
         time_t m_lastEpgRequestEndTime;
         P8PLATFORM::CTimeout m_recordingsUpdateDelay;
 
-        
+        int m_rpcPort;
     };
     
     class ExceptionBase : public std::exception

@@ -12,6 +12,7 @@
     <setting id="curl_timeout" type="number" label="10007" default="15" option="int"/>
     <setting id="channel_reload_timeout" type="slider" label="10008" default="5" range="1,1,30" option="int"/>
     <setting id="recordings_path" type="folder" label="10009" default="" />
+    <setting id="" type="number" label="10012" default="8080"/>
 </category>
 
 <!-- Puzzle TV -->
