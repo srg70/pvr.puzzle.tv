@@ -246,6 +246,10 @@ msgctxt "#32015"
 msgid "On Server"
 msgstr "On Server"
 
+msgctxt "#32016"
+msgid "Reset PVR database."
+msgstr "Reset PVR database."
+
 #============= Menus ================
 
 msgctxt "#32050"

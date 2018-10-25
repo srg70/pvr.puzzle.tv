@@ -281,7 +281,7 @@ namespace OttEngine
                                  
                              }
                          },
-                         [this, shouldUpdate, channelId, epgActivityCounter](const CActionQueue::ActionResult& s)
+                         [this, shouldUpdate, channelId, epgActivityCounter](const ActionQueue::ActionResult& s)
                          {
                              if(s.exception == NULL && *shouldUpdate){
                                  PVR->TriggerEpgUpdate(channelId);
@@ -330,7 +330,7 @@ namespace OttEngine
     {
         P8PLATFORM::CEvent event;
         std::exception_ptr ex = nullptr;
-        CallApiAsync(data, parser, [&](const CActionQueue::ActionResult& s) {
+        CallApiAsync(data, parser, [&](const ActionQueue::ActionResult& s) {
             ex = s.exception;
             event.Signal();
         });
@@ -372,7 +372,7 @@ namespace OttEngine
                 }
             });
         };
-        m_httpEngine->CallApiAsync(strRequest, parserWrapper, [=](const CActionQueue::ActionResult& s)
+        m_httpEngine->CallApiAsync(strRequest, parserWrapper, [=](const ActionQueue::ActionResult& s)
        {
            completion(s);
        });

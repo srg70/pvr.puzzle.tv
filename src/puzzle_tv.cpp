@@ -77,20 +77,20 @@ void PuzzleTV::Init(bool clearEpgCache)
     LoadEpg();
     UpdateArhivesAsync();
     
-    //    CallRpcAsync("{\"jsonrpc\": \"2.0\", \"method\": \"Files.GetDirectory\", \"params\": {\"directory\": \"plugin://plugin.video.pazl.arhive\"},\"id\": 1}",
-    //                 [&] (Document& jsonRoot)
-    //                 {
-    //                     this->LogDebug("Puzzle Files.GetDirectory respunse. RPC version: %s", jsonRoot["jsonrpc"].GetString());
-    //                     for (const auto& ch : jsonRoot["result"]["files"].GetArray()) {
-    //                         this->LogDebug("Channel content:");
-    //                         this->LogDebug("\t filetype = %s", ch["filetype"].GetString());
-    //                         this->LogDebug("\t type =  %s", ch["type"].GetString());
-    //                         this->LogDebug("\t file =  %s", ch["file"].GetString());
-    //                         this->LogDebug("\t label =  %s", ch["label"].GetString());
-    //}
-    //                 },
-    //                 [&](const CActionQueue::ActionResult& s) {
-    //                 });
+//        CallRpcAsync("{\"jsonrpc\": \"2.0\", \"method\": \"Files.GetDirectory\", \"params\": {\"directory\": \"plugin://plugin.video.pazl.arhive\"},\"id\": 1}",
+//                     [&] (Document& jsonRoot)
+//                     {
+//                         LogDebug("Puzzle Files.GetDirectory respunse. RPC version: %s", jsonRoot["jsonrpc"].GetString());
+//                         for (const auto& ch : jsonRoot["result"]["files"].GetArray()) {
+//                             LogDebug("Channel content:");
+//                             LogDebug("\t filetype = %s", ch["filetype"].GetString());
+//                             LogDebug("\t type =  %s", ch["type"].GetString());
+//                             LogDebug("\t file =  %s", ch["file"].GetString());
+//                             LogDebug("\t label =  %s", ch["label"].GetString());
+//    }
+//                     },
+//                     [&](const CActionQueue::ActionResult& s) {
+//                     });
 }
 
 PuzzleTV::~PuzzleTV()
@@ -337,7 +337,7 @@ void PuzzleTV::CallApiFunction(const ApiFunctionData& data, TParser parser)
 {
     P8PLATFORM::CEvent event;
     std::exception_ptr ex = nullptr;
-    CallApiAsync(data, parser, [&](const CActionQueue::ActionResult& s) {
+    CallApiAsync(data, parser, [&](const ActionQueue::ActionResult& s) {
         ex = s.exception;
         event.Signal();
     });
@@ -358,43 +358,6 @@ void PuzzleTV::CallApiFunction(const ApiFunctionData& data, TParser parser)
            
             CallApiFunction(data, parser);
         }
-}
-
-template <typename TParser, typename TCompletion>
-void PuzzleTV::CallRpcAsync(const std::string & data, TParser parser, TCompletion completion)
-{
-    // Build HTTP request
-    std::string strRequest = string("http://") + m_serverUri + ":";
-    strRequest += n_to_string(8080);
-    strRequest +="/jsonrpc?request=";
-    strRequest += data;
-    auto start = P8PLATFORM::GetTimeMs();
-    
-//    LogDebug("Calling '%s'.",  data.name.c_str());
-    
-    std::function<void(const std::string&)> parserWrapper = [=](const std::string& response) {
-        LogDebug("Response in %d ms.",  P8PLATFORM::GetTimeMs() - start);
-        
-        //            if(data.name.compare( "get_url") == 0)
-        //                LogDebug(response.substr(0, 16380).c_str());
-        
-        ParseJson(response, [&] (Document& jsonRoot)
-                  {
-                      if (!jsonRoot.HasMember("error"))
-                      {
-                          parser(jsonRoot);
-                          return;
-                      }
-                      const Value & errObj = jsonRoot["error"];
-                      auto err = errObj["message"].GetString();
-                      auto code = errObj["code"].GetInt();
-                      LogError("Puzzle TV server responses error:");
-                      LogError(err);
-                      throw ServerErrorException(err,code);
-                  });
-    };
-    
-    m_httpEngine->CallApiAsync(strRequest, parserWrapper,  [=](const CActionQueue::ActionResult& ss){completion(ss);});
 }
 
 template <typename TParser, typename TCompletion>
@@ -441,7 +404,7 @@ void PuzzleTV::CallApiAsync(const ApiFunctionData& data, TParser parser, TComple
                   });
     };
 
-    m_httpEngine->CallApiAsync(strRequest, parserWrapper,  [=](const CActionQueue::ActionResult& ss){completion(ss);});
+    m_httpEngine->CallApiAsync(strRequest, parserWrapper,  [=](const ActionQueue::ActionResult& ss){completion(ss);});
 }
 
 void PuzzleTV::UpdateArhivesAsync()
@@ -471,7 +434,7 @@ void PuzzleTV::UpdateArhivesAsync()
                          }
                      }
                  },
-                 [pThis, cahnnelsWithArchive](const CActionQueue::ActionResult& s) {
+                 [pThis, cahnnelsWithArchive](const ActionQueue::ActionResult& s) {
 
 //                     if(s.status != CActionQueue::kActionCompleted) {
 //                         return;

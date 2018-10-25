@@ -415,7 +415,7 @@ namespace PvrClient{
                     ReloadRecordings();
                 }
             }
-        }, [] (CActionQueue::ActionResult ){});
+        }, [] (ActionQueue::ActionResult ){});
     }
     
     void ClientCoreBase::OnEpgUpdateDone()
@@ -461,4 +461,44 @@ namespace PvrClient{
         parser(jsonRoot);
         return;
     }
+    
+    void ClientCoreBase::CallRpcAsync(const std::string & data,
+                                      std::function<void(rapidjson::Document&)>  parser,
+                                      ActionQueue::TCompletion completion)
+    {
+        // Build HTTP request
+        std::string strRequest = string("http://") + "127.0.0.1" + ":";
+        strRequest += "8080";
+        strRequest +="/jsonrpc?request=";
+        strRequest += data;
+        auto start = P8PLATFORM::GetTimeMs();
+        
+        //    LogDebug("Calling '%s'.",  data.name.c_str());
+        
+        std::function<void(const std::string&)> parserWrapper = [=](const std::string& response) {
+            LogDebug("Response in %d ms.",  P8PLATFORM::GetTimeMs() - start);
+            
+            //            if(data.name.compare( "get_url") == 0)
+            //                LogDebug(response.substr(0, 16380).c_str());
+            
+            ParseJson(response, [&] (Document& jsonRoot)
+                      {
+                          if (!jsonRoot.HasMember("error"))
+                          {
+                              parser(jsonRoot);
+                              return;
+                          }
+                          const Value & errObj = jsonRoot["error"];
+                          auto err = errObj["message"].GetString();
+                          auto code = errObj["code"].GetInt();
+                          LogError("RPC call failed with error (%d):", code);
+                          LogError(err);
+                          throw RpcCallException(err);
+                      });
+        };
+        
+        m_httpEngine->CallApiAsync(strRequest, parserWrapper,  [=](const ActionQueue::ActionResult& ss){completion(ss);});
+    }
+    
+
 }

@@ -95,9 +95,6 @@ namespace PuzzleEngine
 
         void Cleanup();
 
-        template <typename TParser, typename TCompletion>
-        void CallRpcAsync(const std::string & data, TParser parser, TCompletion completion);
-
         template <typename TParser>
         void CallApiFunction(const ApiFunctionData& data, TParser parser);
         template <typename TParser, typename TCompletion>

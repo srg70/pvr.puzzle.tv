@@ -76,9 +76,9 @@ public:
         
         m_apiCalls->PerformAsync([=](){
             SendHttpRequest(request, m_sessionCookie, parser,
-                            [=](const CActionQueue::ActionResult& s) { completion(s);});
-        },[=](const CActionQueue::ActionResult& s) {
-            if(s.status != CActionQueue::kActionCompleted)
+                            [=](const ActionQueue::ActionResult& s) { completion(s);});
+        },[=](const ActionQueue::ActionResult& s) {
+            if(s.status != ActionQueue::kActionCompleted)
                 completion(s);
         });
     }
@@ -172,7 +172,7 @@ private:
             
             m_apiCallCompletions->PerformAsync([=]() {
                 result(*response);
-            }, [=](const CActionQueue::ActionResult& s) {
+            }, [=](const ActionQueue::ActionResult& s) {
                 delete response;
                 completion(s);
             });
@@ -180,8 +180,8 @@ private:
     }
     
     ADDON::CHelper_libXBMC_addon *m_addonHelper;
-    CActionQueue* m_apiCalls;
-    CActionQueue* m_apiCallCompletions;
+    ActionQueue::CActionQueue* m_apiCalls;
+    ActionQueue::CActionQueue* m_apiCallCompletions;
 
 };
 

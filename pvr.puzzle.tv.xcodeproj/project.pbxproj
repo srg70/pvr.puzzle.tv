@@ -266,6 +266,7 @@
 		4CAAE7252006438600A866C9 /* edem_pvr_client.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = edem_pvr_client.h; path = src/edem_pvr_client.h; sourceTree = "<group>"; };
 		4CAAE72F200691A600A866C9 /* XMLTV_loader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = XMLTV_loader.cpp; sourceTree = "<group>"; };
 		4CAAE730200691A600A866C9 /* XMLTV_loader.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = XMLTV_loader.hpp; sourceTree = "<group>"; };
+		4CAC99B92180F102005D8902 /* ActionQueueTypes.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ActionQueueTypes.hpp; sourceTree = "<group>"; };
 		4CBC4B8120C149F700BA0CFF /* TimersEngine.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TimersEngine.cpp; sourceTree = "<group>"; };
 		4CBC4B8220C149F700BA0CFF /* TimersEngine.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = TimersEngine.hpp; sourceTree = "<group>"; };
 		4CC18CE2212B2046005E64B8 /* simple_cyclic_buffer.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = simple_cyclic_buffer.hpp; sourceTree = "<group>"; };
@@ -321,6 +322,7 @@
 				4CAAE730200691A600A866C9 /* XMLTV_loader.hpp */,
 				4CFEAA8D1E4DA81A002C2BA4 /* ActionQueue.cpp */,
 				4CFEAA8E1E4DA81A002C2BA4 /* ActionQueue.hpp */,
+				4CAC99B92180F102005D8902 /* ActionQueueTypes.hpp */,
 				4C8506E61F0E25DF00213131 /* HttpEngine.cpp */,
 				4C8506E71F0E25DF00213131 /* HttpEngine.hpp */,
 				4C3EEDBE210C670B001C0DB8 /* neutral_sorting.h */,

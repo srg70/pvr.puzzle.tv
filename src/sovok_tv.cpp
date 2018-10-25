@@ -451,7 +451,7 @@ bool SovokTV::Login(bool wait)
         return true;
     } else {
         ApiFunctionData apiParams("login", params);
-        CallApiAsync(apiParams, parser, [=] (const CActionQueue::ActionResult& s){
+        CallApiAsync(apiParams, parser, [=] (const ActionQueue::ActionResult& s){
             if(s.exception) {
                 try {
                     std::rethrow_exception(s.exception);
@@ -478,7 +478,7 @@ void SovokTV::CallApiFunction(const ApiFunctionData& data, TParser parser)
 {
     P8PLATFORM::CEvent event;
     std::exception_ptr ex = nullptr;
-    CallApiAsync(data, parser, [&](const CActionQueue::ActionResult& s) {
+    CallApiAsync(data, parser, [&](const ActionQueue::ActionResult& s) {
         ex = s.exception;
         event.Signal();
     });
@@ -532,16 +532,16 @@ void SovokTV::CallApiAsync(const ApiFunctionData& data, TParser parser, TApiCall
                       throw ServerErrorException(err,code);
                   });
     };
-    m_httpEngine->CallApiAsync(strRequest, parserWrapper, [=](const CActionQueue::ActionResult& s)
+    m_httpEngine->CallApiAsync(strRequest, parserWrapper, [=](const ActionQueue::ActionResult& s)
                  {
                      // Do not re-login within login/logout command.
-                     if(s.status == CActionQueue::kActionCompleted || isLoginCommand) {
+                     if(s.status == ActionQueue::kActionCompleted || isLoginCommand) {
                          completion(s);
                          return;
                      }
                      // In case of error try to re-login and repeat the API call.
                      Login(false);
-                    m_httpEngine->CallApiAsync(strRequest, parserWrapper,  [=](const CActionQueue::ActionResult& ss){
+                    m_httpEngine->CallApiAsync(strRequest, parserWrapper,  [=](const ActionQueue::ActionResult& ss){
                                      completion(ss);
                                  });
                  });

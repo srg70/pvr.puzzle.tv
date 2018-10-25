@@ -22,48 +22,53 @@
 
 #include "ActionQueue.hpp"
 
-static const int32_t INFINITE_QUEUE_TIMEOUT = 0x7FFFFFFF;
-
-void* CActionQueue::Process()
-{
-    while (!IsStopped())
+namespace ActionQueue {
+    
+    
+    
+    static const int32_t INFINITE_QUEUE_TIMEOUT = 0x7FFFFFFF;
+    
+    void* CActionQueue::Process()
     {
-        IActionQueueItem* action = NULL;
-        // Do not wait infinite when pipeline is stopped.
-        // Could be no new task will arrive, e.g. on StopThead()
-        if( _actions.Pop(action, (_willStop) ? 1000 : INFINITE_QUEUE_TIMEOUT))
+        while (!IsStopped())
         {
-            if(NULL == action)
-                continue;
-            if(_willStop)
-                action->Cancel();
-            else
-                action->Perform();
-            delete action;
+            IActionQueueItem* action = NULL;
+            // Do not wait infinite when pipeline is stopped.
+            // Could be no new task will arrive, e.g. on StopThead()
+            if( _actions.Pop(action, (_willStop) ? 1000 : INFINITE_QUEUE_TIMEOUT))
+            {
+                if(NULL == action)
+                    continue;
+                if(_willStop)
+                    action->Cancel();
+                else
+                    action->Perform();
+                delete action;
+            }
+            
         }
+        return NULL;
+    }
+    
+    void CActionQueue::TerminatePipeline()
+    {
+        // In case of no active tasks unlocks .Pop() waiting
+        _willStop = false;
+        PerformAsync([this] {
+            _willStop = true;
+        }, [](const ActionResult& s) {});
+        _willStop = true;
         
     }
-    return NULL;
-}
-
-void CActionQueue::TerminatePipeline()
-{
-    // In case of no active tasks unlocks .Pop() waiting
-    _willStop = false;
-    PerformAsync([this] {
-        _willStop = true;
-    }, [](const CActionQueue::ActionResult& s) {});
-    _willStop = true;
-
-}
-
-bool CActionQueue::StopThread(int iWaitMs)
-{
-    TerminatePipeline();
-    return this->CThread::StopThread(iWaitMs);
-}
-
-CActionQueue::~CActionQueue(void)
-{
-    StopThread(0);
+    
+    bool CActionQueue::StopThread(int iWaitMs)
+    {
+        TerminatePipeline();
+        return this->CThread::StopThread(iWaitMs);
+    }
+    
+    CActionQueue::~CActionQueue(void)
+    {
+        StopThread(0);
+    }
 }

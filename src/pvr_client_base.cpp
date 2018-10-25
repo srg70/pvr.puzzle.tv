@@ -48,6 +48,9 @@
 #include "helpers.h"
 #include "pvr_client_base.h"
 #include "globals.hpp"
+#include "globals.hpp"
+#include "client_core_base.hpp"
+
 
 using namespace std;
 using namespace ADDON;
@@ -292,6 +295,14 @@ PVR_ERROR  PVRClientBase::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUH
         XBMC->QueueNotification(QUEUE_INFO, message);
         XBMC->FreeString(message);
         OnReloadEpg();
+        m_clientCore->CallRpcAsync("{\"jsonrpc\": \"2.0\", \"method\": \"GUI.ActivateWindow\", \"params\": {\"window\": \"pvrsettings\"},\"id\": 1}",
+                     [&] (rapidjson::Document& jsonRoot) {
+                         char* message = XBMC->GetLocalizedString(32016);
+                         XBMC->QueueNotification(QUEUE_INFO, message);
+                         XBMC->FreeString(message);
+                     },
+                     [&](const ActionQueue::ActionResult& s) {});
+
     } else if(RELOAD_RECORDINGS_MENU_HOOK == menuhook.iHookId) {
 //        char* message = XBMC->GetLocalizedString(32012);
 //        XBMC->QueueNotification(QUEUE_INFO, message);

@@ -115,7 +115,7 @@ protected:
 
 private:
     typedef std::vector<std::string> StreamerIdsList;
-    typedef std::function<void(const CActionQueue::ActionResult&)> TApiCallCompletion;
+    typedef std::function<void(const ActionQueue::ActionResult&)> TApiCallCompletion;
     
     struct ApiFunctionData;
         

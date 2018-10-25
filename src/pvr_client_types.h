@@ -29,6 +29,8 @@
 #include <vector>
 #include <vector>
 #include <functional>
+#include "ActionQueueTypes.hpp"
+#include <rapidjson/document.h>
 
 namespace PvrClient {
     
@@ -155,6 +157,9 @@ namespace PvrClient {
         virtual std::string GetUrl(PvrClient::ChannelId channelId) = 0;
         
         virtual void ReloadRecordings() = 0;
+        virtual void CallRpcAsync(const std::string & data, std::function<void(rapidjson::Document&)>  parser,
+                                  ActionQueue::TCompletion completion) = 0;
+        
         virtual ~IClientCore(){}
     };
  }

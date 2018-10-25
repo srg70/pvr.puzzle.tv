@@ -31,6 +31,7 @@ namespace CurlUtils
     }
 }
 
+using namespace ActionQueue;
 
 static const size_t c_MaxQueueSize = 100000;
 long HttpEngine::c_CurlTimeout = 15; // in sec
@@ -54,7 +55,7 @@ void HttpEngine::CancelAllRequests()
     P8PLATFORM::CEvent event;
     std::exception_ptr ex = nullptr;
     m_apiCalls->CancellAllBefore([=]{},
-                             [&](const CActionQueue::ActionResult& s) {event.Signal();});
+                             [&](const ActionResult& s) {event.Signal();});
     event.Wait();
     m_addonHelper->Log(ADDON::LOG_NOTICE, "All API requests canceled.");
 }

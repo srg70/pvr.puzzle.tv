@@ -25,6 +25,7 @@
 
 #include "pvr_client_types.h"
 #include <rapidjson/document.h>
+#include "ActionQueueTypes.hpp"
 #include <functional>
 #include "globals.hpp"
 
@@ -51,6 +52,11 @@ namespace PvrClient {
         bool GetEpgEntry(UniqueBroadcastIdType i,  EpgEntry& enrty);
         void ForEachEpg(const EpgEntryAction& action) const;
         void GetEpg(ChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries);
+        
+        void CallRpcAsync(const std::string & data, std::function<void(rapidjson::Document&)>  parser,
+                          ActionQueue::TCompletion completion);
+        
+        // abstract methods
         virtual void UpdateEpgForAllChannels(time_t startTime, time_t endTime) = 0;
 
     protected:
@@ -122,7 +128,13 @@ namespace PvrClient {
         JsonParserException(const std::string& r) : ExceptionBase(r) {}
         JsonParserException(const char* r) : ExceptionBase(r) {}
     };
-    
+    class RpcCallException : public ExceptionBase
+    {
+    public:
+        RpcCallException(const std::string& r) : ExceptionBase(r) {}
+        RpcCallException(const char* r) : ExceptionBase(r) {}
+    };
+
     
 }
 

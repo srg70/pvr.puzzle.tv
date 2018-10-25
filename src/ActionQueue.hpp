@@ -26,100 +26,80 @@
 
 #include "p8-platform/util/buffer.h"
 #include "p8-platform/threads/threads.h"
+#include "ActionQueueTypes.hpp"
 #include <exception>
 #include <stdexcept>
 
-class IActionQueueItem
+
+namespace ActionQueue
 {
-public:
-    virtual void Perform() = 0;
-    virtual void Cancel() = 0;
-    virtual ~IActionQueueItem() {}
-protected:
-};
-
-
-class CActionQueue : public P8PLATFORM::CThread
-{
-public:
-    typedef enum {
-        kActionCompleted,
-        kActionCancelled,
-        kActionFailed
-    } ActionCompletionStatus;
-
-    struct ActionResult
-    {
-        ActionCompletionStatus status;
-        std::exception_ptr exception;
-
-        ActionResult(ActionCompletionStatus s, std::exception_ptr e = nullptr)
-        : status(s), exception(e)
-        {}
-    };
-private:
-    template<typename TAction, typename TCompletion>
-    class QueueItem : public IActionQueueItem
+    
+    class CActionQueue : public P8PLATFORM::CThread
     {
     public:
-        QueueItem(const TAction action, const TCompletion completion)
-        : _action(action)
-        , _completion(completion)
+    private:
+        template<typename TAction>
+        class QueueItem : public IActionQueueItem
+        {
+        public:
+            QueueItem(const TAction action, const TCompletion completion)
+            : _action(action)
+            , _completion(completion)
+            {}
+            virtual void Perform() {
+                try {
+                    _action();
+                    _completion(ActionResult(kActionCompleted));
+                } catch (...) {
+                    Failed(std::current_exception());
+                }
+            }
+            virtual void Cancel() {_completion(ActionResult(kActionCancelled));}
+            
+        private:
+            const TAction _action;
+            const TCompletion _completion;
+            void Failed(std::exception_ptr e) {{_completion(ActionResult(kActionFailed, e));}}
+        };
+    public:
+        CActionQueue(size_t maxSize)
+        : _actions(maxSize)
+        , _willStop(false)
         {}
-        virtual void Perform() {
-            try {
-                _action();
-                _completion(ActionResult(kActionCompleted));
-            } catch (...) {
-                Failed(std::current_exception());
+        
+        template<typename TAction>
+        void PerformAsync(const TAction action, const TCompletion completion)
+        {
+            auto item = new QueueItem<TAction>(action, completion);
+            if(!_willStop)
+                _actions.Push(item);
+            else{
+                item->Cancel();
+                delete item;
             }
         }
-        virtual void Cancel() {_completion(ActionResult(kActionCancelled));}
-
-    private:
-        const TAction _action;
-        const TCompletion _completion;
-        void Failed(std::exception_ptr e) {{_completion(ActionResult(kActionFailed, e));}}
-    };
-public:
-    CActionQueue(size_t maxSize)
-    : _actions(maxSize)
-    , _willStop(false)
-    {}
-    
-    template<typename TAction, typename TCompletion>
-    void PerformAsync(const TAction action, const TCompletion completion)
-    {
-        auto item = new QueueItem<TAction, TCompletion>(action, completion);
-        if(!_willStop)
-            _actions.Push(item);
-        else{
-            item->Cancel();
-            delete item;
+        template<typename TAction>
+        void CancellAllBefore(const TAction action, const TCompletion completion)
+        {
+            // Set _willStop
+            TerminatePipeline();
+            // Reset _willStop when queue becomes empty
+            PerformAsync([]{}, [this, action, completion](const ActionResult& s) {
+                _willStop = false;
+                PerformAsync(action, completion);
+            });
         }
-    }
-    template<typename TAction, typename TCompletion>
-    void CancellAllBefore(const TAction action, const TCompletion completion)
-    {
-        // Set _willStop
-        TerminatePipeline();
-        // Reset _willStop when queue becomes empty
-        PerformAsync([]{}, [this, action, completion](const CActionQueue::ActionResult& s) {
-            _willStop = false;
-            PerformAsync(action, completion);
-        });
-    }
-    virtual bool StopThread(int iWaitMs = 5000);
-    virtual ~CActionQueue(void);
-
-private:
-    virtual void *Process(void);
-    void TerminatePipeline();
-
-    typedef P8PLATFORM::SyncedBuffer <IActionQueueItem*> TActionQueue;
-    TActionQueue _actions;
-    bool _willStop;
-
-};
-
+        virtual bool StopThread(int iWaitMs = 5000);
+        virtual ~CActionQueue(void);
+        
+    private:
+        virtual void *Process(void);
+        void TerminatePipeline();
+        
+        typedef P8PLATFORM::SyncedBuffer <IActionQueueItem*> TActionQueue;
+        TActionQueue _actions;
+        bool _willStop;
+        
+    };
+}
 #endif /* Action_Queue_hpp */
