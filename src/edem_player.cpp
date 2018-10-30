@@ -316,16 +316,20 @@ namespace EdemEngine
         string tail = data.substr(endlLine + 1);
         const char* c_GROUP = "#EXTGRP:";
         pos = tail.find(c_GROUP);
-        if(string::npos == pos)
-            throw BadPlaylistFormatException("Invalid channel block format: missing '#EXTGRP:'  tag.");
-        pos += strlen(c_GROUP);
-        endlLine = tail.find('\n', pos);
-        if(std::string::npos == pos)
-            throw BadPlaylistFormatException("Invalid channel block format: missing NEW LINE after #EXTGRP.");
-        string groupName = tail.substr(pos, endlLine - pos);
-        rtrim(groupName);
-        
-        string url = tail.substr(++endlLine);
+        // Optional channel group
+        string groupName = "Без группы";
+        endlLine = 0;
+        if(string::npos != pos) {
+            //  throw BadPlaylistFormatException("Invalid channel block format: missing '#EXTGRP:'  tag.");
+            pos += strlen(c_GROUP);
+            endlLine = tail.find('\n', pos);
+            if(std::string::npos == pos)
+                throw BadPlaylistFormatException("Invalid channel block format: missing NEW LINE after #EXTGRP.");
+            groupName = tail.substr(pos, endlLine - pos);
+            rtrim(groupName);
+            ++endlLine;
+        }
+        string url = tail.substr(endlLine);
         rtrim(url);
         
         Channel channel;
