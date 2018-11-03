@@ -9,6 +9,8 @@
 #ifndef ActionQueueTypes_h
 #define ActionQueueTypes_h
 
+#include <functional>
+
 namespace ActionQueue
 {
     
