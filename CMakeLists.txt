@@ -66,6 +66,7 @@ src/file_cache_buffer.cpp
 src/memory_cache_buffer.cpp
 src/XMLTV_loader.cpp
 src/TimersEngine.cpp
+src/Playlist.cpp
 )
 
 

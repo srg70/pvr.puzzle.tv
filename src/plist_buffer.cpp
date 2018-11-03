@@ -32,6 +32,8 @@
 #include "plist_buffer.h"
 #include "libXBMC_addon.h"
 #include "globals.hpp"
+#include "Playlist.hpp"
+#include "p8-platform/util/util.h"
 
 using namespace P8PLATFORM;
 using namespace ADDON;
@@ -41,27 +43,11 @@ namespace Buffers {
     
     static CTimeout s_SeekTimeout;
 
-    static std::string ToAbsoluteUrl(const std::string& url, const std::string& baseUrl){
-        const char* c_HTTP = "http://";
-        
-        // If Reliative URL
-        if(std::string::npos == url.find(c_HTTP)) {
-            // Append site prefix...
-            auto urlPos = baseUrl.find(c_HTTP);
-            if(std::string::npos == urlPos)
-                throw PlistBufferException((std::string("Missing http:// in base URL: ") + baseUrl).c_str());
-            urlPos = baseUrl.rfind('/');
-            if(std::string::npos == urlPos)
-                throw PlistBufferException((std::string("No '/' in base URL: ") + baseUrl).c_str());
-            return baseUrl.substr(0, urlPos + 1) + url;
-        }
-        return url;
-        
-    }
     PlaylistBuffer::PlaylistBuffer(const std::string &playListUrl,  PlaylistBufferDelegate delegate, int segmentsCacheSize)
     : m_totalLength(0)
     , m_totalDuration(0.0)
     , m_delegate(delegate)
+    , m_playlist(nullptr)
     , m_segmentsCacheSize(delegate == nullptr ? 0 : segmentsCacheSize) // No seek - no cache.
     {
         Init(playListUrl);
@@ -70,6 +56,8 @@ namespace Buffers {
     PlaylistBuffer::~PlaylistBuffer()
     {
         StopThread();
+        if(m_playlist)
+            delete m_playlist;
     }
     
     void PlaylistBuffer::Init(const std::string &playlistUrl)
@@ -84,179 +72,26 @@ namespace Buffers {
             CLockObject lock(m_syncAccess);
 
             m_writeEvent.Reset();
-            m_segmentUrls.clear();
+            if(m_playlist)
+                SAFE_DELETE(m_playlist);
             if(clearContent)
                 m_segments.clear();
             m_position = position;
             m_writeTimshift = m_readTimshift =  timeshift;
             s_SeekTimeout.Init(10*1000);
         }
-        SetBestPlaylist(playListUrl);
+        m_playlist = new Playlist(playListUrl);
         CreateThread();
     }
-    
-    static uint64_t ParseXstreamInfTag(const std::string& data, std::string& url)
-    {
-        const char* c_BAND = "BANDWIDTH=";
         
-        auto pos = data.find(c_BAND);
-        if(std::string::npos == pos)
-            throw PlistBufferException("Invalid playlist format: missing BANDWIDTH in #EXT-X-STREAM-INF tag.");
-        pos += strlen(c_BAND);
-        uint64_t bandwidth = std::stoull(data.substr(pos), &pos);
-        pos = data.find('\n', pos);
-        if(std::string::npos == pos)
-            throw PlistBufferException("Invalid playlist format: missing NEW LINE in #EXT-X-STREAM-INF tag.");
-        url = data.substr(++pos);
-        trim(url);
-        return bandwidth;
-    }
-    
-    void PlaylistBuffer::SetBestPlaylist(const std::string& playlistUrl)
-    {
-        const char* c_XINF = "#EXT-X-STREAM-INF:";
-        
-        m_lastSegment = -1;
-        m_playListUrl = playlistUrl;
-        std::string data;
-        LoadPlaylist(data);
-        auto pos = data.find(c_XINF);
-        // Simple playlist. No special parsing needed.
-        if(std::string::npos == pos) {
-            ParsePlaylist(data);
-            return;
-        }
-        //    LogDebug("Variant playlist URL: \n %s", playlistUrl.c_str() );
-        //    LogDebug("Variant playlist: \n %s", data.c_str() );
-        
-        uint64_t bestRate = 0;
-        while(std::string::npos != pos)
-        {
-            pos += strlen(c_XINF);
-            auto endTag = data.find(c_XINF,pos);
-            std::string::size_type tagLen = endTag - pos;
-            if(std::string::npos == endTag)
-                tagLen = std::string::npos;
-            
-            std::string tagBody = data.substr(pos, tagLen);
-            pos = endTag;
-            std::string url;
-            uint64_t rate = ParseXstreamInfTag(tagBody, url);
-            if(rate > bestRate) {
-                m_playListUrl = ToAbsoluteUrl(url, playlistUrl);
-                bestRate = rate;
-            }
-        }
-        //    LogDebug("Best URL (%d): \n %s", bestRate, m_playListUrl.c_str() );
-        
-    }
-    
-    bool PlaylistBuffer::ParsePlaylist(const std::string& data)
-    {
-        const char* c_M3U = "#EXTM3U";
-        const char* c_INF = "#EXTINF:";
-        const char* c_SEQ = "#EXT-X-MEDIA-SEQUENCE:";
-        const char* c_TYPE = "#EXT-X-PLAYLIST-TYPE:";
-        
-        try {
-            auto pos = data.find(c_M3U);
-            if(std::string::npos == pos)
-                throw PlistBufferException("Invalid playlist format: missing #EXTM3U tag.");
-            pos += strlen(c_M3U);
-            
-            int64_t mediaIndex = 0;
-            std::string  body;
-            pos = data.find(c_SEQ);
-            // If we have media-sequence tag - use it
-            if(std::string::npos != pos) {
-                pos += strlen(c_SEQ);
-                body = data.substr(pos);
-                mediaIndex = std::stoull(body, &pos);
-                m_isVod = false;
-            } else {
-                // ... otherwise check plist type. VOD list may ommit sequence ID
-                pos = data.find(c_TYPE);
-                if(std::string::npos == pos)
-                    throw PlistBufferException("Invalid playlist format: missing #EXT-X-MEDIA-SEQUENCE and #EXT-X-PLAYLIST-TYPE tag.");
-                pos+= strlen(c_TYPE);
-                body = data.substr(pos);
-                std::string vod("VOD");
-                if(body.substr(0,vod.size()) != vod)
-                    throw PlistBufferException("Invalid playlist format: VOD playlist expected.");
-                m_isVod = true;
-                mediaIndex = 0;
-                body=body.substr(0, body.find("#EXT-X-ENDLIST"));
-            }
-            
-            pos = body.find(c_INF, pos);
-            bool hasContent = false;
-            while(std::string::npos != pos) {
-                pos += strlen(c_INF);
-                body = body.substr(pos);
-                float duration = std::stof (body, &pos);
-                if(',' != body[pos++])
-                    throw PlistBufferException("Invalid playlist format: no coma after INF tag.");
-                
-                std::string::size_type urlPos = body.find('\n',pos) + 1;
-                pos = body.find(c_INF, urlPos);
-                hasContent = true;
-                // Check whether we have a segment already
-                if(m_lastSegment >= mediaIndex) {
-                    ++mediaIndex;
-                    continue;
-                }
-                m_lastSegment = mediaIndex;
-                std::string::size_type urlLen = pos - urlPos;
-                if(std::string::npos == pos)
-                    urlLen = std::string::npos;
-                auto url = body.substr(urlPos, urlLen);
-                trim(url);
-                url = ToAbsoluteUrl(url, m_playListUrl);
-                //            LogNotice("IDX: %u Duration: %f. URL: %s", mediaIndex, duration, url.c_str());
-                m_segmentUrls[mediaIndex++]  = TSegmentUrls::mapped_type(duration, url);
-            }
-            LogDebug("m_segmentUrls.size = %d, %s", m_segmentUrls.size(), hasContent ? "Not empty." : "Empty."  );
-            return hasContent;
-        } catch (std::exception& ex) {
-            LogError("Bad M3U : parser error %s", ex.what() );
-            LogError("M3U data : \n %s", data.c_str() );
-            throw;
-        } catch (...) {
-            LogError("Bad M3U : \n %s", data.c_str() );
-            throw;
-        }
-    }
-    
-    void PlaylistBuffer::LoadPlaylist(std::string& data)
-    {
-        char buffer[1024];
-
-        LogDebug(">>> PlaylistBuffer: (re)loading playlist %s.", m_playListUrl.c_str());
-
-        auto f = XBMC->OpenFile(m_playListUrl.c_str(), XFILE::READ_NO_CACHE);
-        if (!f)
-            throw PlistBufferException("Failed to obtain playlist from server.");
-        bool isEof = false;
-        do{
-            buffer[0]= 0;
-            auto bytesRead = XBMC->ReadFile(f, buffer, sizeof(buffer));
-            isEof = bytesRead <= 0;
-            data.append(&buffer[0], bytesRead);
-        }while(!isEof);
-        XBMC->CloseFile(f);
-
-        LogDebug(">>> PlaylistBuffer: (re)loading done. Content: \n%s", data.size()> 16000 ? "[More that 16K]" : data.c_str());
-
-    }
-    
-    bool PlaylistBuffer::FillSegment(const PlaylistBuffer::TSegmentUrls::mapped_type& segmentUrl)
+    bool PlaylistBuffer::FillSegment(const SegmentInfo& segmentInfo)
     {
         unsigned char buffer[8196];
-        void* f = XBMC->OpenFile(segmentUrl.second.c_str(), XFILE::READ_NO_CACHE | XFILE::READ_CHUNKED); //XFILE::READ_AUDIO_VIDEO);
+        void* f = XBMC->OpenFile(segmentInfo.url.c_str(), XFILE::READ_NO_CACHE | XFILE::READ_CHUNKED); //XFILE::READ_AUDIO_VIDEO);
         if(!f)
             throw PlistBufferException("Failed to download playlist media segment.");
         
-        auto segmentData = TSegments::mapped_type(new TSegments::mapped_type::element_type(segmentUrl.first));
+        auto segmentData = TSegments::mapped_type(new TSegments::mapped_type::element_type(segmentInfo.duration));
         ssize_t  bytesRead;
         do {
             bytesRead = XBMC->ReadFile(f, buffer, sizeof(buffer));
@@ -285,9 +120,10 @@ namespace Buffers {
         if(segmantsSize > 0) {
             LogDebug(">>> Segment added at %d. Total %d segs. Bitrate %f", segmentTimeshift, segmantsSize, segmentData->Bitrate());
             LogDebug(">>> Average bitrate: %f", bitrate);
-            // for VOD plist limit segments size to 20
+            // limit segments size to 20
             // to avoid memory overflow
-            if(m_isVod){
+            //if(m_playlist->IsVod())
+            {
                 bool segsCacheFull = segmantsSize > 20;
                 while(segsCacheFull && !IsStopped()){
                     P8PLATFORM::CEvent::Sleep(1*1000);
@@ -317,56 +153,35 @@ namespace Buffers {
         bool isEof = false;
         try {
             while (!isEof && !IsStopped()) {
-                if(m_segmentUrls.empty()) {
-                    // Update archive URL with actual timeshift
-//                    if(m_delegate != nullptr) {
-//                        time_t adjustedTimeshift = m_writeTimshift;
-//                        std::string newPlistUrl = m_delegate->UrlForTimeshift(m_writeTimshift, &adjustedTimeshift);
-//                        if(m_writeTimshift == adjustedTimeshift) {
-//                            LogDebug(">>> PlaylistBuffer: update url from %s to %s.", m_playListUrl.c_str(), newPlistUrl.c_str());
-//                            m_playListUrl = newPlistUrl;
-//                        } else {
-//                            LogDebug(">>> PlaylistBuffer: received all archive stream. Write is done.");
-//                            break;
-//                        }
-//
-//                    }
-                    std::string data;
-                    LoadPlaylist(data);
-                    // Empty playlist treat as EOF.
-                    isEof = !ParsePlaylist(data);
-                }
+                const SegmentInfo* pSegmentInfo;
+                bool hasMoreSegments = false;
+                isEof = !m_playlist->NextSegment(&pSegmentInfo, hasMoreSegments);
                 
-                auto it = m_segmentUrls.begin();
-                auto end = m_segmentUrls.end();
+                if(isEof  || IsStopped())
+                    continue;
                 float sleepTime = 1; //Min sleep time 1 sec
-                while (it != end && !isEof  && !IsStopped()) {
-                    const auto& segmentUrl = it->second;
+                if(nullptr != pSegmentInfo) {
                     LogDebug(">>> Start fill segment.");
-                    isEof = FillSegment(segmentUrl);
+                    isEof = FillSegment(*pSegmentInfo);
                     LogDebug(">>> End fill segment.");
-
-                    auto duration = segmentUrl.first;
+                    
+                    auto duration = pSegmentInfo->duration;
                     sleepTime = std::max(duration / 2.0, 1.0);
                     LogDebug(">>> Segment duration: %f", duration);
-                    ++it;
                     if(!IsStopped())
                         m_writeEvent.Signal();
                 }
-                if(!IsStopped())
-                    m_segmentUrls.clear();
-
-                if(m_isVod) {
-                    LogDebug(">>> PlaylistBuffer: received all VOD stream. Write is done.");
-                    break;
-                }
-                IsStopped(sleepTime);
+                if(!hasMoreSegments)
+                    IsStopped(sleepTime);
             }
             
         } catch (InputBufferException& ex ) {
             LogError("Playlist download thread failed with error: %s", ex.what());
         }
         
+        if(m_playlist->IsVod()) {
+            LogDebug(">>> PlaylistBuffer: received all VOD stream. Write is done.");
+        }
         return NULL;
     }
     
@@ -423,17 +238,13 @@ namespace Buffers {
                     segToRemove = 0;
                     CLockObject lock(m_syncAccess);
                     // Check cache size ...
-                    while(m_segments.size() > m_segmentsCacheSize) {
-                        // Release farest (from current position) segment
-                        time_t maxTimeDelta = 0;
-                        for (auto& seg: m_segments) {
-                            time_t timeDelta = labs(m_readTimshift - seg.first);
-                            if(timeDelta <= maxTimeDelta)
-                                continue;
-                            maxTimeDelta = timeDelta;
-                            segToRemove = seg.first;
+                    if(m_segments.size() > m_segmentsCacheSize) {
+                        // Release oldest (from current position) segment
+                        const auto& oldestSeg = m_segments.begin();
+                        if(m_readTimshift > oldestSeg->first) {
+                            segToRemove = oldestSeg->first;
+                            m_segments.erase(segToRemove);
                         }
-                        m_segments.erase(segToRemove);
                         totalSegments = m_segments.size();
                     }
                 }

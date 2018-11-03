@@ -345,7 +345,7 @@ return false;             \
             id = stoul(strId.c_str());
         }
         catch (const std::invalid_argument& ia) {
-            LogNotice("Channel ID %s -  is not a number! Using hash instead", strId.c_str());
+//            LogNotice("Channel ID %s -  is not a number! Using hash instead", strId.c_str());
             id = std::hash<std::string>{}(strId);
             strId = std::to_string(id);
         }

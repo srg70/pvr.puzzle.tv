@@ -35,6 +35,9 @@
 
 namespace Buffers
 {
+    class Playlist;
+    struct SegmentInfo;
+    
     class IPlaylistBufferDelegate
     {
     public:
@@ -85,16 +88,12 @@ namespace Buffers
             const uint8_t* _begin;
             const float _duration;
         };
-        typedef std::map<uint64_t, std::pair<float, std::string> > TSegmentUrls;
         typedef std::map<time_t, std::shared_ptr<Segment> >  TSegments;
         
-        TSegmentUrls m_segmentUrls;
+        Playlist* m_playlist;
         TSegments m_segments;
-        int64_t m_lastSegment;
-        std::string  m_playListUrl;
         mutable P8PLATFORM::CMutex m_syncAccess;
         P8PLATFORM::CEvent m_writeEvent;
-        bool m_isVod;
         int64_t m_totalLength;
         float m_totalDuration;
         PlaylistBufferDelegate m_delegate;
@@ -106,10 +105,7 @@ namespace Buffers
         void *Process();
         void Init(const std::string &playlistUrl);
         void Init(const std::string &playlistUrl, bool cleanContent, int64_t position, time_t timeshift);
-        bool ParsePlaylist(const std::string& data);
-        void SetBestPlaylist(const std::string& playlistUrl);
-        void LoadPlaylist(std::string& data);
-        bool FillSegment(const TSegmentUrls::mapped_type& segment);
+        bool FillSegment(const SegmentInfo& segment);
         bool IsStopped(uint32_t timeoutInSec = 0);
         float Bitrate() const {
             return m_totalLength / (m_totalDuration + 0.01);
