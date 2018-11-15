@@ -20,7 +20,8 @@
       <setting id="puzzle_server_uri" type="text" label="20000" default="127.0.0.1"/>
       <setting id="puzzle_server_port" type="number" label="20001" default="8089"/>
       <setting id="puzzle_server_retries" type="number" label="20002" default="4"/>
-  </category>
+      <setting id="puzzle_server_epg_url" type="text" label="20003" default="http://api.torrent-tv.ru/ttv.xmltv.xml.gz"/>
+</category>
 
 <!-- Sovok TV -->
   <category label="30010">

@@ -67,6 +67,7 @@ private:
     uint16_t m_serverPort;
     std::string m_serverUri;
     int m_maxServerRetries;
+    std::string m_epgUrl;
     //    bool m_shouldAddFavoritesGroup;
 };
 

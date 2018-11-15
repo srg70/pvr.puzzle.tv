@@ -48,6 +48,12 @@ using namespace ADDON;
 using namespace PuzzleEngine;
 using namespace PvrClient;
 
+static const char* c_epg_setting = "puzzle_server_epg_url";
+static const char* c_server_port_setting = "puzzle_server_port";
+static const char* c_server_url_setting = "puzzle_server_uri";
+static const char* c_server_retries_setting = "puzzle_server_retries";
+
+
 ADDON_STATUS PuzzlePVRClient::Init(PVR_PROPERTIES* pvrprops)
 {
     ADDON_STATUS retVal = PVRClientBase::Init(pvrprops);
@@ -59,13 +65,15 @@ ADDON_STATUS PuzzlePVRClient::Init(PVR_PROPERTIES* pvrprops)
     int serverPort = 8089;
     m_maxServerRetries = 4;
 
-    XBMC->GetSetting("puzzle_server_port", &m_serverPort);
-    if(XBMC->GetSetting("puzzle_server_uri", &buffer))
+    XBMC->GetSetting(c_server_port_setting, &m_serverPort);
+    if(XBMC->GetSetting(c_server_url_setting, &buffer))
         m_serverUri =buffer;
-    XBMC->GetSetting("puzzle_server_retries", &m_maxServerRetries);
+    XBMC->GetSetting(c_server_retries_setting, &m_maxServerRetries);
     if(m_maxServerRetries < 4)
         m_maxServerRetries = 4;
-   
+    if (XBMC->GetSetting(c_epg_setting, &buffer))
+        m_epgUrl = buffer;
+
     
     retVal = CreateCoreSafe(false);
     
@@ -120,25 +128,33 @@ void PuzzlePVRClient::CreateCore(bool clearEpgCache)
     
     m_clientCore = m_puzzleTV = new PuzzleTV(m_serverUri.c_str(), m_serverPort);
     m_puzzleTV->SetMaxServerRetries(m_maxServerRetries);
-    
+    m_puzzleTV->SetEpgUrl(m_epgUrl);
     m_puzzleTV->InitAsync(clearEpgCache);
 }
 
 ADDON_STATUS PuzzlePVRClient::SetSetting(const char *settingName, const void *settingValue)
 {
-    if (strcmp(settingName, "puzzle_server_port") == 0)
+    ADDON_STATUS result = ADDON_STATUS_OK ;
+
+    if (strcmp(settingName, c_server_port_setting) == 0)
     {
+        result = ADDON_STATUS_NEED_RESTART;
     }
-    else if (strcmp(settingName, "puzzle_server_uri") == 0 )
+    else if (strcmp(settingName, c_server_url_setting) == 0 )
     {
+        result = ADDON_STATUS_NEED_RESTART;
     }
-    else if (strcmp(settingName, "puzzle_server_retries") == 0 )
+    else if (strcmp(settingName, c_server_retries_setting) == 0 )
     {
+        result = ADDON_STATUS_NEED_RESTART;
+    }
+    else if(strcmp(settingName,  c_epg_setting) == 0) {
+        result = ADDON_STATUS_NEED_RESTART;
     }
     else {
-        return PVRClientBase::SetSetting(settingName, settingValue);
+        result = PVRClientBase::SetSetting(settingName, settingValue);
     }
-    return ADDON_STATUS_NEED_RESTART;
+    return result;
 }
 
 PVR_ERROR PuzzlePVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabilities)

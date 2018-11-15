@@ -82,6 +82,10 @@ msgctxt "#20002"
 msgid "Retries on startup (4 sec each)"
 msgstr "Попытки подключения к серверу (4 сек)"
 
+msgctxt "#20003"
+msgid "EPG Path (XMLTV)"
+msgstr "Программа передач (XMLTV)"
+
 msgctxt "#20010"
 msgid "Puzzle TV"
 msgstr "Пазл ТВ"
