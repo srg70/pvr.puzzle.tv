@@ -333,24 +333,9 @@ return false;             \
 
     }
     
-    unsigned long PatchChannelId(std::string& strId)
+    static PvrClient::ChannelId PatchChannelId(const std::string& strId)
     {
-        const char * c_TTVChannelidPrefix = "ttv";
-        auto idPrefixPos = strId.find(c_TTVChannelidPrefix);
-        if(idPrefixPos != std::string::npos) {
-            strId = strId.substr(idPrefixPos + strlen(c_TTVChannelidPrefix));
-        }
-        unsigned long id;
-        try {
-            id = stoul(strId.c_str());
-        }
-        catch (const std::invalid_argument& ia) {
-//            LogNotice("Channel ID %s -  is not a number! Using hash instead", strId.c_str());
-            id = std::hash<std::string>{}(strId);
-            strId = std::to_string(id);
-        }
-
-        return id;
+        return std::hash<std::string>{}(strId);
     }
     
     bool ParseChannels(const std::string& url,  const ChannelCallback& onChannelFound)
@@ -379,12 +364,13 @@ return false;             \
             //XBMC->Log(LOG_DEBUG, "XMLTV Loader: found channel node.");
 
             EpgChannel channel;
-            if(!GetAttributeValue(pChannelNode, "id", channel.strId)){
+            std::string strId;
+            if(!GetAttributeValue(pChannelNode, "id", strId)){
                 XBMC->Log(LOG_DEBUG, "XMLTV Loader: no channel ID found.");
                 continue;
             }
             
-            PatchChannelId(channel.strId);
+            channel.id = PatchChannelId(strId);
             
             if(!GetNodeValue(pChannelNode, "display-name", channel.strName)){
                 XBMC->Log(LOG_DEBUG, "XMLTV Loader: no channel display name found.");
@@ -442,10 +428,8 @@ return false;             \
                 int iTmpStart = ParseDateTime(strStart);
                 int iTmpEnd = ParseDateTime(strStop);
                 
-                unsigned long id = PatchChannelId(strId);
-                
                 EpgEntry entry;
-                entry.iChannelId = id;
+                entry.iChannelId = PatchChannelId(strId);
                 entry.startTime = iTmpStart;
                 entry.endTime = iTmpEnd;
                 

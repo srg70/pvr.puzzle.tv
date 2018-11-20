@@ -31,19 +31,20 @@
 
 #include <string>
 #include <functional>
+#include "pvr_client_types.h"
 
 namespace XMLTV {
   
     struct EpgChannel
     {
-        std::string                  strId;
-        std::string                  strName;
-        std::string                  strIcon;
+        PvrClient::ChannelId     id;
+        std::string         strName;
+        std::string         strIcon;
     };
 
     struct EpgEntry
     {
-        int         iChannelId;
+        PvrClient::ChannelId         iChannelId;
         time_t      startTime;
         time_t      endTime;
         std::string strTitle;
