@@ -83,8 +83,24 @@ msgid "Retries on startup (4 sec each)"
 msgstr "Попытки подключения к серверу (4 сек)"
 
 msgctxt "#20003"
-msgid "EPG Path (XMLTV)"
-msgstr "Программа передач (XMLTV)"
+msgid "EPG Path"
+msgstr "Путь к файлу"
+
+msgctxt "#20004"
+msgid "EPG Port"
+msgstr "EPG порт"
+
+msgctxt "#20005"
+msgid "EPG Source"
+msgstr "Источник EPG"
+
+msgctxt "#20006"
+msgid "XMLTV File"
+msgstr "XMLTV файл"
+
+msgctxt "#20007"
+msgid "Puzzle EPG"
+msgstr "Пазл Телегид"
 
 msgctxt "#20010"
 msgid "Puzzle TV"

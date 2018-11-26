@@ -83,8 +83,24 @@ msgid "Retries on startup (4 sec each)"
 msgstr "Retries on startup (4 sec each)"
 
 msgctxt "#20003"
-msgid "EPG Path (XMLTV)"
-msgstr "EPG Path (XMLTV)"
+msgid "EPG Path"
+msgstr "EPG Path"
+
+msgctxt "#20004"
+msgid "EPG Port"
+msgstr "EPG Port"
+
+msgctxt "#20005"
+msgid "EPG Source"
+msgstr "EPG Source"
+
+msgctxt "#20006"
+msgid "XMLTV File"
+msgstr "XMLTV File"
+
+msgctxt "#20007"
+msgid "Puzzle EPG"
+msgstr "Puzzle EPG"
 
 msgctxt "#20010"
 msgid "Puzzle TV"

@@ -162,6 +162,8 @@ namespace XMLTV {
     
     static int ParseDateTime(std::string& strDate, bool iDateFormat = true)
     {
+        static  long offset = LocalTimeOffset();
+
         struct tm timeinfo;
         memset(&timeinfo, 0, sizeof(tm));
         char sign = '+';
@@ -177,15 +179,6 @@ namespace XMLTV {
         timeinfo.tm_year -= 1900;
         timeinfo.tm_isdst = -1;
         
-        std::time_t current_time;
-        std::time(&current_time);
-        long offset = 0;
-#ifndef TARGET_WINDOWS
-        offset = -std::localtime(&current_time)->tm_gmtoff;
-#else
-        _get_timezone(&offset);
-#endif // TARGET_WINDOWS
-        
         long offset_of_date = (hours * 60 * 60) + (minutes * 60);
         if (sign == '-')
         {
@@ -195,6 +188,19 @@ namespace XMLTV {
         return mktime(&timeinfo) - offset_of_date - offset;
     }
     
+    long LocalTimeOffset()
+    {
+        std::time_t current_time;
+        std::time(&current_time);
+        long offset = 0;
+#ifndef TARGET_WINDOWS
+        offset = -std::localtime(&current_time)->tm_gmtoff;
+#else
+        _get_timezone(&offset);
+#endif // TARGET_WINDOWS
+
+        return offset;
+    }
     
     /*
      * This method uses zlib to decompress a gzipped file in memory.

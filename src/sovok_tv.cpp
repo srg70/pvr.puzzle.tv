@@ -63,27 +63,17 @@ static const char* c_EpgCacheFile = "sovok_epg_cache.txt";
 static void BeutifyUrl(string& url);
 struct SovokTV::ApiFunctionData
 {
-    enum API_Version
-    {
-        API_2_2,
-        API_2_3
-    };
-    
-//    ApiFunctionData(const char* _name)
-//    : name(_name) , params(s_EmptyParams), api_ver (API_2_2)
-//    {}
-//    
-    ApiFunctionData(const char* _name, const ParamList& _params = s_EmptyParams, API_Version _version = API_2_2)
-    : name(_name) , params(_params), api_ver (_version)
+
+    ApiFunctionData(const char* _name)
+    : ApiFunctionData(_name, ParamList())
+    {}
+
+    ApiFunctionData(const char* _name, const ParamList& _params)
+    : name(_name) , params(_params)
     {}
     std::string name;
     const ParamList params;
-    API_Version api_ver;
-    static const  ParamList s_EmptyParams;
 };
-
-const ParamList SovokTV::ApiFunctionData::s_EmptyParams;
-
 
 //tatic         P8PLATFORM::CTimeout TEST_LOGIN_FAILED_timeout(30 * 1000);
 
@@ -645,7 +635,7 @@ void SovokTV::InitArchivesInfo()
     m_archivesInfo.clear();
     
     try {
-        ApiFunctionData apiParams("archive_channels_list", ApiFunctionData::s_EmptyParams, ApiFunctionData::API_2_3);
+        ApiFunctionData apiParams("archive_channels_list");
         
         CallApiFunction(apiParams, [&] (Document& jsonRoot)
         {

@@ -30,8 +30,9 @@
 #include "pvr_client_base.h"
 
 class InputBuffer;
+
 namespace PuzzleEngine {
-class PuzzleTV;
+    class PuzzleTV;
 }
 
 class PuzzlePVRClient: public PvrClient::PVRClientBase
@@ -69,6 +70,8 @@ private:
     int m_maxServerRetries;
     std::string m_epgUrl;
     //    bool m_shouldAddFavoritesGroup;
+    int m_epgType;
+    int m_epgPort;
 };
 
 #endif //__puzzle_pvr_client_h__

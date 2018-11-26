@@ -71,6 +71,8 @@ namespace PvrClient {
     {
         EpgEntry()
         : ChannelId(-1)
+        , StartTime(0)
+        , EndTime(0)
         , HasArchive (false)
         {}
         const char* ChannelIdName = "ch";

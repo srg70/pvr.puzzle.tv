@@ -27,6 +27,7 @@
 #include <sstream>
 #include <cstdlib>
 #include <ctime>
+#include <list>
 #include "p8-platform/threads/mutex.h"
 #include "p8-platform/util/timeutils.h"
 #include "p8-platform/util/util.h"
@@ -49,20 +50,26 @@ static const char* c_EpgCacheFile = "puzzle_epg_cache.txt";
 
 struct PuzzleTV::ApiFunctionData
 {
-     ApiFunctionData(const char* _name, const ParamList& _params = s_EmptyParams)
-    : name(_name) , params(_params), attempt(0)
-    {}
-    std::string name;
-    const ParamList params;
-    static const  ParamList s_EmptyParams;
+     ApiFunctionData(const char* _name,  uint16_t _port,  const ParamList* _params = nullptr)
+    : name(_name) , port(_port), attempt(0)
+    {
+        if(_params){
+            params = *_params;
+        }
+    }
+    ~ApiFunctionData()
+    {
+    }
+    const std::string name;
+    const uint16_t port;
+    ParamList params;
     mutable int attempt;
 };
 
-const ParamList PuzzleTV::ApiFunctionData::s_EmptyParams;
-
-PuzzleTV::PuzzleTV(const char* serverUrl, int serverPort) :
+PuzzleTV::PuzzleTV(const char* serverUrl, uint16_t serverPort) :
     m_serverUri(serverUrl),
     m_serverPort(serverPort),
+    m_epgServerPort(8085),
     m_epgUrl("http://api.torrent-tv.ru/ttv.xmltv.xml.gz")
 {
 }
@@ -124,7 +131,7 @@ void PuzzleTV::BuildChannelAndGroupList()
         PlaylistContent plistContent;
 
         // Get channels from server
-        ApiFunctionData params("/get/json");
+        ApiFunctionData params("/get/json", m_serverPort);
         CallApiFunction(params, [&plistContent] (Document& jsonRoot)
         {
             const Value &channels = jsonRoot["channels"];
@@ -144,24 +151,24 @@ void PuzzleTV::BuildChannelAndGroupList()
                 plistContent[channel.Name] = PlaylistContent::mapped_type(channel,groupName);
             }
         });
-        
-        
-        m_epgToServerLut.clear();
-        using namespace XMLTV;
-        
-        auto pThis = this;
-        // Build LUT channels ID from EPG to Server
-        ChannelCallback onNewChannel = [&plistContent, &pThis](const EpgChannel& newChannel){
-            if(plistContent.count(newChannel.strName) != 0) {
-                auto& plistChannel = plistContent[newChannel.strName].first;
-                pThis->m_epgToServerLut[stoul(newChannel.strId.c_str())] = plistChannel.Id;
-                if(plistChannel.IconPath.empty())
-                    plistChannel.IconPath = newChannel.strIcon;
-            }
-        };
-        
-        XMLTV::ParseChannels(m_epgUrl, onNewChannel);
 
+        if(m_epgType == c_EpgType_File) {
+            m_epgToServerLut.clear();
+            using namespace XMLTV;
+            
+            auto pThis = this;
+            // Build LUT channels ID from EPG to Server
+            ChannelCallback onNewChannel = [&plistContent, &pThis](const EpgChannel& newChannel){
+                if(plistContent.count(newChannel.strName) != 0) {
+                    auto& plistChannel = plistContent[newChannel.strName].first;
+                    pThis->m_epgToServerLut[newChannel.id] = plistChannel.Id;
+                    if(plistChannel.IconPath.empty())
+                        plistChannel.IconPath = newChannel.strIcon;
+                }
+            };
+            
+            XMLTV::ParseChannels(m_epgUrl, onNewChannel);
+        }
         
         for(const auto& channelWithGroup : plistContent)
         {
@@ -199,7 +206,7 @@ void PuzzleTV::BuildChannelAndGroupList()
 //    params["cid"] = n_to_string(channelId);
 //    params["time"] = n_to_string(startTime);
 //     try {
-//         ApiFunctionData apiParams("/get/archive_next", params);
+//         ApiFunctionData apiParams("/get/archive_next", , m_serverPort, params);
 //         CallApiFunction(apiParams, [&] (Document& jsonRoot)
 //        {
 //            const Value & archive = jsonRoot["archive"];
@@ -250,33 +257,95 @@ void PuzzleTV::UpdateEpgForAllChannels(time_t startTime, time_t endTime)
         return;
     
     m_epgUpdateInterval.Init(24*60*60*1000);
-    
-    using namespace XMLTV;
     try {
-        auto pThis = this;
-        
-        EpgEntryCallback onEpgEntry = [&pThis,  startTime] (const XMLTV::EpgEntry& newEntry) {
-            pThis->AddEpgEntry(newEntry);
-        };
-        
-        XMLTV::ParseEpg(m_epgUrl, onEpgEntry);
-        
+        LoadEpg();
         SaveEpgCache(c_EpgCacheFile);
-        //        } catch (ServerErrorException& ex) {
-        //            XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32002), ex.reason.c_str() );
+//        } catch (ServerErrorException& ex) {
+//            XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32002), ex.reason.c_str() );
     } catch (...) {
         LogError(" >>>>  FAILED receive EPG <<<<<");
     }
 }
 
+static bool time_compare (const EpgEntry& first, const EpgEntry& second)
+{
+    return first.StartTime < second.StartTime;
+}
+
 void PuzzleTV::LoadEpg()
 {
-    using namespace XMLTV;
+    //    using namespace XMLTV;
     auto pThis = this;
     
-    EpgEntryCallback onEpgEntry = [&pThis] (const XMLTV::EpgEntry& newEntry) {pThis->AddEpgEntry(newEntry);};
-    
-    XMLTV::ParseEpg(m_epgUrl, onEpgEntry);
+    if(m_epgType == c_EpgType_File) {
+        
+        XMLTV::EpgEntryCallback onEpgEntry = [&pThis] (const XMLTV::EpgEntry& newEntry) {pThis->AddEpgEntry(newEntry);};
+        
+        XMLTV::ParseEpg(m_epgUrl, onEpgEntry);
+    } else if(m_epgType == c_EpgType_Server) {
+        
+        auto pThis = this;
+        // Assuming Moscow time EPG +3:00
+        long offset = -(3 * 60 * 60) - XMLTV::LocalTimeOffset();
+        
+        ApiFunctionData apiParams("/channel/json/id=all", m_epgServerPort);
+        try {
+            CallApiFunction(apiParams, [pThis, offset] (Document& jsonRoot) {
+                if(!jsonRoot.IsObject()) {
+                    LogError("PuzzleTV: wrong JSON format of EPG ");
+                    return;
+                }
+                
+                std::for_each(jsonRoot.MemberBegin(), jsonRoot.MemberEnd(), [pThis, offset]  ( Value::ConstMemberIterator::Reference & i) {
+                    // Find channel object
+                    if(i.value.IsObject() && i.value.HasMember("title") && !i.value.HasMember("plot")) {
+                        auto channelIdStr = i.name.GetString();
+                        char* dummy;
+                        ChannelId channelId  = strtoul(channelIdStr, &dummy, 16);
+                        LogDebug("Found channel %s (0x%X)", i.name.GetString(), channelId);
+                        
+                        // Parse EPG items of channel object
+                        auto& epgObj = i.value;
+                        list<EpgEntry> serverEpg;
+                        std::for_each(epgObj.MemberBegin(), epgObj.MemberEnd(), [pThis, offset, channelId, &serverEpg]  ( Value::ConstMemberIterator::Reference & epgItem) {
+                            // Find EPG item
+                            if(epgItem.value.IsObject() && epgItem.value.HasMember("plot")  && epgItem.value.HasMember("img")  && epgItem.value.HasMember("title")) {
+                                EpgEntry epgEntry;
+                                epgEntry.ChannelId = channelId;
+                                string s = epgItem.name.GetString();
+                                s = s.substr(0, s.find('.'));
+                                unsigned long l = stoul(s.c_str());
+                                epgEntry.StartTime = (time_t)l + offset;
+                                epgEntry.Title = epgItem.value["title"].GetString();
+                                epgEntry.Description = epgItem.value["plot"].GetString();
+                                serverEpg.push_back(epgEntry);
+                            }
+                        });
+                        serverEpg.sort(time_compare);
+                        auto runner = serverEpg.begin();
+                        auto end = serverEpg.end();
+                        if(runner != end){
+                            auto pItem = runner++;
+                            while(runner != end) {
+                                pItem->EndTime = runner->StartTime;
+                                pThis->ClientCoreBase::AddEpgEntry(pItem->StartTime, *pItem);
+                                runner++; pItem++;
+                            }
+                            LogDebug(" Puzzle Server: channel ID=%X has %d EPGs. From %s to %s",
+                                     channelId,
+                                     serverEpg.size(),
+                                     time_t_to_string(serverEpg.front().StartTime).c_str(),
+                                     time_t_to_string(serverEpg.back().StartTime).c_str());
+                        }
+                    }
+                });
+            });
+        } catch (...) {
+            LogError("PuzzleTV: exception on lodaing JSON EPG");
+        }
+    }else {
+        LogError("PuzzleTV: unknown EPG source type %d", m_epgType);
+    }
 }
 
 string PuzzleTV::GetNextStream(ChannelId channelId, int currentChannelIdx)
@@ -308,7 +377,7 @@ string PuzzleTV::GetUrl(ChannelId channelId)
                 string cmd = "/get/streams/";
                 cmd += n_to_string_hex(channelId);
                 
-                ApiFunctionData apiParams(cmd.c_str());
+                ApiFunctionData apiParams(cmd.c_str(), m_serverPort);
                 CallApiFunction(apiParams, [&] (Document& jsonRoot)
                {
                     if(!jsonRoot.IsArray())
@@ -337,7 +406,7 @@ void PuzzleTV::CallApiFunction(const ApiFunctionData& data, TParser parser)
 {
     P8PLATFORM::CEvent event;
     std::exception_ptr ex = nullptr;
-    CallApiAsync(data, parser, [&](const ActionQueue::ActionResult& s) {
+    CallApiAsync(data, parser, [&ex, &event](const ActionQueue::ActionResult& s) {
         ex = s.exception;
         event.Signal();
     });
@@ -350,7 +419,7 @@ void PuzzleTV::CallApiFunction(const ApiFunctionData& data, TParser parser)
         } catch (CurlErrorException cex) {
             if(data.attempt >= m_maxServerRetries -1)
                 throw cex;
-            // Probably server doesn'r start yet
+            // Probably server doesn't start yet
             // Wait and retry
             data.attempt += 1;
             XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32013), data.attempt);
@@ -376,35 +445,43 @@ void PuzzleTV::CallApiAsync(const ApiFunctionData& data, TParser parser, TComple
         query += runner->first + '=' + runner->second;
     }
     std::string strRequest = string("http://") + m_serverUri + ":";
-    strRequest += n_to_string(m_serverPort);
+    strRequest += n_to_string(data.port);
     strRequest += data.name + query;
     auto start = P8PLATFORM::GetTimeMs();
 
     LogDebug("Calling '%s'.",  data.name.c_str());
 
-    std::function<void(const std::string&)> parserWrapper = [=](const std::string& response) {
+    auto pThis = this;
+    std::function<void(const std::string&)> parserWrapper = [pThis, start, parser](const std::string& response) {
         LogDebug("Response in %d ms.",  P8PLATFORM::GetTimeMs() - start);
         
         //            if(data.name.compare( "get_url") == 0)
         //                LogDebug(response.substr(0, 16380).c_str());
         
-        ParseJson(response, [&] (Document& jsonRoot)
+//        LogDebug("Response length %d", response.size());
+//        int pos = 0;
+//        while(pos < response.size() ) {
+//            LogDebug("%s", response.substr(pos,  16383).c_str());
+//            pos +=  16383;
+//        }
+
+        pThis->ParseJson(response, [&parser] (Document& jsonRoot)
                   {
                       //if (!jsonRoot.HasMember("error"))
                       {
                           parser(jsonRoot);
                           return;
                       }
-                      const Value & errObj = jsonRoot["error"];
-                      auto err = errObj["message"].GetString();
-                      auto code = errObj["code"].GetInt();
-                      LogError("Puzzle TV server responses error:");
-                      LogError(err);
-                      throw ServerErrorException(err,code);
+//                      const Value & errObj = jsonRoot["error"];
+//                      auto err = errObj["message"].GetString();
+//                      auto code = errObj["code"].GetInt();
+//                      LogError("Puzzle TV server responses error:");
+//                      LogError(err);
+//                      throw ServerErrorException(err,code);
                   });
     };
 
-    m_httpEngine->CallApiAsync(strRequest, parserWrapper,  [=](const ActionQueue::ActionResult& ss){completion(ss);});
+    m_httpEngine->CallApiAsync(strRequest, parserWrapper,  [completion](const ActionQueue::ActionResult& ss){completion(ss);});
 }
 
 void PuzzleTV::UpdateArhivesAsync()
@@ -412,7 +489,7 @@ void PuzzleTV::UpdateArhivesAsync()
     const auto& channelList = m_channelList;
     std::set<ChannelId>* cahnnelsWithArchive = new std::set<ChannelId>();
     auto pThis = this;
-    ApiFunctionData data("/arh/json");
+    ApiFunctionData data("/arh/json", m_serverPort);
     CallApiAsync(data ,
                  [channelList, cahnnelsWithArchive] (Document& jsonRoot) {
                      for (const auto& ch : jsonRoot["channels"].GetArray()) {
@@ -442,7 +519,7 @@ void PuzzleTV::UpdateArhivesAsync()
 //                     for(auto chId : *cahnnelsWithArchive) {
 //                         string cmd = "/arh/channel/";
 //                         cmd += n_to_string_hex(chId);
-//                         ApiFunctionData data(cmd.c_str());
+//                         ApiFunctionData data(cmd.c_str(), m_serverPort);
 //                         pThis->CallApiAsync(data ,
 //                                      [pThis] (Document& jsonRoot){
 //                                          for (const auto& ch : jsonRoot["channels"].GetArray()) {

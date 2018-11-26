@@ -48,10 +48,12 @@ using namespace ADDON;
 using namespace PuzzleEngine;
 using namespace PvrClient;
 
-static const char* c_epg_setting = "puzzle_server_epg_url";
-static const char* c_server_port_setting = "puzzle_server_port";
 static const char* c_server_url_setting = "puzzle_server_uri";
+static const char* c_server_port_setting = "puzzle_server_port";
 static const char* c_server_retries_setting = "puzzle_server_retries";
+static const char* c_epg_provider_setting = "puzzle_server_epg_provider_type";
+static const char* c_epg_url_setting = "puzzle_server_epg_url";
+static const char* c_epg_port_setting = "puzzle_server_epg_port";
 
 
 ADDON_STATUS PuzzlePVRClient::Init(PVR_PROPERTIES* pvrprops)
@@ -71,9 +73,16 @@ ADDON_STATUS PuzzlePVRClient::Init(PVR_PROPERTIES* pvrprops)
     XBMC->GetSetting(c_server_retries_setting, &m_maxServerRetries);
     if(m_maxServerRetries < 4)
         m_maxServerRetries = 4;
-    if (XBMC->GetSetting(c_epg_setting, &buffer))
+    if (XBMC->GetSetting(c_epg_url_setting, &buffer))
         m_epgUrl = buffer;
-
+    XBMC->GetSetting(c_epg_provider_setting, &m_epgType);
+    if(m_epgType != c_EpgType_Server){
+        m_epgType = c_EpgType_File;
+    }
+    
+    if(!XBMC->GetSetting(c_epg_port_setting, &m_epgPort)){
+        m_epgPort = 8085;
+    }
     
     retVal = CreateCoreSafe(false);
     
@@ -128,7 +137,7 @@ void PuzzlePVRClient::CreateCore(bool clearEpgCache)
     
     m_clientCore = m_puzzleTV = new PuzzleTV(m_serverUri.c_str(), m_serverPort);
     m_puzzleTV->SetMaxServerRetries(m_maxServerRetries);
-    m_puzzleTV->SetEpgUrl(m_epgUrl);
+    m_puzzleTV->SetEpgParams(EpgType(m_epgType), m_epgUrl, m_epgPort);
     m_puzzleTV->InitAsync(clearEpgCache);
 }
 
@@ -148,10 +157,16 @@ ADDON_STATUS PuzzlePVRClient::SetSetting(const char *settingName, const void *se
     {
         result = ADDON_STATUS_NEED_RESTART;
     }
-    else if(strcmp(settingName,  c_epg_setting) == 0) {
+    else if(strcmp(settingName,  c_epg_url_setting) == 0) {
         result = ADDON_STATUS_NEED_RESTART;
     }
-    else {
+    else if(strcmp(settingName,  c_epg_provider_setting) == 0) {
+        result = ADDON_STATUS_NEED_RESTART;
+    }
+    else if(strcmp(settingName,  c_epg_port_setting) == 0) {
+        result = ADDON_STATUS_NEED_RESTART;
+    }
+   else {
         result = PVRClientBase::SetSetting(settingName, settingValue);
     }
     return result;

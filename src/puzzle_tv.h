@@ -66,11 +66,15 @@ namespace PuzzleEngine
     };
 
 
+    typedef enum {
+        c_EpgType_File = 0,
+        c_EpgType_Server = 1
+    } EpgType;
 
     class PuzzleTV : public PvrClient::ClientCoreBase
     {
     public:
-        PuzzleTV(const char* serverUrl, int serverPort);
+        PuzzleTV(const char* serverUrl, uint16_t serverPort);
         ~PuzzleTV();
 
         const PvrClient::EpgEntryList& GetEpgList() const;
@@ -80,7 +84,11 @@ namespace PuzzleEngine
         std::string GetNextStream(PvrClient::ChannelId channelId, int currentChannelIdx);
 
         void SetMaxServerRetries(int maxServerRetries) {m_maxServerRetries = maxServerRetries;}
-        void SetEpgUrl(const std::string& epgUrl) {m_epgUrl = epgUrl;}
+        void SetEpgParams(EpgType epgType, const std::string& epgUrl, uint16_t serverPort) {
+            m_epgUrl = epgUrl;
+            m_epgServerPort = serverPort;
+            m_epgType = epgType;
+        }
     protected:
         void Init(bool clearEpgCache);
         virtual void UpdateHasArchive(PvrClient::EpgEntry& entry);
@@ -103,6 +111,8 @@ namespace PuzzleEngine
 
         const uint16_t m_serverPort;
         const std::string m_serverUri;
+        uint16_t m_epgServerPort;
+        EpgType m_epgType;
         int m_maxServerRetries;
 
         std::string m_epgUrl;
