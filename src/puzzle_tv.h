@@ -98,7 +98,7 @@ namespace PuzzleEngine
         typedef std::vector<std::string> StreamerIdsList;
 
         struct ApiFunctionData;
-        bool AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
+        bool AddXmlEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
         void LoadEpg();
         void UpdateArhivesAsync();
 

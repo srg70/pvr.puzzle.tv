@@ -222,7 +222,7 @@ void PuzzleTV::BuildChannelAndGroupList()
 //    return url;
 //}
 
-bool PuzzleTV::AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry)
+bool PuzzleTV::AddXmlEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry)
 {
     unsigned int id = xmlEpgEntry.startTime;
 
@@ -232,7 +232,7 @@ bool PuzzleTV::AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry)
     epgEntry.Description = xmlEpgEntry.strPlot;
     epgEntry.StartTime = xmlEpgEntry.startTime;
     epgEntry.EndTime = xmlEpgEntry.endTime;
-    return ClientCoreBase::AddEpgEntry(id, epgEntry);
+    return AddEpgEntry(id, epgEntry);
 }
 
 void PuzzleTV::UpdateHasArchive(PvrClient::EpgEntry& entry)
@@ -279,7 +279,7 @@ void PuzzleTV::LoadEpg()
     
     if(m_epgType == c_EpgType_File) {
         
-        XMLTV::EpgEntryCallback onEpgEntry = [&pThis] (const XMLTV::EpgEntry& newEntry) {pThis->AddEpgEntry(newEntry);};
+        XMLTV::EpgEntryCallback onEpgEntry = [&pThis] (const XMLTV::EpgEntry& newEntry) {pThis->AddXmlEpgEntry(newEntry);};
         
         XMLTV::ParseEpg(m_epgUrl, onEpgEntry);
     } else if(m_epgType == c_EpgType_Server) {
@@ -328,7 +328,7 @@ void PuzzleTV::LoadEpg()
                             auto pItem = runner++;
                             while(runner != end) {
                                 pItem->EndTime = runner->StartTime;
-                                pThis->ClientCoreBase::AddEpgEntry(pItem->StartTime, *pItem);
+                                pThis->AddEpgEntry(pItem->StartTime, *pItem);
                                 runner++; pItem++;
                             }
                             LogDebug(" Puzzle Server: channel ID=%X has %d EPGs. From %s to %s",
