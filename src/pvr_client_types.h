@@ -93,6 +93,9 @@ namespace PvrClient {
         const char* HasArchiveName = "ha";
         bool HasArchive;
         
+        const char* IconPathName = "ic";
+        std::string IconPath;
+        
         template <class T>
         void Serialize(T& writer) const
         {
@@ -109,6 +112,9 @@ namespace PvrClient {
             writer.String(Description.c_str());
             writer.Key(HasArchiveName);
             writer.Bool(HasArchive);
+            writer.Key(IconPathName);
+            writer.String(IconPath.c_str());
+
             writer.EndObject();
         }
         template <class T>

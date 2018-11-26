@@ -318,6 +318,7 @@ void PuzzleTV::LoadEpg()
                                 epgEntry.StartTime = (time_t)l + offset;
                                 epgEntry.Title = epgItem.value["title"].GetString();
                                 epgEntry.Description = epgItem.value["plot"].GetString();
+                                epgEntry.IconPath = epgItem.value["img"].GetString();
                                 serverEpg.push_back(epgEntry);
                             }
                         });
@@ -422,7 +423,7 @@ void PuzzleTV::CallApiFunction(const ApiFunctionData& data, TParser parser)
             // Probably server doesn't start yet
             // Wait and retry
             data.attempt += 1;
-            XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32013), data.attempt);
+            XBMC->QueueNotification(QUEUE_INFO, XBMC->GetLocalizedString(32013), data.attempt);
             P8PLATFORM::CEvent::Sleep(4000);
            
             CallApiFunction(data, parser);

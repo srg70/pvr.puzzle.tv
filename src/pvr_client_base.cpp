@@ -442,6 +442,7 @@ PVR_ERROR PVRClientBase::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL
         tag.strPlot = itEpgEntry->second.Description.c_str();
         tag.startTime = itEpgEntry->second.StartTime;
         tag.endTime = itEpgEntry->second.EndTime;
+        tag.strIconPath = itEpgEntry->second.IconPath.c_str();
         PVR->TransferEpgEntry(handle, &tag);
     }
     return PVR_ERROR_NO_ERROR;
