@@ -469,8 +469,10 @@ bool PVRClientBase::OpenLiveStream(const PVR_CHANNEL& channel)
     bool tryToRecover = !succeeded;
     while(tryToRecover) {
         string url = GetNextStreamUrl(channel.iUniqueId);
-        if(url.empty()) // nomore streams
+        if(url.empty()) {// nomore streams
+            LogDebug("No alternative stream found.");
             break;
+        }
         succeeded = OpenLiveStream(channel.iUniqueId, url);
         tryToRecover = !succeeded;
     }
