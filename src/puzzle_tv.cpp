@@ -450,11 +450,13 @@ void PuzzleTV::CallApiAsync(const ApiFunctionData& data, TParser parser, TComple
     strRequest += data.name + query;
     auto start = P8PLATFORM::GetTimeMs();
 
-    LogDebug("Calling '%s'.",  data.name.c_str());
+    auto name =data.name;
+    LogDebug("Calling '%s'.",  name.c_str());
 
     auto pThis = this;
-    std::function<void(const std::string&)> parserWrapper = [pThis, start, parser](const std::string& response) {
-        LogDebug("Response in %d ms.",  P8PLATFORM::GetTimeMs() - start);
+    
+    std::function<void(const std::string&)> parserWrapper = [pThis, start, parser, name](const std::string& response) {
+        LogDebug("Response for %s in %d ms.", name.c_str(),  P8PLATFORM::GetTimeMs() - start);
         
         //            if(data.name.compare( "get_url") == 0)
         //                LogDebug(response.substr(0, 16380).c_str());
@@ -487,6 +489,8 @@ void PuzzleTV::CallApiAsync(const ApiFunctionData& data, TParser parser, TComple
 
 void PuzzleTV::UpdateArhivesAsync()
 {
+    return;
+    
     const auto& channelList = m_channelList;
     std::set<ChannelId>* cahnnelsWithArchive = new std::set<ChannelId>();
     auto pThis = this;
