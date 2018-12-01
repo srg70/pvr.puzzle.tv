@@ -191,7 +191,9 @@ void PuzzleTV::BuildChannelAndGroupList()
         }
        
     } catch (ServerErrorException& ex) {
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32006), ex.reason.c_str() );
+        char* message  = XBMC->GetLocalizedString(32006);
+        XBMC->QueueNotification(QUEUE_ERROR, message, ex.reason.c_str());
+        XBMC->FreeString(message);
     } catch (...) {
         LogError(">>>>  FAILED to build channel list <<<<<");
     }
@@ -215,7 +217,9 @@ void PuzzleTV::BuildChannelAndGroupList()
 //            //Log((string(" >>>>  URL: ") + url +  "<<<<<").c_str());
 //        });
 //     } catch (ServerErrorException& ex) {
-//         XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32006), ex.reason.c_str() );
+//        char* message  = XBMC->GetLocalizedString(32006);
+//        XBMC->QueueNotification(QUEUE_ERROR, message), ex.reason.c_str());
+//        XBMC->FreeString(message);
 //     } catch (...) {
 //         LogError(" >>>>  FAILED receive archive <<<<<");
 //    }
@@ -318,7 +322,8 @@ void PuzzleTV::LoadEpg()
                                 epgEntry.StartTime = (time_t)l + offset;
                                 epgEntry.Title = epgItem.value["title"].GetString();
                                 epgEntry.Description = epgItem.value["plot"].GetString();
-                                epgEntry.IconPath = epgItem.value["img"].GetString();
+                                // Causes Kodi crash on reload epg
+//                                epgEntry.IconPath = epgItem.value["img"].GetString();
                                 serverEpg.push_back(epgEntry);
                             }
                         });
@@ -392,14 +397,22 @@ string PuzzleTV::GetUrl(ChannelId channelId)
                                 });
                });
             } catch (ServerErrorException& ex) {
-                XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32006), ex.reason.c_str() );
-            } catch (...) {
+                char* message  = XBMC->GetLocalizedString(32006);
+                XBMC->QueueNotification(QUEUE_ERROR, message, ex.reason.c_str());
+                XBMC->FreeString(message);
+           } catch (...) {
                LogError(" >>>>  FAILED to get URL for channel ID=%d <<<<<", channelId);
            }
         
     }
     AddChannel(ch);
-    return ch.Urls[0];
+    if(ch.Urls.size() == 0) {
+        char* message  = XBMC->GetLocalizedString(32017);
+        XBMC->QueueNotification(QUEUE_ERROR, message);
+        XBMC->FreeString(message);
+        return string();
+    }
+    return  ch.Urls[0];
 }
 
 template <typename TParser>
@@ -423,7 +436,9 @@ void PuzzleTV::CallApiFunction(const ApiFunctionData& data, TParser parser)
             // Probably server doesn't start yet
             // Wait and retry
             data.attempt += 1;
-            XBMC->QueueNotification(QUEUE_INFO, XBMC->GetLocalizedString(32013), data.attempt);
+            char* message  = XBMC->GetLocalizedString(32013);
+            XBMC->QueueNotification(QUEUE_INFO, message, data.attempt);
+            XBMC->FreeString(message);
             P8PLATFORM::CEvent::Sleep(4000);
            
             CallApiFunction(data, parser);
@@ -450,7 +465,7 @@ void PuzzleTV::CallApiAsync(const ApiFunctionData& data, TParser parser, TComple
     strRequest += data.name + query;
     auto start = P8PLATFORM::GetTimeMs();
 
-    auto name =data.name;
+    std::string name =data.name;
     LogDebug("Calling '%s'.",  name.c_str());
 
     auto pThis = this;

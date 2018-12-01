@@ -73,11 +73,11 @@ public:
     {
         if(!m_apiCalls->IsRunning())
             throw QueueNotRunningException("API request queue in not running.");
-        
-        m_apiCalls->PerformAsync([=](){
-            SendHttpRequest(request, m_sessionCookie, parser,
-                            [=](const ActionQueue::ActionResult& s) { completion(s);});
-        },[=](const ActionQueue::ActionResult& s) {
+        auto pThis = this;
+        m_apiCalls->PerformAsync([pThis, request,  parser, completion](){
+            pThis->SendHttpRequest(request, pThis->m_sessionCookie, parser,
+                            [completion](const ActionQueue::ActionResult& s) { completion(s);});
+        },[completion](const ActionQueue::ActionResult& s) {
             if(s.status != ActionQueue::kActionCompleted)
                 completion(s);
         });

@@ -271,6 +271,11 @@ msgctxt "#32016"
 msgid "Reset PVR database."
 msgstr "Reset PVR database."
 
+msgctxt "#32017"
+msgid "Channel is unavailable."
+msgstr "Channel is unavailable."
+
+
 #============= Menus ================
 
 msgctxt "#32050"

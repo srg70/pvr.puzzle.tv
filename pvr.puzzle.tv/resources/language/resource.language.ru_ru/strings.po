@@ -274,6 +274,11 @@ msgctxt "#32016"
 msgid "Reset PVR database."
 msgstr "Очистите данные PVR"
 
+msgctxt "#32017"
+msgid "Channel is unavailable."
+msgstr "Канал недоступен."
+
+
 #============= Menus ================
 
 msgctxt "#32050"

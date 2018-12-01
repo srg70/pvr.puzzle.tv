@@ -92,7 +92,9 @@ ADDON_STATUS OttPVRClient::CreateCoreSafe(bool clearEpgCache)
     }
     catch (OttEngine::AuthFailedException &)
     {
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32007));
+        char* message  = XBMC->GetLocalizedString(32007);
+        XBMC->QueueNotification(QUEUE_ERROR, message);
+        XBMC->FreeString(message);
     }
     catch(...)
     {
