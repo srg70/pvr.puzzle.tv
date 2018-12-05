@@ -462,6 +462,13 @@ InputBuffer*  PVRClientBase::BufferForUrl(const std::string& url )
     return buffer;
 }
 
+std::string PVRClientBase::GetStreamUrl(ChannelId channel)
+{
+    if(NULL == m_clientCore)
+        return string();
+    return  m_clientCore->GetUrl(channel);
+}
+
 bool PVRClientBase::OpenLiveStream(const PVR_CHANNEL& channel)
 {
     m_lastBytesRead = 1;

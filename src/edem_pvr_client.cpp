@@ -204,13 +204,6 @@ ADDON_STATUS EdemPVRClient::OnReloadEpg()
 }
 
 
-string EdemPVRClient::GetStreamUrl(ChannelId channel)
-{
-    if(NULL == m_core)
-        return string();
-    return  m_core->GetUrl(channel);
-}
-
 class EdemArchiveDelegate : public Buffers::IPlaylistBufferDelegate
 {
 public:

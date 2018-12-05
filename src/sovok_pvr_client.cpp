@@ -342,13 +342,6 @@ ADDON_STATUS SovokPVRClient::OnReloadEpg()
    return CreateCoreSafe(true);
 }
 
-std::string SovokPVRClient::GetStreamUrl(ChannelId channelId)
-{
-    if(!HasCore())
-        return std::string();
-    return m_sovokTV->GetUrl(channelId);
-}
-
 bool SovokPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
 {
     if(!HasCore())

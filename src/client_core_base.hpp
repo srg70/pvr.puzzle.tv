@@ -59,6 +59,7 @@ namespace PvrClient {
         
         // abstract methods
         virtual void UpdateEpgForAllChannels(time_t startTime, time_t endTime) = 0;
+        virtual std::string GetUrl(PvrClient::ChannelId channelId) = 0;
 
     protected:
         ClientCoreBase(const RecordingsDelegate& didRecordingsUpadate = nullptr);

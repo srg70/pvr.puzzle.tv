@@ -183,13 +183,6 @@ ADDON_STATUS OttPVRClient::OnReloadEpg()
     return retVal;
 }
 
-string OttPVRClient::GetStreamUrl(PvrClient::ChannelId channelId)
-{
-    if(NULL == m_core)
-        return string();
-   return  m_core->GetUrl(channelId);
-}
-
 class OttArchiveDelegate : public Buffers::IPlaylistBufferDelegate
 {
 public:

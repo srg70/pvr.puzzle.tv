@@ -217,10 +217,8 @@ ADDON_STATUS PuzzlePVRClient::OnReloadEpg()
 
 string PuzzlePVRClient::GetStreamUrl(ChannelId channelId)
 {
-    if(m_puzzleTV == nullptr)
-        return string();
     m_currentChannelStreamIdx = 0;
-    return m_puzzleTV->GetUrl(channelId);
+    return PVRClientBase::GetStreamUrl(channelId);
 }
 
 string PuzzlePVRClient::GetNextStreamUrl(ChannelId channelId)

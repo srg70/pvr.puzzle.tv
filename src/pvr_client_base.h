@@ -112,7 +112,7 @@ namespace PvrClient
         virtual ADDON_STATUS OnReloadEpg();
         virtual ADDON_STATUS OnReloadRecordings();
 
-        virtual std::string GetStreamUrl(ChannelId channelId) = 0;
+        virtual std::string GetStreamUrl(ChannelId channelId);
         virtual std::string GetNextStreamUrl(ChannelId channelId) {return std::string();}
         ChannelId GetLiveChannelId() { return  m_liveChannelId;}
         bool IsLiveInRecording() const;

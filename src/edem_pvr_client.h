@@ -45,7 +45,6 @@ public:
     bool OpenRecordedStream(const PVR_RECORDING &recording);
 
 protected:
-    std::string GetStreamUrl(PvrClient::ChannelId channel);
     PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
     ADDON_STATUS OnReloadEpg();
 
