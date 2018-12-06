@@ -32,6 +32,7 @@
 #include "puzzle_pvr_client.h"
 #include "ott_pvr_client.h"
 #include "edem_pvr_client.h"
+#include "ttv_pvr_client.h"
 #include "xbmc_pvr_dll.h"
 #include "p8-platform/util/util.h"
 #include "kodi/xbmc_addon_cpp_dll.h"
@@ -67,6 +68,9 @@ extern "C" {
                 break;
             case 3:
                 dataSource = new EdemPVRClient();
+                break;
+            case 4:
+                dataSource = new TtvPVRClient();
                 break;
                 
             default:

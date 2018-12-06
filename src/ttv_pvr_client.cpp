@@ -38,23 +38,23 @@
 
 #include "timeshift_buffer.h"
 #include "direct_buffer.h"
-#include "edem_pvr_client.h"
+#include "ttv_pvr_client.h"
 #include "helpers.h"
-#include "edem_player.h"
+#include "ttv_player.h"
 #include "plist_buffer.h"
 #include "globals.hpp"
 
 using namespace Globals;
 using namespace std;
 using namespace ADDON;
-using namespace EdemEngine;
+using namespace TtvEngine;
 using namespace PvrClient;
 
-static const char* c_playlist_setting = "edem_playlist_url";
-static const char* c_epg_setting = "edem_epg_url";
-static const char* c_seek_archives = "edem_seek_archives";
+static const char* c_playlist_setting = "ttv_playlist_url";
+static const char* c_epg_setting = "ttv_epg_url";
+static const char* c_seek_archives = "ttv_seek_archives";
 
-ADDON_STATUS EdemPVRClient::Init(PVR_PROPERTIES* pvrprops)
+ADDON_STATUS TtvPVRClient::Init(PVR_PROPERTIES* pvrprops)
 {
     ADDON_STATUS retVal = PVRClientBase::Init(pvrprops);
     if(ADDON_STATUS_OK != retVal)
@@ -78,7 +78,7 @@ ADDON_STATUS EdemPVRClient::Init(PVR_PROPERTIES* pvrprops)
     
 }
 
-EdemPVRClient::~EdemPVRClient()
+TtvPVRClient::~TtvPVRClient()
 {
     // Probably is better to close streams before engine destruction
     CloseLiveStream();
@@ -86,7 +86,7 @@ EdemPVRClient::~EdemPVRClient()
     DestroyCoreSafe();
 }
 
-ADDON_STATUS EdemPVRClient::CreateCoreSafe(bool clearEpgCache)
+ADDON_STATUS TtvPVRClient::CreateCoreSafe(bool clearEpgCache)
 {
     ADDON_STATUS retVal = ADDON_STATUS_OK;
     try
@@ -101,13 +101,13 @@ ADDON_STATUS EdemPVRClient::CreateCoreSafe(bool clearEpgCache)
     }
     catch(...)
     {
-        XBMC->QueueNotification(QUEUE_ERROR, "Edem TV: unhandeled exception on core creation.");
+        XBMC->QueueNotification(QUEUE_ERROR, "Torrent TV: unhandeled exception on core creation.");
         retVal = ADDON_STATUS_PERMANENT_FAILURE;
     }
     return retVal;
 }
 
-void EdemPVRClient::DestroyCoreSafe()
+void TtvPVRClient::DestroyCoreSafe()
 {
     if(m_core != NULL) {
         m_clientCore = NULL;
@@ -116,19 +116,19 @@ void EdemPVRClient::DestroyCoreSafe()
 
 }
 
-void EdemPVRClient::CreateCore(bool clearEpgCache)
+void TtvPVRClient::CreateCore(bool clearEpgCache)
 {
     DestroyCoreSafe();
     
     if(CheckPlaylistUrl()) {
-        m_clientCore = m_core = new EdemEngine::Core(m_playlistUrl, m_epgUrl);
+        m_clientCore = m_core = new TtvEngine::Core(m_playlistUrl, m_epgUrl);
         m_core->InitAsync(clearEpgCache);
     }
 }
 
-bool EdemPVRClient::CheckPlaylistUrl()
+bool TtvPVRClient::CheckPlaylistUrl()
 {
-    if (m_playlistUrl.empty() || m_playlistUrl.find("***") != string::npos) {
+    if (m_playlistUrl.empty() || m_playlistUrl.find("***") != string::npos)  {
         char* message = XBMC->GetLocalizedString(32010);
         XBMC->QueueNotification(QUEUE_ERROR, message);
         XBMC->FreeString(message);
@@ -137,7 +137,7 @@ bool EdemPVRClient::CheckPlaylistUrl()
     return true;
 }
 
-ADDON_STATUS EdemPVRClient::SetSetting(const char *settingName, const void *settingValue)
+ADDON_STATUS TtvPVRClient::SetSetting(const char *settingName, const void *settingValue)
 {
     ADDON_STATUS result = ADDON_STATUS_OK ;
     
@@ -162,7 +162,7 @@ ADDON_STATUS EdemPVRClient::SetSetting(const char *settingName, const void *sett
     return result;
 }
 
-PVR_ERROR EdemPVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabilities)
+PVR_ERROR TtvPVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabilities)
 {
     pCapabilities->bSupportsEPG = true;
     pCapabilities->bSupportsTV = true;
@@ -181,12 +181,12 @@ PVR_ERROR EdemPVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabilit
     return PVRClientBase::GetAddonCapabilities(pCapabilities);
 }
 
-PVR_ERROR  EdemPVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
+PVR_ERROR  TtvPVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
 {
     return PVRClientBase::MenuHook(menuhook, item);
 }
 
-ADDON_STATUS EdemPVRClient::OnReloadEpg()
+ADDON_STATUS TtvPVRClient::OnReloadEpg()
 {
     ADDON_STATUS retVal = CreateCoreSafe(true);
     
@@ -204,10 +204,10 @@ ADDON_STATUS EdemPVRClient::OnReloadEpg()
 }
 
 
-class EdemArchiveDelegate : public Buffers::IPlaylistBufferDelegate
+class TtvArchiveDelegate : public Buffers::IPlaylistBufferDelegate
 {
 public:
-    EdemArchiveDelegate(EdemEngine::Core* core, const PVR_RECORDING &recording)
+    TtvArchiveDelegate(TtvEngine::Core* core, const PVR_RECORDING &recording)
     : _duration(recording.iDuration)
     , _recordingTime(recording.recordingTime)
     , _core(core)
@@ -245,10 +245,10 @@ private:
     const time_t _duration;
     const time_t _recordingTime;
     PvrClient::ChannelId _channelId;
-    EdemEngine::Core* _core;
+    TtvEngine::Core* _core;
 };
 
-bool EdemPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
+bool TtvPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
 {
     if(NULL == m_core)
         return false;
@@ -256,16 +256,16 @@ bool EdemPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     if(IsLocalRecording(recording))
         return PVRClientBase::OpenRecordedStream(recording);
     
-    auto delegate = new EdemArchiveDelegate(m_core, recording);
+    auto delegate = new TtvArchiveDelegate(m_core, recording);
     string url = delegate->UrlForTimeshift(0);
     if(!m_supportSeek)
         SAFE_DELETE(delegate);
     return PVRClientBase::OpenRecordedStream(url, delegate);
 }
 
-PVR_ERROR EdemPVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
+PVR_ERROR TtvPVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
 {
-    snprintf(signalStatus.strAdapterName, sizeof(signalStatus.strAdapterName), "IPTV Edem TV");
+    snprintf(signalStatus.strAdapterName, sizeof(signalStatus.strAdapterName), "IPTV Torrent TV");
     snprintf(signalStatus.strAdapterStatus, sizeof(signalStatus.strAdapterStatus), (m_core == NULL) ? "Not connected" :"OK");
     return PVR_ERROR_NO_ERROR;
 }

@@ -3,7 +3,7 @@
 
 <!-- Common -->
 <category label="10010">
-    <setting id="provider_type" type="enum" label="10000" lvalues="20010|30010|40010|50010" default="1" />
+    <setting id="provider_type" type="enum" label="10000" lvalues="20010|30010|40010|50010|60010" default="1" />
     <setting id="enable_timeshift" type="bool" label="10001" default="false" />
     <setting id="timeshift_size" type="slider" label="10003" default="50" range="30,5,32640" option="int" visible="eq(-1,true)" subsetting="true"/>
     <setting id="timeshift_type" type="enum" label="10004" lvalues="10005|10006" default="0"  visible="eq(-2,true)" subsetting="true"/>
@@ -58,5 +58,13 @@
     <setting id="edem_epg_url" type="text" label="50001" default="http://epg.it999.ru/edem.xml.gz"/>
     <setting id="edem_seek_archives" type="bool" label="50002" default="false"/>
 </category>
+
+<!-- Edem Player -->
+<category label="60010">
+    <setting id="ttv_playlist_url" type="text" label="60000" default="http://asplaylist.net/***/tv.m3u"/>
+    <setting id="ttv_epg_url" type="text" label="60001" default="http://api.torrent-tv.ru/ttv.xmltv.xml.gz"/>
+    <setting id="ttv_seek_archives" type="bool" label="60002" default="false"/>
+</category>
+
 
 </settings>

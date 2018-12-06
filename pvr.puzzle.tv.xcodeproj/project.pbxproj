@@ -109,6 +109,10 @@
 		4C534CD31F418BB50038539D /* memory_cache_buffer.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4C534CD11F418BB50038539D /* memory_cache_buffer.hpp */; };
 		4C534CD41F46C9D40038539D /* ott_player.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C5BF3611F1A310D00437252 /* ott_player.cpp */; };
 		4C534CD51F46C9EA0038539D /* ott_pvr_client.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C5BF3601F18DAEE00437252 /* ott_pvr_client.cpp */; };
+		4C5D1C5C21B83E6A004286DA /* ttv_player.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C5D1C5821B83E6A004286DA /* ttv_player.h */; };
+		4C5D1C5D21B83E6A004286DA /* ttv_pvr_client.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C5D1C5921B83E6A004286DA /* ttv_pvr_client.h */; };
+		4C5D1C5E21B83E6A004286DA /* ttv_player.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C5D1C5A21B83E6A004286DA /* ttv_player.cpp */; };
+		4C5D1C5F21B83E6A004286DA /* ttv_pvr_client.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C5D1C5B21B83E6A004286DA /* ttv_pvr_client.cpp */; };
 		4C8506E41EF478A000213131 /* pvr_client_base.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C8506E21EF478A000213131 /* pvr_client_base.cpp */; };
 		4C8506E51EF478A000213131 /* pvr_client_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C8506E31EF478A000213131 /* pvr_client_base.h */; };
 		4C8506E81F0E25DF00213131 /* HttpEngine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C8506E61F0E25DF00213131 /* HttpEngine.cpp */; };
@@ -253,6 +257,10 @@
 		4C5BF35F1F18DAEE00437252 /* ott_pvr_client.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ott_pvr_client.h; sourceTree = "<group>"; };
 		4C5BF3601F18DAEE00437252 /* ott_pvr_client.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ott_pvr_client.cpp; sourceTree = "<group>"; };
 		4C5BF3611F1A310D00437252 /* ott_player.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ott_player.cpp; sourceTree = "<group>"; };
+		4C5D1C5821B83E6A004286DA /* ttv_player.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ttv_player.h; sourceTree = "<group>"; };
+		4C5D1C5921B83E6A004286DA /* ttv_pvr_client.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ttv_pvr_client.h; sourceTree = "<group>"; };
+		4C5D1C5A21B83E6A004286DA /* ttv_player.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ttv_player.cpp; sourceTree = "<group>"; };
+		4C5D1C5B21B83E6A004286DA /* ttv_pvr_client.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ttv_pvr_client.cpp; sourceTree = "<group>"; };
 		4C8506E21EF478A000213131 /* pvr_client_base.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = pvr_client_base.cpp; sourceTree = "<group>"; };
 		4C8506E31EF478A000213131 /* pvr_client_base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pvr_client_base.h; sourceTree = "<group>"; };
 		4C8506E61F0E25DF00213131 /* HttpEngine.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HttpEngine.cpp; sourceTree = "<group>"; };
@@ -322,6 +330,7 @@
 				4C5BF35C1F18DAD400437252 /* OTT */,
 				4C8506F31F0E541700213131 /* Puzzle TV */,
 				4C8506EE1F0E53B400213131 /* Sovok TV */,
+				4C5D1C5721B83E54004286DA /* TTV */,
 				4CAAE72F200691A600A866C9 /* XMLTV_loader.cpp */,
 				4CAAE730200691A600A866C9 /* XMLTV_loader.hpp */,
 				4CFEAA8D1E4DA81A002C2BA4 /* ActionQueue.cpp */,
@@ -608,6 +617,17 @@
 			name = OTT;
 			sourceTree = "<group>";
 		};
+		4C5D1C5721B83E54004286DA /* TTV */ = {
+			isa = PBXGroup;
+			children = (
+				4C5D1C5B21B83E6A004286DA /* ttv_pvr_client.cpp */,
+				4C5D1C5921B83E6A004286DA /* ttv_pvr_client.h */,
+				4C5D1C5A21B83E6A004286DA /* ttv_player.cpp */,
+				4C5D1C5821B83E6A004286DA /* ttv_player.h */,
+			);
+			name = TTV;
+			sourceTree = "<group>";
+		};
 		4C8506EE1F0E53B400213131 /* Sovok TV */ = {
 			isa = PBXGroup;
 			children = (
@@ -727,6 +747,7 @@
 				4C49D2191E27C4BF0026F43E /* cdevsocket.h in Headers */,
 				4C49D2071E27C4BF0026F43E /* XMLUtils.h in Headers */,
 				4C49D2241E27C4BF0026F43E /* util.h in Headers */,
+				4C5D1C5D21B83E6A004286DA /* ttv_pvr_client.h in Headers */,
 				4C49D2121E27C4BF0026F43E /* xbmc_scr_types.h in Headers */,
 				4C8506F21F0E541100213131 /* puzzle_tv.h in Headers */,
 				4C49D2351E27C4BF0026F43E /* strfunc.h in Headers */,
@@ -750,6 +771,7 @@
 				4C49D22E1E27C4BF0026F43E /* diyfp.h in Headers */,
 				4CC18CE4212B2046005E64B8 /* simple_cyclic_buffer.hpp in Headers */,
 				4C49D20A1E27C4BF0026F43E /* xbmc_addon_types.h in Headers */,
+				4C5D1C5C21B83E6A004286DA /* ttv_player.h in Headers */,
 				4C49D2271E27C4BF0026F43E /* encodedstream.h in Headers */,
 				4C49D2291E27C4BF0026F43E /* en.h in Headers */,
 				4C49D20F1E27C4BF0026F43E /* xbmc_pvr_dll.h in Headers */,
@@ -865,6 +887,8 @@
 				4C08C7FE1D8290F6004CAAE3 /* addon.cpp in Sources */,
 				4C8506EC1F0E49F400213131 /* puzzle_pvr_client.cpp in Sources */,
 				4CD394B61F2258610073E2DF /* plist_buffer.cpp in Sources */,
+				4C5D1C5E21B83E6A004286DA /* ttv_player.cpp in Sources */,
+				4C5D1C5F21B83E6A004286DA /* ttv_pvr_client.cpp in Sources */,
 				4CAC99BC2188D7C1005D8902 /* Playlist.cpp in Sources */,
 				4C08C7ED1D81D295004CAAE3 /* sovok_pvr_client.cpp in Sources */,
 				4C8506E41EF478A000213131 /* pvr_client_base.cpp in Sources */,

@@ -201,6 +201,24 @@ msgctxt "#50010"
 msgid "Edem Player"
 msgstr "Edem"
 
+#=============== TTV Player Settings ===========
+
+msgctxt "#60000"
+msgid "Paylist Path"
+msgstr "Paylist Path"
+
+msgctxt "#60001"
+msgid "EPG Path (XMLTV)"
+msgstr "EPG Path (XMLTV)"
+
+msgctxt "#60002"
+msgid "Seek Recordings (Experimental)"
+msgstr "Seek Recordings (Experimental)"
+
+msgctxt "#60010"
+msgid "TTV Player"
+msgstr "TTV"
+
 #============= Notifications ================
 
 msgctxt "#32000"
@@ -275,6 +293,9 @@ msgctxt "#32017"
 msgid "Channel is unavailable."
 msgstr "Channel is unavailable."
 
+msgctxt "#32018"
+msgid "TTV Player: playlist inaccessible."
+msgstr "TTV Player: playlist inaccessible."
 
 #============= Menus ================
 

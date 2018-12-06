@@ -24,13 +24,14 @@
  *
  */
 
-#ifndef _edem_player_h_
-#define _edem_player_h_
+#ifndef _ttv_player_h_
+#define _ttv_player_h_
 
 #include "client_core_base.hpp"
 #include <vector>
 #include <functional>
 #include <list>
+#include <map>
 #include <memory>
 #include "p8-platform/util/timeutils.h"
 
@@ -40,7 +41,7 @@ namespace XMLTV {
     struct EpgChannel;
 }
 
-namespace EdemEngine
+namespace TtvEngine
 {
     typedef std::map<std::string, std::string> ParamList;
 
@@ -73,7 +74,21 @@ namespace EdemEngine
         const int code;
     };
     
-    
+    struct ArchiveInfo{
+        ArchiveInfo(unsigned int d, const std::string& t)
+        : days(d)
+        , urlTemplate(t)
+        {}
+        ArchiveInfo(const ArchiveInfo & rf)
+        : ArchiveInfo(rf.days, rf.urlTemplate)
+        {}
+        ArchiveInfo(ArchiveInfo && rv)
+        : ArchiveInfo(rv.days, rv.urlTemplate)
+        {}
+        const unsigned int days;
+        const std::string urlTemplate;
+    };
+    typedef std::map<PvrClient::ChannelId, ArchiveInfo> ArchiveInfos;
     
     class Core : public PvrClient::ClientCoreBase
     {
@@ -91,6 +106,7 @@ namespace EdemEngine
         virtual void BuildChannelAndGroupList();
 
     private:
+        
         void LoadEpg();
         bool AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
 
@@ -99,6 +115,7 @@ namespace EdemEngine
         std::string m_playListUrl;
         std::string m_epgUrl;
         P8PLATFORM::CTimeout m_epgUpdateInterval;
+        ArchiveInfos m_archiveInfo;
     };
 }
-#endif //_edem_player_h_
+#endif //_ttv_player_h_

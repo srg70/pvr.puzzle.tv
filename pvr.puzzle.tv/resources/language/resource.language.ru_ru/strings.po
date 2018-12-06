@@ -204,6 +204,24 @@ msgctxt "#50010"
 msgid "Edem Player"
 msgstr "Эдем"
 
+#=============== TTV Player Settings ===========
+
+msgctxt "#60000"
+msgid "Paylist Path"
+msgstr "Плейлист"
+
+msgctxt "#60001"
+msgid "EPG Path (XMLTV)"
+msgstr "Программа передач (XMLTV)"
+
+msgctxt "#60002"
+msgid "Seek Recordings (Experimental)"
+msgstr "Перемотка в архивах (Экспериментально)"
+
+msgctxt "#60010"
+msgid "TTV Player"
+msgstr "Торрент ТВ"
+
 #============= Notifications ================
 
 msgctxt "#32000"
@@ -277,6 +295,10 @@ msgstr "Очистите данные PVR"
 msgctxt "#32017"
 msgid "Channel is unavailable."
 msgstr "Канал недоступен."
+
+msgctxt "#32018"
+msgid "TTV Player: playlist inaccessible."
+msgstr "TTV Player: плэйлист недоступен"
 
 
 #============= Menus ================
