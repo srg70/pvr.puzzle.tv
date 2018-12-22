@@ -38,6 +38,7 @@ namespace ActionQueue
         : status(s), exception(e)
         {}
     };
+    typedef std::function<void(void)> TAction;
     typedef std::function<void(const ActionResult&)> TCompletion;
 }
 

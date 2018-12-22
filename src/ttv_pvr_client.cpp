@@ -53,6 +53,9 @@ using namespace PvrClient;
 static const char* c_playlist_setting = "ttv_playlist_url";
 static const char* c_epg_setting = "ttv_epg_url";
 static const char* c_seek_archives = "ttv_seek_archives";
+static const char* c_ttv_mode = "ttv_mode";
+static const char* c_ttv_user = "ttv_user";
+static const char* c_ttv_password = "ttv_password";
 
 ADDON_STATUS TtvPVRClient::Init(PVR_PROPERTIES* pvrprops)
 {
@@ -69,6 +72,14 @@ ADDON_STATUS TtvPVRClient::Init(PVR_PROPERTIES* pvrprops)
     
     m_supportSeek = false;
     XBMC->GetSetting(c_seek_archives, &m_supportSeek);
+    
+    m_ttvMode = TTVMode_api;
+    XBMC->GetSetting(c_ttv_mode, &m_ttvMode);
+    if (XBMC->GetSetting(c_ttv_user, &buffer))
+        m_user = buffer;
+    if (XBMC->GetSetting(c_ttv_password, &buffer))
+        m_password = buffer;
+
     
     retVal = CreateCoreSafe(false);
     
@@ -99,6 +110,11 @@ ADDON_STATUS TtvPVRClient::CreateCoreSafe(bool clearEpgCache)
         XBMC->QueueNotification(QUEUE_ERROR, message);
         XBMC->FreeString(message);
     }
+    catch (exception & ex)
+    {
+        LogError("Torrent TV: exception on core creation: %s", ex.what());
+        XBMC->QueueNotification(QUEUE_ERROR, "Torrent TV: exception on core creation.");
+    }
     catch(...)
     {
         XBMC->QueueNotification(QUEUE_ERROR, "Torrent TV: unhandeled exception on core creation.");
@@ -120,21 +136,29 @@ void TtvPVRClient::CreateCore(bool clearEpgCache)
 {
     DestroyCoreSafe();
     
-    if(CheckPlaylistUrl()) {
-        m_clientCore = m_core = new TtvEngine::Core(m_playlistUrl, m_epgUrl);
+        switch(m_ttvMode)
+        {
+            case TTVMode_api:
+            {
+                TtvEngine::Core::UserInfo ui;
+                ui.user = m_user;
+                ui.password = m_password;
+                m_core = new TtvEngine::Core(ui);
+            }
+                break;
+            case TTVMode_playlist:
+                if(!PVRClientBase::CheckPlaylistUrl(m_playlistUrl)) {
+                    LogError("Invalid TTV playlist URL.");
+                    return;
+                }
+                m_core = new TtvEngine::Core(m_playlistUrl, m_epgUrl);
+                break;
+            default:
+                LogError("Unknown TTV mode %d", m_ttvMode);
+                throw;
+        }
+        m_clientCore = m_core;
         m_core->InitAsync(clearEpgCache);
-    }
-}
-
-bool TtvPVRClient::CheckPlaylistUrl()
-{
-    if (m_playlistUrl.empty() || m_playlistUrl.find("***") != string::npos)  {
-        char* message = XBMC->GetLocalizedString(32010);
-        XBMC->QueueNotification(QUEUE_ERROR, message);
-        XBMC->FreeString(message);
-        return false;
-    }
-    return true;
 }
 
 ADDON_STATUS TtvPVRClient::SetSetting(const char *settingName, const void *settingValue)
@@ -142,16 +166,25 @@ ADDON_STATUS TtvPVRClient::SetSetting(const char *settingName, const void *setti
     ADDON_STATUS result = ADDON_STATUS_OK ;
     
     if (strcmp(settingName,  c_playlist_setting) == 0 && strcmp((const char*) settingValue, m_playlistUrl.c_str()) != 0) {
-        m_playlistUrl= (const char*) settingValue;
-        if(!CheckPlaylistUrl()) {
-            return result;
-        } else {
-            result = CreateCoreSafe(false);
+//        m_playlistUrl= (const char*) settingValue;
+//        if(!CheckPlaylistUrl()) {
+//            return result;
+//        } else {
+//            result = CreateCoreSafe(false);
+            result = ADDON_STATUS_NEED_RESTART;
+//        }
+    }
+    else if ((strcmp(settingName,  c_ttv_user) == 0 && strcmp((const char*) settingValue, m_user.c_str()) != 0)
+           || (strcmp(settingName,  c_ttv_password) == 0 && strcmp((const char*) settingValue, m_password.c_str()) != 0)) {
+        if(nullptr != m_core){
+            m_core->ClearSession();
         }
+        result = ADDON_STATUS_NEED_RESTART;
     }
     else if(strcmp(settingName,  c_epg_setting) == 0 && strcmp((const char*) settingValue, m_epgUrl.c_str()) != 0) {
-        m_epgUrl = (const char*) settingValue;
-        result = CreateCoreSafe(false);
+//        m_epgUrl = (const char*) settingValue;
+//        result = CreateCoreSafe(false);
+        result = ADDON_STATUS_NEED_RESTART;
     }
     else if(strcmp(settingName,  c_seek_archives) == 0) {
         m_supportSeek = *(const bool*) settingValue;

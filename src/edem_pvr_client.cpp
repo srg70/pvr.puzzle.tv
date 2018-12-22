@@ -120,21 +120,10 @@ void EdemPVRClient::CreateCore(bool clearEpgCache)
 {
     DestroyCoreSafe();
     
-    if(CheckPlaylistUrl()) {
+    if(PVRClientBase::CheckPlaylistUrl(m_playlistUrl)) {
         m_clientCore = m_core = new EdemEngine::Core(m_playlistUrl, m_epgUrl);
         m_core->InitAsync(clearEpgCache);
     }
-}
-
-bool EdemPVRClient::CheckPlaylistUrl()
-{
-    if (m_playlistUrl.empty() || m_playlistUrl.find("***") != string::npos) {
-        char* message = XBMC->GetLocalizedString(32010);
-        XBMC->QueueNotification(QUEUE_ERROR, message);
-        XBMC->FreeString(message);
-        return false;
-    }
-    return true;
 }
 
 ADDON_STATUS EdemPVRClient::SetSetting(const char *settingName, const void *settingValue)
@@ -143,7 +132,7 @@ ADDON_STATUS EdemPVRClient::SetSetting(const char *settingName, const void *sett
     
     if (strcmp(settingName,  c_playlist_setting) == 0 && strcmp((const char*) settingValue, m_playlistUrl.c_str()) != 0) {
         m_playlistUrl= (const char*) settingValue;
-        if(!CheckPlaylistUrl()) {
+        if(!PVRClientBase::CheckPlaylistUrl(m_playlistUrl)) {
             return result;
         } else {
             result = CreateCoreSafe(false);

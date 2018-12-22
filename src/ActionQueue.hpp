@@ -29,16 +29,35 @@
 #include "ActionQueueTypes.hpp"
 #include <exception>
 #include <stdexcept>
+#include <string>
 
 
 namespace ActionQueue
 {
-    
+    class CAtomicSpinLock
+    {
+    public:
+        CAtomicSpinLock(long& lock);
+        ~CAtomicSpinLock();
+    private:
+        long& m_Lock;
+    };
+
+    class ActionQueueException : public std::exception
+    {
+    public:
+        ActionQueueException(const char* reason = "") : r(reason){}
+        virtual const char* what() const noexcept {return r.c_str();}
+        
+    private:
+        std::string r;
+    };
+
     class CActionQueue : public P8PLATFORM::CThread
     {
     public:
     private:
-        template<typename TAction>
+//        template<typename TAction>
         class QueueItem : public IActionQueueItem
         {
         public:
@@ -65,12 +84,41 @@ namespace ActionQueue
         CActionQueue(size_t maxSize)
         : _actions(maxSize)
         , _willStop(false)
+        , _priorityAction(nullptr)
         {}
-        
-        template<typename TAction>
+
+        void PerformHiPriority(TAction action, const TCompletion completion)
+        {
+            P8PLATFORM::CEvent done;
+            TAction doneAction = [action, &done ](){
+                done.Signal();
+                action();
+            };
+            auto item = new QueueItem(doneAction, completion);
+            if(_willStop){
+                item->Cancel();
+                done.Signal();
+            } else {
+                if(_priorityAction != nullptr) // Can't be
+                    throw ActionQueueException("Too many priority tasks.");
+                {
+                    CAtomicSpinLock lock(_priorityActionGuard);
+                    _priorityAction = item;
+                }
+                // In case when pipline has no tasks
+                // push dummy wakeup task
+                _actions.Push(new QueueItem([]{}, [](const ActionResult&){}));
+            }
+            done.Wait();
+            CAtomicSpinLock lock(_priorityActionGuard);
+            _priorityAction = nullptr;
+            delete item;
+        }
+
+//        template<typename TAction>
         void PerformAsync(const TAction action, const TCompletion completion)
         {
-            auto item = new QueueItem<TAction>(action, completion);
+            auto item = new QueueItem(action, completion);
             if(!_willStop)
                 _actions.Push(item);
             else{
@@ -78,7 +126,7 @@ namespace ActionQueue
                 delete item;
             }
         }
-        template<typename TAction>
+//        template<typename TAction>
         void CancellAllBefore(const TAction action, const TCompletion completion)
         {
             // Set _willStop
@@ -98,6 +146,8 @@ namespace ActionQueue
         
         typedef P8PLATFORM::SyncedBuffer <IActionQueueItem*> TActionQueue;
         TActionQueue _actions;
+        static long _priorityActionGuard;
+        IActionQueueItem* _priorityAction;
         bool _willStop;
         
     };

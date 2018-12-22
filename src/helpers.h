@@ -34,6 +34,10 @@
 #include <ctime>
 #include <algorithm>
 
+
+template <class T>
+void dump_json(const T& jValue);
+
 std::string n_to_string(int64_t n);
 std::string n_to_string_hex(uint64_t n);
 std:: string time_t_to_string(const time_t& time);

@@ -215,6 +215,26 @@ msgctxt "#60002"
 msgid "Seek Recordings (Experimental)"
 msgstr "Seek Recordings (Experimental)"
 
+msgctxt "#60003"
+msgid "API"
+msgstr "API"
+
+msgctxt "#60004"
+msgid "TS-Proxy"
+msgstr "TS-Proxy"
+
+msgctxt "#60005"
+msgid "User"
+msgstr "User"
+
+msgctxt "#60006"
+msgid "Password"
+msgstr "Password"
+
+msgctxt "#60007"
+msgid "Data Source"
+msgstr "Data Source"
+
 msgctxt "#60010"
 msgid "TTV Player"
 msgstr "TTV"
@@ -262,12 +282,12 @@ msgid "Sovok TV error: %s"
 msgstr "Sovok TV error: %s"
 
 msgctxt "#32010"
-msgid "Edem Player: playlist inaccessible."
-msgstr "Edem Player: playlist inaccessible."
+msgid "Playlist inaccessible."
+msgstr "Playlist inaccessible."
 
 msgctxt "#32011"
-msgid "Edem Player: initialization error. See log file for details."
-msgstr "Edem Player: initialization error. See log file for details."
+msgid "Initialization error. See log file for details."
+msgstr "Initialization error. See log file for details."
 
 msgctxt "#32012"
 msgid "Reloading EPG ..."

@@ -69,18 +69,23 @@ public:
     ~HttpEngine();
     
     template <typename TParser, typename TCompletion>
-    void CallApiAsync(const std::string& request, TParser parser, TCompletion completion)
+    void CallApiAsync(const std::string& request, TParser parser, TCompletion completion, bool isHiPriority = false)
     {
         if(!m_apiCalls->IsRunning())
             throw QueueNotRunningException("API request queue in not running.");
         auto pThis = this;
-        m_apiCalls->PerformAsync([pThis, request,  parser, completion](){
+        ActionQueue::TAction action = [pThis, request,  parser, completion](){
             pThis->SendHttpRequest(request, pThis->m_sessionCookie, parser,
                             [completion](const ActionQueue::ActionResult& s) { completion(s);});
-        },[completion](const ActionQueue::ActionResult& s) {
+        };
+        ActionQueue::TCompletion comp = [completion](const ActionQueue::ActionResult& s) {
             if(s.status != ActionQueue::kActionCompleted)
                 completion(s);
-        });
+        };
+        if(isHiPriority)
+            m_apiCalls->PerformHiPriority(action, comp);
+        else
+            m_apiCalls->PerformAsync(action, comp);
     }
     
     template <typename TParser, typename TCompletion>

@@ -59,10 +59,13 @@
     <setting id="edem_seek_archives" type="bool" label="50002" default="false"/>
 </category>
 
-<!-- Edem Player -->
+<!-- TTV Player -->
 <category label="60010">
-    <setting id="ttv_playlist_url" type="text" label="60000" default="http://asplaylist.net/***/tv.m3u"/>
-    <setting id="ttv_epg_url" type="text" label="60001" default="http://api.torrent-tv.ru/ttv.xmltv.xml.gz"/>
+    <setting id="ttv_mode" type="enum" label="60007" lvalues="60003|60004" default="1" />
+    <setting id="ttv_playlist_url" type="text" label="60000" default="http://asplaylist.net/***/tv.m3u" visible="eq(-1,1)" subsetting="true"/>
+    <setting id="ttv_epg_url" type="text" label="60001" default="http://api.torrent-tv.ru/ttv.xmltv.xml.gz" visible="eq(-2,1)" subsetting="true"/>
+    <setting id="ttv_user" type="text" label="60005" default="anonymous" visible="eq(-3,0)" subsetting="true"/>
+    <setting id="ttv_password" type="text" label="60006" default="anonymous" visible="eq(-4,0)" subsetting="true"/>
     <setting id="ttv_seek_archives" type="bool" label="60002" default="false"/>
 </category>
 

@@ -92,8 +92,10 @@ namespace PvrClient{
                 void *Process(void) {
                     try {
                         m_action();
+                    } catch (exception& ex) {
+                        LogError("ClientPhase::Action() exception thrown: %s", ex.what());
                     } catch (...) {
-                        LogError("ClientPhase::Action() failed!");
+                        LogError("ClientPhase::Action() failed. Unknown exception");
                     }
                     return nullptr;
                 };
@@ -229,26 +231,35 @@ namespace PvrClient{
         XBMC->DeleteFile(MakeEpgCachePath(cacheFile).c_str());
     }
     
-    void ClientCoreBase::LoadEpgCache(const char* cacheFile)
+    bool ClientCoreBase::ReadFileContent(const char* cacheFile, std::string& buffer)
     {
-        string cacheFilePath = MakeEpgCachePath(cacheFile);
-        
-        void* file = XBMC->OpenFile(cacheFilePath.c_str(), 0);
+        void* file = XBMC->OpenFile(cacheFile, 0);
         if(NULL == file)
-            return;
+            return false;
         int64_t fSize = XBMC->GetFileLength(file);
         
         char* rawBuf = new char[fSize + 1];
         if(0 == rawBuf)
-            return;
+            return false;
         XBMC->ReadFile(file, rawBuf, fSize);
         XBMC->CloseFile(file);
         file = NULL;
         
         rawBuf[fSize] = 0;
         
-        string ss(rawBuf);
+        buffer.assign(rawBuf);
         delete[] rawBuf;
+        return true;
+    }
+    
+    void ClientCoreBase::LoadEpgCache(const char* cacheFile)
+    {
+        string cacheFilePath = MakeEpgCachePath(cacheFile);
+        
+        string ss;
+        if(!ReadFileContent(cacheFilePath.c_str(), ss))
+            return;
+        
         try {
             ParseJson(ss, [&] (Document& jsonRoot) {
                 

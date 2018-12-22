@@ -57,6 +57,7 @@ namespace PvrClient {
         void CallRpcAsync(const std::string & data, std::function<void(rapidjson::Document&)>  parser,
                           ActionQueue::TCompletion completion);
         
+        static bool ReadFileContent(const char* cacheFile, std::string& buffer);
         // abstract methods
         virtual void UpdateEpgForAllChannels(time_t startTime, time_t endTime) = 0;
         virtual std::string GetUrl(PvrClient::ChannelId channelId) = 0;

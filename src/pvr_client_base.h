@@ -127,7 +127,8 @@ namespace PvrClient
         
         virtual ADDON_STATUS CreateCoreSafe(bool clearEpgCache) = 0;
         virtual void DestroyCoreSafe() = 0;
-
+        
+        static bool CheckPlaylistUrl(const std::string& url);
     private:
         
         void Cleanup();

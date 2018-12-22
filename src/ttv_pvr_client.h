@@ -53,13 +53,20 @@ protected:
 
 private:
     void CreateCore(bool clearEpgCache);
-    bool CheckPlaylistUrl();
     void SetPlaylistUrl(const std::string& url) {m_playlistUrl = url;};
 
     TtvEngine::Core* m_core;
     std::string m_playlistUrl;
     std::string m_epgUrl;
+    
     bool m_supportSeek;
+    enum TTVMode{
+        TTVMode_api = 0,
+        TTVMode_playlist = 1
+    };
+    TTVMode m_ttvMode;
+    std::string m_user;
+    std::string m_password;
 };
 
 #endif //__ttv_pvr_client_h__

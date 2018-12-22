@@ -27,6 +27,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "helpers.h"
+#include "rapidjson/stringbuffer.h"
+#include "rapidjson/prettywriter.h"
+#include "rapidjson/document.h"
+
 
 std::string n_to_string(int64_t n)
 {
@@ -54,6 +58,20 @@ std:: string time_t_to_string(const time_t& time)
     return std::string("Wrong time format");
 }
 
+template <class T>
+void dump_json(const T& jValue)
+{
+    using namespace rapidjson;
+
+    StringBuffer sb;
+    PrettyWriter<StringBuffer> writer(sb);
+    jValue.Accept(writer);
+    auto str = sb.GetString();
+    printf("%s\n", str);
+}
+
+template void dump_json<rapidjson::Document>(const rapidjson::Document& jValue);
+template void dump_json<rapidjson::Value>(const rapidjson::Value& jValue);
 //int strtoi(const std::string &str)
 //{
 //    return atoi(str.c_str());

@@ -1020,4 +1020,19 @@ PVR_ERROR PVRClientBase::CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_ME
     return MenuHook(menuhook, item);
 }
 
+#pragma mark - Playlist Utils
+bool PVRClientBase::CheckPlaylistUrl(const std::string& url)
+{
+    auto f  = XBMC->OpenFile(url.c_str(), 0);
+    
+    if (nullptr == f) {
+        char* message = XBMC->GetLocalizedString(32010);
+        XBMC->QueueNotification(QUEUE_ERROR, message);
+        XBMC->FreeString(message);
+        return false;
+    }
+    
+    XBMC->CloseFile(f);
+    return true;
+}
 
