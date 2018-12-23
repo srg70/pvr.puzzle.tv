@@ -21,7 +21,6 @@
  */
 
 #include "ActionQueue.hpp"
-#include "p8-platform/threads/atomics.h"
 
 namespace ActionQueue {
     
@@ -46,9 +45,12 @@ namespace ActionQueue {
                     action->Perform();
                 delete action;
             }
-            CAtomicSpinLock lock(_priorityActionGuard);
-            if(_priorityAction)
-                _priorityAction->Perform();
+            // Check for priority task
+            if(_priorityAction) {
+                P8PLATFORM::CLockObject lock(_priorityActionMutex);
+                if(_priorityAction)
+                    _priorityAction->Perform();
+            }
             
         }
         return NULL;
@@ -76,17 +78,4 @@ namespace ActionQueue {
         StopThread(0);
     }
     
-    long CActionQueue::_priorityActionGuard = 0;
-    ///////////////////////////////////////////////////////////////////////////
-    // Fast spinlock implmentation. No backoff when busy
-    ///////////////////////////////////////////////////////////////////////////
-    CAtomicSpinLock::CAtomicSpinLock(long& lock) : m_Lock(lock)
-    {
-        while (P8PLATFORM::cas(&m_Lock, 0, 1) != 0) {} // Lock
-    }
-    CAtomicSpinLock::~CAtomicSpinLock()
-    {
-        m_Lock = 0; // Unlock
-    }
-
 }

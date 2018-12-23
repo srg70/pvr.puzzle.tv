@@ -26,6 +26,7 @@
 
 #include "p8-platform/util/buffer.h"
 #include "p8-platform/threads/threads.h"
+#include "p8-platform/threads/mutex.h"
 #include "ActionQueueTypes.hpp"
 #include <exception>
 #include <stdexcept>
@@ -34,15 +35,6 @@
 
 namespace ActionQueue
 {
-    class CAtomicSpinLock
-    {
-    public:
-        CAtomicSpinLock(long& lock);
-        ~CAtomicSpinLock();
-    private:
-        long& m_Lock;
-    };
-
     class ActionQueueException : public std::exception
     {
     public:
@@ -89,7 +81,9 @@ namespace ActionQueue
 
         void PerformHiPriority(TAction action, const TCompletion completion)
         {
-            P8PLATFORM::CEvent done;
+            using namespace P8PLATFORM;
+            
+            CEvent done;
             TAction doneAction = [action, &done ](){
                 done.Signal();
                 action();
@@ -102,7 +96,7 @@ namespace ActionQueue
                 if(_priorityAction != nullptr) // Can't be
                     throw ActionQueueException("Too many priority tasks.");
                 {
-                    CAtomicSpinLock lock(_priorityActionGuard);
+                    CLockObject lock(_priorityActionMutex);
                     _priorityAction = item;
                 }
                 // In case when pipline has no tasks
@@ -110,7 +104,7 @@ namespace ActionQueue
                 _actions.Push(new QueueItem([]{}, [](const ActionResult&){}));
             }
             done.Wait();
-            CAtomicSpinLock lock(_priorityActionGuard);
+            CLockObject lock(_priorityActionMutex);
             _priorityAction = nullptr;
             delete item;
         }
@@ -146,7 +140,7 @@ namespace ActionQueue
         
         typedef P8PLATFORM::SyncedBuffer <IActionQueueItem*> TActionQueue;
         TActionQueue _actions;
-        static long _priorityActionGuard;
+        P8PLATFORM::CMutex _priorityActionMutex;
         IActionQueueItem* _priorityAction;
         bool _willStop;
         
