@@ -687,7 +687,7 @@ namespace TtvEngine
         return  url;
     }
 
-    std::string Core::UpdateEpgForAllChannels_Plist(time_t startTime, time_t endTime)
+    void Core::UpdateEpgForAllChannels_Plist(time_t startTime, time_t endTime)
     {
         using namespace XMLTV;
         try {

@@ -189,7 +189,7 @@ namespace TtvEngine
         // TSProxy plist
         void BuildChannelAndGroupList_Plist();
         std::string GetArchiveUrl_Plist(PvrClient::ChannelId channelId, time_t startTime);
-        std::string UpdateEpgForAllChannels_Plist(time_t startTime, time_t endTime);
+        void UpdateEpgForAllChannels_Plist(time_t startTime, time_t endTime);
 
         void Cleanup();
 
