@@ -380,7 +380,7 @@ namespace PvrClient{
         
         if(lastEndTime < endTime) {
             
-            LogDebug("GetEPG(%d): last Epg  %s -> requested by Kodi %s",
+            LogDebug("GetEPG(%d): last for channel  %s -> requested by Kodi %s",
                      channelId, time_t_to_string(lastEndTime).c_str(), time_t_to_string(endTime).c_str());
             
             auto epgRequestStart = max(lastEndTime, m_lastEpgRequestEndTime);

@@ -180,11 +180,16 @@ namespace TtvEngine
         //API
         std::string GetPlaylistUrl();
         void GetUserInfo();
-        void GetChannelsAndGroups();
         void InitializeArchiveInfo();
-        
+        void BuildChannelAndGroupList_Api();
+        std::string GetArchiveUrl_Api(PvrClient::ChannelId channelId, time_t startTime);
+        void UpdateEpgForAllChannels_Api(time_t startTime, time_t endTime);
+        std::string GetUrl_Api(PvrClient::ChannelId channelId);
+
         // TSProxy plist
-        void ParsePlaylistChannels();
+        void BuildChannelAndGroupList_Plist();
+        std::string GetArchiveUrl_Plist(PvrClient::ChannelId channelId, time_t startTime);
+        std::string UpdateEpgForAllChannels_Plist(time_t startTime, time_t endTime);
 
         void Cleanup();
 

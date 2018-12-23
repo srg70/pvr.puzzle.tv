@@ -317,6 +317,10 @@ msgctxt "#32018"
 msgid "TTV Player: playlist inaccessible."
 msgstr "TTV Player: playlist inaccessible."
 
+msgctxt "#32019"
+msgid "TTV error: %s"
+msgstr "TTV error: %s"
+
 #============= Menus ================
 
 msgctxt "#32050"

@@ -45,6 +45,22 @@
 #include "globals.hpp"
 #include "guid.hpp"
 
+#define CATCH_API_CALL() \
+catch (ServerErrorException& ex) { \
+    LogError("%s. TTV API error: %s", __FUNCTION__,  ex.what()); \
+    char* message = XBMC->GetLocalizedString(32019); \
+    XBMC->QueueNotification(QUEUE_ERROR, message, ex.what() ); \
+    XBMC->FreeString(message); \
+} catch(CurlErrorException& ex) { \
+    LogError("%s. CURL error: %s", __FUNCTION__,  ex.what()); \
+    XBMC->QueueNotification(QUEUE_ERROR, "CURL fatal error: %s", ex.what() ); \
+} catch(std::exception& ex) { \
+    LogError("%s. TTV generic error: %s", __FUNCTION__,  ex.what()); \
+} \
+catch(...) { \
+    LogError("%s. Unknown TTV error.", __FUNCTION__); \
+}
+
 namespace TtvEngine
 {
     using namespace Globals;
@@ -75,7 +91,6 @@ namespace TtvEngine
     
     struct Core::ApiFunctionData
     {
-        
         ApiFunctionData(const char* _name)
         : ApiFunctionData(_name, ParamList())
         {}
@@ -88,7 +103,6 @@ namespace TtvEngine
         bool isHiPriority;
     };
 
-    
     Core::Core(const UserInfo& userInfo)
     : m_hasTSProxy(false)
     , m_isVIP(false)
@@ -125,7 +139,6 @@ namespace TtvEngine
             LoadEpg();
     }
     
-    
     Core::~Core()
     {
         Cleanup();
@@ -141,87 +154,190 @@ namespace TtvEngine
         
         LogNotice("TtvPlayer stopped.");
     }
-    
-    void Core::LoadSessionCache()
-    {
-        string ss;
-        if(!ReadFileContent(c_SessionCachePath, ss))
-            return;
-        
-        try {
-            ParseJson(ss, [&] (Document& jsonRoot) {
-                m_deviceId =  jsonRoot["m_deviceId"].GetString();
-                m_sessionId = jsonRoot["m_sessionId"].GetString();
-            });
-            
-        } catch (...) {
-            LogError(" TTV Engine: FAILED load session cache.");
-            // Do not clear deviceId if loaded.
-            // it should be generated one time for device.
-            //m_deviceId.clear();
-            m_sessionId.clear();
-        }
-    }
-    
-    void Core::SaveSessionCache()
-    {
 
-        StringBuffer s;
-        Writer<StringBuffer> writer(s);
-        
-        writer.StartObject();
-        writer.Key("m_deviceId");
-        writer.String(m_deviceId.c_str(), m_deviceId.size());
-        writer.Key("m_sessionId");
-        writer.String(m_sessionId.c_str(), m_sessionId.size());
-        writer.EndObject();
-        
-        XBMC->CreateDirectory(c_SessionCacheDir);
-        
-        void* file = XBMC->OpenFileForWrite(c_SessionCachePath, true);
-        if(NULL == file)
-            return;
-        auto buf = s.GetString();
-        XBMC->WriteFile(file, buf, s.GetSize());
-        XBMC->CloseFile(file);
-    }
-    
-    void Core::ClearSession()
+#pragma mark - Core interface
+    void Core::BuildChannelAndGroupList()
     {
-        if(XBMC->FileExists(c_SessionCachePath, false)) {
-            XBMC->DeleteFile(c_SessionCachePath);
-            ClearEpgCache(c_EpgCacheFile);
+        if(m_useApi) {
+            BuildChannelAndGroupList_Api();
+        } else {
+            BuildChannelAndGroupList_Plist();
         }
     }
     
-    void Core::RenewSession(){
-        // Check device ID
-        if(m_deviceId.empty()) {
-            m_deviceId = GUID::generate();
+    std::string Core::GetArchiveUrl(ChannelId channelId, time_t startTime)
+    {
+        string url;
+        if(m_useApi) {
+            return GetArchiveUrl_Api(channelId, startTime);
         }
+        return GetArchiveUrl_Plist(channelId, startTime);
         
-        // Authorize to TTV
-        ParamList params;
-        params["username"] = m_userInfo.user;
-        params["password"] = m_userInfo.password;
-        params["application"] = "xbmc";
-        params["guid"] = m_deviceId;
-        try {
-            ApiFunctionData apiParams("auth.php", params);
+    }
+
+    void Core::UpdateHasArchive(PvrClient::EpgEntry& entry)
+    {
+        time_t now = time(nullptr);
+        auto when = now - entry.StartTime;
+        
+        auto chId = entry.ChannelId;
+        if(m_useApi) {
+            if(m_ttvChannels.count(chId) == 0)
+            return;
+            if(m_epgIdToChannelId.count(m_ttvChannels.at(chId).epg_id) == 0)
+            return;
+            entry.HasArchive = when > 0;
+        } else {
+            entry.HasArchive = false;
+            if(m_archiveInfo.count(chId) == 0)
+            return;
             
-            CallApiFunction(apiParams, [&] (Document& jsonRoot)
+            const time_t archivePeriod = m_archiveInfo.at(entry.ChannelId).days * 24 * 60 * 60; //archive  days in secs
+            entry.HasArchive = when > 0 && when < archivePeriod;
+        }
+    }
+    
+    void Core::UpdateEpgForAllChannels(time_t startTime, time_t endTime)
+    {
+        if(m_epgUpdateInterval.IsSet() && m_epgUpdateInterval.TimeLeft() > 0)
+        return;
+        
+        m_epgUpdateInterval.Init(24*60*60*1000);
+        
+        if(m_useApi)
+            UpdateEpgForAllChannels_Api(startTime, endTime);
+        else
+            UpdateEpgForAllChannels_Plist(startTime, endTime);
+
+    }
+    
+    string Core::GetUrl(ChannelId channelId)
+    {
+        if(m_useApi)
+            return GetUrl_Api(channelId);
+        return m_channelList.at(channelId).Urls[0];
+    }
+
+#pragma mark - API methods
+    string Core::GetUrl_Api(ChannelId channelId)
+    {
+        string url;
+        ParamList params;
+        params["channel_id"] = n_to_string(channelId);
+        params["nohls"] = "0";
+        params["hls_bandwidth_preset"] = "0";
+        try {
+            ApiFunctionData apiParams("translation_http.php", params, true);
+            CallApiFunction(apiParams, [&url] (Document& jsonRoot)
                             {
-                                m_sessionId = jsonRoot["session"].GetString();
+                                url = jsonRoot["source"].GetString();
                             });
-            SaveSessionCache();
         }
-        catch(std::exception& ex) {
-            LogError("TTV server authorisation error: %s", ex.what());
-//            if(strcmp(ex.what(), "incorrect") == 0)
-                throw AuthFailedException();
+        CATCH_API_CALL();
+        return url;
+    }
+    
+    std::string Core::GetArchiveUrl_Api(ChannelId channelId, time_t startTime)
+    {
+        string url;
+        auto epg_id = m_ttvChannels.at(channelId).epg_id;
+        
+        char mbstr[100];
+        if (0 == std::strftime(mbstr, sizeof(mbstr), "X%d-X%m-%Y", std::localtime(&startTime))) {
+            return url;
         }
-        catch(...) {
-            LogError("Unknown TTV server authorisation error.");
+        string archiveDate(mbstr);
+        StringUtils::Replace(archiveDate, "X0","X");
+        StringUtils::Replace(archiveDate,"X","");
+        try {
+            
+            int record_id = 0;
+            ParamList params;
+            params["date"] = archiveDate;
+            params["epg_id"] = n_to_string(epg_id);
+            CallApiFunction(ApiFunctionData("arc_records.php", params), [startTime, &record_id] (Document& jsonRoot)
+                            {
+                                if(!jsonRoot.HasMember("records"))
+                                return;
+                                auto& records = jsonRoot["records"];
+                                if(!records.IsArray())
+                                return;
+                                for (auto& r : records.GetArray()) {
+                                    if(r["time"].GetInt() == startTime){
+                                        record_id = r["record_id"].GetInt();
+                                        return;
+                                    }
+                                }
+                            });
+            if(0 == record_id)
+            return url;
+            
+            params.clear();
+            params["record_id"] = n_to_string(record_id);
+            CallApiFunction(ApiFunctionData ("arc_http.php", params), [&url] (Document& jsonRoot)
+                            {
+                                url = jsonRoot["source"].GetString();
+                                LogDebug(">> !!! >> TTV archive URL: %s", url.c_str());
+                            });
+            
+        }
+        CATCH_API_CALL();
+        return url;
+    }
+
+    void Core::UpdateEpgForAllChannels_Api(time_t startTime, time_t endTime)
+    {
+        auto pThis = this;
+        size_t channelsToProcess = m_channelList.size();
+        
+        for (const auto& ch : m_channelList) {
+            
+            auto chId = ch.second.Id;
+            const auto& ttvCh = m_ttvChannels[chId];
+            bool isLast = --channelsToProcess == 0;
+            
+            if(ttvCh.epg_id == 0)
+            continue;
+            
+            auto epgOffset = - XMLTV::LocalTimeOffset();
+            
+            ParamList params;
+            params["btime"] = n_to_string(startTime);
+            params["etime"] = n_to_string(endTime);
+            params["epg_id"] = n_to_string(ttvCh.epg_id);
+            ApiFunctionData apiParams("translation_epg.php", params);
+            
+            CallApiAsync(apiParams, [pThis, chId, epgOffset] (Document& jsonRoot)
+                         {
+                             if(!jsonRoot.HasMember("data"))
+                             return;
+                             
+                             auto& data = jsonRoot["data"];
+                             if(!data.IsArray())
+                             return;
+                             
+                             for(auto& epg : data.GetArray()) {
+                                 EpgEntry epgEntry;
+                                 epgEntry.ChannelId = chId ;
+                                 epgEntry.Title = epg["name"].GetString();
+                                 //epgEntry.Description = m.value["descr"].GetString();
+                                 epgEntry.StartTime = epg["btime"].GetInt();//  + epgOffset;
+                                 epgEntry.EndTime = epg["etime"].GetInt();// + epgOffset;
+                                 UniqueBroadcastIdType id = epgEntry.StartTime;
+                                 pThis->ClientCoreBase::AddEpgEntry(id, epgEntry);
+                             }
+                             
+                         },
+                         [pThis, isLast, chId](const ActionQueue::ActionResult& s) {
+                             try {
+                                 if(isLast)
+                                 pThis->SaveEpgCache(c_EpgCacheFile, 11);
+                                 if(s.exception)
+                                 std::rethrow_exception(s.exception);
+                                 PVR->TriggerEpgUpdate(chId);
+                             }
+                             CATCH_API_CALL();
+                         });
         }
     }
     
@@ -241,12 +357,7 @@ namespace TtvEngine
                                 pThis->m_needsAdult = jsonRoot["adult"].GetInt() == 1;
                             });
         }
-        catch(std::exception& ex) {
-            LogError("TTV server error (GetUserInfo): %s", ex.what());
-        }
-        catch(...) {
-            LogError("Unknown TTV server error (GetUserInfo).");
-        }
+        CATCH_API_CALL();
     }
     
     std::string Core::GetPlaylistUrl()
@@ -273,16 +384,12 @@ namespace TtvEngine
                                 LogDebug(">> !!! >> TTV plist URL: %s", url.c_str());
                             });
         }
-        catch(std::exception& ex) {
-            LogError("TTV server error: %s", ex.what());
-        }
-        catch(...) {
-            LogError("Unknown TTV server error.");
-        }
+        CATCH_API_CALL();
+
         return url;
     }
 
-    void Core::GetChannelsAndGroups()
+    void Core::BuildChannelAndGroupList_Api()
     {
         try {
 
@@ -348,12 +455,8 @@ namespace TtvEngine
             InitializeArchiveInfo();
             
         }
-        catch(std::exception& ex) {
-            LogError("TTV server error: %s", ex.what());
-        }
-        catch(...) {
-            LogError("Unknown TTV server error.");
-        }
+        CATCH_API_CALL();
+
     }
     void Core::InitializeArchiveInfo()
     {
@@ -378,254 +481,8 @@ namespace TtvEngine
                 }
             });
         }
-        catch(std::exception& ex) {
-            LogError("TTV server error: %s", ex.what());
-        }
-        catch(...) {
-            LogError("Unknown TTV server error.");
-        }
+        CATCH_API_CALL();
 
-    }
-    void Core::BuildChannelAndGroupList()
-    {
-        if(m_useApi) {
-            GetChannelsAndGroups();
-        } else {
-            ParsePlaylistChannels();
-        }
-    }
-    
-    std::string Core::GetArchiveUrl(ChannelId channelId, time_t startTime)
-    {
-        string url;
-        if(m_useApi) {
-            auto epg_id = m_ttvChannels.at(channelId).epg_id;
-            
-            char mbstr[100];
-            if (0 == std::strftime(mbstr, sizeof(mbstr), "X%d-X%m-%Y", std::localtime(&startTime))) {
-                return url;
-            }
-            string archiveDate(mbstr);
-            StringUtils::Replace(archiveDate, "X0","X");
-            StringUtils::Replace(archiveDate,"X","");
-            try {
-
-                int record_id = 0;
-                ParamList params;
-                params["date"] = archiveDate;
-                params["epg_id"] = n_to_string(epg_id);
-                CallApiFunction(ApiFunctionData("arc_records.php", params), [startTime, &record_id] (Document& jsonRoot)
-                                {
-                                    if(!jsonRoot.HasMember("records"))
-                                    return;
-                                    auto& records = jsonRoot["records"];
-                                    if(!records.IsArray())
-                                    return;
-                                    for (auto& r : records.GetArray()) {
-                                        if(r["time"].GetInt() == startTime){
-                                            record_id = r["record_id"].GetInt();
-                                            return;
-                                        }
-                                    }
-                                });
-                if(0 == record_id)
-                return url;
-                
-                params.clear();
-                params["record_id"] = n_to_string(record_id);
-                CallApiFunction(ApiFunctionData ("arc_http.php", params), [&url] (Document& jsonRoot)
-                                {
-                                    url = jsonRoot["source"].GetString();
-                                    LogDebug(">> !!! >> TTV archive URL: %s", url.c_str());
-                                });
-                
-            }
-            catch(std::exception& ex) {
-                LogError("TTV server error: %s", ex.what());
-            }
-            catch(...) {
-                LogError("Unknown TTV server error.");
-            }
-            return url;
-        }
-        
-        if(m_archiveInfo.count(channelId) == 0) {
-            return url;
-        }
-        url = m_archiveInfo.at(channelId).urlTemplate;
-        if(url.empty())
-            return url;
-        const char* c_START = "${start}";
-        size_t pos = url.find(c_START);
-        if(string::npos == pos)
-            return string();
-        url.replace(pos, strlen(c_START), n_to_string(startTime));
-        const char* c_STAMP = "${timestamp}";
-        pos = url.find(c_STAMP);
-        if(string::npos == pos)
-            return string();
-        url.replace(pos, strlen(c_STAMP), n_to_string(time(nullptr)));
-        return  url;
-    }
-        
-    bool Core::AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry)
-    {
-        unsigned int id = xmlEpgEntry.startTime;
-        
-        EpgEntry epgEntry;
-        epgEntry.ChannelId = xmlEpgEntry.iChannelId;
-        epgEntry.Title = xmlEpgEntry.strTitle;
-        epgEntry.Description = xmlEpgEntry.strPlot;
-        epgEntry.StartTime = xmlEpgEntry.startTime;
-        epgEntry.EndTime = xmlEpgEntry.endTime;
-        return ClientCoreBase::AddEpgEntry(id, epgEntry);
-    }
-    
-    void Core::UpdateHasArchive(PvrClient::EpgEntry& entry)
-    {
-        time_t now = time(nullptr);
-        auto when = now - entry.StartTime;
-
-        auto chId = entry.ChannelId;
-        if(m_useApi) {
-            if(m_ttvChannels.count(chId) == 0)
-                return;
-            if(m_epgIdToChannelId.count(m_ttvChannels.at(chId).epg_id) == 0)
-                return;
-            entry.HasArchive = when > 0;
-        } else {
-            entry.HasArchive = false;
-            if(m_archiveInfo.count(chId) == 0)
-                return;
-            
-            const time_t archivePeriod = m_archiveInfo.at(entry.ChannelId).days * 24 * 60 * 60; //archive  days in secs
-            entry.HasArchive = when > 0 && when < archivePeriod;
-        }
-    }
-   
-    void Core::UpdateEpgForAllChannels(time_t startTime, time_t endTime)
-    {
-        if(m_epgUpdateInterval.IsSet() && m_epgUpdateInterval.TimeLeft() > 0)
-            return;
-        
-        m_epgUpdateInterval.Init(24*60*60*1000);
-
-        if(m_useApi){
-            auto pThis = this;
-            size_t channelsToProcess = m_channelList.size();
-            
-            for (const auto& ch : m_channelList) {
-
-                auto chId = ch.second.Id;
-                const auto& ttvCh = m_ttvChannels[chId];
-                bool isLast = --channelsToProcess == 0;
-                
-                if(ttvCh.epg_id == 0)
-                    continue;
-                
-                auto epgOffset = - XMLTV::LocalTimeOffset();
-                
-                ParamList params;
-                params["btime"] = n_to_string(startTime);
-                params["etime"] = n_to_string(endTime);
-                params["epg_id"] = n_to_string(ttvCh.epg_id);
-                ApiFunctionData apiParams("translation_epg.php", params);
-                
-                CallApiAsync(apiParams, [pThis, chId, epgOffset] (Document& jsonRoot)
-                             {
-                                 if(!jsonRoot.HasMember("data"))
-                                    return;
-                                 
-                                 auto& data = jsonRoot["data"];
-                                 if(!data.IsArray())
-                                     return;
-                                 
-                                 for(auto& epg : data.GetArray()) {
-                                     EpgEntry epgEntry;
-                                     epgEntry.ChannelId = chId ;
-                                     epgEntry.Title = epg["name"].GetString();
-                                     //epgEntry.Description = m.value["descr"].GetString();
-                                     epgEntry.StartTime = epg["btime"].GetInt();//  + epgOffset;
-                                     epgEntry.EndTime = epg["etime"].GetInt();// + epgOffset;
-                                     UniqueBroadcastIdType id = epgEntry.StartTime;
-                                     pThis->ClientCoreBase::AddEpgEntry(id, epgEntry);
-                                 }
-                                 
-                             },
-                             [pThis, isLast, chId](const ActionQueue::ActionResult& s) {
-                                 try {
-                                     if(isLast)
-                                         pThis->SaveEpgCache(c_EpgCacheFile, 11);
-                                     if(s.exception)
-                                        std::rethrow_exception(s.exception);
-                                     PVR->TriggerEpgUpdate(chId);
-                                 }
-                                 catch(std::exception& ex) {
-                                     LogError("TTV server error (EPG): %s", ex.what());
-                                 }
-                                 catch(...) {
-                                     LogError("Unknown TTV server error.");
-                                 }
-                             });
-            }
-        } else {
-            
-            using namespace XMLTV;
-            try {
-                auto pThis = this;
-                
-                set<ChannelId> channelsToUpdate;
-                EpgEntryCallback onEpgEntry = [&pThis, &channelsToUpdate,  startTime] (const XMLTV::EpgEntry& newEntry) {
-                    if(pThis->AddEpgEntry(newEntry) && newEntry.startTime >= startTime)
-                    channelsToUpdate.insert(newEntry.iChannelId);
-                };
-                
-                XMLTV::ParseEpg(m_epgUrl, onEpgEntry);
-                
-                SaveEpgCache(c_EpgCacheFile, 11);
-            } catch (...) {
-                LogError(" >>>>  FAILED receive EPG <<<<<");
-            }
-        }
-    }
-    
-    void Core::LoadEpg()
-    {
-        using namespace XMLTV;
-        auto pThis = this;
-
-        EpgEntryCallback onEpgEntry = [&pThis] (const XMLTV::EpgEntry& newEntry) {pThis->AddEpgEntry(newEntry);};
-        
-        XMLTV::ParseEpg(m_epgUrl, onEpgEntry);
-    }
-    
-    string Core::GetUrl(ChannelId channelId)
-    {
-        string url;
-        if(m_useApi) {
-            ParamList params;
-            params["channel_id"] = n_to_string(channelId);
-            params["nohls"] = "0";
-            params["hls_bandwidth_preset"] = "0";
-            try {
-                ApiFunctionData apiParams("translation_http.php", params, true);
-                CallApiFunction(apiParams, [&url] (Document& jsonRoot)
-                                {
-                                    url = jsonRoot["source"].GetString();
-                                    LogDebug(">> !!! >> TTV API URL: %s", url.c_str());
-                                });
-            }
-            catch(std::exception& ex) {
-                LogError("TTV server error: %s", ex.what());
-            }
-            catch(...) {
-                LogError("Unknown TTV server error.");
-            }
-        }  else {
-            string url = m_channelList.at(channelId).Urls[0];
-        }
-        return url;
-        
     }
     
     template <typename TParser>
@@ -673,18 +530,18 @@ namespace TtvEngine
         
         std::function<void(const std::string&)> parserWrapper = [pThis, start, parser, strRequest, isLoginCommand](const std::string& response) {
             LogDebug("Response in %d ms.",  P8PLATFORM::GetTimeMs() - start);
-          
+            
             pThis->ParseJson(response, [parser] (Document& jsonRoot)
-                      {
-                          if (jsonRoot.HasMember("success") && jsonRoot["success"].GetInt() == 1)
-                          {
-                              parser(jsonRoot);
-                              return;
-                          }
-                          const char* code = jsonRoot["error"].GetString();
-                          LogError("Torrent TV server responses error: %s", code);
-                          throw ServerErrorException(code);
-                      });
+                             {
+                                 if (jsonRoot.HasMember("success") && jsonRoot["success"].GetInt() == 1)
+                                 {
+                                     parser(jsonRoot);
+                                     return;
+                                 }
+                                 const char* code = jsonRoot["error"].GetString();
+                                 LogError("Torrent TV server responses error: %s", code);
+                                 throw ServerErrorException(code);
+                             });
         };
         ActionQueue::TCompletion comp =  [pThis, data, parser, completion, isLoginCommand](const ActionQueue::ActionResult& s)
         {
@@ -709,9 +566,148 @@ namespace TtvEngine
         };
         m_httpEngine->CallApiAsync(strRequest, parserWrapper, comp, data.isHiPriority);
     }
+    
+#pragma mark - API Session
+    void Core::LoadSessionCache()
+    {
+        string ss;
+        if(!ReadFileContent(c_SessionCachePath, ss))
+        return;
+        
+        try {
+            ParseJson(ss, [&] (Document& jsonRoot) {
+                m_deviceId =  jsonRoot["m_deviceId"].GetString();
+                m_sessionId = jsonRoot["m_sessionId"].GetString();
+            });
+            
+        } catch (...) {
+            LogError(" TTV Engine: FAILED load session cache.");
+            // Do not clear deviceId if loaded.
+            // it should be generated one time for device.
+            //m_deviceId.clear();
+            m_sessionId.clear();
+        }
+    }
+    
+    void Core::SaveSessionCache()
+    {
+        
+        StringBuffer s;
+        Writer<StringBuffer> writer(s);
+        
+        writer.StartObject();
+        writer.Key("m_deviceId");
+        writer.String(m_deviceId.c_str(), m_deviceId.size());
+        writer.Key("m_sessionId");
+        writer.String(m_sessionId.c_str(), m_sessionId.size());
+        writer.EndObject();
+        
+        XBMC->CreateDirectory(c_SessionCacheDir);
+        
+        void* file = XBMC->OpenFileForWrite(c_SessionCachePath, true);
+        if(NULL == file)
+        return;
+        auto buf = s.GetString();
+        XBMC->WriteFile(file, buf, s.GetSize());
+        XBMC->CloseFile(file);
+    }
+    
+    void Core::ClearSession()
+    {
+        if(XBMC->FileExists(c_SessionCachePath, false)) {
+            XBMC->DeleteFile(c_SessionCachePath);
+            ClearEpgCache(c_EpgCacheFile);
+        }
+    }
+    
+    void Core::RenewSession(){
+        // Check device ID
+        if(m_deviceId.empty()) {
+            m_deviceId = GUID::generate();
+        }
+        
+        // Authorize to TTV
+        ParamList params;
+        params["username"] = m_userInfo.user;
+        params["password"] = m_userInfo.password;
+        params["application"] = "xbmc";
+        params["guid"] = m_deviceId;
+        try {
+            ApiFunctionData apiParams("auth.php", params);
+            
+            CallApiFunction(apiParams, [&] (Document& jsonRoot)
+                            {
+                                m_sessionId = jsonRoot["session"].GetString();
+                            });
+            SaveSessionCache();
+        }
+        catch(std::exception& ex) {
+            LogError("TTV server authorisation error: %s", ex.what());
+            //            if(strcmp(ex.what(), "incorrect") == 0)
+            throw AuthFailedException();
+        }
+        catch(...) {
+            LogError("Unknown TTV server authorisation error.");
+        }
+    }
+    
+#pragma mark - Playlist methods
+    bool Core::AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry)
+    {
+        unsigned int id = xmlEpgEntry.startTime;
+        
+        EpgEntry epgEntry;
+        epgEntry.ChannelId = xmlEpgEntry.iChannelId;
+        epgEntry.Title = xmlEpgEntry.strTitle;
+        epgEntry.Description = xmlEpgEntry.strPlot;
+        epgEntry.StartTime = xmlEpgEntry.startTime;
+        epgEntry.EndTime = xmlEpgEntry.endTime;
+        return ClientCoreBase::AddEpgEntry(id, epgEntry);
+    }
+    
+    std::string Core::GetArchiveUrl_Plist(ChannelId channelId, time_t startTime)
+    {
+        string url;
+        if(m_archiveInfo.count(channelId) == 0) {
+            return url;
+        }
+        url = m_archiveInfo.at(channelId).urlTemplate;
+        if(url.empty())
+        return url;
+        const char* c_START = "${start}";
+        size_t pos = url.find(c_START);
+        if(string::npos == pos)
+        return string();
+        url.replace(pos, strlen(c_START), n_to_string(startTime));
+        const char* c_STAMP = "${timestamp}";
+        pos = url.find(c_STAMP);
+        if(string::npos == pos)
+        return string();
+        url.replace(pos, strlen(c_STAMP), n_to_string(time(nullptr)));
+        return  url;
+    }
 
-#pragma mark - Playlist parsing
-    void Core::ParsePlaylistChannels()
+    std::string Core::UpdateEpgForAllChannels_Plist(time_t startTime, time_t endTime)
+    {
+        using namespace XMLTV;
+        try {
+            auto pThis = this;
+            
+            set<ChannelId> channelsToUpdate;
+            EpgEntryCallback onEpgEntry = [&pThis, &channelsToUpdate,  startTime] (const XMLTV::EpgEntry& newEntry) {
+                if(pThis->AddEpgEntry(newEntry) && newEntry.startTime >= startTime)
+                channelsToUpdate.insert(newEntry.iChannelId);
+            };
+            
+            XMLTV::ParseEpg(m_epgUrl, onEpgEntry);
+            
+            SaveEpgCache(c_EpgCacheFile, 11);
+        } catch (...) {
+            LogError(" >>>>  FAILED receive EPG <<<<<");
+        }
+    }
+
+    void Core::BuildChannelAndGroupList_Plist()
     {
         using namespace XMLTV;
         ArchiveInfos archiveInfo;
@@ -757,6 +753,16 @@ namespace TtvEngine
         // add rest archives
         m_archiveInfo.insert(archiveInfo.begin(), archiveInfo.end());
 
+    }
+    
+    void Core::LoadEpg()
+    {
+        using namespace XMLTV;
+        auto pThis = this;
+        
+        EpgEntryCallback onEpgEntry = [&pThis] (const XMLTV::EpgEntry& newEntry) {pThis->AddEpgEntry(newEntry);};
+        
+        XMLTV::ParseEpg(m_epgUrl, onEpgEntry);
     }
     
     static void LoadPlaylist(const string& plistUrl, PlaylistContent& channels, ArchiveInfos& archiveInfo)
@@ -812,10 +818,10 @@ namespace TtvEngine
                 ParseChannelAndGroup(tag, plistIndex++, channels, archiveInfo);
                 pos = pos_end;
             }
-            XBMC->Log(LOG_DEBUG, "TtvPlayer: added %d channels from playlist." , channels.size());
+            LogDebug("TtvPlayer: added %d channels from playlist." , channels.size());
 
         } catch (std::exception& ex) {
-            XBMC->Log(LOG_ERROR, "TtvPlayer: exception during playlist loading: %s", ex.what());
+            LogError("TtvPlayer: exception during playlist loading: %s", ex.what());
             if(NULL != f) {
                 XBMC->CloseFile(f);
                 f = NULL;
