@@ -100,7 +100,7 @@ public:
     std::string GetUrl(PvrClient::ChannelId  channelId);
     std::string GetArchiveUrl(PvrClient::ChannelId  channelId, time_t startTime);
 
-    PvrClient::FavoriteList GetFavorites();
+//    PvrClient::FavoriteList GetFavorites();
 
     int GetSreamerId() const { return m_streammerId; }
     void SetStreamerId(int streamerId);

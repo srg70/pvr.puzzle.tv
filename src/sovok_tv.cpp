@@ -382,23 +382,23 @@ void BeutifyUrl(string& url)
     url = url.substr(0, url.find(" ")); // trim VLC params at the end
 }
 
-FavoriteList SovokTV::GetFavorites()
-{
-    FavoriteList favorites;
-    try {
-        ApiFunctionData apiParams("favorites");
-        CallApiFunction(apiParams, [&] (Document& jsonRoot)
-        {
-            const Value &jsonFavorites = jsonRoot["favorites"];
-            Value::ConstValueIterator itFavorite = jsonFavorites.Begin();
-            for(; itFavorite != jsonFavorites.End(); ++itFavorite)
-                favorites.insert((*itFavorite)["channel_id"].GetInt());
-        });
-    }
-    CATCH_API_CALL(" >>>>  FAILED to get favorites <<<<<")
-
-    return favorites;
-}
+//FavoriteList SovokTV::GetFavorites()
+//{
+//    FavoriteList favorites;
+//    try {
+//        ApiFunctionData apiParams("favorites");
+//        CallApiFunction(apiParams, [&] (Document& jsonRoot)
+//        {
+//            const Value &jsonFavorites = jsonRoot["favorites"];
+//            Value::ConstValueIterator itFavorite = jsonFavorites.Begin();
+//            for(; itFavorite != jsonFavorites.End(); ++itFavorite)
+//                favorites.insert((*itFavorite)["channel_id"].GetInt());
+//        });
+//    }
+//    CATCH_API_CALL(" >>>>  FAILED to get favorites <<<<<")
+//
+//    return favorites;
+//}
 
 
 bool SovokTV::Login(bool wait)
