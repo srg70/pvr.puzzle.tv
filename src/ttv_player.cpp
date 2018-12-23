@@ -109,6 +109,7 @@ namespace TtvEngine
     , m_needsAdult(false)
     , m_useApi(true)
     , m_userInfo(userInfo)
+    , m_zoneId(0)
     {
         LoadSessionCache();
         if(m_sessionId.empty()) {
@@ -226,6 +227,7 @@ namespace TtvEngine
         params["channel_id"] = n_to_string(channelId);
         params["nohls"] = "0";
         params["hls_bandwidth_preset"] = "0";
+        params["zone_id"] = n_to_string(m_zoneId);
         try {
             ApiFunctionData apiParams("translation_http.php", params, true);
             CallApiFunction(apiParams, [&url] (Document& jsonRoot)
@@ -355,6 +357,7 @@ namespace TtvEngine
                                 pThis->m_hasTSProxy = jsonRoot["tsproxy_access"].GetInt() == 1;
                                 pThis->m_isVIP = jsonRoot["vip_status"].GetInt() == 1;
                                 pThis->m_needsAdult = jsonRoot["adult"].GetInt() == 1;
+                                pThis->m_zoneId = jsonRoot["zone_id"].GetInt() == 1;
                             });
         }
         CATCH_API_CALL();
@@ -435,9 +438,7 @@ namespace TtvEngine
                     channel.IsRadio = false;
                     channel.HasArchive = ttvChannel.hasArchive = ch["access_archive"].GetInt() != 0;
 
-                    pThis->AddChannel(channel);
-                    pThis->AddChannelToGroup(ch["group"].GetInt(), channel.Id);
-                    
+
                     ttvChannel.epg_id = ch["epg_id"].GetInt();
                     auto chType = string(ch["type"].GetString());
                     ttvChannel.type = chType == "channel" ? TTVChannelType_channel :
@@ -459,8 +460,16 @@ namespace TtvEngine
                     ttvChannel.canTSProxy = ch["ts_on_air"].GetInt() != 0;
                     ttvChannel.canAceStream = ch["as_on_air"].GetInt() != 0;
                     ttvChannel.isHD = ch["hd_flag"].GetInt() != 0;
-                    pThis->m_ttvChannels[channel.Id] = ttvChannel;
+
+                    if(ttvChannel.isAdult && !pThis->m_needsAdult)
+                        continue;
                     
+                    // Add channel
+                    pThis->AddChannel(channel);
+                    pThis->m_ttvChannels[channel.Id] = ttvChannel;
+                  
+                    // Manage groups
+                    pThis->AddChannelToGroup(ch["group"].GetInt(), channel.Id);
                     if(ttvChannel.isFavorite)
                         pThis->AddChannelToGroup(c_favoritesGroupId, channel.Id);
                     if(ttvChannel.isHD)

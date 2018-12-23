@@ -159,7 +159,8 @@ namespace TtvEngine
         bool m_hasTSProxy;
         bool m_isVIP;
         bool m_needsAdult;
-        bool m_useApi;
+        int m_zoneId;
+        const bool m_useApi;
 
         // API helper methods
         typedef std::function<void(const ActionQueue::ActionResult&)> TApiCallCompletion;
