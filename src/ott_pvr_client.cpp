@@ -238,9 +238,9 @@ bool OttPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     
     auto delegate = new OttArchiveDelegate(m_core, recording);
     string url = delegate->UrlForTimeshift(0);
-    if(m_supportSeek)
-        return PVRClientBase::OpenRecordedStream(url, delegate);
-    return PVRClientBase::OpenRecordedStream(url, nullptr);
+    if(!m_supportSeek)
+        SAFE_DELETE(delegate);
+    return PVRClientBase::OpenRecordedStream(url, delegate);
 }
 
 PVR_ERROR OttPVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
