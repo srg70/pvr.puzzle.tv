@@ -1,3 +1,9 @@
+0.8.1
+- TTV API support.
+
+0.8.0
+- TTV TS-Proxy playlist support.
+
 0.7.12
 - Support of Puzzle EPG server.
 

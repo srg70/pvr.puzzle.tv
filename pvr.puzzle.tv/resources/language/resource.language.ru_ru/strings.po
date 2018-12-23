@@ -325,7 +325,7 @@ msgid "TTV error: %s"
 msgstr "Ошибка TTV: %s"
 
 msgctxt "#32020"
-msgid "Favorites"
+msgid "Favourites"
 msgstr "Избранное"
 
 #============= Menus ================
