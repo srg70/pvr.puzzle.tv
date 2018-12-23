@@ -324,6 +324,10 @@ msgctxt "#32019"
 msgid "TTV error: %s"
 msgstr "Ошибка TTV: %s"
 
+msgctxt "#32020"
+msgid "Favorites"
+msgstr "Избранное"
+
 #============= Menus ================
 
 msgctxt "#32050"

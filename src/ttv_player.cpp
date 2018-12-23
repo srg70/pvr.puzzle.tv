@@ -400,12 +400,27 @@ namespace TtvEngine
             auto pThis = this;
             CallApiFunction(apiParams, [pThis] (Document& jsonRoot)
             {
+                int maxGroupId = 0;
                 for(auto& gr : jsonRoot["categories"].GetArray())
                 {
                     auto id = gr["id"].GetInt();
+                    if(maxGroupId < id)
+                        maxGroupId = id;
                     Group group;
                     group.Name = gr["name"].GetString();
                     pThis->AddGroup(id, group);
+                }
+                const int c_favoritesGroupId = ++maxGroupId;
+                const int c_hdGroupId = ++maxGroupId;
+                {
+                    Group group;
+                    char* groupName = XBMC->GetLocalizedString(32020);
+                    group.Name = groupName;
+                    XBMC->FreeString(groupName);
+                    pThis->AddGroup(c_favoritesGroupId, group);
+
+                    group.Name = "HD";
+                    pThis->AddGroup(c_hdGroupId, group);
                 }
                 unsigned int channelNumber = 1;
                 for(auto& ch : jsonRoot["channels"].GetArray())
@@ -445,6 +460,12 @@ namespace TtvEngine
                     ttvChannel.canAceStream = ch["as_on_air"].GetInt() != 0;
                     ttvChannel.isHD = ch["hd_flag"].GetInt() != 0;
                     pThis->m_ttvChannels[channel.Id] = ttvChannel;
+                    
+                    if(ttvChannel.isFavorite)
+                        pThis->AddChannelToGroup(c_favoritesGroupId, channel.Id);
+                    if(ttvChannel.isHD)
+                        pThis->AddChannelToGroup(c_hdGroupId, channel.Id);
+
                     
 //                    LogDebug("Channel %s: Stream - %s, Archive - %s", channel.Name.c_str(),
 //                             ttvChannel.hasHTTPStream ? "YES" : "NO",
