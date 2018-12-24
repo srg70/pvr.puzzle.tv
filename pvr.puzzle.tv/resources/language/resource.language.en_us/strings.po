@@ -238,9 +238,25 @@ msgctxt "#60007"
 msgid "Data Source"
 msgstr "Data Source"
 
+msgctxt "#60008"
+msgid "Use Ace Strem"
+msgstr "Use Ace Strem"
+
+msgctxt "#60009"
+msgid "Server"
+msgstr "Server"
+
 msgctxt "#60010"
 msgid "TTV Player"
 msgstr "TTV"
+
+msgctxt "#60011"
+msgid "Port"
+msgstr "Port"
+
+msgctxt "#32021"
+msgid "Ace Strem not found!"
+msgstr "Ace Strem not found!"
 
 #============= Notifications ================
 

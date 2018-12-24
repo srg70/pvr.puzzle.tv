@@ -47,10 +47,13 @@
 
 #define CATCH_API_CALL() \
 catch (ServerErrorException& ex) { \
-    LogError("%s. TTV API error: %s", __FUNCTION__,  ex.what()); \
-    char* message = XBMC->GetLocalizedString(32019); \
-    XBMC->QueueNotification(QUEUE_ERROR, message, ex.what() ); \
-    XBMC->FreeString(message); \
+    auto err = ex.what(); \
+    LogError("%s. TTV API error: %s", __FUNCTION__,  err); \
+    if(strcmp(err, "noepg") != 0) { \
+        char* message = XBMC->GetLocalizedString(32019); \
+        XBMC->QueueNotification(QUEUE_ERROR, message, ex.what() ); \
+        XBMC->FreeString(message); \
+    } \
 } catch(CurlErrorException& ex) { \
     LogError("%s. CURL error: %s", __FUNCTION__,  ex.what()); \
     XBMC->QueueNotification(QUEUE_ERROR, "CURL fatal error: %s", ex.what() ); \
@@ -91,24 +94,37 @@ namespace TtvEngine
     
     struct Core::ApiFunctionData
     {
-        ApiFunctionData(const char* _name)
-        : ApiFunctionData(_name, ParamList())
+        ApiFunctionData(const char* _baseUrl,  const char* _name)
+        : baseUrl(_baseUrl), name(_name) , priority(HttpEngine::RequestPriority_Low)
         {}
-        
-        ApiFunctionData(const char* _name, const ParamList& _params, bool hiPriority = false)
-        : name(_name) , params(_params), isHiPriority(hiPriority)
-        {}
+        std::string BuildRequest() const
+        {
+            ParamList::const_iterator runner = params.begin();
+            ParamList::const_iterator first = runner;
+            ParamList::const_iterator end = params.end();
+            
+            string query;
+            for (; runner != end; ++runner)
+            {
+                query += runner == first ? "?" : "&";
+                query += runner->first + '=' + runner->second;
+            }
+            std::string strRequest = baseUrl;
+            strRequest += name + query;
+            return strRequest;
+        }
         std::string name;
-        const ParamList params;
-        bool isHiPriority;
+        std::string baseUrl;
+        ParamList params;
+        HttpEngine::RequestPriority priority;
     };
 
-    Core::Core(const UserInfo& userInfo)
+    Core::Core(const CoreParams& coreParams)
     : m_hasTSProxy(false)
     , m_isVIP(false)
     , m_needsAdult(false)
     , m_useApi(true)
-    , m_userInfo(userInfo)
+    , m_coreParams(coreParams)
     , m_zoneId(0)
     {
         LoadSessionCache();
@@ -128,6 +144,13 @@ namespace TtvEngine
     {
         if(m_useApi && !m_sessionId.empty()) {
             GetUserInfo();
+            if(m_coreParams.useAce) {
+                if(!CheckAceEngineRunning()) {
+                    char* message = XBMC->GetLocalizedString(32021);
+                    XBMC->QueueNotification(QUEUE_ERROR, message);
+                    XBMC->FreeString(message); 
+                }
+            }
         }
 
         RebuildChannelAndGroupList();
@@ -212,6 +235,20 @@ namespace TtvEngine
 
     }
     
+    string Core::GetNextStream(ChannelId channelId, int currentChannelIdx)
+    {
+        auto& channelList = m_channelList;
+        if(channelList.count( channelId ) != 1) {
+            LogError(" >>>>   TTV::GetNextStream: unknown channel ID= %d <<<<<", channelId);
+            return string();
+        }
+        auto& urls = channelList.at(channelId).Urls;
+        if(urls.size() > currentChannelIdx + 1)
+            return urls[currentChannelIdx + 1];
+        return string();
+        
+    }
+    
     string Core::GetUrl(ChannelId channelId)
     {
         if(m_useApi)
@@ -220,25 +257,118 @@ namespace TtvEngine
     }
 
 #pragma mark - API methods
+    bool Core::CheckAceEngineRunning()
+    {
+        //http://127.0.0.1:6878/webui/api/service?method=get_version&format=jsonp
+        ApiFunctionData apiData(m_coreParams.AceServerUrlBase().c_str(), "/webui/api/service");
+        apiData.params["method"] = "get_version";
+        apiData.params["format"] = "jsonp";
+        apiData.params["callback"] = "mycallback";
+        bool isRunning = false;
+        P8PLATFORM::CEvent event;
+        try{
+            string strRequest = apiData.BuildRequest();
+            m_httpEngine->CallApiAsync(strRequest,[&isRunning ] (const std::string& response)
+                                       {
+                                           LogDebug("Ace Engine version: %s", response.c_str());
+                                           isRunning = response.find("version") != string::npos;
+                                       }, [&isRunning, &event](const ActionQueue::ActionResult& s) {
+                                           if(s.status != ActionQueue::kActionCompleted)
+                                               isRunning = false;
+                                           event.Signal();
+                                       } , HttpEngine::RequestPriority_Hi);
+            
+        }
+        CATCH_API_CALL();
+        event.Wait();
+        return m_isAceRunning = isRunning;
+    }
+    
     string Core::GetUrl_Api(ChannelId channelId)
     {
-        string url;
-        ParamList params;
-        params["channel_id"] = n_to_string(channelId);
-        params["nohls"] = "0";
-        params["hls_bandwidth_preset"] = "0";
-        params["zone_id"] = n_to_string(m_zoneId);
+        if(m_channelList.count( channelId ) != 1) {
+            LogError(" >>>>   TTVCore::GetUrl_Api: unknown channel ID= %d <<<<<", channelId);
+            return string();
+        }
+        Channel ch = m_channelList.at(channelId);
+        auto& urls = ch.Urls;
+        if(urls.size() == 0) {
+            auto url = GetUrl_Api_Ace(channelId);
+            if(!url.empty())
+                urls.push_back(url);
+            url = GetUrl_Api_Http(channelId);
+            if(!url.empty())
+                urls.push_back(url);
+            AddChannel(ch);
+        }
+
+        if(ch.Urls.size() == 0) {
+            char* message  = XBMC->GetLocalizedString(32017);
+            XBMC->QueueNotification(QUEUE_ERROR, message);
+            XBMC->FreeString(message);
+            return string();
+        }
+        return  ch.Urls[0];
+    }
+    
+    string Core::GetUrl_Api_Ace(ChannelId channelId)
+    {
+        if(!m_isAceRunning) {
+            LogNotice("Ace stream enging is not running. Check PVR parameters..", channelId);
+            return string();
+        }
+        if(!m_ttvChannels.at(channelId).canAceStream) {
+            LogNotice("TTV channel %d has no Ace stream available.", channelId);
+            return string();
+        }
+        
+        string source, type;
+        ApiFunctionData apiData(c_TTV_API_URL_base, "translation_stream.php");
+        apiData.params["channel_id"] = n_to_string(channelId);
+        apiData.priority = HttpEngine::RequestPriority_Hi;
         try {
-            ApiFunctionData apiParams("translation_http.php", params, true);
-            CallApiFunction(apiParams, [&url] (Document& jsonRoot)
+            CallApiFunction(apiData, [&source, &type] (Document& jsonRoot)
+                            {
+                                source = jsonRoot["source"].GetString();
+                                type = jsonRoot["type"].GetString();
+                            });
+        }
+        CATCH_API_CALL();
+        if(!source.empty())
+            source = HttpEngine::Escape(source);
+        if(type == "contentid")
+            return string(  m_coreParams.AceServerUrlBase() + "/ace/getstream?id=") + source + "&pid=" + m_deviceId;
+        if(type == "torrent")
+            return string( m_coreParams.AceServerUrlBase() + "/ace/getstream?url=") + source + "&pid=" + m_deviceId;;
+        
+        return string();
+
+    }
+    
+    string Core::GetUrl_Api_Http(ChannelId channelId)
+    {
+        if(!m_ttvChannels.at(channelId).hasHTTPStream/*canTSProxy*/) {
+            LogNotice("TTV channel %d has no HTTP stream available.", channelId);
+            return string();
+        }
+        
+        string url;
+        ApiFunctionData apiData(c_TTV_API_URL_base, "translation_http.php");
+        apiData.params["channel_id"] = n_to_string(channelId);
+        apiData.params["nohls"] = "0";
+        apiData.params["hls_bandwidth_preset"] = "0";
+        apiData.params["zone_id"] = n_to_string(m_zoneId);
+        apiData.priority = HttpEngine::RequestPriority_Hi;
+        try {
+            CallApiFunction(apiData, [&url] (Document& jsonRoot)
                             {
                                 url = jsonRoot["source"].GetString();
                             });
         }
         CATCH_API_CALL();
         return url;
+        
     }
-    
     std::string Core::GetArchiveUrl_Api(ChannelId channelId, time_t startTime)
     {
         string url;
@@ -254,10 +384,11 @@ namespace TtvEngine
         try {
             
             int record_id = 0;
-            ParamList params;
-            params["date"] = archiveDate;
-            params["epg_id"] = n_to_string(epg_id);
-            CallApiFunction(ApiFunctionData("arc_records.php", params), [startTime, &record_id] (Document& jsonRoot)
+            ApiFunctionData apiData(c_TTV_API_URL_base, "arc_records.php");
+            apiData.params["date"] = archiveDate;
+            apiData.params["epg_id"] = n_to_string(epg_id);
+            apiData.priority = HttpEngine::RequestPriority_Hi;
+            CallApiFunction(apiData, [startTime, &record_id] (Document& jsonRoot)
                             {
                                 if(!jsonRoot.HasMember("records"))
                                 return;
@@ -272,11 +403,33 @@ namespace TtvEngine
                                 }
                             });
             if(0 == record_id)
-            return url;
+                return url;
             
-            params.clear();
-            params["record_id"] = n_to_string(record_id);
-            CallApiFunction(ApiFunctionData ("arc_http.php", params), [&url] (Document& jsonRoot)
+            if(m_isAceRunning) {
+                string source, type;
+                apiData = ApiFunctionData(c_TTV_API_URL_base, "arc_stream.php");
+                apiData.params["record_id"] = n_to_string(record_id);
+                apiData.priority = HttpEngine::RequestPriority_Hi;
+                try {
+                    CallApiFunction(apiData, [&source, &type] (Document& jsonRoot)
+                                    {
+                                        source = jsonRoot["source"].GetString();
+                                        type = jsonRoot["type"].GetString();
+                                    });
+                }
+                CATCH_API_CALL();
+                if(!source.empty())
+                    source = HttpEngine::Escape(source);
+                if(type == "contentid")
+                    return string(  m_coreParams.AceServerUrlBase() + "/ace/getstream?id=") + source + "&pid=" + m_deviceId;
+                if(type == "torrent")
+                    return string( m_coreParams.AceServerUrlBase() + "/ace/getstream?url=") + source + "&pid=" + m_deviceId;;
+            }
+
+            apiData = ApiFunctionData(c_TTV_API_URL_base, "arc_http.php");
+            apiData.params["record_id"] = n_to_string(record_id);
+            apiData.priority = HttpEngine::RequestPriority_Hi;
+            CallApiFunction(apiData, [&url] (Document& jsonRoot)
                             {
                                 url = jsonRoot["source"].GetString();
                                 LogDebug(">> !!! >> TTV archive URL: %s", url.c_str());
@@ -303,13 +456,12 @@ namespace TtvEngine
             
             auto epgOffset = - XMLTV::LocalTimeOffset();
             
-            ParamList params;
-            params["btime"] = n_to_string(startTime);
-            params["etime"] = n_to_string(endTime);
-            params["epg_id"] = n_to_string(ttvCh.epg_id);
-            ApiFunctionData apiParams("translation_epg.php", params);
-            
-            CallApiAsync(apiParams, [pThis, chId, epgOffset] (Document& jsonRoot)
+            ApiFunctionData apiData(c_TTV_API_URL_base, "translation_epg.php");
+            apiData.params["btime"] = n_to_string(startTime);
+            apiData.params["etime"] = n_to_string(endTime);
+            apiData.params["epg_id"] = n_to_string(ttvCh.epg_id);
+
+            CallApiAsync(apiData, [pThis, chId, epgOffset] (Document& jsonRoot)
                          {
                              if(!jsonRoot.HasMember("data"))
                              return;
@@ -349,10 +501,10 @@ namespace TtvEngine
         ParamList params;
 
         try {
-            ApiFunctionData apiParams("userinfo.php", params);
+            ApiFunctionData apiData(c_TTV_API_URL_base,"userinfo.php");
             
             auto pThis = this;
-            CallApiFunction(apiParams, [&pThis] (Document& jsonRoot)
+            CallApiFunction(apiData, [&pThis] (Document& jsonRoot)
                             {
                                 pThis->m_hasTSProxy = jsonRoot["tsproxy_access"].GetInt() == 1;
                                 pThis->m_isVIP = jsonRoot["vip_status"].GetInt() == 1;
@@ -366,22 +518,22 @@ namespace TtvEngine
     std::string Core::GetPlaylistUrl()
     {
         string url;
-        ParamList params;
-//        params["cat_group"] = "0";
-//        params["cat"] = "0";
-//        params["ts"] = "0";
-//        params["fav"] = "0";
-//        params["cp1251"] = "0";
-        params["hls"] = "1";
-//        params["cat_fav"] = "0";
-//        params["cat_tag"] = "0";
-        params["format"] = "m3u";
-        params["tag"] = "1";
-        params["archive"] = "1";
+       
+        ApiFunctionData apiData(c_TTV_API_URL_base, "user_playlist_url.php");
+//        apiData.params["cat_group"] = "0";
+//        apiData.params["cat"] = "0";
+//        apiData.params["ts"] = "0";
+//        apiData.params["fav"] = "0";
+//        apiData.params["cp1251"] = "0";
+        apiData.params["hls"] = "1";
+//        apiData.params["cat_fav"] = "0";
+//        apiData.params["cat_tag"] = "0";
+        apiData.params["format"] = "m3u";
+        apiData.params["tag"] = "1";
+        apiData.params["archive"] = "1";
         try {
-            ApiFunctionData apiParams("user_playlist_url.php", params);
-            
-            CallApiFunction(apiParams, [&url] (Document& jsonRoot)
+
+            CallApiFunction(apiData, [&url] (Document& jsonRoot)
                             {
                                 url = jsonRoot["url"].GetString();
                                 LogDebug(">> !!! >> TTV plist URL: %s", url.c_str());
@@ -396,12 +548,11 @@ namespace TtvEngine
     {
         try {
 
-            ParamList params;
-            params["type"] = "all";
-            ApiFunctionData apiParams("translation_list.php", params);
-            
+            ApiFunctionData apiData(c_TTV_API_URL_base, "translation_list.php");
+            apiData.params["type"] = "all";
+
             auto pThis = this;
-            CallApiFunction(apiParams, [pThis] (Document& jsonRoot)
+            CallApiFunction(apiData, [pThis] (Document& jsonRoot)
             {
                 int maxGroupId = 0;
                 for(auto& gr : jsonRoot["categories"].GetArray())
@@ -493,11 +644,10 @@ namespace TtvEngine
         try {
             m_epgIdToChannelId.clear();
 
-            ParamList params;
-            ApiFunctionData apiParams("arc_list.php", params);
+            ApiFunctionData apiData(c_TTV_API_URL_base, "arc_list.php");
             
             auto pThis = this;
-            CallApiFunction(apiParams, [pThis] (Document& jsonRoot)
+            CallApiFunction(apiData, [pThis] (Document& jsonRoot)
             {
                 for(auto& ch : jsonRoot["channels"].GetArray())
                 {
@@ -535,24 +685,12 @@ namespace TtvEngine
         
         const bool isLoginCommand = data.name == "auth.php";// || data.name == "logout";
         // Build HTTP request
-        string query;
-        ParamList localParams(data.params);
-        localParams["typeresult"] = "json";
+        ApiFunctionData localData(data);
+        localData.params["typeresult"] = "json";
         if(!isLoginCommand) {
-            localParams["session"] = m_sessionId;
+            localData.params["session"] = m_sessionId;
         }
-        ParamList::const_iterator runner = localParams.begin();
-        ParamList::const_iterator first = runner;
-        ParamList::const_iterator end = localParams.end();
-        
-        for (; runner != end; ++runner)
-        {
-            query += runner == first ? "?" : "&";
-            query += runner->first + '=' + runner->second;
-        }
-        std::string strRequest = c_TTV_API_URL_base;
-        strRequest += data.name + query;
-        
+        string strRequest = localData.BuildRequest();
         auto start = P8PLATFORM::GetTimeMs();
         LogDebug("Calling '%s'.",  data.name.c_str());
         
@@ -594,7 +732,7 @@ namespace TtvEngine
             }
             completion(s);
         };
-        m_httpEngine->CallApiAsync(strRequest, parserWrapper, comp, data.isHiPriority);
+        m_httpEngine->CallApiAsync(strRequest, parserWrapper, comp, data.priority);
     }
     
 #pragma mark - API Session
@@ -657,15 +795,13 @@ namespace TtvEngine
         }
         
         // Authorize to TTV
-        ParamList params;
-        params["username"] = m_userInfo.user;
-        params["password"] = m_userInfo.password;
-        params["application"] = "xbmc";
-        params["guid"] = m_deviceId;
+        ApiFunctionData apiData(c_TTV_API_URL_base, "auth.php");
+        apiData.params["username"] = m_coreParams.user;
+        apiData.params["password"] = m_coreParams.password;
+        apiData.params["application"] = "xbmc";
+        apiData.params["guid"] = m_deviceId;
         try {
-            ApiFunctionData apiParams("auth.php", params);
-            
-            CallApiFunction(apiParams, [&] (Document& jsonRoot)
+            CallApiFunction(apiData, [&] (Document& jsonRoot)
                             {
                                 m_sessionId = jsonRoot["session"].GetString();
                             });

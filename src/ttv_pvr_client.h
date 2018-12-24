@@ -45,6 +45,8 @@ public:
     bool OpenRecordedStream(const PVR_RECORDING &recording);
 
 protected:
+    std::string GetStreamUrl(PvrClient::ChannelId channelId);
+    std::string GetNextStreamUrl(PvrClient::ChannelId channelId);
     PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
     ADDON_STATUS OnReloadEpg();
 
@@ -58,7 +60,8 @@ private:
     TtvEngine::Core* m_core;
     std::string m_playlistUrl;
     std::string m_epgUrl;
-    
+    int m_currentChannelStreamIdx;
+
     bool m_supportSeek;
     enum TTVMode{
         TTVMode_api = 0,
@@ -67,6 +70,9 @@ private:
     TTVMode m_ttvMode;
     std::string m_user;
     std::string m_password;
+    bool m_useAce;
+    std::string m_aceServerUri;
+    int m_aceServerPort;
 };
 
 #endif //__ttv_pvr_client_h__

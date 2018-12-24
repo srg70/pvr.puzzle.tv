@@ -35,7 +35,7 @@
 #include <memory>
 #include "p8-platform/util/timeutils.h"
 #include "ActionQueue.hpp"
-
+#include "helpers.h"
 
 namespace XMLTV {
     struct EpgEntry;
@@ -93,11 +93,22 @@ namespace TtvEngine
     class Core : public PvrClient::ClientCoreBase
     {
     public:
-        struct UserInfo {
+        struct CoreParams {
+            CoreParams()
+            : useAce(false)
+            , aceServerPort(0)
+            {}
             std::string user;
             std::string password;
+            bool useAce;
+            std::string aceServerUri;
+            int aceServerPort;
+            std::string AceServerUrlBase() const
+            {
+                return std::string ("http://") + aceServerUri +":" + n_to_string(aceServerPort);
+            }
         };
-        Core(const UserInfo& userInfo);
+        Core(const CoreParams& coreParams);
         Core(const std::string &playListUrl, const std::string &epgUrl);
         ~Core();
         
@@ -105,7 +116,8 @@ namespace TtvEngine
         void  UpdateEpgForAllChannels(time_t startTime, time_t endTime);
 
         std::string GetUrl(PvrClient::ChannelId channelId);
-        
+        std::string GetNextStream(PvrClient::ChannelId channelId, int currentChannelIdx);
+
         void ClearSession();
     protected:
         virtual void Init(bool clearEpgCache);
@@ -152,7 +164,7 @@ namespace TtvEngine
         
         std::map<int, PvrClient::ChannelId> m_epgIdToChannelId;
         
-        const UserInfo m_userInfo;
+        const CoreParams m_coreParams;
         std::string m_deviceId;
         std::string m_sessionId;
 
@@ -179,11 +191,14 @@ namespace TtvEngine
         void RenewSession();
         
         //API
+        bool CheckAceEngineRunning();
         std::string GetPlaylistUrl();
         void GetUserInfo();
         void InitializeArchiveInfo();
         void BuildChannelAndGroupList_Api();
         std::string GetArchiveUrl_Api(PvrClient::ChannelId channelId, time_t startTime);
+        std::string GetUrl_Api_Ace(PvrClient::ChannelId channelId);
+        std::string GetUrl_Api_Http(PvrClient::ChannelId channelId);
         void UpdateEpgForAllChannels_Api(time_t startTime, time_t endTime);
         std::string GetUrl_Api(PvrClient::ChannelId channelId);
 
@@ -198,6 +213,7 @@ namespace TtvEngine
         std::string m_epgUrl;
         P8PLATFORM::CTimeout m_epgUpdateInterval;
         ArchiveInfos m_archiveInfo;
+        bool m_isAceRunning;
    };
 }
 #endif //_ttv_player_h_

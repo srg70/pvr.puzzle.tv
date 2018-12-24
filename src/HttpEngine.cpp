@@ -88,3 +88,19 @@ void HttpEngine::SetCurlTimeout(long timeout)
 {
     HttpEngine::c_CurlTimeout = timeout;
 }
+
+std::string HttpEngine::Escape(const std::string& str)
+{
+    std::string result;
+    CURL *curl = curl_easy_init();
+    if(curl) {
+        char *output = curl_easy_escape(curl, str.c_str(), str.size());
+        if(output) {
+            result = output;
+            curl_free(output);
+        }
+        curl_easy_cleanup(curl);
+    }
+    return result;
+}
+

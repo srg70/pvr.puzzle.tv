@@ -238,9 +238,25 @@ msgctxt "#60007"
 msgid "Data Source"
 msgstr "Источник данных"
 
+msgctxt "#60008"
+msgid "Use Ace Strem"
+msgstr "Исплоьзовать Ace Strem"
+
+msgctxt "#60009"
+msgid "Server"
+msgstr "Сервер"
+
 msgctxt "#60010"
 msgid "TTV Player"
 msgstr "Торрент ТВ"
+
+msgctxt "#60011"
+msgid "Port"
+msgstr "Порт"
+
+msgctxt "#32021"
+msgid "Ace Strem not found!"
+msgstr "Ace Strem не запущен!"
 
 #============= Notifications ================
 

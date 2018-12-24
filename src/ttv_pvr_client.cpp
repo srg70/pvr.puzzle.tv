@@ -56,6 +56,9 @@ static const char* c_seek_archives = "ttv_seek_archives";
 static const char* c_ttv_mode = "ttv_mode";
 static const char* c_ttv_user = "ttv_user";
 static const char* c_ttv_password = "ttv_password";
+static const char* c_ttv_use_acestream = "ttv_use_acestream";
+static const char* c_ttv_ace_server_uri = "ttv_ace_server_uri";
+static const char* c_ttv_ace_server_port = "ttv_ace_server_port";
 
 ADDON_STATUS TtvPVRClient::Init(PVR_PROPERTIES* pvrprops)
 {
@@ -79,6 +82,16 @@ ADDON_STATUS TtvPVRClient::Init(PVR_PROPERTIES* pvrprops)
         m_user = buffer;
     if (XBMC->GetSetting(c_ttv_password, &buffer))
         m_password = buffer;
+    
+    m_useAce = false;
+    XBMC->GetSetting(c_ttv_use_acestream, &m_useAce);
+    m_aceServerUri = "127.0.0.1";
+    if (XBMC->GetSetting(c_ttv_ace_server_uri, &buffer))
+        m_aceServerUri = buffer;
+    m_aceServerPort = 6878;
+    XBMC->GetSetting(c_ttv_ace_server_port, &m_aceServerPort);
+
+    m_currentChannelStreamIdx = -1;
 
     
     retVal = CreateCoreSafe(false);
@@ -140,10 +153,13 @@ void TtvPVRClient::CreateCore(bool clearEpgCache)
         {
             case TTVMode_api:
             {
-                TtvEngine::Core::UserInfo ui;
-                ui.user = m_user;
-                ui.password = m_password;
-                m_core = new TtvEngine::Core(ui);
+                TtvEngine::Core::CoreParams cp;
+                cp.user = m_user;
+                cp.password = m_password;
+                cp.useAce = m_useAce;
+                cp.aceServerUri = m_aceServerUri;
+                cp.aceServerPort = m_aceServerPort;
+                m_core = new TtvEngine::Core(cp);
             }
                 break;
             case TTVMode_playlist:
@@ -188,6 +204,12 @@ ADDON_STATUS TtvPVRClient::SetSetting(const char *settingName, const void *setti
     }
     else if(strcmp(settingName,  c_seek_archives) == 0) {
         m_supportSeek = *(const bool*) settingValue;
+    }
+    else if(strcmp(settingName,  c_ttv_mode) == 0) {
+        result = ADDON_STATUS_NEED_RESTART;
+    }
+    else if(strcmp(settingName,  c_ttv_use_acestream) == 0) {
+        result = ADDON_STATUS_NEED_RESTART;
     }
     else {
         result = PVRClientBase::SetSetting(settingName, settingValue);
@@ -234,6 +256,21 @@ ADDON_STATUS TtvPVRClient::OnReloadEpg()
     }
     
     return retVal;
+}
+
+
+string TtvPVRClient::GetStreamUrl(ChannelId channelId)
+{
+    m_currentChannelStreamIdx = 0;
+    return PVRClientBase::GetStreamUrl(channelId);
+}
+
+string TtvPVRClient::GetNextStreamUrl(ChannelId channelId)
+{
+    if(m_core == nullptr)
+        return string();
+    LogError("TtvPVRClient:: trying to move to next stream from [%d].", m_currentChannelStreamIdx);
+    return m_core->GetNextStream(channelId, m_currentChannelStreamIdx++);
 }
 
 

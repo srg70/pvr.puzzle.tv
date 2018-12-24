@@ -63,13 +63,19 @@ public:
 class HttpEngine
 {
 public:
+    
+    enum RequestPriority{
+        RequestPriority_Hi = 0,
+        RequestPriority_Low
+    };
+    
     typedef std::map<std::string, std::string> TCoocies;
     
     HttpEngine ();
     ~HttpEngine();
     
     template <typename TParser, typename TCompletion>
-    void CallApiAsync(const std::string& request, TParser parser, TCompletion completion, bool isHiPriority = false)
+    void CallApiAsync(const std::string& request, TParser parser, TCompletion completion, RequestPriority priority = RequestPriority_Low)
     {
         if(!m_apiCalls->IsRunning())
             throw QueueNotRunningException("API request queue in not running.");
@@ -82,7 +88,7 @@ public:
             if(s.status != ActionQueue::kActionCompleted)
                 completion(s);
         };
-        if(isHiPriority)
+        if(priority == RequestPriority_Hi)
             m_apiCalls->PerformHiPriority(action, comp);
         else
             m_apiCalls->PerformAsync(action, comp);
@@ -95,7 +101,8 @@ public:
     }
     void CancelAllRequests();
     static void SetCurlTimeout(long timeout);
-
+    static std::string Escape(const std::string& str);
+    
     TCoocies m_sessionCookie;
 
 private:

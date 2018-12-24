@@ -371,7 +371,7 @@ string PuzzleTV::GetUrl(ChannelId channelId)
 {
     auto& channelList = m_channelList;
     if(channelList.count( channelId ) != 1) {
-        LogError(" >>>>   PuzzleTV::GetNextStream: Unknown channel ID= %d <<<<<", channelId);
+        LogError(" >>>>   PuzzleTV::GetUrl: unknown channel ID= %d <<<<<", channelId);
         return string();
     }
     Channel ch = channelList.at(channelId);
@@ -391,7 +391,7 @@ string PuzzleTV::GetUrl(ChannelId channelId)
                    std::for_each(jsonRoot.Begin(), jsonRoot.End(), [&]  (const Value & i) mutable
                                 {
                                     auto url = i.GetString();
-                                         urls.push_back(url);
+                                    urls.push_back(url);
                                     LogDebug(" >>>>  URL: %s <<<<<",  url);
 
                                 });
@@ -403,9 +403,9 @@ string PuzzleTV::GetUrl(ChannelId channelId)
            } catch (...) {
                LogError(" >>>>  FAILED to get URL for channel ID=%d <<<<<", channelId);
            }
-        
+        AddChannel(ch);
+
     }
-    AddChannel(ch);
     if(ch.Urls.size() == 0) {
         char* message  = XBMC->GetLocalizedString(32017);
         XBMC->QueueNotification(QUEUE_ERROR, message);
