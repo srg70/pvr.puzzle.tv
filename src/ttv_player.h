@@ -185,6 +185,8 @@ namespace TtvEngine
         // Epg management
         void LoadEpg();
         bool AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
+        void AddEpgEntry(PvrClient::EpgEntry& epg);
+        
         // Session
         void LoadSessionCache();
         void SaveSessionCache();

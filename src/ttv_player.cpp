@@ -439,7 +439,14 @@ namespace TtvEngine
         CATCH_API_CALL();
         return url;
     }
-
+    // Linux compilation issue workarround
+    // Call protected base method from private method
+    // instead of directly from lambda.
+    void Core::AddEpgEntry(PvrClient::EpgEntry& epg)
+    {
+        UniqueBroadcastIdType id = epg.StartTime;
+        ClientCoreBase::AddEpgEntry(id, epg);
+    }
     void Core::UpdateEpgForAllChannels_Api(time_t startTime, time_t endTime)
     {
         auto pThis = this;
@@ -477,8 +484,7 @@ namespace TtvEngine
                                  //epgEntry.Description = m.value["descr"].GetString();
                                  epgEntry.StartTime = epg["btime"].GetInt();//  + epgOffset;
                                  epgEntry.EndTime = epg["etime"].GetInt();// + epgOffset;
-                                 UniqueBroadcastIdType id = epgEntry.StartTime;
-                                 pThis->ClientCoreBase::AddEpgEntry(id, epgEntry);
+                                 pThis->AddEpgEntry(epgEntry);
                              }
                              
                          },
