@@ -797,7 +797,7 @@ namespace TtvEngine
     void Core::RenewSession(){
         // Check device ID
         if(m_deviceId.empty()) {
-            m_deviceId = GUID::generate();
+            m_deviceId = CUSTOM_GUID::generate();
         }
         
         // Authorize to TTV

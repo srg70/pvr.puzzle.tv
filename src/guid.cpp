@@ -29,7 +29,7 @@
 #include <functional>
 #include <string>
 
-namespace GUID {
+namespace CUSTOM_GUID {
 
 unsigned char random_char() {
     std::random_device rd;
@@ -50,17 +50,17 @@ std::string generate_hex(const unsigned int len) {
     return ss.str();
 }
     std::string generate() {
-        std::string guid = generate_hex(4);
-        guid += '-';
-        guid += generate_hex(2);
-        guid += '-';
-        guid += generate_hex(2);
-        guid += '-';
-        guid += generate_hex(2);
-        guid += '-';
-        guid += generate_hex(8);
+        std::string g_id = generate_hex(4);
+        g_id += '-';
+        g_id += generate_hex(2);
+        g_id += '-';
+        g_id += generate_hex(2);
+        g_id += '-';
+        g_id += generate_hex(2);
+        g_id += '-';
+        g_id += generate_hex(8);
 
-        return guid;
+        return g_id;
     }
 
 }

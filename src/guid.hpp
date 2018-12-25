@@ -25,7 +25,7 @@
 
 #include <string>
 
-namespace GUID {
+namespace CUSTOM_GUID {
     std::string generate();
 }
 
