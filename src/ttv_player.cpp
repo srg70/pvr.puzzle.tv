@@ -144,6 +144,7 @@ namespace TtvEngine
     {
         if(m_useApi && !m_sessionId.empty()) {
             GetUserInfo();
+            m_isAceRunning = false;
             if(m_coreParams.useAce) {
                 if(!CheckAceEngineRunning()) {
                     char* message = XBMC->GetLocalizedString(32021);
