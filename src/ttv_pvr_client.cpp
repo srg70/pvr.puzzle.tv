@@ -245,15 +245,15 @@ ADDON_STATUS TtvPVRClient::OnReloadEpg()
 {
     ADDON_STATUS retVal = CreateCoreSafe(true);
     
-    if(ADDON_STATUS_OK == retVal && nullptr != m_core){
-        std::time_t startTime = std::time(nullptr);
-        startTime = std::mktime(std::gmtime(&startTime));
-        // Request EPG for all channels from -7 to +1 days
-        time_t endTime = startTime + 1 * 24 * 60 * 60;
-        startTime -= 7 * 24 * 60 * 60;
-        
-        m_core->UpdateEpgForAllChannels(startTime, endTime);
-    }
+//    if(ADDON_STATUS_OK == retVal && nullptr != m_core){
+//        std::time_t startTime = std::time(nullptr);
+//        startTime = std::mktime(std::gmtime(&startTime));
+//        // Request EPG for all channels from -7 to +1 days
+//        time_t endTime = startTime + 1 * 24 * 60 * 60;
+//        startTime -= 7 * 24 * 60 * 60;
+//        
+//        m_core->UpdateEpgForAllChannels(startTime, endTime);
+//    }
     
     return retVal;
 }

@@ -125,10 +125,10 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     SetTimeshiftBufferType(timeshiftBufferType);
     SetCacheLimit(cacheSizeLimit);
     
-    PVR_MENUHOOK hook = {RELOAD_EPG_MENU_HOOK, 32050, PVR_MENUHOOK_EPG};
+    PVR_MENUHOOK hook = {RELOAD_EPG_MENU_HOOK, 32050, PVR_MENUHOOK_ALL};
     PVR->AddMenuHook(&hook);
 
-    hook = {RELOAD_RECORDINGS_MENU_HOOK, 32051, PVR_MENUHOOK_RECORDING};
+    hook = {RELOAD_RECORDINGS_MENU_HOOK, 32051, PVR_MENUHOOK_ALL};
     PVR->AddMenuHook(&hook);
 
     // Local recordings path prefix
@@ -142,7 +142,8 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     
     m_liveChannelId =  m_localRecordChannelId = UnknownChannelId;
     m_lastBytesRead = 1;
-
+    m_lastRecordingsAmount = 0;
+    
     return ADDON_STATUS_OK;
     
 }
@@ -664,7 +665,10 @@ int PVRClientBase::GetRecordingsAmount(bool deleted)
         }
     }
 
-    LogDebug("PVRClientBase: found %d recordings.", size);
+    if(m_lastRecordingsAmount  != size)
+        PVR->TriggerRecordingUpdate();
+    LogDebug("PVRClientBase: found %d recordings. Was %d", size, m_lastRecordingsAmount);
+    m_lastRecordingsAmount = size;
     return size;
     
 }

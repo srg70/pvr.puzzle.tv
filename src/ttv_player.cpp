@@ -705,7 +705,7 @@ namespace TtvEngine
                     if(ttvChannel.isAdult && !pThis->m_needsAdult)
                         continue;
 
-                    dump_json(ch);
+                    //dump_json(ch);
 
                     if(ttvChannel.epg_id != 0)
                         pThis->m_epgIdToChannelId[ttvChannel.epg_id] = channel.Id;

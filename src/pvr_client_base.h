@@ -153,6 +153,7 @@ namespace PvrClient
         TimeshiftBufferType m_timeshiftBufferType;
         std::string m_cacheDir;
         std::string m_recordingsDir;
+        int m_lastRecordingsAmount;
         std::string m_clientPath;
         std::string m_userPath;
         int m_channelReloadTimeout;
