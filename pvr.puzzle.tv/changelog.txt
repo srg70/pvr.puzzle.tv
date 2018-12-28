@@ -1,4 +1,9 @@
-0.8.1
+0.8.3
+- Optimising of EPG reloading
+- Commom menus hooks in all available menues
+- TTV: non-VIP user tweaks.
+
+0.8.2
 - TTV API support.
 
 0.8.0
