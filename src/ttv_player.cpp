@@ -33,7 +33,8 @@
 #include <assert.h>
 #include <algorithm>
 #include <sstream>
-#include <vector>
+#include <list>
+#include <set>
 #include <ctime>
 #include "p8-platform/threads/mutex.h"
 #include "p8-platform/util/util.h"
@@ -78,6 +79,7 @@ namespace TtvEngine
     static const char* c_SessionCachePath = "special://temp/pvr-puzzle-tv/ttv_session.txt";
 
     static const char* c_TTV_API_URL_base = "http://1ttvapi.top/v3/";
+    static const char* c_ACE_ENGINE_HLS_STREAM = "/ace/getstream?"; //"/ace/manifest.m3u8?";
     
     struct NoCaseComparator : binary_function<string, string, bool>
     {
@@ -122,11 +124,13 @@ namespace TtvEngine
     Core::Core(const CoreParams& coreParams)
     : m_hasTSProxy(false)
     , m_isVIP(false)
+    , m_isRegistered(false)
     , m_needsAdult(false)
     , m_useApi(true)
     , m_coreParams(coreParams)
     , m_zoneId(0)
     {
+        m_isRegistered = m_coreParams.user != "anonymous";
         LoadSessionCache();
         if(m_sessionId.empty()) {
             RenewSession();
@@ -160,8 +164,17 @@ namespace TtvEngine
         } else {
             LoadEpgCache(c_EpgCacheFile);
         }
-        if(!m_useApi)
+        if(m_useApi) {
+            time_t now = time(nullptr);
+            int archiveDays = 10;
+            while(archiveDays--) {
+                UpdateArchiveFor(now);
+                now -= 24*60*60;
+            }
+        } else {
             LoadEpg();
+        }
+            
     }
     
     Core::~Core()
@@ -204,28 +217,34 @@ namespace TtvEngine
     {
         time_t now = time(nullptr);
         auto when = now - entry.StartTime;
+        entry.HasArchive = false;
+        if(when < 0)
+            return;
         
         auto chId = entry.ChannelId;
         if(m_useApi) {
             if(m_ttvChannels.count(chId) == 0)
-            return;
-            if(m_epgIdToChannelId.count(m_ttvChannels.at(chId).epg_id) == 0)
-            return;
-            entry.HasArchive = when > 0;
-        } else {
-            entry.HasArchive = false;
-            if(m_archiveInfo.count(chId) == 0)
-            return;
+                return;
+            if(!m_isAceRunning && !m_ttvChannels[chId].hasHTTPArchive)
+                return;
+
+//            if(m_epgIdToChannelId.count(m_ttvChannels.at(chId).epg_id) == 0)
+//                return;
             
-            const time_t archivePeriod = m_archiveInfo.at(entry.ChannelId).days * 24 * 60 * 60; //archive  days in secs
-            entry.HasArchive = when > 0 && when < archivePeriod;
+            entry.HasArchive = GetRecordId(chId, entry.StartTime) != 0;
+        } else {
+            if(m_archiveInfoPlist.count(chId) == 0)
+                return;
+            
+            const time_t archivePeriod = m_archiveInfoPlist.at(entry.ChannelId).days * 24 * 60 * 60; //archive  days in secs
+            entry.HasArchive = when < archivePeriod;
         }
     }
     
     void Core::UpdateEpgForAllChannels(time_t startTime, time_t endTime)
     {
         if(m_epgUpdateInterval.IsSet() && m_epgUpdateInterval.TimeLeft() > 0)
-        return;
+            return;
         
         m_epgUpdateInterval.Init(24*60*60*1000);
         
@@ -338,9 +357,9 @@ namespace TtvEngine
         if(!source.empty())
             source = HttpEngine::Escape(source);
         if(type == "contentid")
-            return string(  m_coreParams.AceServerUrlBase() + "/ace/getstream?id=") + source + "&pid=" + m_deviceId;
+            return m_coreParams.AceServerUrlBase() + c_ACE_ENGINE_HLS_STREAM + "id=" + source + "&pid=" + m_deviceId;
         if(type == "torrent")
-            return string( m_coreParams.AceServerUrlBase() + "/ace/getstream?url=") + source + "&pid=" + m_deviceId;;
+            return m_coreParams.AceServerUrlBase() + c_ACE_ENGINE_HLS_STREAM +"url=" + source + "&pid=" + m_deviceId;
         
         return string();
 
@@ -348,10 +367,10 @@ namespace TtvEngine
     
     string Core::GetUrl_Api_Http(ChannelId channelId)
     {
-        if(!m_ttvChannels.at(channelId).hasHTTPStream/*canTSProxy*/) {
-            LogNotice("TTV channel %d has no HTTP stream available.", channelId);
-            return string();
-        }
+//        if(!m_ttvChannels.at(channelId).hasHTTPStream/*canTSProxy*/) {
+//            LogNotice("TTV channel %d has no HTTP stream available.", channelId);
+//            return string();
+//        }
         
         string url;
         ApiFunctionData apiData(c_TTV_API_URL_base, "translation_http.php");
@@ -370,45 +389,90 @@ namespace TtvEngine
         return url;
         
     }
-    std::string Core::GetArchiveUrl_Api(ChannelId channelId, time_t startTime)
+
+    int Core::GetRecordId(ChannelId channelId, time_t startTime)
     {
-        string url;
-        auto epg_id = m_ttvChannels.at(channelId).epg_id;
+        int epdId = m_ttvChannels[channelId].epg_id;
+        if(epdId == 0)
+            return 0;
+
+        P8PLATFORM::CLockObject lock(m_recordingsGuard);
+
+        if(m_records.count(epdId) != 0) {
+            if(m_records[epdId].count(startTime) != 0)
+                return m_records[epdId][startTime].id;
+        }
+       UpdateArchiveFor(startTime);
+//        if(m_records.count(epdId) != 0) {
+//            if(m_records[epdId].count(startTime) != 0)
+//                return m_records[epdId][startTime].id;
+//        }
+        return 0;
+    }
+    
+    void Core::UpdateArchiveFor(time_t tm)
+    {
+        // Do not update future records.
+        if(tm > time(nullptr))
+            return;
         
         char mbstr[100];
-        if (0 == std::strftime(mbstr, sizeof(mbstr), "X%d-X%m-%Y", std::localtime(&startTime))) {
-            return url;
+        if (0 == std::strftime(mbstr, sizeof(mbstr), "X%d-X%m-%Y", std::localtime(&tm))) {
+            return;
         }
+        static set<string> s_updatingRecordingDays;
+
         string archiveDate(mbstr);
         StringUtils::Replace(archiveDate, "X0","X");
         StringUtils::Replace(archiveDate,"X","");
+        auto it = s_updatingRecordingDays.insert( archiveDate);
+        if(!it.second) // not inserted, i.e.exists
+            return;
+        auto dayToRemoveWhenDone = it.first;
         try {
             
             int record_id = 0;
             ApiFunctionData apiData(c_TTV_API_URL_base, "arc_records.php");
             apiData.params["date"] = archiveDate;
-            apiData.params["epg_id"] = n_to_string(epg_id);
-            apiData.priority = HttpEngine::RequestPriority_Hi;
-            CallApiFunction(apiData, [startTime, &record_id] (Document& jsonRoot)
+            apiData.params["epg_id"] = "all";
+            apiData.params["hls"] = "1";
+//            apiData.priority = HttpEngine::RequestPriority_Hi;
+            auto pThis = this;
+            CallApiAsync(apiData, [pThis] (Document& jsonRoot)
                             {
                                 if(!jsonRoot.HasMember("records"))
-                                return;
+                                    return;
                                 auto& records = jsonRoot["records"];
                                 if(!records.IsArray())
-                                return;
+                                    return;
+                                P8PLATFORM::CLockObject lock(pThis->m_recordingsGuard);
                                 for (auto& r : records.GetArray()) {
-                                    if(r["time"].GetInt() == startTime){
-                                        record_id = r["record_id"].GetInt();
-                                        return;
-                                    }
+                                    Record record;
+                                    record.id = r["record_id"].GetInt();
+                                    record.name = r["name"].GetString();
+                                    record.hasScreen = r["screen"].GetInt() != 0;
+                                    
+                                    pThis->m_records[r["epg_id"].GetInt()][r["time"].GetInt()] = record;
                                 }
+                            }, [dayToRemoveWhenDone, pThis](const ActionQueue::ActionResult& s)  {
+                                P8PLATFORM::CLockObject lock(pThis->m_recordingsGuard);
+                                s_updatingRecordingDays.erase(dayToRemoveWhenDone);
                             });
-            if(0 == record_id)
-                return url;
-            
+        }
+        CATCH_API_CALL();
+
+    }
+    
+    std::string Core::GetArchiveUrl_Api(ChannelId channelId, time_t startTime)
+    {
+        string url;
+        int record_id = GetRecordId(channelId, startTime);
+        if(0 == record_id)
+            return url;
+        try{
             if(m_isAceRunning) {
                 string source, type;
-                apiData = ApiFunctionData(c_TTV_API_URL_base, "arc_stream.php");
+                ApiFunctionData apiData(c_TTV_API_URL_base, "arc_stream.php");
                 apiData.params["record_id"] = n_to_string(record_id);
                 apiData.priority = HttpEngine::RequestPriority_Hi;
                 try {
@@ -422,12 +486,16 @@ namespace TtvEngine
                 if(!source.empty())
                     source = HttpEngine::Escape(source);
                 if(type == "contentid")
-                    return string(  m_coreParams.AceServerUrlBase() + "/ace/getstream?id=") + source + "&pid=" + m_deviceId;
+                    return m_coreParams.AceServerUrlBase() + c_ACE_ENGINE_HLS_STREAM + "id=" + source + "&pid=" + m_deviceId;
                 if(type == "torrent")
-                    return string( m_coreParams.AceServerUrlBase() + "/ace/getstream?url=") + source + "&pid=" + m_deviceId;;
+                    return m_coreParams.AceServerUrlBase() + c_ACE_ENGINE_HLS_STREAM + "url=" + source + "&pid=" + m_deviceId;
             }
-
-            apiData = ApiFunctionData(c_TTV_API_URL_base, "arc_http.php");
+            
+            // check HTTP archive assess
+            if(!m_ttvChannels[channelId].hasHTTPArchive)
+                return url;
+            
+            ApiFunctionData apiData(c_TTV_API_URL_base, "arc_http.php");
             apiData.params["record_id"] = n_to_string(record_id);
             apiData.priority = HttpEngine::RequestPriority_Hi;
             CallApiFunction(apiData, [&url] (Document& jsonRoot)
@@ -450,55 +518,61 @@ namespace TtvEngine
     }
     void Core::UpdateEpgForAllChannels_Api(time_t startTime, time_t endTime)
     {
-        auto pThis = this;
-        size_t channelsToProcess = m_channelList.size();
+        auto epgOffset = - XMLTV::LocalTimeOffset();
         
+        // Validate epg_id
+        std::list<ChannelId> validCahnnels;
         for (const auto& ch : m_channelList) {
-            
             auto chId = ch.second.Id;
             const auto& ttvCh = m_ttvChannels[chId];
-            bool isLast = --channelsToProcess == 0;
-            
-            if(ttvCh.epg_id == 0)
-            continue;
-            
-            auto epgOffset = - XMLTV::LocalTimeOffset();
-            
+            if(ttvCh.epg_id != 0) {
+                validCahnnels.push_back(chId);
+            }
+        }
+        
+        size_t channelsToProcess = validCahnnels.size();
+        
+        for (const auto& chId : validCahnnels) {
+            const auto& ttvCh = m_ttvChannels[chId];
+            const bool isLast = --channelsToProcess == 0;
+            if(isLast)
+                LogDebug("Last EPG channel ID = %d", chId);
             ApiFunctionData apiData(c_TTV_API_URL_base, "translation_epg.php");
             apiData.params["btime"] = n_to_string(startTime);
             apiData.params["etime"] = n_to_string(endTime);
             apiData.params["epg_id"] = n_to_string(ttvCh.epg_id);
-
+            
+            auto pThis = this;
             CallApiAsync(apiData, [pThis, chId, epgOffset] (Document& jsonRoot)
-                         {
-                             if(!jsonRoot.HasMember("data"))
-                             return;
-                             
-                             auto& data = jsonRoot["data"];
-                             if(!data.IsArray())
-                             return;
-                             
-                             for(auto& epg : data.GetArray()) {
-                                 EpgEntry epgEntry;
-                                 epgEntry.ChannelId = chId ;
-                                 epgEntry.Title = epg["name"].GetString();
-                                 //epgEntry.Description = m.value["descr"].GetString();
-                                 epgEntry.StartTime = epg["btime"].GetInt();//  + epgOffset;
-                                 epgEntry.EndTime = epg["etime"].GetInt();// + epgOffset;
-                                 pThis->AddEpgEntry(epgEntry);
-                             }
-                             
-                         },
-                         [pThis, isLast, chId](const ActionQueue::ActionResult& s) {
-                             try {
-                                 if(isLast)
-                                 pThis->SaveEpgCache(c_EpgCacheFile, 11);
-                                 if(s.exception)
-                                 std::rethrow_exception(s.exception);
-                                 PVR->TriggerEpgUpdate(chId);
-                             }
-                             CATCH_API_CALL();
-                         });
+             {
+                 if(!jsonRoot.HasMember("data"))
+                     return;
+                 
+                 auto& data = jsonRoot["data"];
+                 if(!data.IsArray())
+                     return;
+                 
+                 for(auto& epg : data.GetArray()) {
+                     EpgEntry epgEntry;
+                     epgEntry.ChannelId = chId ;
+                     epgEntry.Title = epg["name"].GetString();
+                     //epgEntry.Description = m.value["descr"].GetString();
+                     epgEntry.StartTime = epg["btime"].GetInt();//  + epgOffset;
+                     epgEntry.EndTime = epg["etime"].GetInt();// + epgOffset;
+                     pThis->AddEpgEntry(epgEntry);
+                 }
+                 
+             },
+             [pThis, isLast, chId](const ActionQueue::ActionResult& s) {
+                 try {
+                     if(isLast)
+                         pThis->SaveEpgCache(c_EpgCacheFile, 11);
+                     if(s.exception)
+                         std::rethrow_exception(s.exception);
+                     PVR->TriggerEpgUpdate(chId);
+                 }
+                 CATCH_API_CALL();
+             });
         }
     }
     
@@ -619,9 +693,23 @@ namespace TtvEngine
                     ttvChannel.canAceStream = ch["as_on_air"].GetInt() != 0;
                     ttvChannel.isHD = ch["hd_flag"].GetInt() != 0;
 
+                    // filter channels
+                    if(!pThis->m_isAceRunning &&  !ttvChannel.hasHTTPStream)
+                        continue;
+                    if(ttvChannel.access == TTVChannelAccess_vip)
+                        if(!pThis->m_isVIP)
+                            continue;
+                    if(ttvChannel.access == TTVChannelAccess_registred)
+                        if(!pThis->m_isVIP && ! pThis->m_isRegistered)
+                            continue;
                     if(ttvChannel.isAdult && !pThis->m_needsAdult)
                         continue;
-                    
+
+                    dump_json(ch);
+
+                    if(ttvChannel.epg_id != 0)
+                        pThis->m_epgIdToChannelId[ttvChannel.epg_id] = channel.Id;
+
                     // Add channel
                     pThis->AddChannel(channel);
                     pThis->m_ttvChannels[channel.Id] = ttvChannel;
@@ -640,38 +728,41 @@ namespace TtvEngine
                 }
             });
             // Fill archive info
-            InitializeArchiveInfo();
             
         }
         CATCH_API_CALL();
 
     }
-    void Core::InitializeArchiveInfo()
-    {
-        try {
-            m_epgIdToChannelId.clear();
-
-            ApiFunctionData apiData(c_TTV_API_URL_base, "arc_list.php");
-            
-            auto pThis = this;
-            CallApiFunction(apiData, [pThis] (Document& jsonRoot)
-            {
-                for(auto& ch : jsonRoot["channels"].GetArray())
-                {
-                    bool hasArchiveAssess = ch["access_user"].IsBool() && ch["access_user"].IsTrue();
-                    if(!hasArchiveAssess) {
-                        LogDebug("You do not have access to archive for channel %s", ch["name"].GetString());
-                        continue;
-                    }
-                    pThis->m_epgIdToChannelId[ch["epg_id"].GetInt()] = ch["id"].GetInt();
-
-                }
-            });
-        }
-        CATCH_API_CALL();
-
-    }
-    
+//    void Core::InitializeArchiveInfo()
+//    {
+//        try {
+//            m_epgIdToChannelId.clear();
+//
+//            ApiFunctionData apiData(c_TTV_API_URL_base, "arc_list.php");
+//
+//            auto pThis = this;
+//            CallApiFunction(apiData, [pThis] (Document& jsonRoot)
+//            {
+//                dump_json(jsonRoot);
+//                int total = 0, available = 0;
+//                for(auto& ch : jsonRoot["channels"].GetArray())
+//                {
+//                    ++total;
+//                    bool hasArchiveAssess = ch["access_user"].IsBool() && ch["access_user"].IsTrue();
+////                    if(!hasArchiveAssess) {
+////                        LogDebug("You do not have access to archive for channel %s", ch["name"].GetString());
+////                        continue;
+////                    }
+//                    ++available;
+//                    pThis->m_epgIdToChannelId[ch["epg_id"].GetInt()] = ch["id"].GetInt();
+//                }
+//                LogDebug("Total channel with archive %d. Available %d", total, available);
+//            });
+//        }
+//        CATCH_API_CALL();
+//
+//    }
+//
     template <typename TParser>
     void Core::CallApiFunction(const ApiFunctionData& data, TParser parser)
     {
@@ -705,7 +796,7 @@ namespace TtvEngine
         
         std::function<void(const std::string&)> parserWrapper = [pThis, start, parser, strRequest, isLoginCommand](const std::string& response) {
             LogDebug("Response in %d ms.",  P8PLATFORM::GetTimeMs() - start);
-            
+
             pThis->ParseJson(response, [parser] (Document& jsonRoot)
                              {
                                  if (jsonRoot.HasMember("success") && jsonRoot["success"].GetInt() == 1)
@@ -841,10 +932,10 @@ namespace TtvEngine
     std::string Core::GetArchiveUrl_Plist(ChannelId channelId, time_t startTime)
     {
         string url;
-        if(m_archiveInfo.count(channelId) == 0) {
+        if(m_archiveInfoPlist.count(channelId) == 0) {
             return url;
         }
-        url = m_archiveInfo.at(channelId).urlTemplate;
+        url = m_archiveInfoPlist.at(channelId).urlTemplate;
         if(url.empty())
         return url;
         const char* c_START = "${start}";
@@ -893,7 +984,7 @@ namespace TtvEngine
             if(plistContent.count(newChannel.strName) != 0) {
                 auto& plistChannel = plistContent[newChannel.strName].first;
                 if(plistChannel.HasArchive) {
-                    pThis->m_archiveInfo.emplace(newChannel.id, archiveInfo.at(plistChannel.Id));
+                    pThis->m_archiveInfoPlist.emplace(newChannel.id, archiveInfo.at(plistChannel.Id));
                     archiveInfo.erase(plistChannel.Id);
                 }
                 plistChannel.Id = newChannel.id;
@@ -924,7 +1015,7 @@ namespace TtvEngine
             AddChannelToGroup(itGroup->first, channel.Id);
         }
         // add rest archives
-        m_archiveInfo.insert(archiveInfo.begin(), archiveInfo.end());
+        m_archiveInfoPlist.insert(archiveInfo.begin(), archiveInfo.end());
 
     }
     

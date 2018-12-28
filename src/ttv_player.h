@@ -34,6 +34,7 @@
 #include <map>
 #include <memory>
 #include "p8-platform/util/timeutils.h"
+#include "p8-platform/threads/mutex.h"
 #include "ActionQueue.hpp"
 #include "helpers.h"
 
@@ -159,10 +160,21 @@ namespace TtvEngine
             bool isHD;
         };
         
+        struct Record {
+            int id;
+            int time;
+            std::string name;
+            bool hasScreen;
+        };
+        
         typedef std::map<PvrClient::ChannelId, TTVChanel> TTVChannels;
         TTVChannels m_ttvChannels;
         
         std::map<int, PvrClient::ChannelId> m_epgIdToChannelId;
+        // map<epgId, map<startTime, record>>
+        std::map<int, std::map<int, Record> > m_records;
+        
+        
         
         const CoreParams m_coreParams;
         std::string m_deviceId;
@@ -170,6 +182,7 @@ namespace TtvEngine
 
         bool m_hasTSProxy;
         bool m_isVIP;
+        bool m_isRegistered;
         bool m_needsAdult;
         int m_zoneId;
         const bool m_useApi;
@@ -196,7 +209,8 @@ namespace TtvEngine
         bool CheckAceEngineRunning();
         std::string GetPlaylistUrl();
         void GetUserInfo();
-        void InitializeArchiveInfo();
+        int GetRecordId(PvrClient::ChannelId channelId, time_t startTime);
+        void UpdateArchiveFor(time_t time);
         void BuildChannelAndGroupList_Api();
         std::string GetArchiveUrl_Api(PvrClient::ChannelId channelId, time_t startTime);
         std::string GetUrl_Api_Ace(PvrClient::ChannelId channelId);
@@ -214,7 +228,8 @@ namespace TtvEngine
         std::string m_playListUrl;
         std::string m_epgUrl;
         P8PLATFORM::CTimeout m_epgUpdateInterval;
-        ArchiveInfos m_archiveInfo;
+        P8PLATFORM::CMutex m_recordingsGuard;
+        ArchiveInfos m_archiveInfoPlist;
         bool m_isAceRunning;
    };
 }
