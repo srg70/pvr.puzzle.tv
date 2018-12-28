@@ -70,7 +70,7 @@ namespace PvrClient {
         void ClearEpgCache(const char* cacheFile);
         void LoadEpgCache(const char* cacheFile);
         void SaveEpgCache(const char* cacheFile, unsigned int daysToPreserve = 7);
-        bool AddEpgEntry(UniqueBroadcastIdType id, EpgEntry& entry);
+        UniqueBroadcastIdType AddEpgEntry(UniqueBroadcastIdType id, EpgEntry& entry);
         
         // Channel & group lists
         void AddChannel(const Channel& channel);

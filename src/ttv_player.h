@@ -97,11 +97,13 @@ namespace TtvEngine
         struct CoreParams {
             CoreParams()
             : useAce(false)
+            , enableAdult(false)
             , aceServerPort(0)
             {}
             std::string user;
             std::string password;
             bool useAce;
+            bool enableAdult;
             std::string aceServerUri;
             int aceServerPort;
             std::string AceServerUrlBase() const
@@ -197,7 +199,7 @@ namespace TtvEngine
         
         // Epg management
         void LoadEpg();
-        bool AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
+        PvrClient::UniqueBroadcastIdType AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
         void AddEpgEntry(PvrClient::EpgEntry& epg);
         
         // Session

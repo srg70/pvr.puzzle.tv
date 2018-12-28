@@ -63,6 +63,7 @@ private:
     int m_currentChannelStreamIdx;
 
     bool m_supportSeek;
+    bool m_enableAdultContent;
     enum TTVMode{
         TTVMode_api = 0,
         TTVMode_playlist = 1

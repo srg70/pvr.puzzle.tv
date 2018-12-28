@@ -166,9 +166,9 @@ namespace EdemEngine
         return  url;
     }
         
-    bool Core::AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry)
+    UniqueBroadcastIdType Core::AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry)
     {
-        unsigned int id = xmlEpgEntry.startTime;
+        UniqueBroadcastIdType id = xmlEpgEntry.startTime;
         
         EpgEntry epgEntry;
         epgEntry.ChannelId = xmlEpgEntry.iChannelId;
@@ -200,7 +200,7 @@ namespace EdemEngine
  
             set<ChannelId> channelsToUpdate;
             EpgEntryCallback onEpgEntry = [&pThis, &channelsToUpdate,  startTime] (const XMLTV::EpgEntry& newEntry) {
-                if(pThis->AddEpgEntry(newEntry) && newEntry.startTime >= startTime)
+                if(c_UniqueBroadcastIdUnknown != pThis->AddEpgEntry(newEntry) && newEntry.startTime >= startTime)
                     channelsToUpdate.insert(newEntry.iChannelId);
             };
             

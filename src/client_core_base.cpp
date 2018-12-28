@@ -324,11 +324,11 @@ namespace PvrClient{
         
     }
     
-    bool ClientCoreBase::AddEpgEntry(UniqueBroadcastIdType id, EpgEntry& entry)
+    UniqueBroadcastIdType ClientCoreBase::AddEpgEntry(UniqueBroadcastIdType id, EpgEntry& entry)
     {
         // Do not add EPG for unknown channels
         if(m_mutableChannelList.count(entry.ChannelId) != 1)
-            return false;
+            return c_UniqueBroadcastIdUnknown;
         
         UpdateHasArchive(entry);
         
@@ -340,7 +340,7 @@ namespace PvrClient{
             ++id;
         }
         m_epgEntries[id] =  entry;
-        return true;
+        return id;
     }
     
     bool ClientCoreBase::GetEpgEntry(UniqueBroadcastIdType i,  EpgEntry& entry)

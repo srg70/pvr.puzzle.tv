@@ -59,6 +59,7 @@ static const char* c_ttv_password = "ttv_password";
 static const char* c_ttv_use_acestream = "ttv_use_acestream";
 static const char* c_ttv_ace_server_uri = "ttv_ace_server_uri";
 static const char* c_ttv_ace_server_port = "ttv_ace_server_port";
+static const char* c_ttv_adult = "ttv_adult";
 
 ADDON_STATUS TtvPVRClient::Init(PVR_PROPERTIES* pvrprops)
 {
@@ -75,7 +76,9 @@ ADDON_STATUS TtvPVRClient::Init(PVR_PROPERTIES* pvrprops)
     
     m_supportSeek = false;
     XBMC->GetSetting(c_seek_archives, &m_supportSeek);
-    
+    m_enableAdultContent = false;
+    XBMC->GetSetting(c_ttv_adult, &m_enableAdultContent);
+
     m_ttvMode = TTVMode_api;
     XBMC->GetSetting(c_ttv_mode, &m_ttvMode);
     if (XBMC->GetSetting(c_ttv_user, &buffer))
@@ -159,6 +162,7 @@ void TtvPVRClient::CreateCore(bool clearEpgCache)
                 cp.useAce = m_useAce;
                 cp.aceServerUri = m_aceServerUri;
                 cp.aceServerPort = m_aceServerPort;
+                cp.enableAdult = m_enableAdultContent;
                 m_core = new TtvEngine::Core(cp);
             }
                 break;
@@ -204,6 +208,9 @@ ADDON_STATUS TtvPVRClient::SetSetting(const char *settingName, const void *setti
     }
     else if(strcmp(settingName,  c_seek_archives) == 0) {
         m_supportSeek = *(const bool*) settingValue;
+    }
+    else if (strcmp(settingName,  c_ttv_adult) == 0) {
+        result = ADDON_STATUS_NEED_RESTART;
     }
     else if(strcmp(settingName,  c_ttv_mode) == 0) {
         result = ADDON_STATUS_NEED_RESTART;

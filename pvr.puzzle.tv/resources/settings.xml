@@ -65,11 +65,12 @@
     <setting id="ttv_playlist_url" type="text" label="60000" default="http://asplaylist.net/***/tv.m3u" visible="eq(-1,1)" subsetting="true"/>
     <setting id="ttv_epg_url" type="text" label="60001" default="http://api.torrent-tv.ru/ttv.xmltv.xml.gz" visible="eq(-2,1)" subsetting="true"/>
     <setting id="ttv_user" type="text" label="60005" default="anonymous" visible="eq(-3,0)" subsetting="true"/>
-    <setting id="ttv_password" type="text" label="60006" default="anonymous" visible="eq(-4,0)" subsetting="true"/>
+    <setting id="ttv_password" type="text" label="60006" default="anonymous"  option="hidden" visible="eq(-4,0)" subsetting="true"/>
     <setting id="ttv_use_acestream" type="bool" label="60008" default="false" visible="eq(-5,0)"/>
     <setting id="ttv_ace_server_uri" type="text" label="60009" default="127.0.0.1" visible="eq(-6,0)+eq(-1,true)" subsetting="true"/>
     <setting id="ttv_ace_server_port" type="number" label="60011" default="6878" visible="eq(-7,0)+eq(-2,true)" subsetting="true"/>
     <setting id="ttv_seek_archives" type="bool" label="60002" default="false"/>
+    <setting id="ttv_adult" type="bool" label="30003" default="false"/>
 </category>
 
 

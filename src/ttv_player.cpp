@@ -492,9 +492,9 @@ namespace TtvEngine
             }
             
             // check HTTP archive assess
-            if(!m_ttvChannels[channelId].hasHTTPArchive)
-                return url;
-            
+//            if(!m_ttvChannels[channelId].hasHTTPArchive)
+//                return url;
+//
             ApiFunctionData apiData(c_TTV_API_URL_base, "arc_http.php");
             apiData.params["record_id"] = n_to_string(record_id);
             apiData.priority = HttpEngine::RequestPriority_Hi;
@@ -589,7 +589,7 @@ namespace TtvEngine
                             {
                                 pThis->m_hasTSProxy = jsonRoot["tsproxy_access"].GetInt() == 1;
                                 pThis->m_isVIP = jsonRoot["vip_status"].GetInt() == 1;
-                                pThis->m_needsAdult = jsonRoot["adult"].GetInt() == 1;
+                                pThis->m_needsAdult = pThis->m_coreParams.enableAdult && jsonRoot["adult"].GetInt() == 1;
                                 pThis->m_zoneId = jsonRoot["zone_id"].GetInt() == 1;
                             });
         }
@@ -916,9 +916,9 @@ namespace TtvEngine
     }
     
 #pragma mark - Playlist methods
-    bool Core::AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry)
+    UniqueBroadcastIdType Core::AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry)
     {
-        unsigned int id = xmlEpgEntry.startTime;
+        UniqueBroadcastIdType id = xmlEpgEntry.startTime;
         
         EpgEntry epgEntry;
         epgEntry.ChannelId = xmlEpgEntry.iChannelId;

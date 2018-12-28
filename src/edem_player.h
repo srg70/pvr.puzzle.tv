@@ -92,7 +92,7 @@ namespace EdemEngine
 
     private:
         void LoadEpg();
-        bool AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
+        PvrClient::UniqueBroadcastIdType AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
 
         void Cleanup();
 

@@ -130,6 +130,7 @@ namespace PvrClient {
     };
     
     typedef unsigned int UniqueBroadcastIdType;
+    const UniqueBroadcastIdType c_UniqueBroadcastIdUnknown = (UniqueBroadcastIdType)-1;
     typedef std::map<UniqueBroadcastIdType, EpgEntry> EpgEntryList;
 
     class IClientCorePhase {
