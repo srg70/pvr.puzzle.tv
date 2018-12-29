@@ -683,6 +683,8 @@ void PVRClientBase::FillRecording(const EpgEntryList::value_type& epgEntry, PVR_
     tag.iEpgEventId = epgEntry.first;
     tag.iChannelUid = epgTag.ChannelId;
     tag.channelType = PVR_RECORDING_CHANNEL_TYPE_TV;
+    if(!epgTag.IconPath.empty())
+        strncpy(tag.strIconPath, epgTag.IconPath.c_str(), sizeof(tag.strIconPath) -1);
     
     string dirName(dirPrefix);
     dirName += '/';
