@@ -511,14 +511,14 @@ namespace TtvEngine
     // Linux compilation issue workarround
     // Call protected base method from private method
     // instead of directly from lambda.
-    void Core::AddEpgEntry(PvrClient::EpgEntry& epg)
+    UniqueBroadcastIdType Core::AddEpgEntry(PvrClient::EpgEntry& epg)
     {
         UniqueBroadcastIdType id = epg.StartTime;
-        ClientCoreBase::AddEpgEntry(id, epg);
+        return ClientCoreBase::AddEpgEntry(id, epg);
     }
     void Core::UpdateEpgForAllChannels_Api(time_t startTime, time_t endTime)
     {
-        auto epgOffset = - XMLTV::LocalTimeOffset();
+//        auto epgOffset = - XMLTV::LocalTimeOffset();
         
         // Validate epg_id
         std::list<ChannelId> validCahnnels;
@@ -543,7 +543,7 @@ namespace TtvEngine
             apiData.params["epg_id"] = n_to_string(ttvCh.epg_id);
             
             auto pThis = this;
-            CallApiAsync(apiData, [pThis, chId, epgOffset] (Document& jsonRoot)
+            CallApiAsync(apiData, [pThis, chId, isLast] (Document& jsonRoot)
              {
                  if(!jsonRoot.HasMember("data"))
                      return;
@@ -551,15 +551,17 @@ namespace TtvEngine
                  auto& data = jsonRoot["data"];
                  if(!data.IsArray())
                      return;
-                 
+                 SizeType dataSize = data.Size();
                  for(auto& epg : data.GetArray()) {
-                     EpgEntry epgEntry;
-                     epgEntry.ChannelId = chId ;
-                     epgEntry.Title = epg["name"].GetString();
+                     EpgEntry* epgEntry = new EpgEntry();
+                     epgEntry->ChannelId = chId ;
+                     epgEntry->Title = epg["name"].GetString();
                      //epgEntry.Description = m.value["descr"].GetString();
-                     epgEntry.StartTime = epg["btime"].GetInt();//  + epgOffset;
-                     epgEntry.EndTime = epg["etime"].GetInt();// + epgOffset;
-                     pThis->AddEpgEntry(epgEntry);
+                     epgEntry->StartTime = epg["btime"].GetInt();//  + epgOffset;
+                     epgEntry->EndTime = epg["etime"].GetInt();// + epgOffset;
+                     auto id = pThis->AddEpgEntry(*epgEntry);
+                     // NOTE: will release epgEntry when done
+                     pThis->GetEpgDetailsAsync(id, epg["program_id"].GetString(), epgEntry, isLast && (--dataSize == 0));
                  }
                  
              },
@@ -575,7 +577,55 @@ namespace TtvEngine
              });
         }
     }
+    void Core::GetEpgDetailsAsync(UniqueBroadcastIdType id, const char* programId, EpgEntry* epg, bool isLast)
+    {
+        try
+        {
+            ApiFunctionData apiData(c_TTV_API_URL_base,"translation_epg_details.php");
+            apiData.params["program_id"] = programId;
+            auto pThis = this;
+            CallApiAsync(apiData, [pThis, epg, id] (Document& jsonRoot)
+            {
+                if(!jsonRoot.HasMember("data"))
+                    return ;
+                bool epgChanged = false;
+                auto& data = jsonRoot["data"];
+//                dump_json(data);
+                if(data.HasMember("description")) {
+                    epg->Description = data["description"].GetString();
+                    epgChanged = true;
+                }
+                
+                if(data.HasMember("images")) {
+                    const auto& images= data["images"];
+                    if(images.IsArray()) {
+                        for (const auto& img : images.GetArray()) {
+                            epg->IconPath = img.GetString();
+                            epgChanged = true;
+                            break;
+                        }
+                    }
+                }
+                if(epgChanged)
+                    pThis->UpdateEpgEntry(id, *epg);
+            }, [pThis, epg, isLast](const ActionQueue::ActionResult& s) {
+                if(epg)
+                    delete epg;
+                static int saveCounter = 1000;
+                if(isLast || --saveCounter == 0) {
+                    saveCounter = 1000;
+                    pThis->SaveEpgCache(c_EpgCacheFile, 11);
+                }
+
+            });
+        }
+        CATCH_API_CALL();
+    }
     
+//    void Core::UpdateEpgEntry(UniqueBroadcastIdType id, const EpgEntry* entry) {
+//        ClientCoreBase::UpdateEpgEntry(id, *entry);
+//    }
+
     void Core::GetUserInfo()
     {
         string url;
@@ -585,7 +635,7 @@ namespace TtvEngine
             ApiFunctionData apiData(c_TTV_API_URL_base,"userinfo.php");
             
             auto pThis = this;
-            CallApiFunction(apiData, [&pThis] (Document& jsonRoot)
+            CallApiFunction(apiData, [pThis] (Document& jsonRoot)
                             {
                                 pThis->m_hasTSProxy = jsonRoot["tsproxy_access"].GetInt() == 1;
                                 pThis->m_isVIP = jsonRoot["vip_status"].GetInt() == 1;
@@ -958,8 +1008,8 @@ namespace TtvEngine
             auto pThis = this;
             
             set<ChannelId> channelsToUpdate;
-            EpgEntryCallback onEpgEntry = [&pThis, &channelsToUpdate,  startTime] (const XMLTV::EpgEntry& newEntry) {
-                if(pThis->AddEpgEntry(newEntry) && newEntry.startTime >= startTime)
+            EpgEntryCallback onEpgEntry = [pThis, &channelsToUpdate,  startTime] (const XMLTV::EpgEntry& newEntry) {
+                if(c_UniqueBroadcastIdUnknown != pThis->AddEpgEntry(newEntry) && newEntry.startTime >= startTime)
                 channelsToUpdate.insert(newEntry.iChannelId);
             };
             
@@ -980,7 +1030,7 @@ namespace TtvEngine
         
         auto pThis = this;
         
-        ChannelCallback onNewChannel = [&pThis, &plistContent, &archiveInfo](const EpgChannel& newChannel){
+        ChannelCallback onNewChannel = [pThis, &plistContent, &archiveInfo](const EpgChannel& newChannel){
             if(plistContent.count(newChannel.strName) != 0) {
                 auto& plistChannel = plistContent[newChannel.strName].first;
                 if(plistChannel.HasArchive) {
@@ -1024,7 +1074,7 @@ namespace TtvEngine
         using namespace XMLTV;
         auto pThis = this;
         
-        EpgEntryCallback onEpgEntry = [&pThis] (const XMLTV::EpgEntry& newEntry) {pThis->AddEpgEntry(newEntry);};
+        EpgEntryCallback onEpgEntry = [pThis] (const XMLTV::EpgEntry& newEntry) {pThis->AddEpgEntry(newEntry);};
         
         XMLTV::ParseEpg(m_epgUrl, onEpgEntry);
     }

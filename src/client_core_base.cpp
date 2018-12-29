@@ -285,34 +285,37 @@ namespace PvrClient{
     void ClientCoreBase::SaveEpgCache(const char* cacheFile, unsigned int daysToPreserve)
     {
         string cacheFilePath = MakeEpgCachePath(cacheFile);
-        
-        // Leave epg entries not older then 1 weeks from now
-        time_t now = time(nullptr);
-        auto oldest = now - daysToPreserve*24*60*60;
-        erase_if(m_epgEntries,  [oldest] (const EpgEntryList::value_type& i)
-                 {
-                     return i.second.StartTime < oldest;
-                 });
-        
+
         StringBuffer s;
-        Writer<StringBuffer> writer(s);
-        
-        writer.StartObject();               // Between StartObject()/EndObject(),
-        
-        writer.Key("m_epgEntries");
-        writer.StartArray();                // Between StartArray()/EndArray(),
-        for_each(m_epgEntries.begin(), m_epgEntries.end(),[&](const EpgEntryList::value_type& i) {
+        {
+            P8PLATFORM::CLockObject lock(m_epgAccessMutex);
+            
+            // Leave epg entries not older then 1 weeks from now
+            time_t now = time(nullptr);
+            auto oldest = now - daysToPreserve*24*60*60;
+            erase_if(m_epgEntries,  [oldest] (const EpgEntryList::value_type& i)
+                     {
+                         return i.second.StartTime < oldest;
+                     });
+            
+            Writer<StringBuffer> writer(s);
+            
             writer.StartObject();               // Between StartObject()/EndObject(),
-            writer.Key("k");
-            writer.Int64(i.first);
-            writer.Key("v");
-            i.second.Serialize(writer);
+            
+            writer.Key("m_epgEntries");
+            writer.StartArray();                // Between StartArray()/EndArray(),
+            for_each(m_epgEntries.begin(), m_epgEntries.end(),[&](const EpgEntryList::value_type& i) {
+                writer.StartObject();               // Between StartObject()/EndObject(),
+                writer.Key("k");
+                writer.Int64(i.first);
+                writer.Key("v");
+                i.second.Serialize(writer);
+                writer.EndObject();
+            });
+            writer.EndArray();
+            
             writer.EndObject();
-        });
-        writer.EndArray();
-        
-        writer.EndObject();
-        
+        }
         XBMC->CreateDirectory(c_EpgCacheDirPath);
         
         void* file = XBMC->OpenFileForWrite(cacheFilePath.c_str(), true);
@@ -341,6 +344,22 @@ namespace PvrClient{
         }
         m_epgEntries[id] =  entry;
         return id;
+    }
+    
+    void ClientCoreBase::UpdateEpgEntry(UniqueBroadcastIdType id, const EpgEntry& entry)
+    {
+        P8PLATFORM::CLockObject lock(m_epgAccessMutex);
+        auto & oldEntry = m_epgEntries[id];
+        bool hasArchive = oldEntry.HasArchive;
+        oldEntry =  entry;
+        oldEntry.HasArchive = hasArchive;
+        
+        // Update EPG tag
+        EPG_TAG tag = { 0 };
+        tag.iUniqueBroadcastId = id;
+        entry.FillEpgTag(tag);
+        PVR->EpgEventStateChange(&tag, entry.ChannelId, EPG_EVENT_UPDATED);
+
     }
     
     bool ClientCoreBase::GetEpgEntry(UniqueBroadcastIdType i,  EpgEntry& entry)

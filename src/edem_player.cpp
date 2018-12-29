@@ -199,7 +199,7 @@ namespace EdemEngine
             auto pThis = this;
  
             set<ChannelId> channelsToUpdate;
-            EpgEntryCallback onEpgEntry = [&pThis, &channelsToUpdate,  startTime] (const XMLTV::EpgEntry& newEntry) {
+            EpgEntryCallback onEpgEntry = [pThis, &channelsToUpdate,  startTime] (const XMLTV::EpgEntry& newEntry) {
                 if(c_UniqueBroadcastIdUnknown != pThis->AddEpgEntry(newEntry) && newEntry.startTime >= startTime)
                     channelsToUpdate.insert(newEntry.iChannelId);
             };
@@ -223,7 +223,7 @@ namespace EdemEngine
         using namespace XMLTV;
         auto pThis = this;
 
-        EpgEntryCallback onEpgEntry = [&pThis] (const XMLTV::EpgEntry& newEntry) {pThis->AddEpgEntry(newEntry);};
+        EpgEntryCallback onEpgEntry = [pThis] (const XMLTV::EpgEntry& newEntry) {pThis->AddEpgEntry(newEntry);};
         
         XMLTV::ParseEpg(m_epgUrl, onEpgEntry);
     }

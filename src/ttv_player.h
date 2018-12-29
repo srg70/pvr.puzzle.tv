@@ -200,8 +200,11 @@ namespace TtvEngine
         // Epg management
         void LoadEpg();
         PvrClient::UniqueBroadcastIdType AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
-        void AddEpgEntry(PvrClient::EpgEntry& epg);
-        
+        PvrClient::UniqueBroadcastIdType AddEpgEntry(PvrClient::EpgEntry& epg);
+        void GetEpgDetailsAsync(PvrClient::UniqueBroadcastIdType id, const char* programId, PvrClient::EpgEntry* epg, bool isLast);
+//        void UpdateEpgEntry(PvrClient::UniqueBroadcastIdType id, const PvrClient::EpgEntry* entry);
+
+
         // Session
         void LoadSessionCache();
         void SaveSessionCache();

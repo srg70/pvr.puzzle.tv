@@ -438,12 +438,7 @@ PVR_ERROR PVRClientBase::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL
     {
         EPG_TAG tag = { 0 };
         tag.iUniqueBroadcastId = itEpgEntry->first;
-        tag.iChannelNumber = channel.iUniqueId;
-        tag.strTitle = itEpgEntry->second.Title.c_str();
-        tag.strPlot = itEpgEntry->second.Description.c_str();
-        tag.startTime = itEpgEntry->second.StartTime;
-        tag.endTime = itEpgEntry->second.EndTime;
-        tag.strIconPath = itEpgEntry->second.IconPath.c_str();
+        itEpgEntry->second.FillEpgTag(tag);
         PVR->TransferEpgEntry(handle, &tag);
     }
     return PVR_ERROR_NO_ERROR;
@@ -1038,5 +1033,14 @@ bool PVRClientBase::CheckPlaylistUrl(const std::string& url)
     
     XBMC->CloseFile(f);
     return true;
+}
+
+void PvrClient::EpgEntry::FillEpgTag(EPG_TAG& tag) const{
+    tag.iChannelNumber = ChannelId;
+    tag.strTitle = Title.c_str();
+    tag.strPlot = Description.c_str();
+    tag.startTime = StartTime;
+    tag.endTime = EndTime;
+    tag.strIconPath = IconPath.c_str();
 }
 

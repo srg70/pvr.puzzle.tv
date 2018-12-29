@@ -158,7 +158,7 @@ void PuzzleTV::BuildChannelAndGroupList()
             
             auto pThis = this;
             // Build LUT channels ID from EPG to Server
-            ChannelCallback onNewChannel = [&plistContent, &pThis](const EpgChannel& newChannel){
+            ChannelCallback onNewChannel = [&plistContent, pThis](const EpgChannel& newChannel){
                 if(plistContent.count(newChannel.strName) != 0) {
                     auto& plistChannel = plistContent[newChannel.strName].first;
                     pThis->m_epgToServerLut[newChannel.id] = plistChannel.Id;
@@ -283,7 +283,7 @@ void PuzzleTV::LoadEpg()
     
     if(m_epgType == c_EpgType_File) {
         
-        XMLTV::EpgEntryCallback onEpgEntry = [&pThis] (const XMLTV::EpgEntry& newEntry) {pThis->AddXmlEpgEntry(newEntry);};
+        XMLTV::EpgEntryCallback onEpgEntry = [pThis] (const XMLTV::EpgEntry& newEntry) {pThis->AddXmlEpgEntry(newEntry);};
         
         XMLTV::ParseEpg(m_epgUrl, onEpgEntry);
     } else if(m_epgType == c_EpgType_Server) {

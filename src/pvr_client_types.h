@@ -32,6 +32,8 @@
 #include "ActionQueueTypes.hpp"
 #include <rapidjson/document.h>
 
+struct EPG_TAG;
+
 namespace PvrClient {
     
     typedef unsigned int ChannelId;
@@ -108,12 +110,18 @@ namespace PvrClient {
             writer.Int64(EndTime);
             writer.Key(TitileName);
             writer.String(Title.c_str());
-            writer.Key(DescriptionName);
-            writer.String(Description.c_str());
-            writer.Key(HasArchiveName);
-            writer.Bool(HasArchive);
-            writer.Key(IconPathName);
-            writer.String(IconPath.c_str());
+            if(!Description.empty()) {
+                writer.Key(DescriptionName);
+                writer.String(Description.c_str());
+            }
+            if(HasArchive) {
+                writer.Key(HasArchiveName);
+                writer.Bool(HasArchive);
+            }
+            if(!IconPath.empty()) {
+                writer.Key(IconPathName);
+                writer.String(IconPath.c_str());
+            }
 
             writer.EndObject();
         }
@@ -124,9 +132,14 @@ namespace PvrClient {
             StartTime = reader[StartTimeName].GetInt64();
             EndTime = reader[EndTimeName].GetInt64();
             Title = reader[TitileName].GetString();
-            Description = reader[DescriptionName].GetString();
-            HasArchive = reader[HasArchiveName].GetBool();
+            if(reader.HasMember(DescriptionName))
+                Description = reader[DescriptionName].GetString();
+            if(reader.HasMember(HasArchiveName))
+                HasArchive = reader[HasArchiveName].GetBool();
+            if(reader.HasMember(IconPathName))
+                IconPath = reader[IconPathName].GetString();
         }
+        void FillEpgTag(EPG_TAG& tag) const;
     };
     
     typedef unsigned int UniqueBroadcastIdType;
