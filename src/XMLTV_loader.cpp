@@ -341,7 +341,10 @@ return false;             \
     
     static PvrClient::ChannelId PatchChannelId(const std::string& strId)
     {
-        return std::hash<std::string>{}(strId);
+        int id = std::hash<std::string>{}(strId);
+        // Although Kodi defines unique broadcast ID as unsigned int for addons
+        // internal DB serialisation accepts only signed positive IDs
+        return id < 0 ? -id : id;
     }
     
     bool ParseChannels(const std::string& url,  const ChannelCallback& onChannelFound)

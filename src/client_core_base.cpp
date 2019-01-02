@@ -484,7 +484,7 @@ namespace PvrClient{
             auto strError = string("Rapid JSON parse error: ");
             strError += GetParseError_En(error);
             strError += " (" ;
-            strError += error;
+            strError += n_to_string(error);
             strError += ").";
             LogError(strError.c_str());
             throw JsonParserException(strError);
