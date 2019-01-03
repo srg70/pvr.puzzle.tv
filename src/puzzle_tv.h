@@ -117,7 +117,6 @@ namespace PuzzleEngine
 
         std::string m_epgUrl;
         long m_serverTimeShift;
-        P8PLATFORM::CTimeout m_epgUpdateInterval;
         std::map<PvrClient::ChannelId, PvrClient::ChannelId> m_epgToServerLut;
 
     };

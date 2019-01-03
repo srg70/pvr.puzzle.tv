@@ -98,7 +98,6 @@ namespace EdemEngine
 
         std::string m_playListUrl;
         std::string m_epgUrl;
-        P8PLATFORM::CTimeout m_epgUpdateInterval;
     };
 }
 #endif //_edem_player_h_

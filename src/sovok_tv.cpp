@@ -240,6 +240,15 @@ std::string SovokTV::GetArchiveUrl(ChannelId channelId, time_t startTime)
 void SovokTV::UpdateEpgForAllChannels(time_t startTime, time_t endTime)
 {
 
+    // Assuming server provides EPG at least fo next 12 hours
+    // To reduce amount of API calls, allow next EPG update
+    // after either 12 hours or  endTime
+    time_t now = time(nullptr);
+    time_t nextUpdateAt = std::min(now + 12*60*60, endTime);
+    int32_t interval = nextUpdateAt - now;
+    if(interval > 0)
+        m_epgUpdateInterval.Init(interval*1000);
+
     int64_t totalNumberOfHours = (endTime - startTime) / secondsPerHour;
     int64_t hoursRemaining = totalNumberOfHours;
     const int64_t hours24 = 24;

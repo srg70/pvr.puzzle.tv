@@ -382,7 +382,7 @@ namespace PvrClient{
     
     void ClientCoreBase::GetEpg(ChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries)
     {
-        time_t lastEndTime = 0;
+        time_t lastEndTime = startTime;
         IClientCore::EpgEntryAction action = [&lastEndTime, &epgEntries, channelId, startTime, endTime] (const EpgEntryList::value_type& i)
         {
             auto entryStartTime = i.second.StartTime;
@@ -399,35 +399,40 @@ namespace PvrClient{
         
         if(lastEndTime < endTime) {
             
-            LogDebug("GetEPG(%d): last for channel  %s -> requested by Kodi %s",
+            LogDebug("GetEPG(%d): last for channel (or start) %s -> requested by Kodi %s",
                      channelId, time_t_to_string(lastEndTime).c_str(), time_t_to_string(endTime).c_str());
             
-            auto epgRequestStart = max(lastEndTime, m_lastEpgRequestEndTime);
+           // auto epgRequestStart = max(lastEndTime, m_lastEpgRequestEndTime);
             
-            if(endTime > epgRequestStart) {
+     //       if(endTime > epgRequestStart) {
                 // First EPG loading may be long. Delay recordings update for 90 sec
                 m_recordingsUpdateDelay.Init(90 * 1000);
-                _UpdateEpgForAllChannels(epgRequestStart, endTime);
+                _UpdateEpgForAllChannels(/*epgRequestStart*/lastEndTime, endTime);
 
-                LogDebug("GetEPG(): m_lastEpgRequestEndTime (after) = %s", time_t_to_string(m_lastEpgRequestEndTime).c_str());
-            }
+                //LogDebug("GetEPG(): m_lastEpgRequestEndTime (after) = %s", time_t_to_string(m_lastEpgRequestEndTime).c_str());
+//            }
         }
         m_recordingsUpdateDelay.Init(5 * 1000);
         //ScheduleRecordingsUpdate();
     }
     void ClientCoreBase::_UpdateEpgForAllChannels(time_t startTime, time_t endTime)
     {
-        if(endTime <= m_lastEpgRequestEndTime || endTime <= startTime)
+        if(/*endTime <= m_lastEpgRequestEndTime || */endTime <= startTime)
             return;
         
-        startTime = std::max(startTime, m_lastEpgRequestEndTime);
-        m_lastEpgRequestEndTime = endTime;
+        if(m_epgUpdateInterval.IsSet() && m_epgUpdateInterval.TimeLeft() > 0){
+            LogDebug("Can update EPG after %d sec",  m_epgUpdateInterval.TimeLeft());
+            return;
+        }
+        
+//        startTime = std::max(startTime, m_lastEpgRequestEndTime);
+//        m_lastEpgRequestEndTime = endTime;
         
         char mbstr[100];
         if (std::strftime(mbstr, sizeof(mbstr), "%d/%m %H:%M - ", std::localtime(&startTime))) {
             int dec = strlen(mbstr);
             if (std::strftime(mbstr + dec, sizeof(mbstr) - dec, "%d/%m %H:%M", std::localtime(&endTime))) {
-                LogDebug("Requested all cahnnel EPG update %s", mbstr);
+                LogDebug("Requested all cahnnel EPG update at %s", mbstr);
             }
         }
         

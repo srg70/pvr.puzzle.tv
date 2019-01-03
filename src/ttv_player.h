@@ -232,7 +232,6 @@ namespace TtvEngine
 
         std::string m_playListUrl;
         std::string m_epgUrl;
-        P8PLATFORM::CTimeout m_epgUpdateInterval;
         P8PLATFORM::CMutex m_recordingsGuard;
         ArchiveInfos m_archiveInfoPlist;
         bool m_isAceRunning;

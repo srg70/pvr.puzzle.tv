@@ -66,6 +66,8 @@ namespace PvrClient {
         ClientCoreBase(const RecordingsDelegate& didRecordingsUpadate = nullptr);
         
         // EPG methods
+        P8PLATFORM::CTimeout m_epgUpdateInterval;
+
         static std::string MakeEpgCachePath(const char* cacheFile);
         void ClearEpgCache(const char* cacheFile);
         void LoadEpgCache(const char* cacheFile);

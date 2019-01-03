@@ -243,10 +243,14 @@ namespace TtvEngine
     
     void Core::UpdateEpgForAllChannels(time_t startTime, time_t endTime)
     {
-        if(m_epgUpdateInterval.IsSet() && m_epgUpdateInterval.TimeLeft() > 0)
-            return;
-        
-        m_epgUpdateInterval.Init(24*60*60*1000);
+         // Assuming server provides EPG at least fo next 12 hours
+        // To reduce amount of API calls, allow next EPG update
+        // after either 12 hours or  endTime
+        time_t now = time(nullptr);
+        time_t nextUpdateAt = std::min(now + 12*60*60, endTime);
+        int32_t interval = nextUpdateAt - now;
+        if(interval > 0)
+            m_epgUpdateInterval.Init(interval*1000);
         
         if(m_useApi)
             UpdateEpgForAllChannels_Api(startTime, endTime);
