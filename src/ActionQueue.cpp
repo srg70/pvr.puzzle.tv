@@ -30,6 +30,13 @@ namespace ActionQueue {
     
     void* CActionQueue::Process()
     {
+        // NOTE: Keep commented out! Debug code
+//        if(!_name.empty()){
+//            if (pthread_setname_np( _name.c_str()) != 0)
+//                Globals::LogError("pthread_setname_np failed!");
+//            _name.clear();
+//        }
+
         while (!IsStopped())
         {
             IActionQueueItem* action = NULL;
@@ -48,8 +55,12 @@ namespace ActionQueue {
             // Check for priority task
             if(_priorityAction) {
                 P8PLATFORM::CLockObject lock(_priorityActionMutex);
-                if(_priorityAction)
+                if(_priorityAction) {
                     _priorityAction->Perform();
+                    delete _priorityAction;
+                    _priorityAction = nullptr;
+
+                }
             }
             
         }

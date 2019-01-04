@@ -560,7 +560,6 @@ namespace TtvEngine
                      EpgEntry* epgEntry = new EpgEntry();
                      epgEntry->ChannelId = chId ;
                      epgEntry->Title = epg["name"].GetString();
-                     //epgEntry.Description = m.value["descr"].GetString();
                      epgEntry->StartTime = epg["btime"].GetInt();//  + epgOffset;
                      epgEntry->EndTime = epg["etime"].GetInt();// + epgOffset;
                      auto id = pThis->AddEpgEntry(*epgEntry);
@@ -863,7 +862,7 @@ namespace TtvEngine
                                  throw ServerErrorException(code);
                              });
         };
-        ActionQueue::TCompletion comp =  [pThis, data, parser, completion, isLoginCommand](const ActionQueue::ActionResult& s)
+        ActionQueue::TCompletion completionWrapper =  [pThis, data, parser, completion, isLoginCommand](const ActionQueue::ActionResult& s)
         {
             // Do not re-login within login/logout command.
             if(s.status == ActionQueue::kActionFailed && !isLoginCommand) {
@@ -874,7 +873,7 @@ namespace TtvEngine
                     if(ex.reason == "incorrect") {
                         // In case of error try to re-login and repeat the API call.
                         pThis->RenewSession();
-                        pThis->CallApiAsync(data, parser,  [completion](const ActionQueue::ActionResult& ss){completion(ss);});
+                        pThis->CallApiAsync(data, parser, completion);
                         return;
                     }
                 }
@@ -884,7 +883,7 @@ namespace TtvEngine
             }
             completion(s);
         };
-        m_httpEngine->CallApiAsync(strRequest, parserWrapper, comp, data.priority);
+        m_httpEngine->CallApiAsync(strRequest, parserWrapper, completionWrapper, data.priority);
     }
     
 #pragma mark - API Session

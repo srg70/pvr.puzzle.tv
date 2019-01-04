@@ -105,7 +105,7 @@ namespace Buffers
         void *Process();
         void Init(const std::string &playlistUrl);
         void Init(const std::string &playlistUrl, bool cleanContent, int64_t position, time_t timeshift);
-        bool FillSegment(const SegmentInfo& segment);
+        bool FillSegment(const SegmentInfo& segment, size_t & segmantsSize);
         bool IsStopped(uint32_t timeoutInSec = 0);
         float Bitrate() const {
             return m_totalLength / (m_totalDuration + 0.01);

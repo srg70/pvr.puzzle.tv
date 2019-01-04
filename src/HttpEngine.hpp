@@ -81,12 +81,12 @@ public:
             throw QueueNotRunningException("API request queue in not running.");
         auto pThis = this;
         ActionQueue::TAction action = [pThis, request,  parser, completion](){
-            pThis->SendHttpRequest(request, pThis->m_sessionCookie, parser,
-                            [completion](const ActionQueue::ActionResult& s) { completion(s);});
+            pThis->SendHttpRequest(request, pThis->m_sessionCookie, parser,completion);
         };
         ActionQueue::TCompletion comp = [completion](const ActionQueue::ActionResult& s) {
-            if(s.status != ActionQueue::kActionCompleted)
+            if(s.status != ActionQueue::kActionCompleted){
                 completion(s);
+            }
         };
         if(priority == RequestPriority_Hi)
             m_apiCalls->PerformHiPriority(action, comp);
@@ -118,8 +118,9 @@ private:
         CURL *curl = curl_easy_init();
         if (curl)
         {
+            const unsigned long long requestId = m_DebugRequestId++;
             auto start = P8PLATFORM::GetTimeMs();
-            m_addonHelper->Log(ADDON::LOG_INFO, "Sending request: %s. ID=%llu", url.c_str(), m_DebugRequestId);
+            m_addonHelper->Log(ADDON::LOG_INFO, "Sending request: %s. ID=%llu", url.c_str(), requestId);
             curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
             curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
             curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errorMessage);
@@ -148,12 +149,12 @@ private:
                 
                 if (curlCode == CURLE_OPERATION_TIMEDOUT)
                 {
-                    m_addonHelper->Log(ADDON::LOG_ERROR, "CURL operation timeout! (%d sec). ID=%llu", c_CurlTimeout, m_DebugRequestId);
+                    m_addonHelper->Log(ADDON::LOG_ERROR, "CURL operation timeout! (%d sec). ID=%llu", c_CurlTimeout, requestId);
                     break;
                 }
                 else if (curlCode != CURLE_OK)
                 {
-                    m_addonHelper->Log(ADDON::LOG_ERROR, "CURL error %d. Message: %s. ID=%llu", curlCode, errorMessage, m_DebugRequestId);
+                    m_addonHelper->Log(ADDON::LOG_ERROR, "CURL error %d. Message: %s. ID=%llu", curlCode, errorMessage, requestId);
                     break;
                 }
                 
@@ -162,11 +163,11 @@ private:
                 if (httpCode != 503) // temporarily unavailable
                     break;
                 
-                m_addonHelper->Log(ADDON::LOG_INFO, "%s: %s. ID=%llu", __FUNCTION__, "HTTP error 503 (temporarily unavailable)", m_DebugRequestId);
+                m_addonHelper->Log(ADDON::LOG_INFO, "%s: %s. ID=%llu", __FUNCTION__, "HTTP error 503 (temporarily unavailable)", requestId);
                 
                 P8PLATFORM::CEvent::Sleep(1000);
             }
-            m_addonHelper->Log(ADDON::LOG_INFO, "Got HTTP response (%d) in %d ms. ID=%llu", httpCode,  P8PLATFORM::GetTimeMs() - start, m_DebugRequestId++);
+            m_addonHelper->Log(ADDON::LOG_INFO, "Got HTTP response (%d) in %d ms. ID=%llu", httpCode,  P8PLATFORM::GetTimeMs() - start, requestId);
             
             if (httpCode != 200)
                 *response = "";
@@ -182,12 +183,15 @@ private:
                 throw CurlErrorException(&errorMessage[0]);
             }
             
-            m_apiCallCompletions->PerformAsync([=]() {
+            m_apiCallCompletions->PerformAsync([result, response, requestId]() {
+                Globals::LogDebug("Processing response. ID=%llu", requestId);
                 result(*response);
-            }, [=](const ActionQueue::ActionResult& s) {
+            }, [completion, response, requestId](const ActionQueue::ActionResult& s) {
                 delete response;
+                Globals::LogDebug("Complete response. ID=%llu", requestId);
                 completion(s);
             });
+            ;
         }
     }
     

@@ -84,7 +84,7 @@ namespace Buffers {
         CreateThread();
     }
         
-    bool PlaylistBuffer::FillSegment(const SegmentInfo& segmentInfo)
+    bool PlaylistBuffer::FillSegment(const SegmentInfo& segmentInfo, size_t & segmantsSize)
     {
         unsigned char buffer[8196];
         void* f = XBMC->OpenFile(segmentInfo.url.c_str(), XFILE::READ_NO_CACHE | XFILE::READ_CHUNKED); //XFILE::READ_AUDIO_VIDEO);
@@ -103,7 +103,7 @@ namespace Buffers {
         
         float bitrate = 0.0;
         time_t segmentTimeshift = 0;
-        size_t segmantsSize = 0;
+        segmantsSize = 0;
         {
             CLockObject lock(m_syncAccess);
             if(!IsStopped()) {
@@ -162,11 +162,13 @@ namespace Buffers {
                 float sleepTime = 1; //Min sleep time 1 sec
                 if(nullptr != pSegmentInfo) {
                     LogDebug(">>> Start fill segment.");
-                    isEof = FillSegment(*pSegmentInfo);
+                    size_t  segmantsSize = 0;
+                    isEof = FillSegment(*pSegmentInfo, segmantsSize);
                     LogDebug(">>> End fill segment.");
                     
                     auto duration = pSegmentInfo->duration;
-                    sleepTime = std::max(duration / 2.0, 1.0);
+                    if(segmantsSize > 1)
+                        sleepTime = std::max(duration / 2.0, 1.0);
                     LogDebug(">>> Segment duration: %f", duration);
                     if(!IsStopped())
                         m_writeEvent.Signal();

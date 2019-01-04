@@ -28,6 +28,7 @@
 #include "p8-platform/threads/threads.h"
 #include "p8-platform/threads/mutex.h"
 #include "ActionQueueTypes.hpp"
+#include "globals.hpp"
 #include <exception>
 #include <stdexcept>
 #include <string>
@@ -47,7 +48,6 @@ namespace ActionQueue
 
     class CActionQueue : public P8PLATFORM::CThread
     {
-    public:
     private:
 //        template<typename TAction>
         class QueueItem : public IActionQueueItem
@@ -70,13 +70,14 @@ namespace ActionQueue
         private:
             const TAction _action;
             const TCompletion _completion;
-            void Failed(std::exception_ptr e) {{_completion(ActionResult(kActionFailed, e));}}
+            void Failed(std::exception_ptr e) {_completion(ActionResult(kActionFailed, e));}
         };
     public:
-        CActionQueue(size_t maxSize)
+        CActionQueue(size_t maxSize, const char* name = nullptr)
         : _actions(maxSize)
         , _willStop(false)
         , _priorityAction(nullptr)
+        , _name(name)
         {}
 
         void PerformHiPriority(TAction action, const TCompletion completion)
@@ -85,13 +86,21 @@ namespace ActionQueue
             
             CEvent done;
             TAction doneAction = [action, &done ](){
-                done.Signal();
-                action();
+                try{
+                    action();
+                    done.Signal();
+                } catch  (...){
+                    Globals::LogError("CActionQueue: execption during process HI-priority request!");
+                    done.Signal();
+                    throw;
+                }
             };
             auto item = new QueueItem(doneAction, completion);
             if(_willStop){
                 item->Cancel();
                 done.Signal();
+                delete item;
+                item = nullptr;
             } else {
                 if(_priorityAction != nullptr) // Can't be
                     throw ActionQueueException("Too many priority tasks.");
@@ -104,9 +113,6 @@ namespace ActionQueue
                 _actions.Push(new QueueItem([]{}, [](const ActionResult&){}));
             }
             done.Wait();
-            CLockObject lock(_priorityActionMutex);
-            _priorityAction = nullptr;
-            delete item;
         }
 
 //        template<typename TAction>
@@ -143,6 +149,7 @@ namespace ActionQueue
         P8PLATFORM::CMutex _priorityActionMutex;
         IActionQueueItem* _priorityAction;
         bool _willStop;
+        std::string _name;
         
     };
 }

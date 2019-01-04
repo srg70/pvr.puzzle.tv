@@ -38,8 +38,8 @@ long HttpEngine::c_CurlTimeout = 15; // in sec
 
 HttpEngine::HttpEngine()
     :  m_addonHelper(Globals::XBMC),
-    m_apiCalls(new CActionQueue(c_MaxQueueSize)),
-    m_apiCallCompletions(new CActionQueue(c_MaxQueueSize)),
+    m_apiCalls(new CActionQueue(c_MaxQueueSize, "API Calls")),
+    m_apiCallCompletions(new CActionQueue(c_MaxQueueSize, "API Complition")),
     m_DebugRequestId(1)
 {
 

@@ -421,7 +421,7 @@ namespace PvrClient{
             return;
         
         if(m_epgUpdateInterval.IsSet() && m_epgUpdateInterval.TimeLeft() > 0){
-            LogDebug("Can update EPG after %d sec",  m_epgUpdateInterval.TimeLeft());
+            LogDebug("Can update EPG after %d sec",  m_epgUpdateInterval.TimeLeft()/1000);
             return;
         }
         
