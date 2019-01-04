@@ -71,9 +71,10 @@ namespace EdemEngine
     static void LoadPlaylist(const string& plistUrl, PlaylistContent& channels);
 
     
-    Core::Core(const std::string &playListUrl,  const std::string &epgUrl)
+    Core::Core(const std::string &playListUrl,  const std::string &epgUrl, bool enableAdult)
     : m_playListUrl(playListUrl)
     , m_epgUrl(epgUrl)
+    , m_enableAdult(enableAdult)
     {
     }
     
@@ -126,6 +127,9 @@ namespace EdemEngine
         {
             const auto& channel = channelWithGroup.second.first;
             const auto& groupName = channelWithGroup.second.second;
+            
+            if(!m_enableAdult && groupName == "взрослые")
+                continue;
             
             AddChannel(channel);
             

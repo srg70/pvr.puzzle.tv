@@ -59,6 +59,7 @@ private:
     std::string m_playlistUrl;
     std::string m_epgUrl;
     bool m_supportSeek;
+    bool m_enableAdult;
 };
 
 #endif //__edem_pvr_client_h__

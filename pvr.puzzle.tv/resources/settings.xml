@@ -57,6 +57,7 @@
 <!--    <setting id="edem_epg_url" type="text" label="50001" default="http://programtv.ru/xmltv.xml.gz"/>-->
     <setting id="edem_epg_url" type="text" label="50001" default="http://epg.it999.ru/edem.xml.gz"/>
     <setting id="edem_seek_archives" type="bool" label="50002" default="false"/>
+    <setting id="edem_adult" type="bool" label="30003" default="false"/>
 </category>
 
 <!-- TTV Player -->

@@ -53,6 +53,7 @@ using namespace PvrClient;
 static const char* c_playlist_setting = "edem_playlist_url";
 static const char* c_epg_setting = "edem_epg_url";
 static const char* c_seek_archives = "edem_seek_archives";
+static const char* c_edem_adult = "edem_adult";
 
 ADDON_STATUS EdemPVRClient::Init(PVR_PROPERTIES* pvrprops)
 {
@@ -69,6 +70,9 @@ ADDON_STATUS EdemPVRClient::Init(PVR_PROPERTIES* pvrprops)
     
     m_supportSeek = false;
     XBMC->GetSetting(c_seek_archives, &m_supportSeek);
+    
+    m_enableAdult = false;
+    XBMC->GetSetting(c_edem_adult, &m_enableAdult);
     
     retVal = CreateCoreSafe(false);
     
@@ -121,7 +125,7 @@ void EdemPVRClient::CreateCore(bool clearEpgCache)
     DestroyCoreSafe();
     
     if(PVRClientBase::CheckPlaylistUrl(m_playlistUrl)) {
-        m_clientCore = m_core = new EdemEngine::Core(m_playlistUrl, m_epgUrl);
+        m_clientCore = m_core = new EdemEngine::Core(m_playlistUrl, m_epgUrl, m_enableAdult);
         m_core->InitAsync(clearEpgCache);
     }
 }
@@ -145,7 +149,18 @@ ADDON_STATUS EdemPVRClient::SetSetting(const char *settingName, const void *sett
     else if(strcmp(settingName,  c_seek_archives) == 0) {
         m_supportSeek = *(const bool*) settingValue;
     }
-    else {
+    else if(strcmp(settingName,  c_edem_adult) == 0) {
+        m_enableAdult = *(const bool*) settingValue;
+        result = CreateCoreSafe(false);
+        m_clientCore->CallRpcAsync("{\"jsonrpc\": \"2.0\", \"method\": \"GUI.ActivateWindow\", \"params\": {\"window\": \"pvrsettings\"},\"id\": 1}",
+                                   [&] (rapidjson::Document& jsonRoot) {
+                                       char* message = XBMC->GetLocalizedString(32016);
+                                       XBMC->QueueNotification(QUEUE_INFO, message);
+                                       XBMC->FreeString(message);
+                                   },
+                                   [&](const ActionQueue::ActionResult& s) {});
+
+    } else {
         result = PVRClientBase::SetSetting(settingName, settingValue);
     }
     return result;
@@ -177,19 +192,7 @@ PVR_ERROR  EdemPVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUH
 
 ADDON_STATUS EdemPVRClient::OnReloadEpg()
 {
-    ADDON_STATUS retVal = CreateCoreSafe(true);
-    
-//    if(ADDON_STATUS_OK == retVal && nullptr != m_core){
-//        std::time_t startTime = std::time(nullptr);
-//        startTime = std::mktime(std::gmtime(&startTime));
-//        // Request EPG for all channels from -7 to +1 days
-//        time_t endTime = startTime + 1 * 24 * 60 * 60;
-//        startTime -= 7 * 24 * 60 * 60;
-//
-//        m_core->UpdateEpgForAllChannels(startTime, endTime);
-//    }
-    
-    return retVal;
+    return CreateCoreSafe(true);
 }
 
 

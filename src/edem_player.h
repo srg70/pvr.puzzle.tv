@@ -78,7 +78,7 @@ namespace EdemEngine
     class Core : public PvrClient::ClientCoreBase
     {
     public:
-        Core(const std::string &playListUrl, const std::string &epgUrl);
+        Core(const std::string &playListUrl, const std::string &epgUrl, bool enableAdult);
         ~Core();
         
         std::string GetArchiveUrl(PvrClient::ChannelId channelId, time_t startTime);
@@ -96,6 +96,7 @@ namespace EdemEngine
 
         void Cleanup();
 
+        const bool m_enableAdult;
         std::string m_playListUrl;
         std::string m_epgUrl;
     };
