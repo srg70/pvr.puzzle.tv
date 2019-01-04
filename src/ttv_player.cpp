@@ -555,6 +555,9 @@ namespace TtvEngine
                  auto& data = jsonRoot["data"];
                  if(!data.IsArray())
                      return;
+                 time_t now = time(nullptr);
+                 time_t details_from = now - 13*60*60;
+                 time_t details_to = now + 13*60*60;
                  SizeType dataSize = data.Size();
                  for(auto& epg : data.GetArray()) {
                      EpgEntry* epgEntry = new EpgEntry();
@@ -564,7 +567,9 @@ namespace TtvEngine
                      epgEntry->EndTime = epg["etime"].GetInt();// + epgOffset;
                      auto id = pThis->AddEpgEntry(*epgEntry);
                      // NOTE: will release epgEntry when done
-                     pThis->GetEpgDetailsAsync(id, epg["program_id"].GetString(), epgEntry, isLast && (--dataSize == 0));
+                     if(details_from < epgEntry->StartTime && epgEntry->StartTime < details_to)  {// limit detailed EPG requests
+                         pThis->GetEpgDetailsAsync(id, epg["program_id"].GetString(), epgEntry, isLast && (--dataSize == 0));
+                     }
                  }
                  
              },
