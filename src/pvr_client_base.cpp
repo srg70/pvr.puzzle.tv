@@ -33,6 +33,7 @@
 
 #include <stdio.h>
 #include <algorithm>
+#include <list>
 #include "p8-platform/util/util.h"
 #include "p8-platform/util/StringUtils.h"
 
@@ -595,6 +596,8 @@ bool PVRClientBase::SwitchChannel(ChannelId channelId, const std::string& url)
     CLockObject lock(m_mutex);
     if(IsLiveInRecording() || channelId == m_localRecordChannelId)
         return OpenLiveStream(channelId, url); // Split/join live and recording streams (when nesessry)
+    
+    m_liveChannelId = channelId;
     return m_inputBuffer->SwitchStream(url); // Just change live stream
 }
 
@@ -711,8 +714,8 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
     PVR_ERROR result = PVR_ERROR_NO_ERROR;
     auto pThis = this;
     
-    auto Pvr = PVR;
-    IClientCore::EpgEntryAction action = [&handle, pThis ,&result, Pvr](const EpgEntryList::value_type& epgEntry)
+    std::list<PVR_RECORDING> recs;
+    IClientCore::EpgEntryAction action = [pThis ,&result, &recs](const EpgEntryList::value_type& epgEntry)
     {
         try {
             if(!epgEntry.second.HasArchive)
@@ -720,8 +723,7 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
 
             PVR_RECORDING tag = { 0 };
             pThis->FillRecording(epgEntry, tag, s_RemoteRecPrefix.c_str());
-            
-            Pvr->TransferRecordingEntry(handle, &tag);
+            recs.push_back(tag);
             return true;
         }
         catch (...)  {
@@ -733,6 +735,10 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
     };
     m_clientCore->ForEachEpg(action);
     
+    // Populate server recordings
+    for (auto& r : recs) {
+        PVR->TransferRecordingEntry(handle, &r);
+    }
     // Add local recordings
     if(XBMC->DirectoryExists(m_recordingsDir.c_str()))
     {
@@ -951,7 +957,7 @@ bool PVRClientBase::StartRecordingFor(const PVR_TIMER &timer)
 //        CloseLiveStream();
         m_inputBuffer->SwapCache( new Buffers::FileCacheBuffer(recordingDir, 255, false));
         m_localRecordBuffer = m_inputBuffer;
-        m_liveChannelId = m_localRecordChannelId;
+        m_liveChannelId = m_localRecordChannelId; // ???
         return true;
     }
     // otherwise just open new recording stream
