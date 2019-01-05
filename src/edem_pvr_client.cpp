@@ -150,15 +150,18 @@ ADDON_STATUS EdemPVRClient::SetSetting(const char *settingName, const void *sett
         m_supportSeek = *(const bool*) settingValue;
     }
     else if(strcmp(settingName,  c_edem_adult) == 0) {
-        m_enableAdult = *(const bool*) settingValue;
-        result = CreateCoreSafe(false);
-        m_clientCore->CallRpcAsync("{\"jsonrpc\": \"2.0\", \"method\": \"GUI.ActivateWindow\", \"params\": {\"window\": \"pvrsettings\"},\"id\": 1}",
-                                   [&] (rapidjson::Document& jsonRoot) {
-                                       char* message = XBMC->GetLocalizedString(32016);
-                                       XBMC->QueueNotification(QUEUE_INFO, message);
-                                       XBMC->FreeString(message);
-                                   },
-                                   [&](const ActionQueue::ActionResult& s) {});
+        bool newValue = *(const bool*) settingValue;
+        if(newValue != m_enableAdult) {
+            m_enableAdult = newValue;
+            result = CreateCoreSafe(false);
+            m_clientCore->CallRpcAsync("{\"jsonrpc\": \"2.0\", \"method\": \"GUI.ActivateWindow\", \"params\": {\"window\": \"pvrsettings\"},\"id\": 1}",
+                                       [&] (rapidjson::Document& jsonRoot) {
+                                           char* message = XBMC->GetLocalizedString(32016);
+                                           XBMC->QueueNotification(QUEUE_INFO, message);
+                                           XBMC->FreeString(message);
+                                       },
+                                       [&](const ActionQueue::ActionResult& s) {});
+        }
 
     } else {
         result = PVRClientBase::SetSetting(settingName, settingValue);
