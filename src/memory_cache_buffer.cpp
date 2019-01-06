@@ -127,7 +127,7 @@ namespace Buffers
         unsigned int idx = -1;
         ChunkPtr chunk = NULL;
         {
-            LogDebug("MemoryCacheBuffer::Seek. >>> Requested pos %d", iPosition);
+            LogDebug("MemoryCacheBuffer::Seek. >>> Requested pos %lld", iPosition);
             
             CLockObject lock(m_SyncAccess);
             
@@ -144,8 +144,8 @@ namespace Buffers
                 iPosition = m_begin;
             }
             iWhence = SEEK_SET;
-            LogDebug("MemoryCacheBuffer::Seek. Calculated pos %d", iPosition);
-            LogDebug("MemoryCacheBuffer::Seek. Begin %d Length %d", m_begin, m_length);
+            LogDebug("MemoryCacheBuffer::Seek. Calculated pos %lld", iPosition);
+            LogDebug("MemoryCacheBuffer::Seek. Begin %lld Length %lld", m_begin, m_length);
             
             idx = GetChunkIndexFor(iPosition);
             if(idx >= m_ReadChunks.size()) {
@@ -157,9 +157,9 @@ namespace Buffers
             auto inPos = GetPositionInChunkFor(iPosition);
             auto pos =  chunk->Seek(inPos);
             m_position = iPosition -  (inPos - pos);
-            LogDebug("MemoryCacheBuffer::Seek. Chunk idx %d, pos in chunk %d, actual pos %d", idx, inPos, pos);
+            LogDebug("MemoryCacheBuffer::Seek. Chunk idx %d, pos in chunk %lld, actual pos %lld", idx, inPos, pos);
         }
-        LogDebug("MemoryCacheBuffer::Seek. <<< Result pos %d", m_position);
+        LogDebug("MemoryCacheBuffer::Seek. <<< Result pos %lld", m_position);
         return m_position;
         
     }
@@ -362,6 +362,8 @@ namespace Buffers
     }
     int64_t MemoryCacheBuffer::GetPositionInChunkFor(int64_t pos) {
         pos -= m_begin;
+        if(pos < 0)
+            return 0;
         return pos % CHUNK_SIZE_LIMIT;
     }
     
