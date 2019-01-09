@@ -176,7 +176,7 @@ namespace TtvEngine
         std::map<int, PvrClient::ChannelId> m_epgIdToChannelId;
         // map<epgId, map<startTime, record>>
         std::map<int, std::map<int, Record> > m_records;
-        typedef std::set<const PvrClient::EpgEntryList::key_type> EpgForDetails;
+        typedef std::set<PvrClient::EpgEntryList::key_type> EpgForDetails;
         
         EpgForDetails m_epgForDetails;
         const CoreParams m_coreParams;
