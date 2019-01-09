@@ -70,6 +70,7 @@ src/Playlist.cpp
 src/ttv_player.cpp
 src/ttv_pvr_client.cpp
 src/guid.cpp
+src/playlist_cache.cpp
 )
 
 
