@@ -129,6 +129,7 @@ namespace TtvEngine
     , m_useApi(true)
     , m_coreParams(coreParams)
     , m_zoneId(0)
+    , m_isRunnig(true)
     {
         m_isRegistered = m_coreParams.user != "anonymous";
         LoadSessionCache();
@@ -141,6 +142,7 @@ namespace TtvEngine
     : m_playListUrl(playListUrl)
     , m_epgUrl(epgUrl)
     , m_useApi(false)
+    , m_isRunnig(true)
     {
     }
     
@@ -163,6 +165,8 @@ namespace TtvEngine
             ClearEpgCache(c_EpgCacheFile);
         } else {
             LoadEpgCache(c_EpgCacheFile);
+            // Schedule very low EPG details update
+            ScheduleEpgDetails();
         }
         if(m_useApi) {
             time_t now = time(nullptr);
@@ -187,6 +191,7 @@ namespace TtvEngine
         LogNotice("TtvPlayer stopping...");
         
         if(m_httpEngine){
+            m_isRunnig = false;
             SAFE_DELETE(m_httpEngine);
         }
         
@@ -512,124 +517,7 @@ namespace TtvEngine
         CATCH_API_CALL();
         return url;
     }
-    // Linux compilation issue workarround
-    // Call protected base method from private method
-    // instead of directly from lambda.
-    UniqueBroadcastIdType Core::AddEpgEntry(PvrClient::EpgEntry& epg)
-    {
-        UniqueBroadcastIdType id = epg.StartTime;
-        return ClientCoreBase::AddEpgEntry(id, epg);
-    }
-    void Core::UpdateEpgForAllChannels_Api(time_t startTime, time_t endTime)
-    {
-//        auto epgOffset = - XMLTV::LocalTimeOffset();
-        
-        // Validate epg_id
-        std::list<ChannelId> validCahnnels;
-        for (const auto& ch : m_channelList) {
-            auto chId = ch.second.Id;
-            const auto& ttvCh = m_ttvChannels[chId];
-            if(ttvCh.epg_id != 0) {
-                validCahnnels.push_back(chId);
-            }
-        }
-        
-        size_t channelsToProcess = validCahnnels.size();
-        
-        for (const auto& chId : validCahnnels) {
-            const auto& ttvCh = m_ttvChannels[chId];
-            const bool isLast = --channelsToProcess == 0;
-            if(isLast)
-                LogDebug("Last EPG channel ID = %d", chId);
-            ApiFunctionData apiData(c_TTV_API_URL_base, "translation_epg.php");
-            apiData.params["btime"] = n_to_string(startTime);
-            apiData.params["etime"] = n_to_string(endTime);
-            apiData.params["epg_id"] = n_to_string(ttvCh.epg_id);
-            
-            auto pThis = this;
-            CallApiAsync(apiData, [pThis, chId, isLast] (Document& jsonRoot)
-             {
-                 if(!jsonRoot.HasMember("data"))
-                     return;
-                 
-                 auto& data = jsonRoot["data"];
-                 if(!data.IsArray())
-                     return;
-                 time_t now = time(nullptr);
-                 time_t details_from = now - 13*60*60;
-                 time_t details_to = now + 13*60*60;
-                 SizeType dataSize = data.Size();
-                 for(auto& epg : data.GetArray()) {
-                     EpgEntry* epgEntry = new EpgEntry();
-                     epgEntry->ChannelId = chId ;
-                     epgEntry->Title = epg["name"].GetString();
-                     epgEntry->StartTime = epg["btime"].GetInt();//  + epgOffset;
-                     epgEntry->EndTime = epg["etime"].GetInt();// + epgOffset;
-                     auto id = pThis->AddEpgEntry(*epgEntry);
-                     // NOTE: will release epgEntry when done
-                     if(details_from < epgEntry->StartTime && epgEntry->StartTime < details_to)  {// limit detailed EPG requests
-                         pThis->GetEpgDetailsAsync(id, epg["program_id"].GetString(), epgEntry, isLast && (--dataSize == 0));
-                     }
-                 }
-                 
-             },
-             [pThis, isLast, chId](const ActionQueue::ActionResult& s) {
-                 try {
-                     if(isLast)
-                         pThis->SaveEpgCache(c_EpgCacheFile, 11);
-                     if(s.exception)
-                         std::rethrow_exception(s.exception);
-                     PVR->TriggerEpgUpdate(chId);
-                 }
-                 CATCH_API_CALL();
-             });
-        }
-    }
-    void Core::GetEpgDetailsAsync(UniqueBroadcastIdType id, const char* programId, EpgEntry* epg, bool isLast)
-    {
-        try
-        {
-            ApiFunctionData apiData(c_TTV_API_URL_base,"translation_epg_details.php");
-            apiData.params["program_id"] = programId;
-            auto pThis = this;
-            CallApiAsync(apiData, [pThis, epg, id] (Document& jsonRoot)
-            {
-                if(!jsonRoot.HasMember("data"))
-                    return ;
-                bool epgChanged = false;
-                auto& data = jsonRoot["data"];
-//                dump_json(data);
-                if(data.HasMember("description")) {
-                    epg->Description = data["description"].GetString();
-                    epgChanged = true;
-                }
-                
-                if(data.HasMember("images")) {
-                    const auto& images= data["images"];
-                    if(images.IsArray()) {
-                        for (const auto& img : images.GetArray()) {
-                            epg->IconPath = img.GetString();
-                            epgChanged = true;
-                            break;
-                        }
-                    }
-                }
-                if(epgChanged)
-                    pThis->UpdateEpgEntry(id, *epg);
-            }, [pThis, epg, isLast](const ActionQueue::ActionResult& s) {
-                if(epg)
-                    delete epg;
-                static int saveCounter = 1000;
-                if(isLast || --saveCounter == 0) {
-                    saveCounter = 1000;
-                    pThis->SaveEpgCache(c_EpgCacheFile, 11);
-                }
 
-            });
-        }
-        CATCH_API_CALL();
-    }
-    
 //    void Core::UpdateEpgEntry(UniqueBroadcastIdType id, const EpgEntry* entry) {
 //        ClientCoreBase::UpdateEpgEntry(id, *entry);
 //    }
@@ -832,7 +720,7 @@ namespace TtvEngine
         });
         event.Wait();
         if(ex)
-        std::rethrow_exception(ex);
+            std::rethrow_exception(ex);
     }
     
     template <typename TParser>
@@ -870,7 +758,7 @@ namespace TtvEngine
         ActionQueue::TCompletion completionWrapper =  [pThis, data, parser, completion, isLoginCommand](const ActionQueue::ActionResult& s)
         {
             // Do not re-login within login/logout command.
-            if(s.status == ActionQueue::kActionFailed && !isLoginCommand) {
+            if(s.status == ActionQueue::kActionFailed && !isLoginCommand && pThis->m_isRunnig) {
                 try{
                     std::rethrow_exception(s.exception);
                 }
@@ -889,6 +777,193 @@ namespace TtvEngine
             completion(s);
         };
         m_httpEngine->CallApiAsync(strRequest, parserWrapper, completionWrapper, data.priority);
+    }
+    
+#pragma mark - API EPG
+    // Linux compilation issue workarround
+    // Call protected base method from private method
+    // instead of directly from lambda.
+    UniqueBroadcastIdType Core::AddEpgEntry(PvrClient::EpgEntry& epg)
+    {
+        UniqueBroadcastIdType id = epg.StartTime;
+        return ClientCoreBase::AddEpgEntry(id, epg);
+    }
+    
+    void Core::UpdateEpgForAllChannels_Api(time_t startTime, time_t endTime)
+    {
+        //        auto epgOffset = - XMLTV::LocalTimeOffset();
+        
+        // Validate epg_id
+        std::list<ChannelId> validCahnnels;
+        for (const auto& ch : m_channelList) {
+            auto chId = ch.second.Id;
+            const auto& ttvCh = m_ttvChannels[chId];
+            if(ttvCh.epg_id != 0) {
+                validCahnnels.push_back(chId);
+            }
+        }
+        
+        size_t channelsToProcess = validCahnnels.size();
+        
+        for (const auto& chId : validCahnnels) {
+            const auto& ttvCh = m_ttvChannels[chId];
+            const bool isLast = --channelsToProcess == 0;
+            if(isLast)
+                LogDebug("Last EPG channel ID = %d", chId);
+            ApiFunctionData apiData(c_TTV_API_URL_base, "translation_epg.php");
+            apiData.params["btime"] = n_to_string(startTime);
+            apiData.params["etime"] = n_to_string(endTime);
+            apiData.params["epg_id"] = n_to_string(ttvCh.epg_id);
+            
+            auto pThis = this;
+            CallApiAsync(apiData, [pThis, chId, isLast] (Document& jsonRoot)
+                         {
+                             if(!jsonRoot.HasMember("data"))
+                                 return;
+                             
+                             auto& data = jsonRoot["data"];
+                             if(!data.IsArray())
+                                 return;
+                             time_t now = time(nullptr);
+                             time_t details_from = now - 13*60*60;
+                             time_t details_to = now + 13*60*60;
+                             SizeType dataSize = data.Size();
+                             for(auto& epg : data.GetArray()) {
+                                 EpgEntry epgEntry;
+                                 epgEntry.ChannelId = chId ;
+                                 epgEntry.Title = epg["name"].GetString();
+                                 epgEntry.StartTime = epg["btime"].GetInt();//  + epgOffset;
+                                 epgEntry.EndTime = epg["etime"].GetInt();// + epgOffset;
+                                 epgEntry.ProgramId = epg["program_id"].GetString();
+                                 pThis->AddEpgEntry(epgEntry);
+                             }
+                             
+                         },
+                         [pThis, isLast, chId](const ActionQueue::ActionResult& s) {
+                             try {
+                                 if(isLast) {
+                                     pThis->SaveEpgCache(c_EpgCacheFile, 11);
+                                     if(pThis->m_isRunnig) {
+                                         pThis->ScheduleEpgDetails();
+                                     }
+                                 }
+                                 if(!pThis->m_isRunnig){
+                                     return;
+                                 }
+                                 if(s.exception)
+                                     std::rethrow_exception(s.exception);
+                                 PVR->TriggerEpgUpdate(chId);
+                             }
+                             CATCH_API_CALL();
+                         });
+        }
+    }
+    
+    void Core::ScheduleEpgDetails() {
+        
+        if(!m_isRunnig)
+            return;
+        auto pThis = this;
+        m_httpEngine->RunOnCompletionQueueAsync([pThis] () {
+            // When list is empty assume first time scheduling
+            // i.e. have to call GetEpgDetailsAsync()
+            bool shouldPingDetailsLoop = pThis->m_epgForDetails.size() <= 0;
+            
+            IClientCore::EpgEntryAction action = [pThis](const EpgEntryList::value_type& p)
+            {
+                if(!p.second.ProgramId.empty())
+                    pThis->m_epgForDetails.emplace(p.first);
+                return true;
+            };
+            auto was =  pThis->m_epgForDetails.size();
+            LogDebug("EPG Details: currently scheduled %d EPG items for details request",  was);
+            pThis->ForEachEpg(action);
+            if(shouldPingDetailsLoop) {
+                pThis->GetEpgDetailsAsync();
+            }
+            auto total = pThis->m_epgForDetails.size();
+            LogDebug("EPG Details: added %d EPG items for details request. Total %d.",  total - was, total);
+        }, [](const ActionQueue::ActionResult& s) {});
+
+    }
+    
+    void Core::GetEpgDetailsAsync()
+    {
+        try
+        {
+            EpgEntry* epg = nullptr;
+            auto pId = m_epgForDetails.begin();
+            auto end = m_epgForDetails.end();
+            UniqueBroadcastIdType id;
+            // Find first not EPG without details
+            // that hasn't requested.
+            while(pId != end && nullptr == epg) {
+                id =*pId;
+                pId = m_epgForDetails.erase(pId);
+                epg = new EpgEntry();
+                if(!GetEpgEntry(id, *epg)){
+                    SAFE_DELETE(epg);
+                    continue;
+                }
+                if(epg->ProgramId.empty()){
+                    SAFE_DELETE(epg);
+                    continue;
+                }
+            }
+            if(nullptr == epg)
+                return;
+            
+            ApiFunctionData apiData(c_TTV_API_URL_base,"translation_epg_details.php");
+            apiData.params["program_id"] = epg->ProgramId;
+            epg->ProgramId.clear();
+            auto pThis = this;
+            CallApiAsync(apiData, [pThis, epg, id] (Document& jsonRoot)
+                         {
+                             if(!jsonRoot.HasMember("data"))
+                                 return ;
+                             bool epgChanged = false;
+                             auto& data = jsonRoot["data"];
+                             //                dump_json(data);
+                             if(data.HasMember("description")) {
+                                 auto& d = data["description"];
+                                 if(d.IsString()) {
+                                     epg->Description = data["description"].GetString();
+                                 }
+                             }
+                             if(data.HasMember("category")) {
+                                 auto& d = data["category"];
+                                 if(d.IsString()){
+                                     epg->Category = data["category"].GetString();
+                                 }
+                             }
+
+                             if(data.HasMember("images")) {
+                                 const auto& images= data["images"];
+                                 if(images.IsArray()) {
+                                     for (const auto& img : images.GetArray()) {
+                                         epg->IconPath = img.GetString();
+                                         break;
+                                     }
+                                 }
+                             }
+                         }, [pThis, id, epg](const ActionQueue::ActionResult& s) {
+                             if(epg){
+                                 pThis->UpdateEpgEntry(id, *epg);
+                                 delete epg;
+                             }
+                             bool isLast = pThis->m_epgForDetails.size() <= 0;
+                             static int saveCounter = 1000;
+                             if(pThis->m_isRunnig && (isLast || --saveCounter <= 0)) {
+                                 saveCounter = 1000;
+                                 pThis->SaveEpgCache(c_EpgCacheFile, 11);
+                                 LogDebug("EPG Details: saved 1000 EPG updated. %d rest to update.", pThis->m_epgForDetails.size());
+                             }
+                             if(/*!isLast && */pThis->m_isRunnig) {
+                                 pThis->GetEpgDetailsAsync();
+                             }
+                         });
+        }
+        CATCH_API_CALL();
     }
     
 #pragma mark - API Session

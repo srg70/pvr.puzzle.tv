@@ -31,6 +31,7 @@
 #include <vector>
 #include <functional>
 #include <list>
+#include <set>
 #include <map>
 #include <memory>
 #include "p8-platform/util/timeutils.h"
@@ -175,9 +176,9 @@ namespace TtvEngine
         std::map<int, PvrClient::ChannelId> m_epgIdToChannelId;
         // map<epgId, map<startTime, record>>
         std::map<int, std::map<int, Record> > m_records;
+        typedef std::set<const PvrClient::EpgEntryList::key_type> EpgForDetails;
         
-        
-        
+        EpgForDetails m_epgForDetails;
         const CoreParams m_coreParams;
         std::string m_deviceId;
         std::string m_sessionId;
@@ -199,9 +200,10 @@ namespace TtvEngine
         
         // Epg management
         void LoadEpg();
+        void ScheduleEpgDetails();
         PvrClient::UniqueBroadcastIdType AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
         PvrClient::UniqueBroadcastIdType AddEpgEntry(PvrClient::EpgEntry& epg);
-        void GetEpgDetailsAsync(PvrClient::UniqueBroadcastIdType id, const char* programId, PvrClient::EpgEntry* epg, bool isLast);
+        void GetEpgDetailsAsync();
 //        void UpdateEpgEntry(PvrClient::UniqueBroadcastIdType id, const PvrClient::EpgEntry* entry);
 
 
@@ -235,6 +237,7 @@ namespace TtvEngine
         P8PLATFORM::CMutex m_recordingsGuard;
         ArchiveInfos m_archiveInfoPlist;
         bool m_isAceRunning;
+        bool m_isRunnig;
    };
 }
 #endif //_ttv_player_h_

@@ -94,10 +94,10 @@ public:
             m_apiCalls->PerformAsync(action, comp);
     }
     
-    template <typename TParser, typename TCompletion>
-    void RunOnCompletionQueueAsync(TParser parser, TCompletion completion)
+    //template <typename TParser, typename TCompletion>
+    void RunOnCompletionQueueAsync(ActionQueue::TAction action, ActionQueue::TCompletion completion)
     {
-        m_apiCallCompletions->PerformAsync(parser,  completion);
+        m_apiCallCompletions->PerformAsync(action,  completion);
     }
     void CancelAllRequests();
     static void SetCurlTimeout(long timeout);

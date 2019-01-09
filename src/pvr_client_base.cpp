@@ -1050,5 +1050,9 @@ void PvrClient::EpgEntry::FillEpgTag(EPG_TAG& tag) const{
     tag.startTime = StartTime;
     tag.endTime = EndTime;
     tag.strIconPath = IconPath.c_str();
+    if(!Category.empty()) {
+        tag.iGenreType = EPG_GENRE_USE_STRING;
+        tag.strGenreDescription = Category.c_str();
+    }
 }
 

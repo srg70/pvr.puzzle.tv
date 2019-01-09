@@ -53,7 +53,7 @@ namespace ActionQueue
         class QueueItem : public IActionQueueItem
         {
         public:
-            QueueItem(const TAction action, const TCompletion completion)
+            QueueItem(TAction action, TCompletion completion)
             : _action(action)
             , _completion(completion)
             {}
@@ -80,7 +80,7 @@ namespace ActionQueue
         , _name(name)
         {}
 
-        void PerformHiPriority(TAction action, const TCompletion completion)
+        void PerformHiPriority(TAction action, TCompletion completion)
         {
             using namespace P8PLATFORM;
             
@@ -116,7 +116,7 @@ namespace ActionQueue
         }
 
 //        template<typename TAction>
-        void PerformAsync(const TAction action, const TCompletion completion)
+        void PerformAsync(TAction action, TCompletion completion)
         {
             auto item = new QueueItem(action, completion);
             if(!_willStop)
@@ -127,7 +127,7 @@ namespace ActionQueue
             }
         }
 //        template<typename TAction>
-        void CancellAllBefore(const TAction action, const TCompletion completion)
+        void CancellAllBefore(TAction action, TCompletion completion)
         {
             // Set _willStop
             TerminatePipeline();

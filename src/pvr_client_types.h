@@ -98,6 +98,13 @@ namespace PvrClient {
         const char* IconPathName = "ic";
         std::string IconPath;
         
+        // Used by TTV for async EPG details update
+        const char* ProgramIdName = "pi";
+        std::string ProgramId;
+      
+        const char* CategoryName = "ca";
+        std::string Category;
+
         template <class T>
         void Serialize(T& writer) const
         {
@@ -122,6 +129,14 @@ namespace PvrClient {
                 writer.Key(IconPathName);
                 writer.String(IconPath.c_str());
             }
+            if(!ProgramId.empty()) {
+                writer.Key(ProgramIdName);
+                writer.String(ProgramId.c_str());
+            }
+            if(!Category.empty()) {
+                writer.Key(CategoryName);
+                writer.String(Category.c_str());
+            }
 
             writer.EndObject();
         }
@@ -138,6 +153,11 @@ namespace PvrClient {
                 HasArchive = reader[HasArchiveName].GetBool();
             if(reader.HasMember(IconPathName))
                 IconPath = reader[IconPathName].GetString();
+            if(reader.HasMember(ProgramIdName))
+                ProgramId = reader[ProgramIdName].GetString();
+            if(reader.HasMember(CategoryName))
+                Category = reader[CategoryName].GetString();
+            
         }
         void FillEpgTag(EPG_TAG& tag) const;
     };
