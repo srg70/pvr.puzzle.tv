@@ -26,7 +26,6 @@
 
 #include <string>
 #include <memory>
-#include <map>
 #include <vector>
 #include <list>
 #include "p8-platform/threads/threads.h"
@@ -35,8 +34,8 @@
 
 namespace Buffers
 {
-    class Playlist;
-    struct SegmentInfo;
+    class MutableSegment;
+    class PlaylistCache;
     
     class IPlaylistBufferDelegate
     {
@@ -66,50 +65,18 @@ namespace Buffers
         virtual bool StopThread(int iWaitMs = 5000);
         
     private:
-        class Segment
-        {
-        public:
-            Segment(float duration);
-            Segment(const uint8_t* buffer, size_t size, float duration);
-            void Push(const uint8_t* buffer, size_t size);
-            const uint8_t* Pop(size_t requesred, size_t*  actual);
-            size_t Read(uint8_t* buffer, size_t size);
-            size_t Seek(size_t position);
-            size_t Position() const  {return _begin - &_data[0];}
-            size_t BytesReady() const {return  _size - Position();}
-            float Bitrate() const { return  _duration == 0.0 ? 0.0 : _size/_duration;}
-            float Duration() const {return _duration;}
-            size_t Length() const {return _size;}
-            
-            ~Segment();
-        private:
-            uint8_t* _data;
-            size_t _size;
-            const uint8_t* _begin;
-            const float _duration;
-        };
-        typedef std::map<time_t, std::shared_ptr<Segment> >  TSegments;
-        
-        Playlist* m_playlist;
-        TSegments m_segments;
         mutable P8PLATFORM::CMutex m_syncAccess;
         P8PLATFORM::CEvent m_writeEvent;
-        int64_t m_totalLength;
-        float m_totalDuration;
         PlaylistBufferDelegate m_delegate;
         int64_t m_position;
-        time_t m_writeTimshift;
-        time_t m_readTimshift;
         const int m_segmentsCacheSize;
-
+        PlaylistCache* m_cache;
+        
         void *Process();
         void Init(const std::string &playlistUrl);
-        void Init(const std::string &playlistUrl, bool cleanContent, int64_t position, time_t timeshift);
-        bool FillSegment(const SegmentInfo& segment, size_t & segmantsSize);
+        void Init(const std::string &playlistUrl, bool cleanContent, int64_t position,  time_t readTimshift, time_t writeTimshift);
+        bool FillSegment(MutableSegment* segment);
         bool IsStopped(uint32_t timeoutInSec = 0);
-        float Bitrate() const {
-            return m_totalLength / (m_totalDuration + 0.01);
-        }
     };
     
     class PlistBufferException : public InputBufferException

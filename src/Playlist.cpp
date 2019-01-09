@@ -1,10 +1,24 @@
-//
-//  Playlist.cpp
-//  comple.test
-//
-//  Created by Sergey Shramchenko on 30/10/2018.
-//  Copyright © 2018 Home. All rights reserved.
-//
+/*
+ *
+ *   Copyright (C) 2018 Sergey Shramchenko
+ *   https://github.com/srg70/pvr.puzzle.tv
+ *
+ *  This Program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2, or (at your option)
+ *  any later version.
+ *
+ *  This Program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with XBMC; see the file COPYING.  If not, write to
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ *  http://www.gnu.org/copyleft/gpl.html
+ *
+ */
 
 #include "Playlist.hpp"
 #include "globals.hpp"
@@ -103,7 +117,8 @@ namespace Buffers {
         const char* c_INF = "#EXTINF:";
         const char* c_SEQ = "#EXT-X-MEDIA-SEQUENCE:";
         const char* c_TYPE = "#EXT-X-PLAYLIST-TYPE:";
-        
+        const char* c_CACHE = "#EXT-X-ALLOW-CACHE:"; // removed in v7 but in use by TTV :(
+
         try {
             auto pos = data.find(c_M3U);
             if(std::string::npos == pos)
@@ -116,9 +131,17 @@ namespace Buffers {
             // If we have media-sequence tag - use it
             if(std::string::npos != pos) {
                 pos += strlen(c_SEQ);
-                body = data.substr(pos);
+                 body = data.substr(pos);
                 mediaIndex = std::stoull(body, &pos);
                 m_isVod = false;
+                // Check for cache tag (obsolete)
+                pos = data.find(c_CACHE);
+                if(std::string::npos != pos) {
+                    pos += strlen(c_CACHE);
+                    body = data.substr(pos);
+                    std::string yes("YES");
+                    m_isVod =  body.substr(0,yes.size()) == yes;
+                }
             } else {
                 // ... otherwise check plist type. VOD list may ommit sequence ID
                 pos = data.find(c_TYPE);
@@ -134,7 +157,7 @@ namespace Buffers {
                 body=body.substr(0, body.find("#EXT-X-ENDLIST"));
             }
             
-            pos = body.find(c_INF, pos);
+            pos = body.find(c_INF);
             bool hasContent = false;
             while(std::string::npos != pos) {
                 pos += strlen(c_INF);
