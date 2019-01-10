@@ -115,26 +115,20 @@ namespace Buffers
     int64_t CGenericFile::Seek(int64_t iFilePosition, int iWhence)
     {
         auto s = XBMC->SeekFile(m_handler, iFilePosition, iWhence);
-        //    std::stringstream ss;
-        //    ss <<">>> SEEK to" << iFilePosition << ". Res=" << s ;
-        //    m_helper->Log(LOG_DEBUG, ss.str().c_str());
+//        LogDebug("SEEK to %lld. Result %lld" , iFilePosition, s);
         return s;
     }
     
     int64_t CGenericFile::Length()
     {
         auto l = XBMC->GetFileLength(m_handler);
-        //    std::stringstream ss;
-        //    ss <<">>> LENGHT=" << l;
-        //    XBMC->Log(LOG_DEBUG, ss.str().c_str());
+        //    LogDebug(">>> LENGHT= %lld", l);
         return l;
     }
     int64_t CGenericFile::Position()
     {
         auto p = XBMC->GetFilePosition(m_handler);
-        //    std::stringstream ss;
-        //    ss <<">>> POSITION=" << p;
-        //    XBMC->Log(LOG_DEBUG, ss.str().c_str());
+          //    LogDebug(">>> POSITION= %lld", p);
         
         return p;
     }
@@ -317,7 +311,7 @@ namespace Buffers
         unsigned int idx = -1;
         ChunkFilePtr chunk = NULL;
         {
-//            XBMC->Log(LOG_DEBUG, "TimeshiftBuffer::Sseek. >>> Requested pos %d", iPosition);
+//            LogDebug("TimeshiftBuffer::Seek. >>> Requested pos %d", iPosition);
 
             CLockObject lock(m_SyncAccess);
             
@@ -334,12 +328,12 @@ namespace Buffers
                 iPosition = m_begin;
             }
             iWhence = SEEK_SET;
-//            XBMC->Log(LOG_DEBUG, "TimeshiftBuffer::Sseek. Calculated pos %d", iPosition);
-//            XBMC->Log(LOG_DEBUG, "TimeshiftBuffer::Sseek. Begin %d Length %d", m_begin, m_length);
+            LogDebug("TimeshiftBuffer::Seek. Calculated pos %lld", iPosition);
+            LogDebug("TimeshiftBuffer::Seek. Begin %lld Length %lld", m_begin, m_length);
 
             idx = GetChunkIndexFor(iPosition);
             if(idx >= m_ReadChunks.size()) {
-                XBMC->Log(LOG_ERROR, "TimeshiftBuffer: seek failed. Wrong chunk index %d", idx);
+                LogError("TimeshiftBuffer: seek failed. Wrong chunk index %d", idx);
                 return -1;
             }
             chunk = m_ReadChunks[idx];
@@ -347,8 +341,8 @@ namespace Buffers
         auto inPos = GetPositionInChunkFor(iPosition);
         auto pos =  chunk->m_reader.Seek(inPos, iWhence);
         m_position = iPosition -  (inPos - pos);
-//        XBMC->Log(LOG_DEBUG, "TimeshiftBuffer::Sseek. Chunk idx %d, pos in chunk %d, actual pos %d", idx, inPos, pos);
-//        XBMC->Log(LOG_DEBUG, "TimeshiftBuffer::Sseek. <<< Result pos %d", m_position);
+        LogDebug("TimeshiftBuffer::Seek: chunk idx %lld, pos in chunk %lld, actual pos %lld", idx, inPos, pos);
+        LogDebug("TimeshiftBuffer::Seek: result pos %lld", m_position);
         return iPosition;
         
     }
@@ -392,21 +386,25 @@ namespace Buffers
             }
             
             if(nullptr == chunk)  {
-                XBMC->Log(LOG_ERROR, "FileCacheBuffer: failed to obtain chunk for read.");
+                LogError("FileCacheBuffer: failed to obtain chunk for read. Buffer pos=%lld, length=%lld", m_position, m_length);
                 break;
             }
             
             size_t bytesToRead = bufferSize - totalBytesRead;
             ssize_t bytesRead = chunk->m_reader.Read( ((char*)buffer) + totalBytesRead, bytesToRead);
-            if(bytesRead == 0 ) {
-                //XBMC->Log(LOG_NOTICE, "FileCacheBuffer: nothing to read.");
-                break;
-            }
-            //DebugLog(std::string(">>> Read: ") + n_to_string(bytesRead));
+            //LogDebug("FileCacheBuffer: >>> Read: %d" , bytesRead);
+
             totalBytesRead += bytesRead;
             m_position += bytesRead;
+            // Did we done with chunk?
             if(chunk->m_reader.Length() >= CHUNK_FILE_SIZE_LIMIT && chunk->m_reader.Position() == chunk->m_reader.Length()) {
                 chunk = nullptr;
+            } else if(bytesRead == 0 ) {
+                // Chunk is NOT full, but has no more data.
+                // Break to let the player to request another time
+                // or let the user to stop playing.
+                    LogDebug("FileCacheBuffer: nothing to read from chunk. Chunk pos=%lld, lenght=%lld", chunk->m_reader.Position(), chunk->m_reader.Length());
+                    break;
             }
         }
         if(nullptr == chunk && !m_isReadOnly) {
@@ -429,7 +427,7 @@ namespace Buffers
     }
     void FileCacheBuffer::UnlockAfterWriten(uint8_t* pBuf, ssize_t writtenBytes) {
         if(m_chunkForLock.get() != pBuf) {
-            LogError("Error: FileCacheBuffer::UnlockUnit() wrong buffer to unlock.");
+            LogError("FileCacheBuffer: FileCacheBuffer::UnlockUnit() wrong buffer to unlock.");
             return;
         }
         Write(pBuf, writtenBytes < 0 ? UnitSize() : writtenBytes);
@@ -475,7 +473,7 @@ namespace Buffers
                 }
                 totalWritten += bytesWritten;
                 if(bytesWritten != bytesToWrite) {
-                    XBMC->Log(LOG_ERROR, "FileCachetBuffer: write cache error, written (%d) != read (%d)", bytesWritten,bytesToWrite);
+                    LogError("FileCachetBuffer: write cache error, written (%d) != read (%d)", bytesWritten,bytesToWrite);
                     //break;// ???
                 }
                 available -= bytesWritten;
@@ -488,7 +486,7 @@ namespace Buffers
             }
             
         } catch (std::exception&  ) {
-            XBMC->Log(LOG_ERROR, "Failed to create timeshift chunkfile in directory %s", m_bufferDir.c_str());
+            LogError("FileCacheBuffer: failed to create timeshift chunkfile in directory %s", m_bufferDir.c_str());
         }
         
         return totalWritten;
@@ -503,7 +501,7 @@ namespace Buffers
         }
         ChunkFilePtr newChunk = new CAddonFile(UniqueFilename(m_bufferDir).c_str(), m_autoDelete);
         m_ChunkFileSwarm.push_back(ChunkFileSwarm::value_type(newChunk));
-        XBMC->Log(LOG_DEBUG, ">>> TimeshiftBuffer: new current chunk (for write):  %s", + newChunk->Path().c_str());
+        LogDebug(">>> TimeshiftBuffer: new current chunk (for write):  %s", + newChunk->Path().c_str());
         return newChunk;
     }
     

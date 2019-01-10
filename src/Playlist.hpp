@@ -28,6 +28,7 @@ namespace Buffers{
     public:
         Playlist(const std::string &url);
         bool NextSegment(const SegmentInfo** ppInfo, bool& hasMoreSegments);
+        bool Reload();
         bool IsVod() const {return m_isVod;}
     private:
         typedef std::map<uint64_t, SegmentInfo> TSegmentUrls;

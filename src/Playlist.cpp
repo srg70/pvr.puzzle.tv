@@ -194,28 +194,28 @@ namespace Buffers {
         
     }
     
-    bool Playlist::NextSegment(const SegmentInfo** ppInfo, bool& hasMoreSegments) {
-        hasMoreSegments = false;
-        if(m_segmentUrls.count(m_loadIterator) != 0) {
-            *ppInfo = &m_segmentUrls[m_loadIterator++];
-            hasMoreSegments = m_segmentUrls.count(m_loadIterator) > 0;
-            return true;
-        }
-        *ppInfo = nullptr;
-        // For VOD plist NO refresh is available
-        // So return EOF right now.
+    bool Playlist::Reload() {
+        // For VOD plist we can't reload/refresh.
         if(m_isVod)
             return false;
         std::string data;
         LoadPlaylist(data);
         // Empty playlist treat as EOF.
-        if(!ParsePlaylist(data))
-            return false;
+        return ParsePlaylist(data);
+    }
+    
+    bool Playlist::NextSegment(const SegmentInfo** ppInfo, bool& hasMoreSegments) {
+        hasMoreSegments = false;
+        *ppInfo = nullptr;
+        LogDebug("Playlist: searching for segment info #%lld...", m_loadIterator);
         if(m_segmentUrls.count(m_loadIterator) != 0) {
             *ppInfo = &m_segmentUrls[m_loadIterator++];
             hasMoreSegments = m_segmentUrls.count(m_loadIterator) > 0;
+            LogDebug("Playlist: segment info is found. Has more? %s", hasMoreSegments ? "YES" : "NO");
+            return true;
         }
-        return true;
+        LogDebug("Playlist: segment info is missing");
+        return false;
     }
     
 }

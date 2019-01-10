@@ -34,6 +34,7 @@
 #include "globals.hpp"
 #include "Playlist.hpp"
 #include "p8-platform/util/util.h"
+#include "p8-platform/util/timeutils.h"
 
 using namespace P8PLATFORM;
 using namespace ADDON;
@@ -86,6 +87,10 @@ namespace Buffers {
         
     bool PlaylistBuffer::FillSegment(const SegmentInfo& segmentInfo, size_t & segmantsSize)
     {
+        // Reload segments plailist every 3 seconds
+        // to avoid missing chunks
+        const uint32_t c_time = 3 * 1000;
+        P8PLATFORM::CTimeout plistReloadTimeout(c_time);
         unsigned char buffer[8196];
         void* f = XBMC->OpenFile(segmentInfo.url.c_str(), XFILE::READ_NO_CACHE | XFILE::READ_CHUNKED); //XFILE::READ_AUDIO_VIDEO);
         if(!f)
@@ -96,6 +101,10 @@ namespace Buffers {
         do {
             bytesRead = XBMC->ReadFile(f, buffer, sizeof(buffer));
             segmentData->Push(buffer, bytesRead);
+            if(plistReloadTimeout.TimeLeft() <= 0) {
+                m_playlist->Reload();
+                plistReloadTimeout.Init(c_time);
+            }
             //        LogDebug(">>> Write: %d", bytesRead);
         }while (bytesRead > 0 && !IsStopped());
         
@@ -124,11 +133,11 @@ namespace Buffers {
             // to avoid memory overflow
             //if(m_playlist->IsVod())
             {
-                bool segsCacheFull = segmantsSize > 20;
-                while(segsCacheFull && !IsStopped()){
+                bool segsCacheIsFull = segmantsSize > 20;
+                while(segsCacheIsFull && !IsStopped()){
                     P8PLATFORM::CEvent::Sleep(1*1000);
                     CLockObject lock(m_syncAccess);
-                    segsCacheFull = m_segments.size() > 20;
+                    segsCacheIsFull = m_segments.size() > 20;
                 };
                 
             }
@@ -137,30 +146,18 @@ namespace Buffers {
         return bytesRead < 0; // 0 (i.e. EOF) means no error, caller may continue with next chunk
     }
     
-    bool PlaylistBuffer::IsStopped(uint32_t timeoutInSec) {
-        P8PLATFORM::CTimeout timeout(timeoutInSec * 1000);
-        do{
-            bool isStopped = P8PLATFORM::CThread::IsStopped();
-            if(isStopped || timeout.TimeLeft() == 0)
-                return isStopped;
-            Sleep(1000);//1sec
-        }while (true);
-        return false;
-    }
-    
     void *PlaylistBuffer::Process()
     {
         bool isEof = false;
         try {
             while (!isEof && !IsStopped()) {
-                const SegmentInfo* pSegmentInfo;
-                bool hasMoreSegments = false;
-                isEof = !m_playlist->NextSegment(&pSegmentInfo, hasMoreSegments);
-                
+                isEof = !m_playlist->Reload();
                 if(isEof  || IsStopped())
                     continue;
+                const SegmentInfo* pSegmentInfo;
+                bool hasMoreSegments = false;
                 float sleepTime = 1; //Min sleep time 1 sec
-                if(nullptr != pSegmentInfo) {
+                if(m_playlist->NextSegment(&pSegmentInfo, hasMoreSegments)) {
                     LogDebug(">>> Start fill segment.");
                     size_t  segmantsSize = 0;
                     isEof = FillSegment(*pSegmentInfo, segmantsSize);
@@ -187,7 +184,18 @@ namespace Buffers {
         return NULL;
     }
     
-    ssize_t PlaylistBuffer::Read(unsigned char *buffer, size_t bufferSize, uint32_t timeoutMs)
+    bool PlaylistBuffer::IsStopped(uint32_t timeoutInSec) {
+        P8PLATFORM::CTimeout timeout(timeoutInSec * 1000);
+        do{
+            bool isStopped = P8PLATFORM::CThread::IsStopped();
+            if(isStopped || timeout.TimeLeft() == 0)
+                return isStopped;
+            Sleep(1000);//1sec
+        }while (true);
+        return false;
+    }
+    
+   ssize_t PlaylistBuffer::Read(unsigned char *buffer, size_t bufferSize, uint32_t timeoutMs)
     {
         
         size_t totalBytesRead = 0;

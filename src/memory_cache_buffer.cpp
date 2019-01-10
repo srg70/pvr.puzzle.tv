@@ -206,14 +206,18 @@ namespace Buffers
                 bytesRead = chunk->Read( ((uint8_t*)buffer) + totalBytesRead, bytesToRead);
                 m_position += bytesRead;
             }
-            if(bytesRead == 0 ) {
-                //LogDebug("MemoryCacheBuffer: nothing to read.");
-                break;
-            }
+
             //DebugLog(std::string(">>> Read: ") + n_to_string(bytesRead));
             totalBytesRead += bytesRead;
+            // Did we done with chunk?
             if(chunk->ReadPos() == chunk->Capacity()) {
-                chunk = NULL;
+                chunk = nullptr;
+            } else if(bytesRead == 0 ) {
+                // Chunk is NOT full, but has no more data.
+                // Break to let the player to request another time
+                // or let the user to stop playing.
+                LogDebug("MemoryCacheBuffer: nothing to read from chunk. Chunk pos=%lld, lenght=%lld", chunk->ReadPos(), chunk->WritePos());
+                break;
             }
         }
         // Do we have memory before read position to free?
