@@ -24,8 +24,10 @@
 #define __playlist_cache_hpp__
 
 #include <map>
+#include <list>
 #include <string>
 #include <memory>
+#include <exception>
 
 namespace Buffers {
     class Playlist;
@@ -43,7 +45,6 @@ namespace Buffers {
         size_t Length() const {return _size;}
     protected:
         Segment(float duration);
-        Segment(const uint8_t* buffer, size_t size, float duration);
         ~Segment();
         uint8_t* _data;
         size_t _size;
@@ -59,7 +60,6 @@ namespace Buffers {
     public:
         const std::string url;
         void Push(const uint8_t* buffer, size_t size);
-    private: // ???
         ~MutableSegment(){};
     };
 
@@ -67,7 +67,7 @@ namespace Buffers {
     class PlaylistCache {
         
     public:
-        PlaylistCache(const std::string &streamUrl);
+        PlaylistCache(const std::string &playlistUrl);
         ~PlaylistCache();
         MutableSegment* SegmentToFillAfter(size_t position);
         void SegmentReady(MutableSegment* segment);
@@ -87,6 +87,19 @@ namespace Buffers {
         float m_totalDuration;
         
     };
+    
+    class PlaylistCacheException : public std::exception
+    {
+    public:
+        PlaylistCacheException(const char* reason = "")
+        : m_reason(reason)
+        {}
+        virtual const char* what() const noexcept {return m_reason.c_str();}
+        
+    private:
+        const std::string m_reason;
+    };
+
     
 }
 #endif /* __playlist_cache_hpp__ */

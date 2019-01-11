@@ -24,14 +24,15 @@
 #include <memory>
 #include "playlist_cache.hpp"
 #include "Playlist.hpp"
+#include "globals.hpp"
 
 using namespace Globals;
 
 namespace Buffers {
-    PlaylistCache::PlaylistCache(const std::string &streamUrl)
+    PlaylistCache::PlaylistCache(const std::string &playlistUrl)
     : m_totalLength(0)
     , m_totalDuration(0.0)
-    , m_playlist(nullptr)
+    , m_playlist(playlistUrl)
     { }
     
     PlaylistCache::~PlaylistCache()  {
@@ -61,7 +62,7 @@ namespace Buffers {
         return true; // check for empty segs;
     }
 
-    bool IsEof(size_t position) const {
+    bool PlaylistCache::IsEof(size_t position) const {
         return m_playlist->IsVod() && check position;
     }
 
@@ -74,15 +75,7 @@ namespace Buffers {
     , _duration(duration)
     {
     }
-    
-    Segment::Segment(const uint8_t* buffer, size_t size, float duration)
-    : _duration(duration)
-    , _begin(NULL)
-    {
-        Push(buffer, size);
-    }
-    
-    
+        
 //    const uint8_t* Segment::Pop(size_t requesred, size_t*  actual)
 //    {
 //        if(_begin == NULL)
@@ -117,7 +110,7 @@ namespace Buffers {
     Segment::~Segment()
     {
         if(_data != NULL)
-            delete _data;
+            free( _data);
     }
 
     void MutableSegment::Push(const uint8_t* buffer, size_t size)
@@ -127,7 +120,7 @@ namespace Buffers {
         
         void * ptr = realloc(_data, _size + size);
         if(NULL == ptr)
-            throw PlistBufferException("Faied to allocate segmwnt.");
+            throw PlaylistCacheException("Faied to allocate segmwnt.");
         _data = (uint8_t*) ptr;
         memcpy(&_data[_size], buffer, size);
         _size += size;
