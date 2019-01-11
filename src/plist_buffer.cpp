@@ -484,7 +484,7 @@ namespace Buffers {
         
         void * ptr = realloc(_data, _size + size);
         if(NULL == ptr)
-            throw PlistBufferException("Faied to allocate segmwnt.");
+            throw PlistBufferException("Faied to allocate segment.");
         _data = (uint8_t*) ptr;
         memcpy(&_data[_size], buffer, size);
         _size += size;
@@ -493,6 +493,7 @@ namespace Buffers {
     
     const uint8_t* PlaylistBuffer::Segment::Pop(size_t requesred, size_t*  actual)
     {
+        // TODO: check _data for NULL
         if(_begin == NULL)
             _begin = &_data[0];
         
@@ -512,6 +513,7 @@ namespace Buffers {
 
     size_t PlaylistBuffer::Segment::Read(uint8_t* buffer, size_t size)
     {
+        // TODO: check _data for NULL
         if(_begin == NULL)
             _begin = &_data[0];
         size_t actual = std::min(size, BytesReady());
@@ -525,7 +527,7 @@ namespace Buffers {
     PlaylistBuffer::Segment::~Segment()
     {
         if(_data != NULL)
-            delete _data;
+            free( _data);
     }
     
 }
