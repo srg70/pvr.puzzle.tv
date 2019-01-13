@@ -221,7 +221,8 @@ namespace TtvEngine
     void Core::UpdateHasArchive(PvrClient::EpgEntry& entry)
     {
         time_t now = time(nullptr);
-        auto when = now - entry.StartTime;
+        time_t epgTime = m_addCurrentEpgToArchive ? entry.StartTime : entry.EndTime;
+        auto when = now - epgTime;
         entry.HasArchive = false;
         if(when < 0)
             return;

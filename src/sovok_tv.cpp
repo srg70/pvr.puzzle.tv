@@ -40,6 +40,7 @@
 #include "sovok_tv.h"
 #include "HttpEngine.hpp"
 #include "globals.hpp"
+#include "XMLTV_loader.hpp"
 
 using namespace Globals;
 using namespace std;
@@ -360,9 +361,10 @@ void SovokTV::UpdateHasArchive(EpgEntry& entry)
     if(!entry.HasArchive)
         return;
     
-    time_t to = time(nullptr);
-    time_t from = to - m_archivesInfo.at(entry.ChannelId) * 60 * 60;
-    entry.HasArchive = entry.StartTime >= from && entry.StartTime < to;
+    time_t now = time(nullptr);
+    time_t epgTime = m_addCurrentEpgToArchive ? entry.StartTime : entry.EndTime;
+    time_t from = now - m_archivesInfo.at(entry.ChannelId) * 60 * 60;
+    entry.HasArchive = epgTime >= from && epgTime < now;
 }
 
 string SovokTV::GetUrl(ChannelId channelId)

@@ -142,6 +142,7 @@ void SovokPVRClient::CreateCore(bool clearEpgCache)
     if(m_enableAdult)
         m_sovokTV->SetPinCode(m_pinCode);
     SetCountryFilter();
+    m_sovokTV->IncludeCurrentEpgToArchive(m_addCurrentEpgToArchive);
     m_sovokTV->InitAsync(clearEpgCache);
 
     

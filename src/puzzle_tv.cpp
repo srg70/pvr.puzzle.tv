@@ -248,9 +248,10 @@ void PuzzleTV::UpdateHasArchive(PvrClient::EpgEntry& entry)
         return;
 
     time_t now = time(nullptr);
+    time_t epgTime = m_addCurrentEpgToArchive ? entry.StartTime : entry.EndTime;
     const time_t archivePeriod = 3 * 24 * 60 * 60; //3 days in secs
     time_t from = now - archivePeriod;
-    entry.HasArchive = entry.StartTime > from && entry.StartTime < now;
+    entry.HasArchive = epgTime > from && epgTime < now;
 
 
 }

@@ -116,6 +116,7 @@ void OttPVRClient::CreateCore(bool clearEpgCache)
     DestroyCoreSafe();
     
     m_clientCore = m_core = new OttEngine::Core(m_playlistUrl, m_key);
+    m_core->IncludeCurrentEpgToArchive(m_addCurrentEpgToArchive);
     m_core->InitAsync(clearEpgCache);
 
 }

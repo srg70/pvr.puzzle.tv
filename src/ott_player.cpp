@@ -40,6 +40,7 @@
 #include "ott_player.h"
 #include "HttpEngine.hpp"
 #include "globals.hpp"
+#include "XMLTV_loader.hpp"
 
 namespace OttEngine
 {
@@ -319,8 +320,9 @@ namespace OttEngine
         if(!entry.HasArchive)
             return;
         
-        time_t to = time(nullptr);
-        entry.HasArchive = entry.StartTime < to;
+        time_t now = time(nullptr);
+        time_t epgTime = m_addCurrentEpgToArchive ? entry.StartTime : entry.EndTime;
+        entry.HasArchive = epgTime < now;
 
     }
     

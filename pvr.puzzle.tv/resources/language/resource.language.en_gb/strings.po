@@ -69,6 +69,10 @@ msgctxt "#10012"
 msgid "RPC local port"
 msgstr "RPC local port"
 
+msgctxt "#10013"
+msgid "Archive for current broadcast"
+msgstr "Archive for current broadcast"
+
 #============ Puzzle Server Settings ============
 
 msgctxt "#20000"

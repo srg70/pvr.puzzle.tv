@@ -117,6 +117,10 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     m_rpcPort = 8080;
     XBMC->GetSetting("rpc_local_port", &m_rpcPort);
     
+    m_addCurrentEpgToArchive = true;
+    XBMC->GetSetting("archive_for_current_epg_item", &m_addCurrentEpgToArchive);
+
+    
     CurlUtils::SetCurlTimeout(curlTimout);
     SetChannelReloadTimeout(channelTimeout);
     SetTimeshiftEnabled(isTimeshiftEnabled);
@@ -221,6 +225,10 @@ ADDON_STATUS PVRClientBase::SetSetting(const char *settingName, const void *sett
     else if (strcmp(settingName, "rpc_local_port") == 0)
     {
         m_rpcPort = *(int *)(settingValue);
+    }
+    else if (strcmp(settingName, "archive_for_current_epg_item") == 0)
+    {
+        m_addCurrentEpgToArchive = *(bool *)(settingValue);
     }
 
     return ADDON_STATUS_OK;

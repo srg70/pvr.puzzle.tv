@@ -126,6 +126,7 @@ void EdemPVRClient::CreateCore(bool clearEpgCache)
     
     if(PVRClientBase::CheckPlaylistUrl(m_playlistUrl)) {
         m_clientCore = m_core = new EdemEngine::Core(m_playlistUrl, m_epgUrl, m_enableAdult);
+        m_core->IncludeCurrentEpgToArchive(m_addCurrentEpgToArchive);
         m_core->InitAsync(clearEpgCache);
     }
 }

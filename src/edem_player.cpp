@@ -187,7 +187,8 @@ namespace EdemEngine
     {
         time_t now = time(nullptr);
         const time_t archivePeriod = 3 * 24 * 60 * 60; //3 days in secs
-        auto when = now - entry.StartTime;
+        time_t epgTime = m_addCurrentEpgToArchive ? entry.StartTime : entry.EndTime;
+        auto when = now - epgTime;
         entry.HasArchive = when > 0 && when < archivePeriod;
     }
    

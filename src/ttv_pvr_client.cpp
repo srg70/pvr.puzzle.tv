@@ -178,6 +178,7 @@ void TtvPVRClient::CreateCore(bool clearEpgCache)
                 throw;
         }
         m_clientCore = m_core;
+        m_core->IncludeCurrentEpgToArchive(m_addCurrentEpgToArchive);
         m_core->InitAsync(clearEpgCache);
 }
 

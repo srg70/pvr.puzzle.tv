@@ -56,7 +56,8 @@ namespace PvrClient {
         void SetRpcPort(int port) {m_rpcPort = port;}
         void CallRpcAsync(const std::string & data, std::function<void(rapidjson::Document&)>  parser,
                           ActionQueue::TCompletion completion);
-        
+        void IncludeCurrentEpgToArchive(bool add) {m_addCurrentEpgToArchive = add;}
+
         static bool ReadFileContent(const char* cacheFile, std::string& buffer);
         // abstract methods
         virtual void UpdateEpgForAllChannels(time_t startTime, time_t endTime) = 0;
@@ -94,8 +95,8 @@ namespace PvrClient {
         HttpEngine* m_httpEngine;
         const PvrClient::ChannelList & m_channelList;
         const PvrClient::GroupList& m_groupList;
-        
-        
+        bool m_addCurrentEpgToArchive;
+
     private:
         
         // Recordings
@@ -116,6 +117,7 @@ namespace PvrClient {
         P8PLATFORM::CTimeout m_recordingsUpdateDelay;
 
         int m_rpcPort;
+
     };
     
     class ExceptionBase : public std::exception

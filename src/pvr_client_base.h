@@ -107,7 +107,8 @@ namespace PvrClient
 
     protected:
         IClientCore* m_clientCore;
-        
+        bool m_addCurrentEpgToArchive;
+
         virtual PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
         virtual ADDON_STATUS OnReloadEpg();
         virtual ADDON_STATUS OnReloadRecordings();
