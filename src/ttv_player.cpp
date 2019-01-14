@@ -158,6 +158,7 @@ namespace TtvEngine
                     XBMC->FreeString(message); 
                 }
             }
+            InitializeArchiveInfo();
         }
 
         RebuildChannelAndGroupList();
@@ -234,9 +235,6 @@ namespace TtvEngine
             if(!m_isAceRunning && !m_ttvChannels[chId].hasHTTPArchive)
                 return;
 
-//            if(m_epgIdToChannelId.count(m_ttvChannels.at(chId).epg_id) == 0)
-//                return;
-            
             entry.HasArchive = GetRecordId(chId, entry.StartTime) != 0;
         } else {
             if(m_archiveInfoPlist.count(chId) == 0)
@@ -402,7 +400,7 @@ namespace TtvEngine
 
     int Core::GetRecordId(ChannelId channelId, time_t startTime)
     {
-        int epdId = m_ttvChannels[channelId].epg_id;
+        EpgChannelId epdId = m_epgIdForArchive[channelId];
         if(epdId == 0)
             return 0;
 
@@ -680,36 +678,37 @@ namespace TtvEngine
         CATCH_API_CALL();
 
     }
-//    void Core::InitializeArchiveInfo()
-//    {
-//        try {
-//            m_epgIdToChannelId.clear();
-//
-//            ApiFunctionData apiData(c_TTV_API_URL_base, "arc_list.php");
-//
-//            auto pThis = this;
-//            CallApiFunction(apiData, [pThis] (Document& jsonRoot)
-//            {
-//                dump_json(jsonRoot);
-//                int total = 0, available = 0;
-//                for(auto& ch : jsonRoot["channels"].GetArray())
-//                {
-//                    ++total;
-//                    bool hasArchiveAssess = ch["access_user"].IsBool() && ch["access_user"].IsTrue();
-////                    if(!hasArchiveAssess) {
-////                        LogDebug("You do not have access to archive for channel %s", ch["name"].GetString());
-////                        continue;
-////                    }
-//                    ++available;
-//                    pThis->m_epgIdToChannelId[ch["epg_id"].GetInt()] = ch["id"].GetInt();
-//                }
-//                LogDebug("Total channel with archive %d. Available %d", total, available);
-//            });
-//        }
-//        CATCH_API_CALL();
-//
-//    }
-//
+    
+    void Core::InitializeArchiveInfo()
+    {
+        try {
+            m_epgIdToChannelId.clear();
+
+            ApiFunctionData apiData(c_TTV_API_URL_base, "arc_list.php");
+
+            auto pThis = this;
+            CallApiFunction(apiData, [pThis] (Document& jsonRoot)
+            {
+                //dump_json(jsonRoot);
+                int total = 0, available = 0;
+                for(auto& ch : jsonRoot["channels"].GetArray())
+                {
+                    ++total;
+                    bool hasArchiveAssess = ch["access_user"].IsBool() && ch["access_user"].IsTrue();
+                    if(!hasArchiveAssess) {
+                        LogDebug("You do not have access to archive for channel %s", ch["name"].GetString());
+                        continue;
+                    }
+                    ++available;
+                    pThis->m_epgIdForArchive[ ch["id"].GetInt()] = ch["epg_id"].GetInt();
+                }
+                LogNotice("Total channel with archive %d. Available for you %d", total, available);
+            });
+        }
+        CATCH_API_CALL();
+
+    }
+
     template <typename TParser>
     void Core::CallApiFunction(const ApiFunctionData& data, TParser parser)
     {
@@ -1148,7 +1147,7 @@ namespace TtvEngine
             }
             AddChannelToGroup(itGroup->first, channel.Id);
         }
-        // add rest archives
+        // add rest of archives
         m_archiveInfoPlist.insert(archiveInfo.begin(), archiveInfo.end());
 
     }

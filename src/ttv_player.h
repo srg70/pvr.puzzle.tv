@@ -143,8 +143,10 @@ namespace TtvEngine
             TTVChannelAccess_registred,
             TTVChannelAccess_vip
         };
+        
+        typedef int EpgChannelId;
         struct TTVChanel {
-            int epg_id;
+            EpgChannelId epg_id;
             TTVChannelType type;
             TTVChannelSource source;
             bool isFavorite;
@@ -173,9 +175,10 @@ namespace TtvEngine
         typedef std::map<PvrClient::ChannelId, TTVChanel> TTVChannels;
         TTVChannels m_ttvChannels;
         
-        std::map<int, PvrClient::ChannelId> m_epgIdToChannelId;
+        std::map<EpgChannelId, PvrClient::ChannelId> m_epgIdToChannelId;
+        std::map<PvrClient::ChannelId, EpgChannelId> m_epgIdForArchive;
         // map<epgId, map<startTime, record>>
-        std::map<int, std::map<int, Record> > m_records;
+        std::map<EpgChannelId, std::map<int, Record> > m_records;
         typedef std::set<PvrClient::EpgEntryList::key_type> EpgForDetails;
         
         EpgForDetails m_epgForDetails;
@@ -213,6 +216,8 @@ namespace TtvEngine
         void RenewSession();
         
         //API
+        void InitializeArchiveInfo();
+
         bool CheckAceEngineRunning();
         std::string GetPlaylistUrl();
         void GetUserInfo();

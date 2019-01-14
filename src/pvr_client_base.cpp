@@ -126,8 +126,8 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     XBMC->GetSetting("wait_for_inet", &waitForInetTimeout);
     
     if(waitForInetTimeout > 0){
-        char* message = XBMC->GetLocalizedString(32012);
-        XBMC->QueueNotification(QUEUE_INFO, "Checking Internet connection...");
+        char* message = XBMC->GetLocalizedString(32022);
+        XBMC->QueueNotification(QUEUE_INFO, message);
         XBMC->FreeString(message);
         
         P8PLATFORM::CTimeout waitForInet(waitForInetTimeout * 1000);
@@ -140,8 +140,8 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
                 P8PLATFORM::CEvent::Sleep(1000);
         }while(!connected && timeLeft > 0);
         if(!connected) {
-            char* message = XBMC->GetLocalizedString(32012);
-            XBMC->QueueNotification(QUEUE_ERROR, "No Internet connection!");
+            char* message = XBMC->GetLocalizedString(32023);
+            XBMC->QueueNotification(QUEUE_ERROR, message);
             XBMC->FreeString(message);
         }
     }

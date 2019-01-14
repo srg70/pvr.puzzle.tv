@@ -39,12 +39,13 @@ long HttpEngine::c_CurlTimeout = 15; // in sec
 HttpEngine::HttpEngine()
     :   m_apiCalls(new CActionQueue(c_MaxQueueSize, "API Calls")),
         m_apiCallCompletions(new CActionQueue(c_MaxQueueSize, "API Complition")),
+        m_apiHiPriorityCallCompletions(new CActionQueue(c_MaxQueueSize, "API Hi Priority Comp")),
         m_DebugRequestId(1)
 {
 
     m_apiCalls->CreateThread();
     m_apiCallCompletions->CreateThread();
-    
+    m_apiHiPriorityCallCompletions->CreateThread();
 }
 
 
@@ -105,6 +106,12 @@ HttpEngine::~HttpEngine()
         m_apiCallCompletions->StopThread();
         SAFE_DELETE(m_apiCallCompletions);
         Globals::LogInfo("API completion queue deleted.");
+    }
+    if(m_apiHiPriorityCallCompletions) {
+        Globals::LogInfo("Destroying API hi-priority completion queue...");
+        m_apiHiPriorityCallCompletions->StopThread();
+        SAFE_DELETE(m_apiHiPriorityCallCompletions);
+        Globals::LogInfo("API hi-priority completion queue deleted.");
     }
 
 }

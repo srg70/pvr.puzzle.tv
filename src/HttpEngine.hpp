@@ -80,8 +80,8 @@ public:
         if(!m_apiCalls->IsRunning())
             throw QueueNotRunningException("API request queue in not running.");
         auto pThis = this;
-        ActionQueue::TAction action = [pThis, request,  parser, completion](){
-            pThis->SendHttpRequest(request, pThis->m_sessionCookie, parser,completion);
+        ActionQueue::TAction action = [pThis, request,  parser, completion, priority](){
+            pThis->SendHttpRequest(request, pThis->m_sessionCookie, parser,completion, priority);
         };
         ActionQueue::TCompletion comp = [completion](const ActionQueue::ActionResult& s) {
             if(s.status != ActionQueue::kActionCompleted){
@@ -112,7 +112,7 @@ private:
     mutable unsigned long long m_DebugRequestId;
 
     template <typename TResultCallback, typename TCompletion>
-    void SendHttpRequest(const std::string &url,const TCoocies &cookie, TResultCallback result, TCompletion completion) const
+    void SendHttpRequest(const std::string &url,const TCoocies &cookie, TResultCallback result, TCompletion completion, RequestPriority priority) const
     {
         char errorMessage[CURL_ERROR_SIZE];
         std::string* response = new std::string();
@@ -174,30 +174,40 @@ private:
                 *response = "";
             
             curl_easy_cleanup(curl);
-            if(!m_apiCallCompletions->IsRunning()){
-                delete response;
-                throw QueueNotRunningException("API call completion queue in not running.");
-            }
-            
+
             if(curlCode != CURLE_OK){
                 delete response;
                 throw CurlErrorException(&errorMessage[0]);
             }
             
-            m_apiCallCompletions->PerformAsync([result, response, requestId]() {
+            ActionQueue::TAction action = [result, response, requestId]() {
                 Globals::LogDebug("Processing response. ID=%llu", requestId);
                 result(*response);
-            }, [completion, response, requestId](const ActionQueue::ActionResult& s) {
+            };
+            ActionQueue::TCompletion comp =[completion, response, requestId](const ActionQueue::ActionResult& s) {
                 delete response;
                 Globals::LogDebug("Complete response. ID=%llu", requestId);
                 completion(s);
-            });
-            ;
+            };
+            if(priority == RequestPriority_Hi) {
+                if(!m_apiHiPriorityCallCompletions->IsRunning()){
+                    delete response;
+                    throw QueueNotRunningException("API call completion queue in not running.");
+                }
+                m_apiHiPriorityCallCompletions->PerformAsync(action, comp);
+            } else {
+                if(!m_apiCallCompletions->IsRunning()){
+                    delete response;
+                    throw QueueNotRunningException("API call completion queue in not running.");
+                }
+                m_apiCallCompletions->PerformAsync(action, comp);
+            }
         }
     }
     
     ActionQueue::CActionQueue* m_apiCalls;
     ActionQueue::CActionQueue* m_apiCallCompletions;
+    ActionQueue::CActionQueue* m_apiHiPriorityCallCompletions;
 
 };
 

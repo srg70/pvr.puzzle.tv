@@ -73,8 +73,8 @@ msgid "Archive for current broadcast"
 msgstr "Архив текущей передачи"
 
 msgctxt "#10014"
-msgid "Wait for Inet connection (0 - don't check)"
-msgstr "Ждать соединения с Интернет (0 - не проверять)"
+msgid "Wait for Internet connection (0 - don't check)"
+msgstr "Ожидать подключение к Интернету (0 - не проверять)"
 
 #============ Puzzle Server Settings ============
 
@@ -262,10 +262,6 @@ msgctxt "#60011"
 msgid "Port"
 msgstr "Порт"
 
-msgctxt "#32021"
-msgid "Ace Strem not found!"
-msgstr "Ace Strem не запущен!"
-
 #============= Notifications ================
 
 msgctxt "#32000"
@@ -351,6 +347,18 @@ msgstr "Ошибка TTV: %s"
 msgctxt "#32020"
 msgid "Favourites"
 msgstr "Избранное"
+
+msgctxt "#32021"
+msgid "Ace Strem not found!"
+msgstr "Ace Strem не запущен!"
+
+msgctxt "#32022"
+msgid "Checking Internet connection..."
+msgstr "Проверяю подключение к Интернету..."
+
+msgctxt "#32023"
+msgid "No Internet connection!"
+msgstr "Нет доступа в Интернет!"
 
 #============= Menus ================
 
