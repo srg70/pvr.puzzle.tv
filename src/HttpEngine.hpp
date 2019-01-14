@@ -105,6 +105,7 @@ public:
     
     TCoocies m_sessionCookie;
 
+    static bool CheckInternetConnection(long timeout); 
 private:
     static size_t CurlWriteData(void *buffer, size_t size, size_t nmemb, void *userp);
     static  long c_CurlTimeout;
@@ -120,7 +121,7 @@ private:
         {
             const unsigned long long requestId = m_DebugRequestId++;
             auto start = P8PLATFORM::GetTimeMs();
-            m_addonHelper->Log(ADDON::LOG_INFO, "Sending request: %s. ID=%llu", url.c_str(), requestId);
+            Globals::LogInfo("Sending request: %s. ID=%llu", url.c_str(), requestId);
             curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
             curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
             curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errorMessage);
@@ -149,12 +150,12 @@ private:
                 
                 if (curlCode == CURLE_OPERATION_TIMEDOUT)
                 {
-                    m_addonHelper->Log(ADDON::LOG_ERROR, "CURL operation timeout! (%d sec). ID=%llu", c_CurlTimeout, requestId);
+                    Globals::LogError("CURL operation timeout! (%d sec). ID=%llu", c_CurlTimeout, requestId);
                     break;
                 }
                 else if (curlCode != CURLE_OK)
                 {
-                    m_addonHelper->Log(ADDON::LOG_ERROR, "CURL error %d. Message: %s. ID=%llu", curlCode, errorMessage, requestId);
+                    Globals::LogError("CURL error %d. Message: %s. ID=%llu", curlCode, errorMessage, requestId);
                     break;
                 }
                 
@@ -163,11 +164,11 @@ private:
                 if (httpCode != 503) // temporarily unavailable
                     break;
                 
-                m_addonHelper->Log(ADDON::LOG_INFO, "%s: %s. ID=%llu", __FUNCTION__, "HTTP error 503 (temporarily unavailable)", requestId);
+                Globals::LogInfo("%s: %s. ID=%llu", __FUNCTION__, "HTTP error 503 (temporarily unavailable)", requestId);
                 
                 P8PLATFORM::CEvent::Sleep(1000);
             }
-            m_addonHelper->Log(ADDON::LOG_INFO, "Got HTTP response (%d) in %d ms. ID=%llu", httpCode,  P8PLATFORM::GetTimeMs() - start, requestId);
+            Globals::LogInfo("Got HTTP response (%d) in %d ms. ID=%llu", httpCode,  P8PLATFORM::GetTimeMs() - start, requestId);
             
             if (httpCode != 200)
                 *response = "";
@@ -195,7 +196,6 @@ private:
         }
     }
     
-    ADDON::CHelper_libXBMC_addon *m_addonHelper;
     ActionQueue::CActionQueue* m_apiCalls;
     ActionQueue::CActionQueue* m_apiCallCompletions;
 

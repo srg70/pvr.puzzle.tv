@@ -35,6 +35,8 @@
 #include <algorithm>
 #include <list>
 #include "p8-platform/util/util.h"
+#include "p8-platform/util/timeutils.h"
+#include "p8-platform/threads/mutex.h"
 #include "p8-platform/util/StringUtils.h"
 
 #include "kodi/xbmc_addon_cpp_dll.h"
@@ -49,7 +51,7 @@
 #include "helpers.h"
 #include "pvr_client_base.h"
 #include "globals.hpp"
-#include "globals.hpp"
+#include "HttpEngine.hpp"
 #include "client_core_base.hpp"
 
 
@@ -120,6 +122,29 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     m_addCurrentEpgToArchive = true;
     XBMC->GetSetting("archive_for_current_epg_item", &m_addCurrentEpgToArchive);
 
+    long waitForInetTimeout = 0;
+    XBMC->GetSetting("wait_for_inet", &waitForInetTimeout);
+    
+    if(waitForInetTimeout > 0){
+        char* message = XBMC->GetLocalizedString(32012);
+        XBMC->QueueNotification(QUEUE_INFO, "Checking Internet connection...");
+        XBMC->FreeString(message);
+        
+        P8PLATFORM::CTimeout waitForInet(waitForInetTimeout * 1000);
+        bool connected = false;
+        long timeLeft = 0;
+        do {
+            timeLeft = waitForInet.TimeLeft();
+            connected = HttpEngine::CheckInternetConnection(timeLeft/1000);
+            if(!connected)
+                P8PLATFORM::CEvent::Sleep(1000);
+        }while(!connected && timeLeft > 0);
+        if(!connected) {
+            char* message = XBMC->GetLocalizedString(32012);
+            XBMC->QueueNotification(QUEUE_ERROR, "No Internet connection!");
+            XBMC->FreeString(message);
+        }
+    }
     
     CurlUtils::SetCurlTimeout(curlTimout);
     SetChannelReloadTimeout(channelTimeout);

@@ -72,6 +72,10 @@ msgctxt "#10013"
 msgid "Archive for current broadcast"
 msgstr "Архив текущей передачи"
 
+msgctxt "#10014"
+msgid "Wait for Inet connection (0 - don't check)"
+msgstr "Ждать соединения с Интернет (0 - не проверять)"
+
 #============ Puzzle Server Settings ============
 
 msgctxt "#20000"

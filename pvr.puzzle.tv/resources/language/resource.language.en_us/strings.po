@@ -72,6 +72,10 @@ msgctxt "#10013"
 msgid "Archive for current broadcast"
 msgstr "Archive for current broadcast"
 
+msgctxt "#10014"
+msgid "Wait for Inet connection (0 - don't check)"
+msgstr "Wait for Inet connection (0 - don't check)"
+
 #============ Puzzle Server Settings ============
 
 msgctxt "#20000"

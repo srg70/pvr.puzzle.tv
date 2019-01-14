@@ -14,6 +14,7 @@
     <setting id="channel_reload_timeout" type="slider" label="10008" default="5" range="1,1,30" option="int"/>
     <setting id="recordings_path" type="folder" label="10009" default="" />
     <setting id="rpc_local_port" type="number" label="10012" default="8080"/>
+    <setting id="wait_for_inet" type="number" label="10014" default="0" option="int"/>
 </category>
 
 <!-- Puzzle TV -->
