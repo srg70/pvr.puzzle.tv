@@ -162,6 +162,7 @@ namespace PvrClient
         int m_lastBytesRead;
         
         int m_rpcPort;
+        int m_channelIndexOffset;
     };
 }
 #endif //pvr_client_base_h

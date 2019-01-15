@@ -119,6 +119,9 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     m_rpcPort = 8080;
     XBMC->GetSetting("rpc_local_port", &m_rpcPort);
     
+    m_channelIndexOffset = 0;
+    XBMC->GetSetting("channel_index_offset", &m_channelIndexOffset);
+    
     m_addCurrentEpgToArchive = true;
     XBMC->GetSetting("archive_for_current_epg_item", &m_addCurrentEpgToArchive);
 
@@ -254,6 +257,12 @@ ADDON_STATUS PVRClientBase::SetSetting(const char *settingName, const void *sett
     else if (strcmp(settingName, "archive_for_current_epg_item") == 0)
     {
         m_addCurrentEpgToArchive = *(bool *)(settingValue);
+        return ADDON_STATUS_NEED_RESTART;
+    }
+    else if (strcmp(settingName, "channel_index_offset") == 0)
+    {
+        m_channelIndexOffset = *(int *)(settingValue);
+        return ADDON_STATUS_NEED_RESTART;
     }
 
     return ADDON_STATUS_OK;
@@ -384,10 +393,12 @@ PVR_ERROR PVRClientBase::GetChannels(ADDON_HANDLE handle, bool bRadio)
         {
             PVR_CHANNEL pvrChannel = { 0 };
             pvrChannel.iUniqueId = channel.Id;
-            pvrChannel.iChannelNumber = channel.Number;
+            pvrChannel.iChannelNumber = channel.Number + m_channelIndexOffset;
             pvrChannel.bIsRadio = channel.IsRadio;
             strncpy(pvrChannel.strChannelName, channel.Name.c_str(), sizeof(pvrChannel.strChannelName));
             strncpy(pvrChannel.strIconPath, channel.IconPath.c_str(), sizeof(pvrChannel.strIconPath));
+            
+            LogDebug("==> CH %-5d - %-40s", pvrChannel.iChannelNumber, channel.Name.c_str());
             
             PVR->TransferChannelEntry(handle, &pvrChannel);
         }

@@ -76,6 +76,10 @@ msgctxt "#10014"
 msgid "Wait for Internet connection (0 - don't check)"
 msgstr "Wait for Internet connection (0 - don't check)"
 
+msgctxt "#10015"
+msgid "Channel index offset"
+msgstr "Channel index offset"
+
 #============ Puzzle Server Settings ============
 
 msgctxt "#20000"
