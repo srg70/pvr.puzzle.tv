@@ -30,6 +30,7 @@
 #include <memory>
 #include <exception>
 #include "Playlist.hpp"
+#include "plist_buffer_delegate.h"
 
 namespace Buffers {
 
@@ -73,13 +74,14 @@ namespace Buffers {
     class PlaylistCache {
         
     public:
-        PlaylistCache(const std::string &playlistUrl);
+        PlaylistCache(const std::string &playlistUrl, PlaylistBufferDelegate delegate);
         ~PlaylistCache();
         MutableSegment* SegmentToFillAfter(int64_t position);
         void SegmentReady(MutableSegment* segment);
         Segment* SegmentAt(int64_t position);
         bool HasSegmentsToFill() const;
         bool IsEof(int64_t position) const;
+        bool IsFull() const {return m_cacheSizeInBytes > m_cacheSizeLimit;}
         float Bitrate() const { return m_totalDuration == 0 ? 0.0 : m_totalLength / m_totalDuration;}
         void ReloadPlaylist();
     private:
@@ -87,6 +89,7 @@ namespace Buffers {
         // key is data offset from the beginning (BytesReady() sum)
         typedef std::map<int64_t, Segment*>  TSegments;
         typedef std::queue<SegmentInfo> TSegmentInfos;
+        typedef std::list<std::unique_ptr<MutableSegment>> TSwarm;
         
         MutableSegment::TimeOffset TimeOffsetFromProsition(int64_t position) const {
             float bitrate = Bitrate();
@@ -94,13 +97,16 @@ namespace Buffers {
         }
         
         Playlist m_playlist;
+        PlaylistBufferDelegate m_delegate;
         MutableSegment::TimeOffset m_lastSegmentOffset;
         int64_t m_lastSegmentPosition;
         TSegmentInfos m_dataToLoad;
         TSegments m_segments;
         int64_t m_totalLength;
         float m_totalDuration;
-        std::list<std::unique_ptr<MutableSegment>> m_segmentsSwamp;
+        TSwarm m_segmentsSwamp;
+        const int m_cacheSizeLimit;
+        int m_cacheSizeInBytes;
 
     };
     

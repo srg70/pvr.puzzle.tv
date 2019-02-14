@@ -273,6 +273,7 @@
 		4C8506EB1F0E49F400213131 /* puzzle_pvr_client.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = puzzle_pvr_client.h; sourceTree = "<group>"; };
 		4C8506EF1F0E541100213131 /* puzzle_tv.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = puzzle_tv.cpp; sourceTree = "<group>"; };
 		4C8506F01F0E541100213131 /* puzzle_tv.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = puzzle_tv.h; sourceTree = "<group>"; };
+		4C8594C52215CA5500571757 /* plist_buffer_delegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = plist_buffer_delegate.h; sourceTree = "<group>"; };
 		4CAAE7212000CB2100A866C9 /* pvr_client_types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = pvr_client_types.h; sourceTree = "<group>"; };
 		4CAAE7222006438600A866C9 /* edem_player.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = edem_player.cpp; path = src/edem_player.cpp; sourceTree = "<group>"; };
 		4CAAE7232006438600A866C9 /* edem_player.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = edem_player.h; path = src/edem_player.h; sourceTree = "<group>"; };
@@ -547,6 +548,7 @@
 				4C08C7F01D81E2A8004CAAE3 /* direct_buffer.h */,
 				4CD394B41F2258610073E2DF /* plist_buffer.cpp */,
 				4CD394B51F2258610073E2DF /* plist_buffer.h */,
+				4C8594C52215CA5500571757 /* plist_buffer_delegate.h */,
 				4CAC99BA2188D7C1005D8902 /* Playlist.cpp */,
 				4CAC99BB2188D7C1005D8902 /* Playlist.hpp */,
 				4CC578D921D378A200871747 /* playlist_cache.cpp */,

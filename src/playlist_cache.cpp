@@ -29,12 +29,15 @@
 using namespace Globals;
 
 namespace Buffers {
-    PlaylistCache::PlaylistCache(const std::string &playlistUrl)
+    PlaylistCache::PlaylistCache(const std::string &playlistUrl, PlaylistBufferDelegate delegate)
     : m_totalLength(0)
     , m_totalDuration(0.0)
     , m_playlist(playlistUrl)
     , m_lastSegmentOffset(0.0)
     , m_lastSegmentPosition (0)
+    , m_delegate(delegate)
+    , m_cacheSizeInBytes(0)
+    , m_cacheSizeLimit(60* 1024 * 1024) // ~3MByte/chunck * 20 chuncks (usualy 6 sec) = 60 MByte
     { }
     
     PlaylistCache::~PlaylistCache()  {
@@ -53,6 +56,8 @@ namespace Buffers {
     
     MutableSegment* PlaylistCache::SegmentToFillAfter(int64_t position)  {
 //        MutableSegment::TimeOffset idx = TimeOffsetFromProsition(position);
+        if(IsFull())
+            return nullptr;
         if(m_dataToLoad.empty()) {
                 return nullptr;
         }
@@ -66,22 +71,43 @@ namespace Buffers {
     }
     
     void PlaylistCache::SegmentReady(MutableSegment* segment) {
-        segment->Seek(0); // For position init
+        segment->Seek(0); // Initialize position
+        m_cacheSizeInBytes += segment->Length();
         m_totalLength += segment->Length();
         m_totalDuration += segment->Duration();
         m_segments[m_lastSegmentPosition] = segment;
         m_lastSegmentPosition += segment->BytesReady();
+        LogDebug("PlaylistCache: segment added. Cache seze %d bytes", m_cacheSizeInBytes);
     }
     
     Segment* PlaylistCache::SegmentAt(int64_t position) {
 //        MutableSegment::TimeOffset requestedTime = TimeOffsetFromProsition(position);
+        
+        Segment* retVal = nullptr;
+        std::list<TSegments::key_type> removedSegmentKeys;
         for (const auto& s : m_segments) {
             if(position >= s.first && position< s.first + s.second->Length()) {
                 s.second->Seek(position - s.first);
-                return s.second;
+                retVal = s.second;
+                break;
+            }else  if(IsFull()) {
+                // Free older segments when cache is full
+                if(position > s.first + s.second->Length()) {
+                    auto it = std::find_if(m_segmentsSwamp.begin(), m_segmentsSwamp.end(), [&s](const TSwarm::value_type& value) { return s.second == value.get();});
+                    if(m_segmentsSwamp.end() != it){
+                        m_cacheSizeInBytes -= s.second->Length();
+                        removedSegmentKeys.push_back(s.first);
+                        m_segmentsSwamp.erase(it);
+                        LogDebug("PlaylistCache: segment removed. Cache seze %d bytes", m_cacheSizeInBytes);
+                    }
+                }
             }
         }
-        return nullptr;
+        
+        for (auto& key : removedSegmentKeys) {
+            m_segments.erase(key);
+        }
+        return retVal;
     }
 
     bool PlaylistCache::HasSegmentsToFill() const {

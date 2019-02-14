@@ -25,26 +25,17 @@
 
 
 #include <string>
-#include <memory>
 #include <vector>
 #include <list>
 #include "p8-platform/threads/threads.h"
 #include "p8-platform/util/buffer.h"
 #include "input_buffer.h"
+#include "plist_buffer_delegate.h"
 
 namespace Buffers
 {
     class MutableSegment;
     class PlaylistCache;
-    
-    class IPlaylistBufferDelegate
-    {
-    public:
-        virtual time_t Duration() const= 0;
-        virtual std::string UrlForTimeshift(time_t timeshift, time_t* timeshiftAdjusted) const = 0;
-        virtual ~IPlaylistBufferDelegate() {}
-    };
-    typedef  std::shared_ptr<IPlaylistBufferDelegate> PlaylistBufferDelegate;
     
     class PlaylistBuffer :  public InputBuffer, public P8PLATFORM::CThread
     {

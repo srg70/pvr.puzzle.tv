@@ -68,7 +68,7 @@ namespace Buffers {
             m_writeEvent.Reset();
             if(m_cache)
                 SAFE_DELETE(m_cache);
-            m_cache = new PlaylistCache(playListUrl);
+            m_cache = new PlaylistCache(playListUrl, m_delegate);
             m_position = position;
         }
         CreateThread();
