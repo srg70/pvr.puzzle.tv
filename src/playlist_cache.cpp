@@ -33,37 +33,63 @@ namespace Buffers {
     : m_totalLength(0)
     , m_totalDuration(0.0)
     , m_playlist(playlistUrl)
+    , m_lastSegmentOffset(0.0)
+    , m_lastSegmentPosition (0)
     { }
     
     PlaylistCache::~PlaylistCache()  {
-        if(m_playlist)
-            delete m_playlist;
     }
     
-    MutableSegment* PlaylistCache::SegmentToFillAfter(size_t position)  {
-        
-        lock()
-        for (const auto& s : m_segments) {
-            
+    void PlaylistCache::ReloadPlaylist(){
+        m_playlist.Reload();
+        SegmentInfo info;
+        bool hasMore = true;
+        while(m_playlist.NextSegment(info, hasMore)) {
+            m_dataToLoad.push(info);
+            if(!hasMore)
+                break;
+        }
+    }
+    
+    MutableSegment* PlaylistCache::SegmentToFillAfter(int64_t position)  {
+//        MutableSegment::TimeOffset idx = TimeOffsetFromProsition(position);
+        if(m_dataToLoad.empty()) {
+                return nullptr;
         }
         
-        return TSegment(new TSegment::element_type(duration));
+        SegmentInfo info(m_dataToLoad.front());
+        m_dataToLoad.pop();
+        MutableSegment* retVal = new MutableSegment(info.url, info.duration, m_lastSegmentOffset);
+        m_lastSegmentOffset += info.duration;
+        m_segmentsSwamp.push_back(std::unique_ptr<MutableSegment>(retVal));
+        return retVal;
     }
     
     void PlaylistCache::SegmentReady(MutableSegment* segment) {
-        
+        segment->Seek(0); // For position init
+        m_totalLength += segment->Length();
+        m_totalDuration += segment->Duration();
+        m_segments[m_lastSegmentPosition] = segment;
+        m_lastSegmentPosition += segment->BytesReady();
     }
     
-    TSegment PlaylistCache::SegmentAt(size_t position) {
-        
+    Segment* PlaylistCache::SegmentAt(int64_t position) {
+//        MutableSegment::TimeOffset requestedTime = TimeOffsetFromProsition(position);
+        for (const auto& s : m_segments) {
+            if(position >= s.first && position< s.first + s.second->Length()) {
+                s.second->Seek(position - s.first);
+                return s.second;
+            }
+        }
+        return nullptr;
     }
 
     bool PlaylistCache::HasSegmentsToFill() const {
-        return true; // check for empty segs;
+        return !m_dataToLoad.empty();
     }
 
-    bool PlaylistCache::IsEof(size_t position) const {
-        return m_playlist->IsVod() && check position;
+    bool PlaylistCache::IsEof(int64_t position) const {
+        return m_playlist.IsVod() /*&& check position*/;
     }
 
 #pragma mark - Segment

@@ -153,7 +153,6 @@ namespace Buffers {
                 if(body.substr(0,vod.size()) != vod)
                     throw PlaylistException("Invalid playlist format: VOD playlist expected.");
                 m_isVod = true;
-                mediaIndex = 0;
                 body=body.substr(0, body.find("#EXT-X-ENDLIST"));
             }
             
@@ -201,7 +200,7 @@ namespace Buffers {
         
         LogDebug(">>> PlaylistBuffer: (re)loading playlist %s.", m_playListUrl.c_str());
         
-        auto f = XBMC->OpenFile(m_playListUrl.c_str(), XFILE::READ_NO_CACHE);
+        auto f = XBMC->OpenFile(m_playListUrl.c_str(), XFILE::READ_NO_CACHE | XFILE::READ_CHUNKED | XFILE::READ_TRUNCATED);
         if (!f)
             throw PlaylistException("Failed to obtain playlist from server.");
         bool isEof = false;
@@ -227,12 +226,11 @@ namespace Buffers {
         return ParsePlaylist(data);
     }
     
-    bool Playlist::NextSegment(const SegmentInfo** ppInfo, bool& hasMoreSegments) {
+    bool Playlist::NextSegment(SegmentInfo& info, bool& hasMoreSegments) {
         hasMoreSegments = false;
-        *ppInfo = nullptr;
         LogDebug("Playlist: searching for segment info #%lld...", m_loadIterator);
         if(m_segmentUrls.count(m_loadIterator) != 0) {
-            *ppInfo = &m_segmentUrls[m_loadIterator++];
+            info = m_segmentUrls[m_loadIterator++];
             hasMoreSegments = m_segmentUrls.count(m_loadIterator) > 0;
             LogDebug("Playlist: segment info is found. Has more? %s", hasMoreSegments ? "YES" : "NO");
             return true;

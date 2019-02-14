@@ -25,12 +25,13 @@
 
 #include <map>
 #include <list>
+#include <queue>
 #include <string>
 #include <memory>
 #include <exception>
+#include "Playlist.hpp"
 
 namespace Buffers {
-    class Playlist;
 
     class Segment
     {
@@ -45,7 +46,7 @@ namespace Buffers {
         size_t Length() const {return _size;}
     protected:
         Segment(float duration);
-        ~Segment();
+        virtual ~Segment();
         uint8_t* _data;
         size_t _size;
         const uint8_t* _begin;
@@ -53,14 +54,19 @@ namespace Buffers {
     };
     
     class MutableSegment : public Segment {
-        MutableSegment(const std::string& u, float duration)
-        : Segment(duration)
-        , url(u)
-        {}
     public:
+        typedef  float TimeOffset;
+        const TimeOffset timeOffset;
         const std::string url;
         void Push(const uint8_t* buffer, size_t size);
         ~MutableSegment(){};
+    private:
+        friend class PlaylistCache;
+        MutableSegment(const std::string& u, float duration, TimeOffset offset)
+        : Segment(duration)
+        , url(u)
+        , timeOffset(offset)
+        {}
     };
 
 
@@ -69,23 +75,33 @@ namespace Buffers {
     public:
         PlaylistCache(const std::string &playlistUrl);
         ~PlaylistCache();
-        MutableSegment* SegmentToFillAfter(size_t position);
+        MutableSegment* SegmentToFillAfter(int64_t position);
         void SegmentReady(MutableSegment* segment);
-        Segment* SegmentAt(size_t position);
+        Segment* SegmentAt(int64_t position);
         bool HasSegmentsToFill() const;
-        bool IsEof(size_t position) const;
+        bool IsEof(int64_t position) const;
         float Bitrate() const { return m_totalDuration == 0 ? 0.0 : m_totalLength / m_totalDuration;}
+        void ReloadPlaylist();
     private:
        
-        // key is time offset from the beginning (durations sum)
-        typedef std::map<float, Segment*>  TSegments;
-
-        Playlist* m_playlist;
-        std::list<std::unique_ptr<MutableSegment>> m_segmentsSwamp;
+        // key is data offset from the beginning (BytesReady() sum)
+        typedef std::map<int64_t, Segment*>  TSegments;
+        typedef std::queue<SegmentInfo> TSegmentInfos;
+        
+        MutableSegment::TimeOffset TimeOffsetFromProsition(int64_t position) const {
+            float bitrate = Bitrate();
+            return (bitrate == 0.0) ? 0.0 : position/bitrate;
+        }
+        
+        Playlist m_playlist;
+        MutableSegment::TimeOffset m_lastSegmentOffset;
+        int64_t m_lastSegmentPosition;
+        TSegmentInfos m_dataToLoad;
         TSegments m_segments;
         int64_t m_totalLength;
         float m_totalDuration;
-        
+        std::list<std::unique_ptr<MutableSegment>> m_segmentsSwamp;
+
     };
     
     class PlaylistCacheException : public std::exception

@@ -139,6 +139,7 @@
 		4CDC11E120B4531900EA9E2B /* client_core_base.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4CDC11DF20B4531900EA9E2B /* client_core_base.hpp */; };
 		4CDC11E520BDC48100EA9E2B /* globals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CDC11E320BDC48100EA9E2B /* globals.cpp */; };
 		4CDC11E620BDC48100EA9E2B /* globals.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4CDC11E420BDC48100EA9E2B /* globals.hpp */; };
+		4CE40890220DAACE00CC92CC /* playlist_cache.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CC578D921D378A200871747 /* playlist_cache.cpp */; };
 		4CFEAA8F1E4DA81A002C2BA4 /* ActionQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CFEAA8D1E4DA81A002C2BA4 /* ActionQueue.cpp */; };
 		4CFEAA901E4DA81A002C2BA4 /* ActionQueue.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4CFEAA8E1E4DA81A002C2BA4 /* ActionQueue.hpp */; };
 /* End PBXBuildFile section */
@@ -907,6 +908,7 @@
 				4CFEAA8F1E4DA81A002C2BA4 /* ActionQueue.cpp in Sources */,
 				4C534CC31F347CD50038539D /* file_cache_buffer.cpp in Sources */,
 				4C08C7EE1D81D295004CAAE3 /* sovok_tv.cpp in Sources */,
+				4CE40890220DAACE00CC92CC /* playlist_cache.cpp in Sources */,
 				4C8506E81F0E25DF00213131 /* HttpEngine.cpp in Sources */,
 				4C08C7F31D81E2A8004CAAE3 /* direct_buffer.cpp in Sources */,
 				4C08C7F51D81E2A8004CAAE3 /* timeshift_buffer.cpp in Sources */,

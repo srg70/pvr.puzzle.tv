@@ -33,7 +33,9 @@ namespace Buffers{
     struct SegmentInfo {
         SegmentInfo () : duration(0.0) {}
         SegmentInfo(float d, std::string u) : url(u), duration(d){}
+        SegmentInfo(const SegmentInfo& info) : SegmentInfo(info.duration, info.url) {}
         SegmentInfo&  operator=(const SegmentInfo&& s) { return *new (this)SegmentInfo(s.duration, s.url);}
+        SegmentInfo&  operator=(const SegmentInfo& s) { return *new (this)SegmentInfo(s.duration, s.url);}
         const std::string url;
         const float duration;
     };
@@ -41,7 +43,7 @@ namespace Buffers{
     class Playlist {
     public:
         Playlist(const std::string &url);
-        bool NextSegment(const SegmentInfo** ppInfo, bool& hasMoreSegments);
+        bool NextSegment(SegmentInfo& info, bool& hasMoreSegments);
         bool Reload();
         bool IsVod() const {return m_isVod;}
     private:
