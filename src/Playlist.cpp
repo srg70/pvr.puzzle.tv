@@ -20,6 +20,7 @@
  *
  */
 
+#include <inttypes.h>
 #include "Playlist.hpp"
 #include "globals.hpp"
 #include "helpers.h"
@@ -180,7 +181,8 @@ namespace Buffers {
                 trim(url);
                 url = ToAbsoluteUrl(url, m_playListUrl);
                 //            LogNotice("IDX: %u Duration: %f. URL: %s", mediaIndex, duration, url.c_str());
-                m_segmentUrls[mediaIndex++] = TSegmentUrls::mapped_type(duration, url);
+                auto currentIdx = mediaIndex++;
+                m_segmentUrls[currentIdx] = TSegmentUrls::mapped_type(duration, url, currentIdx);
             }
             LogDebug("m_segmentUrls.size = %d, %s", m_segmentUrls.size(), hasContent ? "Not empty." : "Empty."  );
             return hasContent;
@@ -212,7 +214,7 @@ namespace Buffers {
         }while(!isEof);
         XBMC->CloseFile(f);
         
-        LogDebug(">>> PlaylistBuffer: (re)loading done. Content: \n%s", data.size()> 16000 ? "[More that 16K]" : data.c_str());
+        LogDebug(">>> PlaylistBuffer: (re)loading done. Content: \n%s", data.substr(0, 16000).c_str());
         
     }
     
@@ -228,15 +230,24 @@ namespace Buffers {
     
     bool Playlist::NextSegment(SegmentInfo& info, bool& hasMoreSegments) {
         hasMoreSegments = false;
-        LogDebug("Playlist: searching for segment info #%lld...", m_loadIterator);
+//        LogDebug("Playlist: searching for segment info #%" PRIu64 "...", m_loadIterator);
         if(m_segmentUrls.count(m_loadIterator) != 0) {
             info = m_segmentUrls[m_loadIterator++];
             hasMoreSegments = m_segmentUrls.count(m_loadIterator) > 0;
-            LogDebug("Playlist: segment info is found. Has more? %s", hasMoreSegments ? "YES" : "NO");
+//            LogDebug("Playlist: segment info is found. Has more? %s", hasMoreSegments ? "YES" : "NO");
             return true;
         }
-        LogDebug("Playlist: segment info is missing");
+//        LogDebug("Playlist: segment info is missing");
         return false;
     }
     
+    bool Playlist::SetNextSegmentIndex(uint64_t idx) {
+        if(m_segmentUrls.size() < idx) {
+            LogDebug("Playlist: failed to next segment to #%" PRIu64 ". Total segments %d .", idx, m_segmentUrls.size());
+            return false;
+        }
+        m_loadIterator = idx;
+        LogDebug("Playlist: next segment index set to #%" PRIu64 ".", m_loadIterator);
+        return true;
+    }
 }

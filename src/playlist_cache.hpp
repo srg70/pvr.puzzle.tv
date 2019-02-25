@@ -25,7 +25,7 @@
 
 #include <map>
 #include <list>
-#include <queue>
+#include <deque>
 #include <string>
 #include <memory>
 #include <exception>
@@ -40,13 +40,15 @@ namespace Buffers {
         //            const uint8_t* Pop(size_t requesred, size_t*  actual);
         size_t Read(uint8_t* buffer, size_t size);
         size_t Seek(size_t position);
-        size_t Position() const  {return _begin - &_data[0];}
-        size_t BytesReady() const {return  _size - Position();}
-        float Bitrate() const { return  _duration == 0.0 ? 0.0 : _size/_duration;}
+        size_t Position() const  {return  (nullptr == _data) ? 0 : _begin - &_data[0];}
+        size_t BytesReady() const {return (nullptr == _data) ? 0 : Size() - Position();}
+        float Bitrate() const { return  Duration() == 0.0 ? 0.0 : Size()/Duration();}
         float Duration() const {return _duration;}
-        size_t Length() const {return _size;}
+        size_t Size() const {return _size;}
+
     protected:
         Segment(float duration);
+        void Init();
         virtual ~Segment();
         uint8_t* _data;
         size_t _size;
@@ -57,19 +59,37 @@ namespace Buffers {
     class MutableSegment : public Segment {
     public:
         typedef  float TimeOffset;
+        typedef int64_t DataOffset;
         const TimeOffset timeOffset;
-        const std::string url;
+        const DataOffset dataOffset;
+        const SegmentInfo info;
         void Push(const uint8_t* buffer, size_t size);
+        void Free();
+        bool IsValid() const {return _isValid;}
+        void DataReady() {
+            Seek(0);
+            _isValid = true;
+        }
+        // Virtual segment size in bytes
+        // may be not equal to actual _size
+        size_t Length() const {return _length;}
+
         ~MutableSegment(){};
     private:
         friend class PlaylistCache;
-        MutableSegment(const std::string& u, float duration, TimeOffset offset)
-        : Segment(duration)
-        , url(u)
-        , timeOffset(offset)
+        MutableSegment(const SegmentInfo& i, TimeOffset tOffset, DataOffset dOffset)
+        : Segment(i.duration)
+        , info(i)
+        , timeOffset(tOffset)
+        , dataOffset(dOffset)
+        , _length(0)
+        , _isValid (false)
         {}
-    };
 
+        size_t _length;
+        bool _isValid;
+    };
+    
 
     class PlaylistCache {
         
@@ -81,16 +101,18 @@ namespace Buffers {
         Segment* SegmentAt(int64_t position);
         bool HasSegmentsToFill() const;
         bool IsEof(int64_t position) const;
-        bool IsFull() const {return m_cacheSizeInBytes > m_cacheSizeLimit;}
+        bool IsFull() const {return m_playlist.IsVod() && m_cacheSizeInBytes > m_cacheSizeLimit; }
         float Bitrate() const { return m_totalDuration == 0 ? 0.0 : m_totalLength / m_totalDuration;}
+        int64_t Length() const { return m_playlist.IsVod() ? m_totalLength : -1; }
         void ReloadPlaylist();
+        bool PrepareForSeek(int64_t position);
     private:
        
-        // key is data offset from the beginning (BytesReady() sum)
-        typedef std::map<int64_t, Segment*>  TSegments;
-        typedef std::queue<SegmentInfo> TSegmentInfos;
-        typedef std::list<std::unique_ptr<MutableSegment>> TSwarm;
+        // key is segment index in m3u file
+        typedef std::map<uint64_t, std::unique_ptr<MutableSegment>>  TSegments;
+        typedef std::deque<SegmentInfo> TSegmentInfos;
         
+        inline bool CanSeek() const {return nullptr != m_delegate; }
         MutableSegment::TimeOffset TimeOffsetFromProsition(int64_t position) const {
             float bitrate = Bitrate();
             return (bitrate == 0.0) ? 0.0 : position/bitrate;
@@ -98,13 +120,12 @@ namespace Buffers {
         
         Playlist m_playlist;
         PlaylistBufferDelegate m_delegate;
-        MutableSegment::TimeOffset m_lastSegmentOffset;
-        int64_t m_lastSegmentPosition;
+        MutableSegment::TimeOffset m_playlistTimeOffset;
+        MutableSegment::DataOffset m_playlistDataOffset;
         TSegmentInfos m_dataToLoad;
         TSegments m_segments;
         int64_t m_totalLength;
         float m_totalDuration;
-        TSwarm m_segmentsSwamp;
         const int m_cacheSizeLimit;
         int m_cacheSizeInBytes;
 

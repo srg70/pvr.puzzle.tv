@@ -40,7 +40,7 @@ namespace Buffers
     class PlaylistBuffer :  public InputBuffer, public P8PLATFORM::CThread
     {
     public:
-        PlaylistBuffer(const std::string &streamUrl,  PlaylistBufferDelegate delegate, int segmentsCacheSize);
+        PlaylistBuffer(const std::string &streamUrl,  PlaylistBufferDelegate delegate);
         ~PlaylistBuffer();
         
         int64_t GetLength() const;
@@ -57,15 +57,13 @@ namespace Buffers
         
     private:
         mutable P8PLATFORM::CMutex m_syncAccess;
-        P8PLATFORM::CEvent m_writeEvent;
+        mutable P8PLATFORM::CEvent m_writeEvent;
         PlaylistBufferDelegate m_delegate;
         int64_t m_position;
-        const int m_segmentsCacheSize;
         PlaylistCache* m_cache;
         
         void *Process();
         void Init(const std::string &playlistUrl);
-        void Init(const std::string &playlistUrl, bool cleanContent, int64_t position,  time_t readTimshift, time_t writeTimshift);
         bool FillSegment(MutableSegment* segment);
         bool IsStopped(uint32_t timeoutInSec = 0);
     };

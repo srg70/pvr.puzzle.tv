@@ -453,7 +453,7 @@ InputBuffer*  PVRClientBase::BufferForUrl(const std::string& url )
     const std::string m3uExt = ".m3u";
     const std::string m3u8Ext = ".m3u8";
     if( url.find(m3u8Ext) != std::string::npos || url.find(m3uExt) != std::string::npos)
-        buffer = new Buffers::PlaylistBuffer(url, NULL, 0); // No segments cache for live playlist
+        buffer = new Buffers::PlaylistBuffer(url, NULL); // No segments cache for live playlist
     else
         buffer = new DirectBuffer(url);
     return buffer;
@@ -831,7 +831,7 @@ bool PVRClientBase::OpenRecordedStream(const std::string& url,  Buffers::IPlayli
         const bool isM3u = url.find(m3u8Ext) != std::string::npos || url.find(m3uExt) != std::string::npos;
         Buffers::PlaylistBufferDelegate plistDelegate(delegate);
         if(isM3u)
-            buffer = new Buffers::PlaylistBuffer(url, plistDelegate, 20); // Cache 20 segments for archive seek optimization
+            buffer = new Buffers::PlaylistBuffer(url, plistDelegate);
         else
             buffer = new ArchiveBuffer(url);
 

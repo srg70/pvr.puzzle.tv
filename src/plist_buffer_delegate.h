@@ -30,6 +30,7 @@ namespace Buffers
     class IPlaylistBufferDelegate
     {
     public:
+        virtual int SegmentsAmountToCache() const= 0;
         virtual time_t Duration() const= 0;
         virtual std::string UrlForTimeshift(time_t timeshift, time_t* timeshiftAdjusted) const = 0;
         virtual ~IPlaylistBufferDelegate() {}

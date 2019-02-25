@@ -31,19 +31,21 @@
 namespace Buffers{
     
     struct SegmentInfo {
-        SegmentInfo () : duration(0.0) {}
-        SegmentInfo(float d, std::string u) : url(u), duration(d){}
-        SegmentInfo(const SegmentInfo& info) : SegmentInfo(info.duration, info.url) {}
-        SegmentInfo&  operator=(const SegmentInfo&& s) { return *new (this)SegmentInfo(s.duration, s.url);}
-        SegmentInfo&  operator=(const SegmentInfo& s) { return *new (this)SegmentInfo(s.duration, s.url);}
+        SegmentInfo () : duration(0.0) , index (-1){}
+        SegmentInfo(float d, std::string u, uint64_t i) : url(u), duration(d), index(i){}
+        SegmentInfo(const SegmentInfo& info) : SegmentInfo(info.duration, info.url, info.index) {}
+        SegmentInfo&  operator=(const SegmentInfo&& s) { return *new (this)SegmentInfo(s.duration, s.url, s.index);}
+        SegmentInfo&  operator=(const SegmentInfo& s) { return *new (this)SegmentInfo(s.duration, s.url, s.index);}
         const std::string url;
         const float duration;
+        uint64_t index;
     };
     
     class Playlist {
     public:
         Playlist(const std::string &url);
         bool NextSegment(SegmentInfo& info, bool& hasMoreSegments);
+        bool SetNextSegmentIndex(uint64_t offset);
         bool Reload();
         bool IsVod() const {return m_isVod;}
     private:
