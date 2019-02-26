@@ -44,6 +44,7 @@ namespace Buffers {
     PlaylistBuffer::PlaylistBuffer(const std::string &playListUrl,  PlaylistBufferDelegate delegate)
     : m_delegate(delegate)
     , m_cache(nullptr)
+    , m_currentSegment(nullptr)
     {
         Init(playListUrl);
     }
@@ -108,7 +109,7 @@ namespace Buffers {
                 MutableSegment* segment =  nullptr;
                 {
                     CLockObject lock(m_syncAccess);
-                    segment = m_cache->SegmentToFillAfter(m_position);
+                    segment = m_cache->SegmentToFill();
                 }
     
                 float sleepTime = 1; //Min sleep time 1 sec
@@ -118,7 +119,7 @@ namespace Buffers {
                     LogDebug("PlaylistBuffer: End fill segment.");
                     
                     auto duration = segment->Duration();
-                    LogDebug("PlaylistBuffer: Segment duration: %f", duration);
+//                    LogDebug("PlaylistBuffer: Segment duration: %f", duration);
                     if(!IsStopped()){
                         CLockObject lock(m_syncAccess);
                         m_cache->SegmentReady(segment);
@@ -161,49 +162,41 @@ namespace Buffers {
         //    int32_t timeout = c_commonTimeoutMs;
         while (totalBytesRead < bufferSize)
         {
-            Segment* segment = NULL;
+            if(nullptr == m_currentSegment)
             {
                 CLockObject lock(m_syncAccess);
-                segment = m_cache->SegmentAt(m_position);
+                m_currentSegment = m_cache->NextSegment();
             }
             // Retry 1 time after write operation
-            if(NULL == segment && m_writeEvent.Wait(timeoutMs))
+            if(NULL == m_currentSegment && m_writeEvent.Wait(timeoutMs))
             {
                 CLockObject lock(m_syncAccess);
-                segment = m_cache->SegmentAt(m_position);
+                m_currentSegment = m_cache->NextSegment();
             }
-            if(NULL == segment)
+            if(NULL == m_currentSegment)
             {
                 //            StopThread();
                 LogNotice("PlaylistBuffer: no segment for read.");
                 break;
             }
-            size_t bytesToRead;
+            size_t bytesToRead = bufferSize - totalBytesRead;
             size_t bytesRead;
-            do
-            {
-                bytesToRead = bufferSize - totalBytesRead;
-                bytesRead = segment->Read( buffer + totalBytesRead, bytesToRead);
+            do {
+                bytesRead = m_currentSegment->Read( buffer + totalBytesRead, bytesToRead);
                 totalBytesRead += bytesRead;
                 m_position += bytesRead;
-            }while(bytesToRead > 0 && bytesRead > 0);
+                bytesToRead = bufferSize - totalBytesRead;
+
+            } while(bytesToRead > 0 && bytesRead > 0);
+            if(m_currentSegment->BytesReady() <= 0) {
+                LogDebug("PlaylistBuffer: done with segment. Moving next.");
+                m_currentSegment = 0;
+            }
+            
 
         }
-        
-        //m_position += totalBytesRead;
-//        LogDebug(">>> PlaylistBuffer::Read(): totalBytesRead %d, position %lld", totalBytesRead, m_position);
 
-//        bool hasMoreData = false;
-//        {
-//            CLockObject lock(m_syncAccess);
-//            hasMoreData = m_segments.count(m_readTimshift) > 0  ||  (!IsStopped() && IsRunning());
-//        }
-//        if(!hasMoreData)
-//            LogDebug(">>> PlaylistBuffer: read is done. No more data.");
-//
-//        if (hasMoreData)
-            return totalBytesRead;
-//        return -1;
+        return totalBytesRead;
     }
     
     bool PlaylistBuffer::SwitchStream(const std::string &newUrl)
@@ -288,11 +281,15 @@ namespace Buffers {
             return m_position;
         // If cahce failed to prepare for seek operation
         // return failed code
-        CLockObject lock(m_syncAccess);
-        if(!m_cache->PrepareForSeek(iPosition)) {
-            LogDebug("PlaylistBuffer: cache failed to prepare for seek to pos %" PRId64 "", iPosition);
-            return -1;
+        {
+            CLockObject lock(m_syncAccess);
+            if(!m_cache->PrepareSegmentForPosition(iPosition)) {
+                LogDebug("PlaylistBuffer: cache failed to prepare for seek to pos %" PRId64 "", iPosition);
+                return -1;
+            }
         }
+        
+        m_currentSegment = nullptr;
         m_position = iPosition;
         return m_position;
     }

@@ -34,6 +34,7 @@
 
 namespace Buffers
 {
+    class Segment;
     class MutableSegment;
     class PlaylistCache;
     
@@ -61,6 +62,7 @@ namespace Buffers
         PlaylistBufferDelegate m_delegate;
         int64_t m_position;
         PlaylistCache* m_cache;
+        Segment* m_currentSegment;
         
         void *Process();
         void Init(const std::string &playlistUrl);

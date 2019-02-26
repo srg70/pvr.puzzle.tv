@@ -60,8 +60,8 @@ namespace Buffers {
     public:
         typedef  float TimeOffset;
         typedef int64_t DataOffset;
+
         const TimeOffset timeOffset;
-        const DataOffset dataOffset;
         const SegmentInfo info;
         void Push(const uint8_t* buffer, size_t size);
         void Free();
@@ -72,16 +72,15 @@ namespace Buffers {
         }
         // Virtual segment size in bytes
         // may be not equal to actual _size
-        size_t Length() const {return _length;}
+        size_t Length() const { return _length; }
 
         ~MutableSegment(){};
     private:
         friend class PlaylistCache;
-        MutableSegment(const SegmentInfo& i, TimeOffset tOffset, DataOffset dOffset)
+        MutableSegment(const SegmentInfo& i, TimeOffset tOffset)
         : Segment(i.duration)
         , info(i)
         , timeOffset(tOffset)
-        , dataOffset(dOffset)
         , _length(0)
         , _isValid (false)
         {}
@@ -96,16 +95,16 @@ namespace Buffers {
     public:
         PlaylistCache(const std::string &playlistUrl, PlaylistBufferDelegate delegate);
         ~PlaylistCache();
-        MutableSegment* SegmentToFillAfter(int64_t position);
+        MutableSegment* SegmentToFill();
         void SegmentReady(MutableSegment* segment);
-        Segment* SegmentAt(int64_t position);
+        Segment* NextSegment();
+        bool PrepareSegmentForPosition(int64_t position);
         bool HasSegmentsToFill() const;
         bool IsEof(int64_t position) const;
         bool IsFull() const {return m_playlist.IsVod() && m_cacheSizeInBytes > m_cacheSizeLimit; }
-        float Bitrate() const { return m_totalDuration == 0 ? 0.0 : m_totalLength / m_totalDuration;}
+        float Bitrate() const { return m_bitrate;}
         int64_t Length() const { return m_playlist.IsVod() ? m_totalLength : -1; }
         void ReloadPlaylist();
-        bool PrepareForSeek(int64_t position);
     private:
        
         // key is segment index in m3u file
@@ -121,11 +120,12 @@ namespace Buffers {
         Playlist m_playlist;
         PlaylistBufferDelegate m_delegate;
         MutableSegment::TimeOffset m_playlistTimeOffset;
-        MutableSegment::DataOffset m_playlistDataOffset;
         TSegmentInfos m_dataToLoad;
         TSegments m_segments;
         int64_t m_totalLength;
-        float m_totalDuration;
+        uint64_t m_currentSegmentIndex;
+        float m_currentSegmentPositionFactor;
+        float m_bitrate;
         const int m_cacheSizeLimit;
         int m_cacheSizeInBytes;
 
