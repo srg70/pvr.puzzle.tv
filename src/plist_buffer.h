@@ -63,6 +63,7 @@ namespace Buffers
         int64_t m_position;
         PlaylistCache* m_cache;
         Segment* m_currentSegment;
+        uint64_t m_loadingSegmentIndex;
         
         void *Process();
         void Init(const std::string &playlistUrl);

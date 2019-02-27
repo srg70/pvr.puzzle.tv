@@ -39,7 +39,6 @@ namespace Buffers {
     public:
         //            const uint8_t* Pop(size_t requesred, size_t*  actual);
         size_t Read(uint8_t* buffer, size_t size);
-        size_t Seek(size_t position);
         size_t Position() const  {return  (nullptr == _data) ? 0 : _begin - &_data[0];}
         size_t BytesReady() const {return (nullptr == _data) ? 0 : Size() - Position();}
         float Bitrate() const { return  Duration() == 0.0 ? 0.0 : Size()/Duration();}
@@ -64,11 +63,12 @@ namespace Buffers {
         const TimeOffset timeOffset;
         const SegmentInfo info;
         void Push(const uint8_t* buffer, size_t size);
-        void Free();
         bool IsValid() const {return _isValid;}
+        bool IsLoading() const {return _isLoading;}
         void DataReady() {
             Seek(0);
             _isValid = true;
+            _isLoading = false;
         }
         // Virtual segment size in bytes
         // may be not equal to actual _size
@@ -77,45 +77,59 @@ namespace Buffers {
         ~MutableSegment(){};
     private:
         friend class PlaylistCache;
+        
         MutableSegment(const SegmentInfo& i, TimeOffset tOffset)
         : Segment(i.duration)
         , info(i)
         , timeOffset(tOffset)
         , _length(0)
         , _isValid (false)
+        , _isLoading(false)
         {}
+
+        size_t Seek(size_t position);
+        void Free();
 
         size_t _length;
         bool _isValid;
+        bool _isLoading;
     };
     
 
     class PlaylistCache {
         
     public:
+        enum SegmentStatus{
+            k_SegmentStatus_Ok = 0,
+            k_SegmentStatus_CacheEmpty,
+            k_SegmentStatus_Loading,
+            k_SegmentStatus_EOF
+        };
         PlaylistCache(const std::string &playlistUrl, PlaylistBufferDelegate delegate);
         ~PlaylistCache();
         MutableSegment* SegmentToFill();
         void SegmentReady(MutableSegment* segment);
-        Segment* NextSegment();
-        bool PrepareSegmentForPosition(int64_t position);
+        void SegmentCanceled(MutableSegment* segment);
+        Segment* NextSegment(SegmentStatus& status);
+        bool PrepareSegmentForPosition(int64_t position, uint64_t* nextSegmentIndex);
         bool HasSegmentsToFill() const;
-        bool IsEof(int64_t position) const;
+        bool IsEof() const;
         bool IsFull() const {return m_playlist.IsVod() && m_cacheSizeInBytes > m_cacheSizeLimit; }
         float Bitrate() const { return m_bitrate;}
         int64_t Length() const { return m_playlist.IsVod() ? m_totalLength : -1; }
         void ReloadPlaylist();
+        bool CanSeek() const {return nullptr != m_delegate || m_playlist.IsVod(); }
     private:
        
         // key is segment index in m3u file
         typedef std::map<uint64_t, std::unique_ptr<MutableSegment>>  TSegments;
         typedef std::deque<SegmentInfo> TSegmentInfos;
         
-        inline bool CanSeek() const {return nullptr != m_delegate; }
         MutableSegment::TimeOffset TimeOffsetFromProsition(int64_t position) const {
             float bitrate = Bitrate();
             return (bitrate == 0.0) ? 0.0 : position/bitrate;
         }
+        void CheckCacheSize();
         
         Playlist m_playlist;
         PlaylistBufferDelegate m_delegate;
@@ -126,7 +140,7 @@ namespace Buffers {
         uint64_t m_currentSegmentIndex;
         float m_currentSegmentPositionFactor;
         float m_bitrate;
-        const int m_cacheSizeLimit;
+        int m_cacheSizeLimit;
         int m_cacheSizeInBytes;
 
     };

@@ -44,7 +44,6 @@ namespace Buffers {
     PlaylistBuffer::PlaylistBuffer(const std::string &playListUrl,  PlaylistBufferDelegate delegate)
     : m_delegate(delegate)
     , m_cache(nullptr)
-    , m_currentSegment(nullptr)
     {
         Init(playListUrl);
     }
@@ -65,6 +64,8 @@ namespace Buffers {
                 SAFE_DELETE(m_cache);
             m_cache = new PlaylistCache(playlistUrl, m_delegate);
             m_position = 0;
+            m_currentSegment = nullptr;
+            m_loadingSegmentIndex = 0;
         }
         CreateThread();
     }
@@ -77,15 +78,16 @@ namespace Buffers {
         
         unsigned char buffer[8196];
         ssize_t  bytesRead;
+        uint64_t segmentIndex = segment->info.index;
         do {
             bytesRead = XBMC->ReadFile(f, buffer, sizeof(buffer));
             segment->Push(buffer, bytesRead);
             //        LogDebug(">>> Write: %d", bytesRead);
-        }while (bytesRead > 0 && !IsStopped());
+        }while (bytesRead > 0 && !IsStopped() && m_loadingSegmentIndex == segmentIndex);
         
         XBMC->CloseFile(f);
 
-        return bytesRead < 0; // 0 (i.e. EOF) means no error, caller may continue with next chunk
+        return m_loadingSegmentIndex == segmentIndex && segment->BytesReady() > 0;
     }
     
     bool PlaylistBuffer::IsStopped(uint32_t timeoutInSec) {
@@ -110,19 +112,31 @@ namespace Buffers {
                 {
                     CLockObject lock(m_syncAccess);
                     segment = m_cache->SegmentToFill();
+                    if(nullptr != segment) {
+                        m_loadingSegmentIndex = segment->info.index;
+                        LogDebug("PlaylistBuffer: Start fill segment #%" PRIu64 ".", m_loadingSegmentIndex);
+                    }
                 }
     
                 float sleepTime = 1; //Min sleep time 1 sec
                 if(nullptr != segment) {
-                    LogDebug("PlaylistBuffer: Start fill segment.");
-                    FillSegment(segment);
-                    LogDebug("PlaylistBuffer: End fill segment.");
-                    
+                    // Load segn=ment data
+                    bool segmentReady = FillSegment(segment);
+                    if(segmentReady)
+                        LogDebug("PlaylistBuffer: End fill segment #%" PRIu64 ".", m_loadingSegmentIndex);
+                    else
+                        LogDebug("PlaylistBuffer: FAILED to fill segment. New segmenet to fill #%" PRIu64 ".", m_loadingSegmentIndex);
+
                     auto duration = segment->Duration();
 //                    LogDebug("PlaylistBuffer: Segment duration: %f", duration);
+                    // Populate loaded segment
                     if(!IsStopped()){
                         CLockObject lock(m_syncAccess);
-                        m_cache->SegmentReady(segment);
+                        if(segmentReady) {
+                            m_cache->SegmentReady(segment);
+                        } else {
+                            m_cache->SegmentCanceled(segment);
+                        }
                         m_writeEvent.Signal();
                     }
                     sleepTime = std::max(duration / 2.0, 1.0);
@@ -159,23 +173,44 @@ namespace Buffers {
             return -1;
         }
         size_t totalBytesRead = 0;
+        bool isEof = false;
+        PlaylistCache::SegmentStatus segmentStatus;
         //    int32_t timeout = c_commonTimeoutMs;
         while (totalBytesRead < bufferSize)
         {
-            if(nullptr == m_currentSegment)
+            int waitingCounter = 0;
+            while(nullptr == m_currentSegment)
             {
-                CLockObject lock(m_syncAccess);
-                m_currentSegment = m_cache->NextSegment();
+                {
+                    CLockObject lock(m_syncAccess);
+                    m_currentSegment = m_cache->NextSegment(segmentStatus);
+                }
+                if( nullptr == m_currentSegment) {
+                    if((isEof = m_cache->IsEof())) {
+                        LogNotice("PlaylistBuffer: EOF reported.");
+                        break;
+                    }
+                    if(PlaylistCache::k_SegmentStatus_Loading == segmentStatus ||
+                       PlaylistCache::k_SegmentStatus_CacheEmpty == segmentStatus)
+                    {
+                        if(waitingCounter++ < 3 && IsRunning()){
+                            LogNotice("PlaylistBuffer: waiting for segment loading...");
+                            m_writeEvent.Wait(5*1000);//(timeoutMs);
+                        } else {
+                            LogError("PlaylistBuffer: segment loading  timeout! %d sec.", timeoutMs * (waitingCounter-1) / 1000);
+                            break;
+                        }
+                    } else {
+                        LogError("PlaylistBuffer: segment not found. Reason %d.", segmentStatus);
+                        break;
+                    }
+                }
+                
             }
-            // Retry 1 time after write operation
-            if(NULL == m_currentSegment && m_writeEvent.Wait(timeoutMs))
-            {
-                CLockObject lock(m_syncAccess);
-                m_currentSegment = m_cache->NextSegment();
-            }
+ 
             if(NULL == m_currentSegment)
             {
-                //            StopThread();
+                // StopThread();
                 LogNotice("PlaylistBuffer: no segment for read.");
                 break;
             }
@@ -189,14 +224,14 @@ namespace Buffers {
 
             } while(bytesToRead > 0 && bytesRead > 0);
             if(m_currentSegment->BytesReady() <= 0) {
-                LogDebug("PlaylistBuffer: done with segment. Moving next.");
-                m_currentSegment = 0;
+                LogDebug("PlaylistBuffer: read all data from segment. Moving next...");
+                m_currentSegment = nullptr;
             }
             
 
         }
 
-        return totalBytesRead;
+        return isEof ? -1 : totalBytesRead;
     }
     
     bool PlaylistBuffer::SwitchStream(const std::string &newUrl)
@@ -215,7 +250,7 @@ namespace Buffers {
     
     int64_t PlaylistBuffer::GetLength() const
     {
-        if(m_delegate == nullptr) {
+        if(!m_cache->CanSeek()) {
             LogDebug("PlaylistBuffer: Plist archive lenght -1");
             return -1;
         }
@@ -227,6 +262,8 @@ namespace Buffers {
         if(retVal > 0)
             return  retVal;
 
+        if(nullptr == m_delegate)
+            return -1;
         // Fallback to bitrate for dynamic streams...
         float bitrate = 0.0;
         {
@@ -240,7 +277,7 @@ namespace Buffers {
     
     int64_t PlaylistBuffer::GetPosition() const
     {
-        if(m_delegate == nullptr) {
+        if(!m_cache->CanSeek()) {
             LogDebug("PlaylistBuffer: Plist archive position -1");
             return -1;
         }
@@ -250,7 +287,7 @@ namespace Buffers {
     
     int64_t PlaylistBuffer::Seek(int64_t iPosition, int iWhence)
     {
-        if(m_delegate == nullptr)
+        if(!m_cache->CanSeek())
             return -1;
 
         LogDebug("PlaylistBuffer: Seek requested pos %" PRId64 ", from %d", iPosition, iWhence);
@@ -283,10 +320,12 @@ namespace Buffers {
         // return failed code
         {
             CLockObject lock(m_syncAccess);
-            if(!m_cache->PrepareSegmentForPosition(iPosition)) {
+            uint64_t nextSegmentIndex;
+            if(!m_cache->PrepareSegmentForPosition(iPosition, &nextSegmentIndex)) {
                 LogDebug("PlaylistBuffer: cache failed to prepare for seek to pos %" PRId64 "", iPosition);
                 return -1;
             }
+            m_loadingSegmentIndex = nextSegmentIndex;
         }
         
         m_currentSegment = nullptr;
@@ -296,6 +335,7 @@ namespace Buffers {
     
     bool PlaylistBuffer::StopThread(int iWaitMs)
     {
+        LogDebug("PlaylistBuffer: terminating loading thread...");
         int stopCounter = 0;
         bool retVal = false;
         while(!(retVal = this->CThread::StopThread(iWaitMs))){
