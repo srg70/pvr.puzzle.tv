@@ -20,7 +20,11 @@
  *
  */
 
-#include <inttypes.h>
+#if (defined(_WIN32) || defined(_WIN64))
+    # include "p8-platform/windows/inttypes.h"
+#else
+    #include <inttypes.h>
+#endif
 #include "Playlist.hpp"
 #include "globals.hpp"
 #include "helpers.h"

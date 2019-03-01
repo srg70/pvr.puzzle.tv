@@ -21,10 +21,14 @@
  */
 
 
+#if (defined(_WIN32) || defined(_WIN64))
+# include "p8-platform/windows/inttypes.h"
+#else
+#include <inttypes.h>
+#endif
 #include "p8-platform/os.h"
 #include <memory>
 #include <list>
-#include <inttypes.h>
 #include "playlist_cache.hpp"
 #include "Playlist.hpp"
 #include "globals.hpp"
