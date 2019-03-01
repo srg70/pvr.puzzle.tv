@@ -22,7 +22,7 @@
 
 
 #if (defined(_WIN32) || defined(_WIN64))
-#define __STDC_CONSTANT_MACROS
+#define __STDC_FORMAT_MACROS
 #endif
 #include <inttypes.h>
 #include "p8-platform/os.h"
