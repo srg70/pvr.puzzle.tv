@@ -23,11 +23,13 @@
 
 #if (defined(_WIN32) || defined(__WIN32__))
 #include <windows.h>
+#define __STDC_FORMAT_MACROS
 #ifdef GetObject
 #undef GetObject
 #endif
 #endif
 
+#include <inttypes.h>
 #include "helpers.h"
 #include "plist_buffer.h"
 #include "libXBMC_addon.h"
