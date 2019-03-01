@@ -116,7 +116,7 @@ namespace Buffers {
 //        bool IsEof() const;
         bool IsFull() const {return CanSeek() && m_cacheSizeInBytes > m_cacheSizeLimit; }
         int64_t Length() const { return CanSeek() ? m_totalLength : -1; }
-        void ReloadPlaylist();
+        bool ReloadPlaylist();
         bool CanSeek() const {return nullptr != m_delegate || m_playlist.IsVod(); }
     private:
        

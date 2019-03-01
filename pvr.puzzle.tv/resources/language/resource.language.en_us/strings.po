@@ -364,6 +364,10 @@ msgctxt "#32023"
 msgid "No Internet connection!"
 msgstr "No Internet connection!"
 
+msgctxt "#32024"
+msgid "Playlist is invalid or missing!"
+msgstr "Playlist is invalid or missing!"
+
 #============= Menus ================
 
 msgctxt "#32050"

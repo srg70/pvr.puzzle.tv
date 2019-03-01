@@ -78,7 +78,7 @@ msgstr "Ожидать подключение к Интернету (0 - не п
 
 msgctxt "#10015"
 msgid "Channel index offset"
-msgstr "Смещение номерации каналов"
+msgstr "Смещение нумерации каналов"
 
 #============ Puzzle Server Settings ============
 
@@ -363,6 +363,10 @@ msgstr "Проверяю подключение к Интернету..."
 msgctxt "#32023"
 msgid "No Internet connection!"
 msgstr "Нет доступа в Интернет!"
+
+msgctxt "#32024"
+msgid "Playlist is invalid or missing!"
+msgstr "Плэйлист недоступен! "
 
 #============= Menus ================
 

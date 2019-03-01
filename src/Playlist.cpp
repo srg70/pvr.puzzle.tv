@@ -240,7 +240,7 @@ namespace Buffers {
     bool Playlist::Reload() {
         // For VOD plist we can't reload/refresh.
         if(m_isVod)
-            return false;
+            return true;
         std::string data;
         LoadPlaylist(data);
         // Empty playlist treat as EOF.

@@ -67,6 +67,9 @@ namespace Buffers {
             try {
                 m_cache = new PlaylistCache(playlistUrl, m_delegate);
             } catch (PlaylistException ex) {
+                char* message  = XBMC->GetLocalizedString(32024);
+                XBMC->QueueNotification(QUEUE_ERROR, message);
+                XBMC->FreeString(message);
                 throw InputBufferException((std::string("Playlist exception: ") + ex.what()).c_str());
             }
             m_position = 0;
@@ -157,7 +160,10 @@ namespace Buffers {
                 // it can take a time, and playlist will be out of sync.
                 {
                     CLockObject lock(m_syncAccess);
-                    m_cache->ReloadPlaylist();
+                    if(!m_cache->ReloadPlaylist()) {
+                        LogError("PlaylistBuffer: playlist update failed.");
+                        break;
+                    }
                 }
 
             }

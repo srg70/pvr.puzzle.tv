@@ -47,7 +47,10 @@ namespace Buffers {
     , m_currentSegmentIndex(0)
     , m_currentSegmentPositionFactor(0.0)
     {
-        ReloadPlaylist();
+        if(!ReloadPlaylist()){
+            LogError("PlaylistCache: playlist initialization failed.");
+            throw PlaylistException("PlaylistCache: playlist initialization failed.");
+        }
         m_currentSegmentIndex = m_dataToLoad.size() > 0 ?  m_dataToLoad.front().index : 0;
         m_cacheSizeLimit = CanSeek()
             ? ((nullptr != delegate) ? delegate->SegmentsAmountToCache() : 20) * 3 * 1024 * 1024
@@ -57,10 +60,10 @@ namespace Buffers {
     PlaylistCache::~PlaylistCache()  {
     }
     
-    void PlaylistCache::ReloadPlaylist(){
+    bool PlaylistCache::ReloadPlaylist(){
         
  
-        m_playlist.Reload();
+        if(m_playlist.Reload())
         {
             SegmentInfo info;
             bool hasMore = true;
@@ -69,6 +72,9 @@ namespace Buffers {
                 if(!hasMore)
                     break;
             }
+        } else {
+            LogError("PlaylistCache: playlist is empty or missing.");
+            return false;
         }
         
         
@@ -84,11 +90,11 @@ namespace Buffers {
             auto last  = m_dataToLoad.end();
             int statCounter = 0;
             // Stat at least 3 segments for bitrate
-            while(shouldCalculateOffset && it != last && statCounter++ < 3) {
+            while(it != last && statCounter++ < 3) {
                 struct __stat64 stat;
-                shouldCalculateOffset &= (0 == XBMC->StatFile(it->url.c_str(), &stat));
-                if(!shouldCalculateOffset){
+                if(0 != XBMC->StatFile(it->url.c_str(), &stat)){
                     LogError("PlaylistCache: failed to obtain file stat for %s. Total length %" PRId64 "(%f Bps)", it->url.c_str(), m_totalLength, Bitrate());
+                    return false;
                 }
                 MutableSegment* segment = new MutableSegment(*it, timeOffaset);
                 segment->_length = stat.st_size;
@@ -97,10 +103,6 @@ namespace Buffers {
                 m_totalLength += segment->_length;
 
                 ++it;
-            }
-            if(!shouldCalculateOffset){
-                LogError("PlaylistCache: failed to calculate stream bitrate. No seek will be available!");
-                return;
             }
             
             // Define "virtual" bitrate.
@@ -128,6 +130,7 @@ namespace Buffers {
         if(shouldCalculateOffset){
             LogError("PlaylistCache: playlist reloaded. Total length %" PRId64 "(%f B/sec).", m_totalLength, Bitrate());
         }
+        return true;
     }
     
     MutableSegment* PlaylistCache::SegmentToFill()  {
@@ -351,7 +354,11 @@ namespace Buffers {
             auto url = m_delegate->UrlForTimeshift(timeOffset, &adjustedTimeOffset);
             uint64_t indexOffset = timeOffset / m_playlist.TargetDuration();
             m_playlist = Playlist(url, indexOffset);
-            ReloadPlaylist();
+            if(!ReloadPlaylist()){
+                LogError("PlaylistCache: playlist update failed.");
+                return false;
+            }
+                
             m_playlistTimeOffset = indexOffset * m_playlist.TargetDuration();
             m_currentSegmentIndex = indexOffset;
             m_currentSegmentPositionFactor = (timeOffset - m_playlistTimeOffset) / m_playlist.TargetDuration();
