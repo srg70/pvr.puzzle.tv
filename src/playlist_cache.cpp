@@ -24,6 +24,8 @@
 #if (defined(_WIN32) || defined(_WIN64))
 #define __STDC_FORMAT_MACROS
 #endif
+#define NOMINMAX
+#include <algorithm>
 #include <inttypes.h>
 #include "p8-platform/os.h"
 #include <memory>
