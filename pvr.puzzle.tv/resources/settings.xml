@@ -59,7 +59,7 @@
     <setting id="edem_playlist_url" type="text" label="50000" default="https://edem.tv/playlists/uplist/***/edem_pl.m3u8"/>
 <!--    <setting id="edem_epg_url" type="text" label="50001" default="http://programtv.ru/xmltv.xml.gz"/>-->
     <setting id="edem_epg_url" type="text" label="50001" default="http://epg.it999.ru/edem.xml.gz"/>
-    <setting id="edem_seek_archives" type="bool" label="50002" default="false"/>
+    <setting id="edem_seek_archives" type="bool" label="50002" default="true"/>
     <setting id="edem_adult" type="bool" label="30003" default="false"/>
 </category>
 
@@ -73,7 +73,7 @@
     <setting id="ttv_use_acestream" type="bool" label="60008" default="false" visible="eq(-5,0)"/>
     <setting id="ttv_ace_server_uri" type="text" label="60009" default="127.0.0.1" visible="eq(-6,0)+eq(-1,true)" subsetting="true"/>
     <setting id="ttv_ace_server_port" type="number" label="60011" default="6878" visible="eq(-7,0)+eq(-2,true)" subsetting="true"/>
-    <setting id="ttv_seek_archives" type="bool" label="60002" default="false"/>
+    <setting id="ttv_seek_archives" type="bool" label="60002" default="true"/>
     <setting id="ttv_adult" type="bool" label="30003" default="false"/>
 </category>
 

@@ -209,8 +209,8 @@ msgid "EPG Path (XMLTV)"
 msgstr "Программа передач (XMLTV)"
 
 msgctxt "#50002"
-msgid "Seek Recordings (Experimental)"
-msgstr "Перемотка в архивах (Экспериментально)"
+msgid "Seek Recordings"
+msgstr "Перемотка в архивах"
 
 msgctxt "#50010"
 msgid "Edem Player"
@@ -227,8 +227,8 @@ msgid "EPG Path (XMLTV)"
 msgstr "Программа передач (XMLTV)"
 
 msgctxt "#60002"
-msgid "Seek Recordings (Experimental)"
-msgstr "Перемотка в архивах (Экспериментально)"
+msgid "Seek Recordings"
+msgstr "Перемотка в архивах"
 
 msgctxt "#60003"
 msgid "API"

@@ -206,8 +206,8 @@ msgid "EPG Path (XMLTV)"
 msgstr "EPG Path (XMLTV)"
 
 msgctxt "#50002"
-msgid "Seek Recordings (Experimental)"
-msgstr "Seek Recordings (Experimental)"
+msgid "Seek Recordings"
+msgstr "Seek Recordings"
 
 msgctxt "#50010"
 msgid "Edem Player"
@@ -224,8 +224,8 @@ msgid "EPG Path (XMLTV)"
 msgstr "EPG Path (XMLTV)"
 
 msgctxt "#60002"
-msgid "Seek Recordings (Experimental)"
-msgstr "Seek Recordings (Experimental)"
+msgid "Seek Recordings"
+msgstr "Seek Recordings"
 
 msgctxt "#60003"
 msgid "API"
