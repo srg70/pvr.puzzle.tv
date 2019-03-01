@@ -538,7 +538,28 @@ namespace TtvEngine
                                 pThis->m_zoneId = jsonRoot["zone_id"].GetInt() == 1;
                             });
         }
-        CATCH_API_CALL();
+        catch (ServerErrorException& ex) {
+            if(ex.reason == "incorrect") {
+                // In case of error try to re-login one time.
+               RenewSession();
+               return;
+            }
+            auto err = ex.what();
+            LogError("%s. TTV API error: %s", __FUNCTION__,  err);
+            if(strcmp(err, "noepg") != 0) {
+                char* message = XBMC->GetLocalizedString(32019);
+                XBMC->QueueNotification(QUEUE_ERROR, message, ex.what() );
+                XBMC->FreeString(message);
+            }
+        } catch(CurlErrorException& ex) {
+            LogError("%s. CURL error: %s", __FUNCTION__,  ex.what());
+            XBMC->QueueNotification(QUEUE_ERROR, "CURL fatal error: %s", ex.what() );
+        } catch(std::exception& ex) {
+            LogError("%s. TTV generic error: %s", __FUNCTION__,  ex.what());
+        }
+        catch(...) {
+            LogError("%s. Unknown TTV error.", __FUNCTION__);
+        }
     }
     
     std::string Core::GetPlaylistUrl()
@@ -758,22 +779,23 @@ namespace TtvEngine
         ActionQueue::TCompletion completionWrapper =  [pThis, data, parser, completion, isLoginCommand](const ActionQueue::ActionResult& s)
         {
             // Do not re-login within login/logout command.
-            if(s.status == ActionQueue::kActionFailed && !isLoginCommand && pThis->m_isRunnig) {
-                try{
-                    std::rethrow_exception(s.exception);
-                }
-                catch(ServerErrorException& ex) {
-                    if(ex.reason == "incorrect") {
-                        // In case of error try to re-login and repeat the API call.
-                        pThis->RenewSession();
-                        pThis->CallApiAsync(data, parser, completion);
-                        return;
-                    }
-                }
-                catch(...) {
-                    // Let caller to handle exceptions
-                }
-            }
+            // MOVED to UserInfo() command. Causes deadlock on sync API call.
+//            if(s.status == ActionQueue::kActionFailed && !isLoginCommand && pThis->m_isRunnig) {
+//                try{
+//                    std::rethrow_exception(s.exception);
+//                }
+//                catch(ServerErrorException& ex) {
+//                    if(ex.reason == "incorrect") {
+//                        // In case of error try to re-login and repeat the API call.
+//                        pThis->RenewSession();
+//                        pThis->CallApiAsync(data, parser, completion);
+//                        return;
+//                    }
+//                }
+//                catch(...) {
+//                    // Let caller to handle exceptions
+//                }
+//            }
             completion(s);
         };
         m_httpEngine->CallApiAsync(strRequest, parserWrapper, completionWrapper, data.priority);

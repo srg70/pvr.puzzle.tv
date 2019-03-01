@@ -206,6 +206,10 @@ public:
         _channelId =  epgTag.ChannelId;
         
     }
+    virtual int SegmentsAmountToCache() const {
+        // 20 segments cache
+        return 20;
+    }
     virtual time_t Duration() const
     {
         time_t fromNow = time(nullptr) - _recordingTime;

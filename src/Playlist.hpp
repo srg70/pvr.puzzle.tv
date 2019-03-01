@@ -1,10 +1,24 @@
-//
-//  Playlist.hpp
-//  comple.test
-//
-//  Created by Sergey Shramchenko on 30/10/2018.
-//  Copyright © 2018 Home. All rights reserved.
-//
+/*
+*
+*   Copyright (C) 2018 Sergey Shramchenko
+*   https://github.com/srg70/pvr.puzzle.tv
+*
+*  This Program is free software; you can redistribute it and/or modify
+*  it under the terms of the GNU General Public License as published by
+*  the Free Software Foundation; either version 2, or (at your option)
+*  any later version.
+*
+*  This Program is distributed in the hope that it will be useful,
+*  but WITHOUT ANY WARRANTY; without even the implied warranty of
+*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+*  GNU General Public License for more details.
+*
+*  You should have received a copy of the GNU General Public License
+*  along with XBMC; see the file COPYING.  If not, write to
+*  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+*  http://www.gnu.org/copyleft/gpl.html
+*
+*/
 
 #ifndef Playlist_hpp
 #define Playlist_hpp
@@ -17,19 +31,24 @@
 namespace Buffers{
     
     struct SegmentInfo {
-        SegmentInfo () : duration(0.0) {}
-        SegmentInfo(float d, std::string u) : url(u), duration(d){}
-        SegmentInfo&  operator=(const SegmentInfo&& s) { return *new (this)SegmentInfo(s.duration, s.url);}
+        SegmentInfo () : duration(0.0) , index (-1){}
+        SegmentInfo(float d, std::string u, uint64_t i) : url(u), duration(d), index(i){}
+        SegmentInfo(const SegmentInfo& info) : SegmentInfo(info.duration, info.url, info.index) {}
+        SegmentInfo&  operator=(const SegmentInfo&& s) { return *new (this)SegmentInfo(s.duration, s.url, s.index);}
+        SegmentInfo&  operator=(const SegmentInfo& s) { return *new (this)SegmentInfo(s.duration, s.url, s.index);}
         const std::string url;
         const float duration;
+        uint64_t index;
     };
     
     class Playlist {
     public:
-        Playlist(const std::string &url);
-        bool NextSegment(const SegmentInfo** ppInfo, bool& hasMoreSegments);
+        Playlist(const std::string &url, uint64_t indexOffset = 0);
+        bool NextSegment(SegmentInfo& info, bool& hasMoreSegments);
+        bool SetNextSegmentIndex(uint64_t offset);
         bool Reload();
         bool IsVod() const {return m_isVod;}
+        int TargetDuration() const {return m_targetDuration;}
     private:
         typedef std::map<uint64_t, SegmentInfo> TSegmentUrls;
 
@@ -42,6 +61,8 @@ namespace Buffers{
         std::string  m_playListUrl;
         uint64_t m_loadIterator;
         bool m_isVod;
+        uint64_t m_indexOffset;
+        int m_targetDuration;
 
     };
     

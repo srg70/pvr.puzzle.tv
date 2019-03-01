@@ -139,6 +139,7 @@
 		4CDC11E120B4531900EA9E2B /* client_core_base.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4CDC11DF20B4531900EA9E2B /* client_core_base.hpp */; };
 		4CDC11E520BDC48100EA9E2B /* globals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CDC11E320BDC48100EA9E2B /* globals.cpp */; };
 		4CDC11E620BDC48100EA9E2B /* globals.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4CDC11E420BDC48100EA9E2B /* globals.hpp */; };
+		4CE40890220DAACE00CC92CC /* playlist_cache.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CC578D921D378A200871747 /* playlist_cache.cpp */; };
 		4CFEAA8F1E4DA81A002C2BA4 /* ActionQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CFEAA8D1E4DA81A002C2BA4 /* ActionQueue.cpp */; };
 		4CFEAA901E4DA81A002C2BA4 /* ActionQueue.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4CFEAA8E1E4DA81A002C2BA4 /* ActionQueue.hpp */; };
 /* End PBXBuildFile section */
@@ -272,6 +273,7 @@
 		4C8506EB1F0E49F400213131 /* puzzle_pvr_client.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = puzzle_pvr_client.h; sourceTree = "<group>"; };
 		4C8506EF1F0E541100213131 /* puzzle_tv.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = puzzle_tv.cpp; sourceTree = "<group>"; };
 		4C8506F01F0E541100213131 /* puzzle_tv.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = puzzle_tv.h; sourceTree = "<group>"; };
+		4C8594C52215CA5500571757 /* plist_buffer_delegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = plist_buffer_delegate.h; sourceTree = "<group>"; };
 		4CAAE7212000CB2100A866C9 /* pvr_client_types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = pvr_client_types.h; sourceTree = "<group>"; };
 		4CAAE7222006438600A866C9 /* edem_player.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = edem_player.cpp; path = src/edem_player.cpp; sourceTree = "<group>"; };
 		4CAAE7232006438600A866C9 /* edem_player.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = edem_player.h; path = src/edem_player.h; sourceTree = "<group>"; };
@@ -285,6 +287,8 @@
 		4CBC4B8120C149F700BA0CFF /* TimersEngine.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TimersEngine.cpp; sourceTree = "<group>"; };
 		4CBC4B8220C149F700BA0CFF /* TimersEngine.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = TimersEngine.hpp; sourceTree = "<group>"; };
 		4CC18CE2212B2046005E64B8 /* simple_cyclic_buffer.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = simple_cyclic_buffer.hpp; sourceTree = "<group>"; };
+		4CC578D921D378A200871747 /* playlist_cache.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = playlist_cache.cpp; sourceTree = "<group>"; };
+		4CC578DA21D378A200871747 /* playlist_cache.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = playlist_cache.hpp; sourceTree = "<group>"; };
 		4CD394B41F2258610073E2DF /* plist_buffer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = plist_buffer.cpp; sourceTree = "<group>"; };
 		4CD394B51F2258610073E2DF /* plist_buffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = plist_buffer.h; sourceTree = "<group>"; };
 		4CDC11DE20B4531900EA9E2B /* client_core_base.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = client_core_base.cpp; sourceTree = "<group>"; };
@@ -544,10 +548,13 @@
 				4C08C7F01D81E2A8004CAAE3 /* direct_buffer.h */,
 				4CD394B41F2258610073E2DF /* plist_buffer.cpp */,
 				4CD394B51F2258610073E2DF /* plist_buffer.h */,
-				4C08C7F11D81E2A8004CAAE3 /* timeshift_buffer.cpp */,
-				4C08C7F21D81E2A8004CAAE3 /* timeshift_buffer.h */,
+				4C8594C52215CA5500571757 /* plist_buffer_delegate.h */,
 				4CAC99BA2188D7C1005D8902 /* Playlist.cpp */,
 				4CAC99BB2188D7C1005D8902 /* Playlist.hpp */,
+				4CC578D921D378A200871747 /* playlist_cache.cpp */,
+				4CC578DA21D378A200871747 /* playlist_cache.hpp */,
+				4C08C7F11D81E2A8004CAAE3 /* timeshift_buffer.cpp */,
+				4C08C7F21D81E2A8004CAAE3 /* timeshift_buffer.h */,
 			);
 			name = Buffers;
 			sourceTree = "<group>";
@@ -903,6 +910,7 @@
 				4CFEAA8F1E4DA81A002C2BA4 /* ActionQueue.cpp in Sources */,
 				4C534CC31F347CD50038539D /* file_cache_buffer.cpp in Sources */,
 				4C08C7EE1D81D295004CAAE3 /* sovok_tv.cpp in Sources */,
+				4CE40890220DAACE00CC92CC /* playlist_cache.cpp in Sources */,
 				4C8506E81F0E25DF00213131 /* HttpEngine.cpp in Sources */,
 				4C08C7F31D81E2A8004CAAE3 /* direct_buffer.cpp in Sources */,
 				4C08C7F51D81E2A8004CAAE3 /* timeshift_buffer.cpp in Sources */,

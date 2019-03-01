@@ -32,9 +32,8 @@
 #include "plist_buffer.h"
 #include "libXBMC_addon.h"
 #include "globals.hpp"
-#include "Playlist.hpp"
+#include "playlist_cache.hpp"
 #include "p8-platform/util/util.h"
-#include "p8-platform/util/timeutils.h"
 
 using namespace P8PLATFORM;
 using namespace ADDON;
@@ -42,14 +41,9 @@ using namespace Globals;
 
 namespace Buffers {
     
-    static CTimeout s_SeekTimeout;
-
-    PlaylistBuffer::PlaylistBuffer(const std::string &playListUrl,  PlaylistBufferDelegate delegate, int segmentsCacheSize)
-    : m_totalLength(0)
-    , m_totalDuration(0.0)
-    , m_delegate(delegate)
-    , m_playlist(nullptr)
-    , m_segmentsCacheSize(delegate == nullptr ? 0 : segmentsCacheSize) // No seek - no cache.
+    PlaylistBuffer::PlaylistBuffer(const std::string &playListUrl,  PlaylistBufferDelegate delegate)
+    : m_delegate(delegate)
+    , m_cache(nullptr)
     {
         Init(playListUrl);
     }
@@ -57,131 +51,47 @@ namespace Buffers {
     PlaylistBuffer::~PlaylistBuffer()
     {
         StopThread();
-        if(m_playlist)
-            delete m_playlist;
     }
     
     void PlaylistBuffer::Init(const std::string &playlistUrl)
     {
-        Init(playlistUrl, true, 0, 0);
-    }
-
-    void PlaylistBuffer::Init(const std::string &playListUrl, bool clearContent, int64_t position, time_t timeshift)
-    {
-        StopThread(20000);
+         StopThread(20000);
         {
             CLockObject lock(m_syncAccess);
 
             m_writeEvent.Reset();
-            if(m_playlist)
-                SAFE_DELETE(m_playlist);
-            if(clearContent)
-                m_segments.clear();
-            m_position = position;
-            m_writeTimshift = m_readTimshift =  timeshift;
-            s_SeekTimeout.Init(10*1000);
+            if(m_cache)
+                SAFE_DELETE(m_cache);
+            try {
+                m_cache = new PlaylistCache(playlistUrl, m_delegate);
+            } catch (PlaylistException ex) {
+                throw InputBufferException((std::string("Playlist exception: ") + ex.what()).c_str());
+            }
+            m_position = 0;
+            m_currentSegment = nullptr;
+            m_loadingSegmentIndex = 0;
         }
-        m_playlist = new Playlist(playListUrl);
         CreateThread();
     }
         
-    bool PlaylistBuffer::FillSegment(const SegmentInfo& segmentInfo, size_t & segmantsSize)
+    bool PlaylistBuffer::FillSegment(MutableSegment* segment)
     {
-        // Reload segments plailist every 3 seconds
-        // to avoid missing chunks
-        const uint32_t c_time = 3 * 1000;
-        P8PLATFORM::CTimeout plistReloadTimeout(c_time);
-        unsigned char buffer[8196];
-        void* f = XBMC->OpenFile(segmentInfo.url.c_str(), XFILE::READ_NO_CACHE | XFILE::READ_CHUNKED); //XFILE::READ_AUDIO_VIDEO);
+        void* f = XBMC->OpenFile(segment->info.url.c_str(), XFILE::READ_NO_CACHE | XFILE::READ_CHUNKED); //XFILE::READ_AUDIO_VIDEO);
         if(!f)
             throw PlistBufferException("Failed to download playlist media segment.");
         
-        auto segmentData = TSegments::mapped_type(new TSegments::mapped_type::element_type(segmentInfo.duration));
+        unsigned char buffer[8196];
         ssize_t  bytesRead;
+        uint64_t segmentIndex = segment->info.index;
         do {
             bytesRead = XBMC->ReadFile(f, buffer, sizeof(buffer));
-            segmentData->Push(buffer, bytesRead);
-            if(plistReloadTimeout.TimeLeft() <= 0) {
-                m_playlist->Reload();
-                plistReloadTimeout.Init(c_time);
-            }
+            segment->Push(buffer, bytesRead);
             //        LogDebug(">>> Write: %d", bytesRead);
-        }while (bytesRead > 0 && !IsStopped());
+        }while (bytesRead > 0 && !IsStopped() && m_loadingSegmentIndex == segmentIndex);
         
         XBMC->CloseFile(f);
-        
-        float bitrate = 0.0;
-        time_t segmentTimeshift = 0;
-        segmantsSize = 0;
-        {
-            CLockObject lock(m_syncAccess);
-            if(!IsStopped()) {
-                m_segments[m_writeTimshift] = segmentData;
-                segmentTimeshift = m_writeTimshift;
-                m_writeTimshift += segmentData->Duration();
-                m_totalDuration += segmentData->Duration();
-                m_totalLength += segmentData->Length();
-                bitrate = Bitrate();
-                segmantsSize = m_segments.size();
-            }
-        }
-        // If added?
-        if(segmantsSize > 0) {
-            LogDebug(">>> Segment added at %d. Total %d segs. Bitrate %f", segmentTimeshift, segmantsSize, segmentData->Bitrate());
-            LogDebug(">>> Average bitrate: %f", bitrate);
-            // limit segments size to 20
-            // to avoid memory overflow
-            //if(m_playlist->IsVod())
-            {
-                bool segsCacheIsFull = segmantsSize > 20;
-                while(segsCacheIsFull && !IsStopped()){
-                    P8PLATFORM::CEvent::Sleep(1*1000);
-                    CLockObject lock(m_syncAccess);
-                    segsCacheIsFull = m_segments.size() > 20;
-                };
-                
-            }
-        }
 
-        return bytesRead < 0; // 0 (i.e. EOF) means no error, caller may continue with next chunk
-    }
-    
-    void *PlaylistBuffer::Process()
-    {
-        bool isEof = false;
-        try {
-            while (!isEof && !IsStopped()) {
-                isEof = !m_playlist->Reload();
-                if(isEof  || IsStopped())
-                    continue;
-                const SegmentInfo* pSegmentInfo;
-                bool hasMoreSegments = false;
-                float sleepTime = 1; //Min sleep time 1 sec
-                if(m_playlist->NextSegment(&pSegmentInfo, hasMoreSegments)) {
-                    LogDebug(">>> Start fill segment.");
-                    size_t  segmantsSize = 0;
-                    isEof = FillSegment(*pSegmentInfo, segmantsSize);
-                    LogDebug(">>> End fill segment.");
-                    
-                    auto duration = pSegmentInfo->duration;
-                    if(segmantsSize > 1)
-                        sleepTime = std::max(duration / 2.0, 1.0);
-                    LogDebug(">>> Segment duration: %f", duration);
-                    if(!IsStopped())
-                        m_writeEvent.Signal();
-                }
-                if(!hasMoreSegments)
-                    IsStopped(sleepTime);
-            }
-            
-        } catch (InputBufferException& ex ) {
-            LogError("Playlist download thread failed with error: %s", ex.what());
-        }
-        
-        if(m_playlist->IsVod()) {
-            LogDebug(">>> PlaylistBuffer: received all VOD stream. Write is done.");
-        }
-        return NULL;
+        return m_loadingSegmentIndex == segmentIndex && segment->BytesReady() > 0;
     }
     
     bool PlaylistBuffer::IsStopped(uint32_t timeoutInSec) {
@@ -195,87 +105,137 @@ namespace Buffers {
         return false;
     }
     
-   ssize_t PlaylistBuffer::Read(unsigned char *buffer, size_t bufferSize, uint32_t timeoutMs)
+    void *PlaylistBuffer::Process()
     {
+        bool isEof = false;
+        try {
+            m_cache->ReloadPlaylist();
+            while (/*!isEof && */ !IsStopped()) {
+
+                MutableSegment* segment =  nullptr;
+                {
+                    CLockObject lock(m_syncAccess);
+                    segment = m_cache->SegmentToFill();
+                    if(nullptr != segment) {
+                        m_loadingSegmentIndex = segment->info.index;
+                        LogDebug("PlaylistBuffer: Start fill segment #%" PRIu64 ".", m_loadingSegmentIndex);
+                    }
+                }
+    
+                float sleepTime = 1; //Min sleep time 1 sec
+                if(nullptr != segment) {
+                    // Load segn=ment data
+                    bool segmentReady = FillSegment(segment);
+                    if(segmentReady)
+                        LogDebug("PlaylistBuffer: End fill segment #%" PRIu64 ".", m_loadingSegmentIndex);
+                    else
+                        LogDebug("PlaylistBuffer: FAILED to fill segment. New segmenet to fill #%" PRIu64 ".", m_loadingSegmentIndex);
+
+                    auto duration = segment->Duration();
+//                    LogDebug("PlaylistBuffer: Segment duration: %f", duration);
+                    // Populate loaded segment
+                    if(!IsStopped()){
+                        CLockObject lock(m_syncAccess);
+                        if(segmentReady) {
+                            m_cache->SegmentReady(segment);
+                        } else {
+                            m_cache->SegmentCanceled(segment);
+                        }
+                        m_writeEvent.Signal();
+                    }
+                    sleepTime = std::max(duration / 2.0, 1.0);
+                } else {
+                    ;//isEof = m_cache->IsEof(m_position);
+                }
+                if(/*!isEof && */m_cache->IsFull() || !m_cache->HasSegmentsToFill()){
+                    IsStopped(sleepTime);
+                }
+                // We should update playlist often, disregarding to amount of data to load
+                // Even if we have several segment to load
+                // it can take a time, and playlist will be out of sync.
+                {
+                    CLockObject lock(m_syncAccess);
+                    m_cache->ReloadPlaylist();
+                }
+
+            }
+            
+        } catch (InputBufferException& ex ) {
+            LogError("PlaylistBuffer: download thread failed with error: %s", ex.what());
+        }
         
+        LogDebug("PlaylistBuffer: write thread is done.");
+
+        return NULL;
+    }
+    
+    ssize_t PlaylistBuffer::Read(unsigned char *buffer, size_t bufferSize, uint32_t timeoutMs)
+    {
+     
+        if(!IsRunning()) {
+            LogError("PlaylistBuffer: write thread is not running.");
+            return -1;
+        }
         size_t totalBytesRead = 0;
+        bool isEof = false;
+        PlaylistCache::SegmentStatus segmentStatus;
         //    int32_t timeout = c_commonTimeoutMs;
         while (totalBytesRead < bufferSize)
         {
-            TSegments::mapped_type segment = NULL;
+            int waitingCounter = 0;
+            while(nullptr == m_currentSegment)
             {
-                CLockObject lock(m_syncAccess);
-                if(m_segments.count(m_readTimshift) > 0)
-                    segment = m_segments.at(m_readTimshift);
+                {
+                    CLockObject lock(m_syncAccess);
+                    m_currentSegment = m_cache->NextSegment(segmentStatus);
+                }
+                if( nullptr == m_currentSegment) {
+                    if((isEof = PlaylistCache::k_SegmentStatus_EOF == segmentStatus)) {
+                        LogNotice("PlaylistBuffer: EOF reported.");
+                        break;
+                    }
+                    if(PlaylistCache::k_SegmentStatus_Loading == segmentStatus ||
+                       PlaylistCache::k_SegmentStatus_CacheEmpty == segmentStatus)
+                    {
+                        if(waitingCounter++ < 3 && IsRunning()){
+                            LogNotice("PlaylistBuffer: waiting for segment loading...");
+                            m_writeEvent.Wait(5*1000);//(timeoutMs);
+                        } else {
+                            LogError("PlaylistBuffer: segment loading  timeout! %d sec.", timeoutMs * (waitingCounter-1) / 1000);
+                            break;
+                        }
+                    } else {
+                        LogError("PlaylistBuffer: segment not found. Reason %d.", segmentStatus);
+                        break;
+                    }
+                }
+                
             }
-            // Retry 1 time after write operation
-            if(NULL == segment && m_writeEvent.Wait(timeoutMs))
+ 
+            if(NULL == m_currentSegment)
             {
-                CLockObject lock(m_syncAccess);
-                if(m_segments.count(m_readTimshift) > 0)
-                    segment = m_segments.at(m_readTimshift);
-            }
-            if(NULL == segment)
-            {
-                //            StopThread();
+                // StopThread();
                 LogNotice("PlaylistBuffer: no segment for read.");
                 break;
             }
-            size_t bytesToRead;
+            size_t bytesToRead = bufferSize - totalBytesRead;
             size_t bytesRead;
-            do
-            {
-                bytesToRead = bufferSize - totalBytesRead;
-                bytesRead = segment->Read( buffer + totalBytesRead, bytesToRead);
+            do {
+                bytesRead = m_currentSegment->Read( buffer + totalBytesRead, bytesToRead);
                 totalBytesRead += bytesRead;
-            }while(bytesToRead > 0 && bytesRead > 0);
+                m_position += bytesRead;
+                bytesToRead = bufferSize - totalBytesRead;
 
-
-            if(segment->BytesReady() <= 0){
-                time_t segToRemove = m_readTimshift;
-                m_readTimshift += segment->Duration();
-                LogDebug(">>> PlaylistBuffer: Segment been read. Read/write timeshift (%d/%d)", m_readTimshift, m_writeTimshift);
-                // Reset segment position for next usage.
-                segment->Seek(0);
-                
-                int totalSegments = 0;
-                if(m_segmentsCacheSize <=0) { // Do NOT cache segments
-                    CLockObject lock(m_syncAccess);
-                    m_segments.erase(segToRemove);
-                    totalSegments = m_segments.size();
-
-                } else { // Check segments chache size
-                    segToRemove = 0;
-                    CLockObject lock(m_syncAccess);
-                    // Check cache size ...
-                    if(m_segments.size() > m_segmentsCacheSize) {
-                        // Release oldest (from current position) segment
-                        const auto& oldestSeg = m_segments.begin();
-                        if(m_readTimshift > oldestSeg->first) {
-                            segToRemove = oldestSeg->first;
-                            m_segments.erase(segToRemove);
-                        }
-                        totalSegments = m_segments.size();
-                    }
-                }
-                if(segToRemove > 0)
-                    LogDebug(">>> PlaylistBuffer: Segment removed at %d sec. Total %d segs.", segToRemove, totalSegments);
+            } while(bytesToRead > 0 && bytesRead > 0);
+            if(m_currentSegment->BytesReady() <= 0) {
+                LogDebug("PlaylistBuffer: read all data from segment. Moving next...");
+                m_currentSegment = nullptr;
             }
-        }
-        m_position += totalBytesRead;
-//        LogDebug(">>> PlaylistBuffer::Read(): totalBytesRead %d, position %lld", totalBytesRead, m_position);
+            
 
-        bool hasMoreData = false;
-        {
-            CLockObject lock(m_syncAccess);
-            hasMoreData = m_segments.count(m_readTimshift) > 0  ||  (!IsStopped() && IsRunning());
         }
-        if(!hasMoreData)
-            LogDebug(">>> PlaylistBuffer: read is done. No more data.");
-        
-        if (hasMoreData)
-            return totalBytesRead;
-        return -1;
+
+        return isEof ? -1 : totalBytesRead;
     }
     
     bool PlaylistBuffer::SwitchStream(const std::string &newUrl)
@@ -294,48 +254,37 @@ namespace Buffers {
     
     int64_t PlaylistBuffer::GetLength() const
     {
-        if(m_delegate == nullptr) {
-            LogDebug("Plist archive lenght -1");
-            return -1;
-        }
-        float bitrate = 0.0;
-        {
-            CLockObject lock(m_syncAccess);
-            bitrate = Bitrate();
-         }
-        int64_t retVal = m_delegate->Duration() * bitrate;
-       LogDebug("Plist archive lenght %lld (bitrate %f)", retVal, bitrate);
-        return retVal;
+        return m_cache->Length();
     }
     
     int64_t PlaylistBuffer::GetPosition() const
     {
-        if(m_delegate == nullptr) {
-            LogDebug("Plist archive position =1");
+        if(!m_cache->CanSeek()) {
+            LogDebug("PlaylistBuffer: Plist archive position -1");
             return -1;
         }
-        LogDebug("Plist archive position %lld", m_position);
+        LogDebug("PlaylistBuffer: Plist archive position %" PRId64 "", m_position);
         return m_position;
     }
     
     int64_t PlaylistBuffer::Seek(int64_t iPosition, int iWhence)
     {
-        if(m_delegate == nullptr)
+        if(!m_cache->CanSeek())
             return -1;
-        
-        LogDebug("PlaylistBuffer::Seek. >>> Requested pos %lld, from %d", iPosition, iWhence);
-        
+
+        LogDebug("PlaylistBuffer: Seek requested pos %" PRId64 ", from %d", iPosition, iWhence);
+
         // Translate position to offset from start of buffer.
         int64_t length = GetLength();
         int64_t begin = 0;
-        
+
         if(iWhence == SEEK_CUR) {
             iPosition = m_position + iPosition;
         } else if(iWhence == SEEK_END) {
             iPosition = length + iPosition;
         }
         if(iPosition < 0 )
-            LogDebug("PlaylistBuffer::Seek. Can't be pos %lld", iPosition);
+            LogDebug("PlaylistBuffer: Seek can't be pos %" PRId64 "", iPosition);
 
         if(iPosition > length) {
             iPosition = length;
@@ -344,109 +293,31 @@ namespace Buffers {
             iPosition = begin;
         }
         iWhence = SEEK_SET;
-        LogDebug("PlaylistBuffer::Seek. Calculated pos %lld", iPosition);
-        
+        LogDebug("PlaylistBuffer: Seek calculated pos %" PRId64 "", iPosition);
+
         int64_t seekDelta =  iPosition - m_position;
         if(seekDelta == 0)
             return m_position;
-        
-        // Do we have the data in cache already?
-        float bitrate = 0.0;
-        time_t requestedTimeshit, curTimeshift;
-        time_t writeTimeshift = 0, readTimshift;
-        bool haveCachedSeg = false, shouldReinit = false;
+        // If cahce failed to prepare for seek operation
+        // return failed code
         {
             CLockObject lock(m_syncAccess);
-            bitrate = Bitrate();
-            requestedTimeshit = iPosition / (bitrate + 0.001);
-            curTimeshift = m_position / (bitrate + 0.001);
-            
-            for (auto& seg: m_segments) {
-                if(seg.first > requestedTimeshit || seg.first + seg.second->Duration()  < requestedTimeshit)
-                    continue;
-                // We have a segment
-                haveCachedSeg = true;
-                readTimshift = seg.first;
-                LogDebug("PlaylistBuffer::Seek. Found cached segment. timeshift %d", readTimshift);
-                size_t posInSegment = requestedTimeshit - seg.first * bitrate;
-                seg.second->Seek(posInSegment);
-                
-                // continue write after continuesly last cahed segment after the found one
-                writeTimeshift = readTimshift;
-                TSegments::mapped_type segData;
-                do{
-                    segData = m_segments.at(writeTimeshift);
-                    writeTimeshift += segData->Duration();
-                } while(m_segments.count(writeTimeshift) > 0);
-                shouldReinit = haveCachedSeg && m_writeTimshift != writeTimeshift;
-                break;
-            }
-        }
-        if(shouldReinit) {
-            time_t adjustedTimeshift = writeTimeshift;
-            std::string newUrl = m_delegate->UrlForTimeshift(writeTimeshift, &adjustedTimeshift);
-            if(writeTimeshift != adjustedTimeshift ) {
-                writeTimeshift = adjustedTimeshift;
-            }
-
-            LogDebug("PlaylistBuffer::Seek. Restart write from %lld sec. Read at %lld sec", writeTimeshift, readTimshift);
-            
-            Init(newUrl, false,  iPosition, writeTimeshift);
-        }
-        if(haveCachedSeg) {
-            m_readTimshift = readTimshift;
-            return m_position;
-        }
-        
-        // No data in cache - reinit writer
-        try {
-//            if(s_SeekTimeout.TimeLeft() > 0)
-//            {
-//                LogDebug("PlaylistBuffer::Seek. >>> Can't seek now, wait %d ms", s_SeekTimeout.TimeLeft());
-//                CEvent::Sleep(s_SeekTimeout.TimeLeft());
-//            }
-
-            time_t adjustedTimeshift = requestedTimeshit;
-            std::string newUrl = m_delegate->UrlForTimeshift(requestedTimeshit, &adjustedTimeshift);
-            if(requestedTimeshit != adjustedTimeshift ) {
-                iPosition = adjustedTimeshift * bitrate;
-                requestedTimeshit = adjustedTimeshift;
-            }
-            LogDebug("PlaylistBuffer::Seek. Delta %f Mb, %lld(%lld) sec", seekDelta/1024.0/1024.0, (requestedTimeshit - curTimeshift), requestedTimeshit);
-
-            // Flour to segment duration (10 sec)
-            time_t segTimeshift = requestedTimeshit / 10 * 10;
-            Init(newUrl,  false, iPosition, segTimeshift);
-
-            // If we can't read from strean in 60 sec - report error
-            if(!m_writeEvent.Wait(60000)) {
-                LogError("PlaylistBuffer::Seek. failed to read after seek in 60 sec.");
+            uint64_t nextSegmentIndex;
+            if(!m_cache->PrepareSegmentForPosition(iPosition, &nextSegmentIndex)) {
+                LogDebug("PlaylistBuffer: cache failed to prepare for seek to pos %" PRId64 "", iPosition);
                 return -1;
             }
-            {
-                CLockObject lock(m_syncAccess);
-                auto& seg = m_segments.at(segTimeshift);
-                size_t posInSegment = iPosition - segTimeshift * bitrate;
-                seg->Seek(posInSegment);
-                m_position = iPosition;
-            }
-            LogDebug("PlaylistBuffer::Seek. pos after seek %lld", m_position);
-            return m_position;
-
-        } catch (std::exception&  ex) {
-            LogError("PlaylistBuffer::Seek. Exception thrown. Reason: %s. Reset position!", ex.what());
-            m_position = 0;
-            return -1;
-
-        }catch (...) {
-            LogError("PlaylistBuffer::Seek. Unknown exception. Reset position!");
-            m_position = 0;
-            return -1;
+            m_loadingSegmentIndex = nextSegmentIndex;
         }
+        
+        m_currentSegment = nullptr;
+        m_position = iPosition;
+        return m_position;
     }
     
     bool PlaylistBuffer::StopThread(int iWaitMs)
     {
+        LogDebug("PlaylistBuffer: terminating loading thread...");
         int stopCounter = 0;
         bool retVal = false;
         while(!(retVal = this->CThread::StopThread(iWaitMs))){
@@ -458,76 +329,6 @@ namespace Buffers {
             LogError("PlaylistBuffer: failed to stop thread in %d ms", stopCounter*iWaitMs);
         
         return retVal;
-    }
-    
-#pragma mark - Segment
-    
-    PlaylistBuffer::Segment::Segment(float duration)
-    :_data(NULL)
-    , _size(0)
-    , _begin(NULL)
-    , _duration(duration)
-    {
-    }
-    
-    PlaylistBuffer::Segment::Segment(const uint8_t* buffer, size_t size, float duration)
-    : _duration(duration)
-    , _begin(NULL)
-    {
-        Push(buffer, size);
-    }
-    
-    void PlaylistBuffer::Segment::Push(const uint8_t* buffer, size_t size)
-    {
-        if(NULL == buffer || 0 == size)
-            return;
-        
-        void * ptr = realloc(_data, _size + size);
-        if(NULL == ptr)
-            throw PlistBufferException("Faied to allocate segment.");
-        _data = (uint8_t*) ptr;
-        memcpy(&_data[_size], buffer, size);
-        _size += size;
-        //    LogDebug(">>> Size: %d", _size);
-    }
-    
-    const uint8_t* PlaylistBuffer::Segment::Pop(size_t requesred, size_t*  actual)
-    {
-        // TODO: check _data for NULL
-        if(_begin == NULL)
-            _begin = &_data[0];
-        
-        size_t available = _size - (_begin - &_data[0]);
-        *actual = std::min(requesred, available);
-        const uint8_t* retVal = _begin;
-        _begin += *actual;
-        return retVal;
-    }
-    
-    size_t PlaylistBuffer::Segment::Seek(size_t position)
-    {
-        _begin = &_data[0] + std::min(position, _size);
-        return Position();
-    }
-
-
-    size_t PlaylistBuffer::Segment::Read(uint8_t* buffer, size_t size)
-    {
-        // TODO: check _data for NULL
-        if(_begin == NULL)
-            _begin = &_data[0];
-        size_t actual = std::min(size, BytesReady());
-        //    LogDebug(">>> Available: %d  Actual: %d", available, actual);
-        memcpy(buffer, _begin, actual);
-        _begin += actual;
-        return actual;
-    }
-    
-    
-    PlaylistBuffer::Segment::~Segment()
-    {
-        if(_data != NULL)
-            free( _data);
     }
     
 }
