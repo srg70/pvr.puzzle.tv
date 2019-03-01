@@ -1,3 +1,18 @@
+0.8.11
+- Refactoring of archive engine.
+- Implemented rewinding for VOD archives (TTV TS Proxy, OTT)
+- Improved rewinding for Edem archives
+
+0.8.9
+- Checking Internet connection on startup
+- Optionaly exclude current translation from archive
+
+0.8.8
+- Improved playlist playback
+
+0.8.4
+- TTV: detailed EPG support
+
 0.8.3
 - Optimising of EPG reloading
 - Commom menus hooks in all available menues
