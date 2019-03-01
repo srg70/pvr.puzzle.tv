@@ -174,7 +174,7 @@ namespace Buffers {
     ssize_t PlaylistBuffer::Read(unsigned char *buffer, size_t bufferSize, uint32_t timeoutMs)
     {
      
-        if(!IsRunning()) {
+        if(IsStopped()) {
             LogError("PlaylistBuffer: write thread is not running.");
             return -1;
         }
