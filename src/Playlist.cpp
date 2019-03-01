@@ -160,6 +160,7 @@ namespace Buffers {
                     body = data.substr(pos);
                     std::string yes("YES");
                     m_isVod =  body.substr(0,yes.size()) == yes;
+                    body=body.substr(0, body.find("#EXT-X-ENDLIST"));
                 }
             } else {
                 // ... otherwise check plist type. VOD list may ommit sequence ID
