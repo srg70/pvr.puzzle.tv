@@ -22,10 +22,9 @@
 
 
 #if (defined(_WIN32) || defined(_WIN64))
-# include "p8-platform/windows/inttypes.h"
-#else
-#include <inttypes.h>
+#define __STDC_CONSTANT_MACROS
 #endif
+#include <inttypes.h>
 #include "p8-platform/os.h"
 #include <memory>
 #include <list>
