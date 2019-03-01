@@ -62,7 +62,11 @@ namespace Buffers {
             m_writeEvent.Reset();
             if(m_cache)
                 SAFE_DELETE(m_cache);
-            m_cache = new PlaylistCache(playlistUrl, m_delegate);
+            try {
+                m_cache = new PlaylistCache(playlistUrl, m_delegate);
+            } catch (PlaylistException ex) {
+                throw InputBufferException((std::string("Playlist exception: ") + ex.what()).c_str());
+            }
             m_position = 0;
             m_currentSegment = nullptr;
             m_loadingSegmentIndex = 0;
@@ -186,7 +190,7 @@ namespace Buffers {
                     m_currentSegment = m_cache->NextSegment(segmentStatus);
                 }
                 if( nullptr == m_currentSegment) {
-                    if((isEof = m_cache->IsEof())) {
+                    if((isEof = PlaylistCache::k_SegmentStatus_EOF == segmentStatus)) {
                         LogNotice("PlaylistBuffer: EOF reported.");
                         break;
                     }
@@ -250,29 +254,7 @@ namespace Buffers {
     
     int64_t PlaylistBuffer::GetLength() const
     {
-        if(!m_cache->CanSeek()) {
-            LogDebug("PlaylistBuffer: Plist archive lenght -1");
-            return -1;
-        }
-
-        // m_writeEvent.Wait(10*1000); // Wait 10 sec for first segment
-
-        // For VOD we have actual length ready.
-        int64_t retVal = m_cache->Length();
-        if(retVal > 0)
-            return  retVal;
-
-        if(nullptr == m_delegate)
-            return -1;
-        // Fallback to bitrate for dynamic streams...
-        float bitrate = 0.0;
-        {
-            CLockObject lock(m_syncAccess);
-            bitrate = m_cache->Bitrate();
-        }
-        retVal = m_delegate->Duration() * bitrate;
-        LogDebug("PlaylistBuffer: Plist archive lenght %" PRId64 " (bitrate %f)", retVal, bitrate);
-        return retVal;
+        return m_cache->Length();
     }
     
     int64_t PlaylistBuffer::GetPosition() const

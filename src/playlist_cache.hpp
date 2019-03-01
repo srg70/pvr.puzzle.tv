@@ -113,10 +113,9 @@ namespace Buffers {
         Segment* NextSegment(SegmentStatus& status);
         bool PrepareSegmentForPosition(int64_t position, uint64_t* nextSegmentIndex);
         bool HasSegmentsToFill() const;
-        bool IsEof() const;
-        bool IsFull() const {return m_playlist.IsVod() && m_cacheSizeInBytes > m_cacheSizeLimit; }
-        float Bitrate() const { return m_bitrate;}
-        int64_t Length() const { return m_playlist.IsVod() ? m_totalLength : -1; }
+//        bool IsEof() const;
+        bool IsFull() const {return CanSeek() && m_cacheSizeInBytes > m_cacheSizeLimit; }
+        int64_t Length() const { return CanSeek() ? m_totalLength : -1; }
         void ReloadPlaylist();
         bool CanSeek() const {return nullptr != m_delegate || m_playlist.IsVod(); }
     private:
@@ -130,7 +129,8 @@ namespace Buffers {
             return (bitrate == 0.0) ? 0.0 : position/bitrate;
         }
         void CheckCacheSize();
-        
+        float Bitrate() const { return m_bitrate;}
+
         Playlist m_playlist;
         PlaylistBufferDelegate m_delegate;
         MutableSegment::TimeOffset m_playlistTimeOffset;

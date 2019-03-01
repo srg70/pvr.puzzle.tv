@@ -43,11 +43,12 @@ namespace Buffers{
     
     class Playlist {
     public:
-        Playlist(const std::string &url);
+        Playlist(const std::string &url, uint64_t indexOffset = 0);
         bool NextSegment(SegmentInfo& info, bool& hasMoreSegments);
         bool SetNextSegmentIndex(uint64_t offset);
         bool Reload();
         bool IsVod() const {return m_isVod;}
+        int TargetDuration() const {return m_targetDuration;}
     private:
         typedef std::map<uint64_t, SegmentInfo> TSegmentUrls;
 
@@ -60,6 +61,8 @@ namespace Buffers{
         std::string  m_playListUrl;
         uint64_t m_loadIterator;
         bool m_isVod;
+        uint64_t m_indexOffset;
+        int m_targetDuration;
 
     };
     

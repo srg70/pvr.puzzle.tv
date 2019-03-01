@@ -63,7 +63,10 @@ namespace Buffers {
         return bandwidth;
     }
     
-    Playlist::Playlist(const std::string &url){
+    Playlist::Playlist(const std::string &url, uint64_t indexOffset)
+    : m_indexOffset(indexOffset)
+    , m_targetDuration(0)
+    {
         SetBestPlaylist(url);
     }
     
@@ -118,6 +121,7 @@ namespace Buffers {
         const char* c_INF = "#EXTINF:";
         const char* c_SEQ = "#EXT-X-MEDIA-SEQUENCE:";
         const char* c_TYPE = "#EXT-X-PLAYLIST-TYPE:";
+        const char* c_TARGET = "#EXT-X-TARGETDURATION:";
         const char* c_CACHE = "#EXT-X-ALLOW-CACHE:"; // removed in v7 but in use by TTV :(
 
         try {
@@ -126,14 +130,25 @@ namespace Buffers {
                 throw PlaylistException("Invalid playlist format: missing #EXTM3U tag.");
             pos += strlen(c_M3U);
             
-            int64_t mediaIndex = 0;
+            // Fill target duration value (mandatory tag)
+            pos = data.find(c_TARGET);
+            // If we have media-sequence tag - use it
+            if(std::string::npos == pos)
+                throw PlaylistException("Invalid playlist format: missing #EXT-X-TARGETDURATION tag.");
+
+            pos += strlen(c_TARGET);
+            m_targetDuration = std::stoi(data.substr(pos), &pos);
+            
+            // Playlist may be sub-sequence of some bigger strea (e.g. archive at Edem)
+            // Initial index offset helps to right possitionig of segments range
+            int64_t mediaIndex = m_indexOffset;
             std::string  body;
             pos = data.find(c_SEQ);
             // If we have media-sequence tag - use it
             if(std::string::npos != pos) {
                 pos += strlen(c_SEQ);
                  body = data.substr(pos);
-                mediaIndex = std::stoull(body, &pos);
+                mediaIndex += std::stoull(body, &pos);
                 m_isVod = false;
                 // Check for cache tag (obsolete)
                 pos = data.find(c_CACHE);
