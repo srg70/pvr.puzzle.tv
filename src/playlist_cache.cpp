@@ -76,8 +76,10 @@ namespace Buffers {
             
             // Stat first 3 segments to calculate bitrate
             auto it = m_dataToLoad.begin();
-            auto last = it + 3;
-            while(shouldCalculateOffset && it != last) {
+            auto last  = m_dataToLoad.end();
+            int statCounter = 0;
+            // Stat at least 3 segments for bitrate
+            while(shouldCalculateOffset && it != last && statCounter++ < 3) {
                 struct __stat64 stat;
                 shouldCalculateOffset &= (0 == XBMC->StatFile(it->url.c_str(), &stat));
                 if(!shouldCalculateOffset){
@@ -100,7 +102,6 @@ namespace Buffers {
             m_bitrate =  m_totalLength/timeOffaset;
             
             if(m_playlist.IsVod()) {
-                last  = m_dataToLoad.end();
                 while(it!=last) {
                     MutableSegment* segment = new MutableSegment(*it, timeOffaset);
                     segment->_length = m_bitrate * it->duration;
