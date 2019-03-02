@@ -270,6 +270,11 @@ namespace Buffers {
             int64_t idx = -1;
             auto runner = m_segments.begin();
             const auto end = m_segments.end();
+            if(CanSeek()) {
+                // Skip first segment, preserve in cache
+                // Kodi seek to 0 freaquently...
+                ++runner;
+            }
             // Search for oldest segment
             while(runner->first < m_currentSegmentIndex) {
                 if(runner->second->IsValid()) {
