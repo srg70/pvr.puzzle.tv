@@ -143,21 +143,20 @@ namespace Buffers {
                         CLockObject lock(m_syncAccess);
                         if(segmentReady) {
                             m_cache->SegmentReady(segment);
-                        } else {
+                            m_writeEvent.Signal();
+                       } else {
                             m_cache->SegmentCanceled(segment);
                         }
-                        m_writeEvent.Signal();
                     }
-                    sleepTime = std::max(duration / 2.0, 1.0);
+                    sleepTime = 1.0;//std::max(duration / 2.0, 1.0);
                 } else {
                     ;//isEof = m_cache->IsEof(m_position);
                 }
-                if(/*!isEof && */m_cache->IsFull() || !m_cache->HasSegmentsToFill()){
-                    IsStopped(sleepTime);
-                }
+                
                 // We should update playlist often, disregarding to amount of data to load
                 // Even if we have several segment to load
                 // it can take a time, and playlist will be out of sync.
+                //                if(!playlistBeenReloaded)
                 {
                     CLockObject lock(m_syncAccess);
                     if(!m_cache->ReloadPlaylist()) {
@@ -165,7 +164,18 @@ namespace Buffers {
                         break;
                     }
                 }
+                // No reason to download next segment when cache is full
+                bool chacheIsFull = false;
+                do{
+                    CLockObject lock(m_syncAccess);
+                    chacheIsFull = !m_cache->HasSpaceForNewSegment();
+                } while(chacheIsFull && !IsStopped());
+                
+                if(!m_cache->HasSegmentsToFill()){
+                    IsStopped(sleepTime);
+                }
 
+ 
             }
             
         } catch (InputBufferException& ex ) {

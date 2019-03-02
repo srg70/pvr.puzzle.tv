@@ -114,10 +114,11 @@ namespace Buffers {
         bool PrepareSegmentForPosition(int64_t position, uint64_t* nextSegmentIndex);
         bool HasSegmentsToFill() const;
 //        bool IsEof() const;
-        bool IsFull() const {return CanSeek() && m_cacheSizeInBytes > m_cacheSizeLimit; }
+        bool IsFull() const {return CanSeek() ? m_cacheSizeInBytes > m_cacheSizeLimit : m_segments.size() > 2; }
         int64_t Length() const { return CanSeek() ? m_totalLength : -1; }
         bool ReloadPlaylist();
         bool CanSeek() const {return nullptr != m_delegate || m_playlist.IsVod(); }
+        bool HasSpaceForNewSegment();
     private:
        
         // key is segment index in m3u file
@@ -128,7 +129,6 @@ namespace Buffers {
             float bitrate = Bitrate();
             return (bitrate == 0.0) ? 0.0 : position/bitrate;
         }
-        void CheckCacheSize();
         float Bitrate() const { return m_bitrate;}
 
         Playlist m_playlist;

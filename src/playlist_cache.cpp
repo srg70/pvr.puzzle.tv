@@ -53,8 +53,8 @@ namespace Buffers {
         }
         m_currentSegmentIndex = m_dataToLoad.size() > 0 ?  m_dataToLoad.front().index : 0;
         m_cacheSizeLimit = CanSeek()
-            ? ((nullptr != delegate) ? delegate->SegmentsAmountToCache() : 20) * 3 * 1024 * 1024
-            : 0; // ~3MByte/chunck (usualy 6 sec)
+            ? ((nullptr != delegate) ? delegate->SegmentsAmountToCache() : 20) * 6 * 1024 * 1024
+            : 0; // ~6 MByte/chunck (usualy 6 sec)
     }
     
     PlaylistCache::~PlaylistCache()  {
@@ -248,9 +248,13 @@ namespace Buffers {
                 status = k_SegmentStatus_Loading;
                 LogDebug("PlaylistCache: segment with index #%" PRIu64 " should start loading shortly. Requested time offset %f. Stream duration %f.", m_currentSegmentIndex, segmentTimeOffset, m_delegate->Duration());
             }
+        }else {
+            // Live stream
+            // TODO: check whether segment loading now
+            status = k_SegmentStatus_Loading;
+            LogDebug("PlaylistCache: segment with index #%" PRIu64 " should start loading shortly. Last known segment #%" PRIu64 ".", m_currentSegmentIndex, m_segments.size() > 0 ? m_segments.rbegin()->first : 0);
         }
         
-        CheckCacheSize();
         // Forward to nex segment only if we found current
         if(nullptr != retVal) {
             ++m_currentSegmentIndex;
@@ -259,10 +263,10 @@ namespace Buffers {
         return retVal;
     }
 
-    void PlaylistCache::CheckCacheSize() {
+    bool PlaylistCache::HasSpaceForNewSegment() {
         // Free older segments when cache is full
         // or we are on live stream (no caching requered)
-        if(IsFull() || !CanSeek()) {
+        if(IsFull()) {
             int64_t idx = -1;
             auto runner = m_segments.begin();
             const auto end = m_segments.end();
@@ -275,11 +279,12 @@ namespace Buffers {
                 ++runner;
             }
             // If we don't have a segment to free BEFORE current position,
+            // and we are NOT live stream,
             // search for farest segment AFTER position.
             // We'll need to reload it later,
             // but we have to free memory now, for new data
             // that probably waiting for memory
-            if(-1 == idx) {
+            if(-1 == idx && CanSeek()) {
                 auto rrunner = m_segments.rbegin();
                 const auto rend = m_segments.rend();
                 ++rrunner; // Skip last segment, preserve in cache
@@ -301,12 +306,13 @@ namespace Buffers {
                     m_segments.erase(idx);
                 }
                 LogDebug("PlaylistCache: segment %" PRIu64 " removed. Cache size %d bytes", idx, m_cacheSizeInBytes);
+            } else if(CanSeek()) {
+                LogDebug("PlaylistCache: cache is full but no segments to free. Current idx %" PRIu64 " Size %d bytes", m_currentSegmentIndex, m_cacheSizeInBytes);
             } else {
-                if(CanSeek()) {
-                    LogDebug("PlaylistCache: cache is full but no segments to free. Current idx %" PRIu64 " Size %d bytes", m_currentSegmentIndex, m_cacheSizeInBytes);
-                }
+                LogDebug("PlaylistCache: cache is full but no segments to free. Current idx %" PRIu64 " %d segments in cache.", m_currentSegmentIndex, m_segments.size());
             }
         }
+        return !IsFull();
     }
     
     // Find segment in playlist by time offset,caalculated from position
