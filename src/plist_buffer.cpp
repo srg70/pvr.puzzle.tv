@@ -169,7 +169,7 @@ namespace Buffers {
                 do{
                     CLockObject lock(m_syncAccess);
                     chacheIsFull = !m_cache->HasSpaceForNewSegment();
-                } while(chacheIsFull && !IsStopped());
+                } while(chacheIsFull && !IsStopped(1));
                 
                 if(!m_cache->HasSegmentsToFill()){
                     IsStopped(sleepTime);
@@ -217,7 +217,9 @@ namespace Buffers {
                     {
                         if(waitingCounter++ < 3 && IsRunning()){
                             LogNotice("PlaylistBuffer: waiting for segment loading...");
-                            m_writeEvent.Wait(5*1000);//(timeoutMs);
+                            // TODO: review timeout
+                            timeoutMs = 5*1000;
+                            m_writeEvent.Wait(timeoutMs);
                         } else {
                             LogError("PlaylistBuffer: segment loading  timeout! %d sec.", timeoutMs * (waitingCounter-1) / 1000);
                             break;

@@ -264,6 +264,8 @@ namespace Buffers {
     }
 
     bool PlaylistCache::HasSpaceForNewSegment() {
+        // Current segment for read is m_currentSegmentIndex - 1
+        uint64_t currentSegment = m_currentSegmentIndex -1;
         // Free older segments when cache is full
         // or we are on live stream (no caching requered)
         if(IsFull()) {
@@ -272,11 +274,11 @@ namespace Buffers {
             const auto end = m_segments.end();
             if(CanSeek()) {
                 // Skip first segment, preserve in cache
-                // Kodi seek to 0 freaquently...
+                // Kodi seeks to 0 freaquently...
                 ++runner;
             }
             // Search for oldest segment
-            while(runner->first < m_currentSegmentIndex) {
+            while(runner->first < currentSegment) {
                 if(runner->second->IsValid()) {
                     idx = runner->first;
                     break;
@@ -285,15 +287,22 @@ namespace Buffers {
             }
             // If we don't have a segment to free BEFORE current position,
             // and we are NOT live stream,
-            // search for farest segment AFTER position.
+            // search for farest segment AFTER range of valid segments
+            // from current position.
             // We'll need to reload it later,
             // but we have to free memory now, for new data
             // that probably waiting for memory
             if(-1 == idx && CanSeek()) {
+                // Search for first invalid continues segment after current
+                while(m_segments.count(++currentSegment) != 0) {
+                    if(!m_segments[currentSegment]->IsValid()){
+                        break;
+                    }
+                }
                 auto rrunner = m_segments.rbegin();
                 const auto rend = m_segments.rend();
                 ++rrunner; // Skip last segment, preserve in cache
-                while(rrunner != rend &&  rrunner->first > m_currentSegmentIndex) {
+                while(rrunner != rend &&  rrunner->first > currentSegment) {
                     if(rrunner->second->IsValid()){
                         idx = rrunner->first;
                         break;
@@ -312,9 +321,9 @@ namespace Buffers {
                 }
                 LogDebug("PlaylistCache: segment %" PRIu64 " removed. Cache size %d bytes", idx, m_cacheSizeInBytes);
             } else if(CanSeek()) {
-                LogDebug("PlaylistCache: cache is full but no segments to free. Current idx %" PRIu64 " Size %d bytes", m_currentSegmentIndex, m_cacheSizeInBytes);
+                LogDebug("PlaylistCache: cache is full but no segments to free. Current idx %" PRIu64 " Size %d bytes", currentSegment, m_cacheSizeInBytes);
             } else {
-                LogDebug("PlaylistCache: cache is full but no segments to free. Current idx %" PRIu64 " %d segments in cache.", m_currentSegmentIndex, m_segments.size());
+                LogDebug("PlaylistCache: cache is full but no segments to free. Current idx %" PRIu64 " %d segments in cache.", currentSegment, m_segments.size());
             }
         }
         return !IsFull();
