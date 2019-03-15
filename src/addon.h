@@ -28,6 +28,7 @@
 #ifndef __Iptv_Pvr_Addoin_h__
 #define __Iptv_Pvr_Addoin_h__
 
+#include "kodi/AddonBase.h"
 #include "xbmc_addon_types.h"
 #include "xbmc_pvr_types.h"
 
@@ -46,9 +47,7 @@ public:
     virtual ADDON_STATUS Init(PVR_PROPERTIES* pvrprops) = 0;
     virtual ADDON_STATUS GetStatus() = 0;
 
-    virtual int GetSettings(ADDON_StructSetting ***sSet) = 0;
     virtual ADDON_STATUS SetSetting(const char *settingName, const void *settingValue) = 0;
-    virtual void FreeSettings() = 0;
 
 //    virtual const char *GetBackendName(void) = 0;
     virtual PVR_ERROR GetAddonCapabilities(PVR_ADDON_CAPABILITIES* pCapabilities) = 0;
@@ -77,10 +76,12 @@ public:
     virtual PVR_ERROR DeleteRecording(const PVR_RECORDING &recording) = 0;
     virtual bool OpenRecordedStream(const PVR_RECORDING &recording) = 0;
     virtual void CloseRecordedStream(void) = 0;
+    virtual PVR_ERROR GetStreamReadChunkSize(int* chunksize) = 0;
     virtual int ReadRecordedStream(unsigned char *pBuffer, unsigned int iBufferSize) = 0;
     virtual long long SeekRecordedStream(long long iPosition, int iWhence /* = SEEK_SET */) = 0;
     virtual long long PositionRecordedStream(void) = 0;
     virtual long long LengthRecordedStream(void) = 0;
+    virtual PVR_ERROR IsEPGTagRecordable(const EPG_TAG* tag, bool* bIsRecordable) = 0;
 
     virtual PVR_ERROR CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item) = 0;
     
@@ -100,6 +101,20 @@ public:
     virtual PVR_ERROR UpdateTimer(const PVR_TIMER &timer) = 0;
     virtual ~ITimersEngine() {}
 
+};
+
+class PuzzleTvAddon : public ::kodi::addon::CAddonBase
+{
+public:
+    virtual ~PuzzleTvAddon() override;
+    
+    virtual ADDON_STATUS Create() override;
+    
+    virtual ADDON_STATUS GetStatus() override;
+    
+    virtual ADDON_STATUS SetSetting(const std::string& settingName, const ::kodi::CSettingValue& settingValue) override;
+
+    
 };
 
 #endif /* __Iptv_Pvr_Addoin_h__ */

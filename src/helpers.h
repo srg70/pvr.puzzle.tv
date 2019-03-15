@@ -29,7 +29,7 @@
 
 
 #include <string>
-#include<stdint.h>
+#include <stdint.h>
 #include <cctype>
 #include <ctime>
 #include <algorithm>

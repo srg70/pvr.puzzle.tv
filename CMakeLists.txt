@@ -73,6 +73,42 @@ src/guid.cpp
 src/playlist_cache.cpp
 )
 
+set(IPTV_HEADERS
+src/direct_buffer.h
+src/plist_buffer.h
+src/input_buffer.h
+src/addon.h
+src/edem_player.h
+src/edem_pvr_client.h
+src/helpers.h
+src/timeshift_buffer.h
+src/puzzle_pvr_client.h
+src/neutral_sorting.h
+src/cache_buffer.h
+src/ott_player.h
+src/ott_pvr_client.h
+src/plist_buffer_delegate.h
+src/puzzle_tv.h
+src/pvr_client_base.h
+src/pvr_client_types.h
+src/sovok_pvr_client.h
+src/sovok_tv.h
+src/ttv_player.h
+src/ttv_pvr_client.h
+src/playlist_cache.hpp
+src/Playlist.hpp
+src/HttpEngine.hpp
+src/ActionQueue.hpp
+src/simple_cyclic_buffer.hpp
+src/memory_cache_buffer.hpp
+src/XMLTV_loader.hpp
+src/globals.hpp
+src/TimersEngine.hpp
+src/file_cache_buffer.hpp
+src/ActionQueueTypes.hpp
+src/client_core_base.hpp
+src/guid.hpp
+)
 
 build_addon(pvr.puzzle.tv IPTV DEPLIBS)
 

@@ -33,7 +33,6 @@
 
 #include <ctime>
 #include "p8-platform/util/util.h"
-#include "kodi/xbmc_addon_cpp_dll.h"
 
 #include "timeshift_buffer.h"
 #include "direct_buffer.h"

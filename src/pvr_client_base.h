@@ -52,9 +52,7 @@ namespace PvrClient
         ADDON_STATUS Init(PVR_PROPERTIES* pvrprops);
         virtual ~PVRClientBase();
         
-        int GetSettings(ADDON_StructSetting ***sSet);
         ADDON_STATUS SetSetting(const char *settingName, const void *settingValue);
-        void FreeSettings();
         
         PVR_ERROR GetAddonCapabilities(PVR_ADDON_CAPABILITIES* pCapabilities);
         bool CanPauseStream();
@@ -90,11 +88,13 @@ namespace PvrClient
         PVR_ERROR GetRecordings(ADDON_HANDLE handle, bool deleted);
         PVR_ERROR DeleteRecording(const PVR_RECORDING &recording);
         void CloseRecordedStream(void);
+        PVR_ERROR GetStreamReadChunkSize(int* chunksize);
         int ReadRecordedStream(unsigned char *pBuffer, unsigned int iBufferSize);
         long long SeekRecordedStream(long long iPosition, int iWhence);
         long long PositionRecordedStream(void);
         long long LengthRecordedStream(void);
-        
+        PVR_ERROR IsEPGTagRecordable(const EPG_TAG* tag, bool* bIsRecordable);
+
         bool StartRecordingFor(const PVR_TIMER &timer);
         bool StopRecordingFor(const PVR_TIMER &timer);
         bool FindEpgFor(const PVR_TIMER &timer);

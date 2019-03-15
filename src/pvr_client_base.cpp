@@ -34,13 +34,13 @@
 #include <stdio.h>
 #include <algorithm>
 #include <list>
+#include "kodi/libXBMC_addon.h"
+#include "kodi/Filesystem.h"
 #include "p8-platform/util/util.h"
 #include "p8-platform/util/timeutils.h"
 #include "p8-platform/threads/mutex.h"
 #include "p8-platform/util/StringUtils.h"
 
-#include "kodi/xbmc_addon_cpp_dll.h"
-#include "kodi/kodi_vfs_utils.hpp"
 
 #include "timeshift_buffer.h"
 #include "file_cache_buffer.hpp"
@@ -204,14 +204,6 @@ void PVRClientBase::OnSystemWake()
 }
 
 
-static ADDON_StructSetting ** g_sovokSettings = NULL;
-static int g_sovokSettingsSize = 0;
-
-int PVRClientBase::GetSettings(ADDON_StructSetting ***sSet)
-{
-    return 0;
-}
-
 ADDON_STATUS PVRClientBase::SetSetting(const char *settingName, const void *settingValue)
 {
     if (strcmp(settingName, "enable_timeshift") == 0)
@@ -268,14 +260,6 @@ ADDON_STATUS PVRClientBase::SetSetting(const char *settingName, const void *sett
     return ADDON_STATUS_OK;
 }
 
-void PVRClientBase::FreeSettings()
-{
-    if(g_sovokSettings && g_sovokSettingsSize)
-        DllUtils::FreeStruct(g_sovokSettingsSize, &g_sovokSettings);
-    g_sovokSettingsSize = 0;
-    g_sovokSettings = NULL;
-}
-
 PVR_ERROR PVRClientBase::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabilities)
 {
     //pCapabilities->bSupportsEPG = true;
@@ -284,14 +268,19 @@ PVR_ERROR PVRClientBase::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabilit
     //pCapabilities->bSupportsChannelGroups = true;
     //pCapabilities->bHandlesInputStream = true;
     //pCapabilities->bSupportsRecordings = true;
-    
     pCapabilities->bSupportsTimers = true;
+
 //    pCapabilities->bSupportsChannelScan = false;
 //    pCapabilities->bHandlesDemuxing = false;
 //    pCapabilities->bSupportsRecordingPlayCount = false;
 //    pCapabilities->bSupportsLastPlayedPosition = false;
 //    pCapabilities->bSupportsRecordingEdl = false;
-    
+
+    // Kodi 18
+    pCapabilities->bSupportsRecordingsRename = false;
+    pCapabilities->bSupportsRecordingsLifetimeChange = false;
+    pCapabilities->bSupportsDescrambleInfo = false;
+
     return PVR_ERROR_NO_ERROR;
 }
 
@@ -326,12 +315,18 @@ void PVRClientBase::SetTimeshiftPath(const std::string& path){
     // Cleanup chache
     if(XBMC->DirectoryExists(nonEmptyPath))
     {
-        std::vector<CVFSDirEntry> files;
-        VFSUtils::GetDirectory(XBMC, nonEmptyPath, "*.bin", files);
-        for (auto& f : files) {
-            if(!f.IsFolder())
-                if(!XBMC->DeleteFile(f.Path().c_str()))
-                    LogError( "Failed to delete timeshift folder entry %s", f.Path().c_str());
+        VFSDirEntry* files;
+        unsigned int num_files;
+        if(XBMC->GetDirectory(nonEmptyPath, "*.bin", &files, &num_files)) {
+            for (int i = 0; i < num_files; ++i) {
+                const VFSDirEntry& f = files[i];
+                if(!f.folder)
+                    if(!XBMC->DeleteFile(f.path))
+                        LogError( "Failed to delete timeshift folder entry %s", f.path);
+            }
+            XBMC->FreeDirectory(files, num_files);
+        } else {
+            LogError( "Failed obtain content of timeshift folder %s", nonEmptyPath);
         }
     }
 
@@ -699,12 +694,20 @@ int PVRClientBase::GetRecordingsAmount(bool deleted)
     // Add local recordings
     if(XBMC->DirectoryExists(m_recordingsDir.c_str()))
     {
-        std::vector<CVFSDirEntry> files;
-        VFSUtils::GetDirectory(XBMC, m_recordingsDir, "", files);
-        for (auto& f : files) {
-            if(f.IsFolder())
-                ++size;
+        VFSDirEntry* files;
+        unsigned int num_files;
+        if(XBMC->GetDirectory(m_recordingsDir.c_str(), "", &files, &num_files)) {
+            for (int i = 0; i < num_files; ++i) {
+                const VFSDirEntry& f = files[i];
+                if(f.folder)
+                    ++size;
+
+            }
+            XBMC->FreeDirectory(files, num_files);
+        } else {
+            LogError( "Failed obtain content of local recordings folder (amount) %s", m_recordingsDir.c_str());
         }
+
     }
 
     if(m_lastRecordingsAmount  != size)
@@ -786,24 +789,32 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
     // Add local recordings
     if(XBMC->DirectoryExists(m_recordingsDir.c_str()))
     {
-        std::vector<CVFSDirEntry> files;
-        VFSUtils::GetDirectory(XBMC, m_recordingsDir, "", files);
-        for (auto& f : files) {
-            if(!f.IsFolder())
-                continue;
-            std::string infoPath = f.Path() + PATH_SEPARATOR_CHAR;
-            infoPath += "recording.inf";
-            void* infoFile = XBMC->OpenFile(infoPath.c_str(), 0);
-            if(nullptr == infoFile)
-                continue;
-            PVR_RECORDING tag = { 0 };
-            bool isValid = XBMC->ReadFile(infoFile, &tag, sizeof(tag)) == sizeof(tag);
-            XBMC->CloseFile(infoFile);
-            if(!isValid)
-                continue;
-
-            PVR->TransferRecordingEntry(handle, &tag);
+        VFSDirEntry* files;
+        unsigned int num_files;
+        if(XBMC->GetDirectory(m_recordingsDir.c_str(), "", &files, &num_files)) {
+            for (int i = 0; i < num_files; ++i) {
+                const VFSDirEntry& f = files[i];
+                if(f.folder)
+                    continue;
+                std::string infoPath = f.path;
+                infoPath += PATH_SEPARATOR_CHAR;
+                infoPath += "recording.inf";
+                void* infoFile = XBMC->OpenFile(infoPath.c_str(), 0);
+                if(nullptr == infoFile)
+                    continue;
+                PVR_RECORDING tag = { 0 };
+                bool isValid = XBMC->ReadFile(infoFile, &tag, sizeof(tag)) == sizeof(tag);
+                XBMC->CloseFile(infoFile);
+                if(!isValid)
+                    continue;
+                
+                PVR->TransferRecordingEntry(handle, &tag);
+           }
+            XBMC->FreeDirectory(files, num_files);
+        } else {
+            LogError( "Failed obtain content of local recordings folder %s", m_recordingsDir.c_str());
         }
+        
     }
 
     return result;
@@ -819,14 +830,26 @@ PVR_ERROR PVRClientBase::DeleteRecording(const PVR_RECORDING &recording)
     if(!XBMC->DirectoryExists(dir.c_str()))
         return PVR_ERROR_INVALID_PARAMETERS;
 
-    std::vector<CVFSDirEntry> files;
-    VFSUtils::GetDirectory(XBMC, dir, "", files);
-    for (auto& f : files) {
-        if(f.IsFolder())
-            continue;
-        if(!XBMC->DeleteFile(f.Path().c_str()))
-            return PVR_ERROR_FAILED;
+    
+    if(XBMC->DirectoryExists(m_recordingsDir.c_str()))
+    {
+        VFSDirEntry* files;
+        unsigned int num_files;
+        if(XBMC->GetDirectory(m_recordingsDir.c_str(), "", &files, &num_files)) {
+            for (int i = 0; i < num_files; ++i) {
+                const VFSDirEntry& f = files[i];
+                if(f.folder)
+                    continue;
+                if(!XBMC->DeleteFile(f.path))
+                    return PVR_ERROR_FAILED;
+            }
+            XBMC->FreeDirectory(files, num_files);
+        } else {
+            LogError( "Failed obtain content of local recordings folder (delete) %s", m_recordingsDir.c_str());
+        }
+        
     }
+
     XBMC->RemoveDirectory(dir.c_str());
     PVR->TriggerRecordingUpdate();
     
@@ -899,6 +922,13 @@ void PVRClientBase::CloseRecordedStream(void)
     }
     
 }
+
+PVR_ERROR PVRClientBase::GetStreamReadChunkSize(int* chunksize) {
+    // TODO: obtain from buffer...
+    *chunksize = 32 * 1024; // 32K chunk.
+    return PVR_ERROR_NO_ERROR;
+}
+
 int PVRClientBase::ReadRecordedStream(unsigned char *pBuffer, unsigned int iBufferSize)
 {
     uint32_t timeoutMs = 5000;
@@ -917,6 +947,13 @@ long long PVRClientBase::PositionRecordedStream(void)
 long long PVRClientBase::LengthRecordedStream(void)
 {
     return (m_recordBuffer == NULL) ? -1 : m_recordBuffer->GetLength();
+}
+
+PVR_ERROR PVRClientBase::IsEPGTagRecordable(const EPG_TAG*, bool* bIsRecordable)
+{
+    // Seems we can record all tags
+    *bIsRecordable = true;
+    return PVR_ERROR_NO_ERROR;
 }
 
 #pragma mark - Timer  delegate
@@ -1088,7 +1125,7 @@ bool PVRClientBase::CheckPlaylistUrl(const std::string& url)
 }
 
 void PvrClient::EpgEntry::FillEpgTag(EPG_TAG& tag) const{
-    tag.iChannelNumber = ChannelId;
+    tag.iUniqueChannelId = ChannelId;
     tag.strTitle = Title.c_str();
     tag.strPlot = Description.c_str();
     tag.startTime = StartTime;

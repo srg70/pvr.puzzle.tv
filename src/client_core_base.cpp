@@ -360,7 +360,7 @@ namespace PvrClient{
             tag.iUniqueBroadcastId = id;
             entry.FillEpgTag(tag);
         }
-        PVR->EpgEventStateChange(&tag, entry.ChannelId, EPG_EVENT_UPDATED);
+        PVR->EpgEventStateChange(&tag, EPG_EVENT_UPDATED);
 
     }
     

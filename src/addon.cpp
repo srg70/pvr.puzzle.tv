@@ -35,7 +35,6 @@
 #include "ttv_pvr_client.h"
 #include "xbmc_pvr_dll.h"
 #include "p8-platform/util/util.h"
-#include "kodi/xbmc_addon_cpp_dll.h"
 #include "TimersEngine.hpp"
 
 #ifdef TARGET_WINDOWS
@@ -130,16 +129,6 @@ extern "C" {
         Globals::Cleanup();
     }
     
-    bool ADDON_HasSettings()
-    {
-        return true;
-    }
-    
-    unsigned int ADDON_GetSettings(ADDON_StructSetting ***sSet)
-    {
-        return m_DataSource->GetSettings(sSet);
-    }
-    
     ADDON_STATUS ADDON_SetSetting(const char *settingName, const void *settingValue)
     {
         if (strcmp(settingName, "provider_type") == 0) {
@@ -155,15 +144,6 @@ extern "C" {
         return m_DataSource->SetSetting(settingName, settingValue);
     }
     
-    
-    void ADDON_FreeSettings()
-    {
-        m_DataSource->FreeSettings();
-    }
-    
-    void ADDON_Stop()
-    {
-    }
     
     /***********************************************************
      * PVR Client AddOn specific public library functions
@@ -197,28 +177,6 @@ extern "C" {
     {
     }
     
-    const char* GetPVRAPIVersion(void)
-    {
-        static const char *strApiVersion = XBMC_PVR_API_VERSION;
-        return strApiVersion;
-    }
-    
-    const char* GetMininumPVRAPIVersion(void)
-    {
-        static const char *strMinApiVersion = XBMC_PVR_MIN_API_VERSION;
-        return strMinApiVersion;
-    }
-    
-    const char* GetGUIAPIVersion(void)
-    {
-        return ""; // GUI API not used
-    }
-    
-    const char* GetMininumGUIAPIVersion(void)
-    {
-        return ""; // GUI API not used
-    }
-    
     PVR_ERROR GetAddonCapabilities(PVR_ADDON_CAPABILITIES* pCapabilities)
     {
         return m_DataSource->GetAddonCapabilities(pCapabilities);
@@ -232,7 +190,7 @@ extern "C" {
     
     const char *GetBackendVersion(void)
     {
-        static std::string strBackendVersion = XBMC_PVR_API_VERSION;
+        static std::string strBackendVersion = STR(IPTV_VERSION);
         return strBackendVersion.c_str();
     }
     
@@ -282,11 +240,6 @@ extern "C" {
     bool SwitchChannel(const PVR_CHANNEL &channel)
     {
         return m_DataSource->SwitchChannel(channel);
-    }
-    
-    PVR_ERROR GetStreamProperties(PVR_STREAM_PROPERTIES* pProperties)
-    {
-        return PVR_ERROR_NOT_IMPLEMENTED;
     }
     
     int GetChannelGroupsAmount(void)
@@ -344,6 +297,11 @@ extern "C" {
     }
     
     // ******* RECORDING ******/
+    
+    PVR_ERROR GetStreamReadChunkSize(int* chunksize)
+    {
+        return m_DataSource->GetStreamReadChunkSize(chunksize);
+    }
     int GetRecordingsAmount(bool deleted)
     {
         return m_DataSource->GetRecordingsAmount(deleted);
@@ -387,7 +345,15 @@ extern "C" {
         return m_DataSource->LengthRecordedStream();
     }
     
-    /** T I M E R S **/
+    PVR_ERROR IsEPGTagRecordable(const EPG_TAG* tag, bool* bIsRecordable)
+    {
+        return m_DataSource->IsEPGTagRecordable(tag, bIsRecordable);
+    }
+    
+    /********************************************************************************/
+    /********************************* T I M E R S **********************************/
+    /********************************************************************************/
+    
     PVR_ERROR AddTimer(const PVR_TIMER &timer)
     {
         return m_timersEngine ? m_timersEngine->AddTimer (timer) : PVR_ERROR_FAILED;
@@ -415,11 +381,16 @@ extern "C" {
 
     PVR_ERROR GetTimerTypes(PVR_TIMER_TYPE types[], int *size) { return PVR_ERROR_NOT_IMPLEMENTED; }
 
-    /** UNUSED API FUNCTIONS */
+    /********************************************************************************/
+    /**************************** UNUSED API FUNCTIONS ******************************/
+    /********************************************************************************/
+
     const char * GetLiveStreamURL(const PVR_CHANNEL &channel)  { return ""; }
+    PVR_ERROR GetStreamProperties(PVR_STREAM_PROPERTIES* pProperties) { return PVR_ERROR_NOT_IMPLEMENTED; }
+    PVR_ERROR GetChannelStreamProperties(const PVR_CHANNEL* channel, PVR_NAMED_VALUE* properties, unsigned int* iPropertiesCount) { return PVR_ERROR_NOT_IMPLEMENTED; }
+
     PVR_ERROR OpenDialogChannelScan(void) { return PVR_ERROR_NOT_IMPLEMENTED; }
-    
-    PVR_ERROR DeleteChannel(const PVR_CHANNEL &channel) { return PVR_ERROR_NOT_IMPLEMENTED; }
+        PVR_ERROR DeleteChannel(const PVR_CHANNEL &channel) { return PVR_ERROR_NOT_IMPLEMENTED; }
     PVR_ERROR RenameChannel(const PVR_CHANNEL &channel) { return PVR_ERROR_NOT_IMPLEMENTED; }
     PVR_ERROR MoveChannel(const PVR_CHANNEL &channel) { return PVR_ERROR_NOT_IMPLEMENTED; }
     PVR_ERROR OpenDialogChannelSettings(const PVR_CHANNEL &channel) { return PVR_ERROR_NOT_IMPLEMENTED; }
@@ -433,7 +404,6 @@ extern "C" {
     PVR_ERROR GetRecordingEdl(const PVR_RECORDING&, PVR_EDL_ENTRY[], int*) { return PVR_ERROR_NOT_IMPLEMENTED; };
     void DemuxAbort(void) {}
     DemuxPacket* DemuxRead(void) { return NULL; }
-    unsigned int GetChannelSwitchDelay(void) { return 0; }
     bool IsTimeshifting(void) { return false; }
     bool IsRealTimeStream(void) { return true; }
     void PauseStream(bool bPaused) {}
@@ -445,4 +415,11 @@ extern "C" {
     PVR_ERROR UndeleteRecording(const PVR_RECORDING& recording) { return PVR_ERROR_NOT_IMPLEMENTED; }
     PVR_ERROR DeleteAllRecordingsFromTrash() { return PVR_ERROR_NOT_IMPLEMENTED; }
     PVR_ERROR SetEPGTimeFrame(int) { return PVR_ERROR_NOT_IMPLEMENTED; }
+    PVR_ERROR GetDescrambleInfo(PVR_DESCRAMBLE_INFO*) { return PVR_ERROR_NOT_IMPLEMENTED; }
+    PVR_ERROR SetRecordingLifetime(const PVR_RECORDING*) { return PVR_ERROR_NOT_IMPLEMENTED; }
+    PVR_ERROR GetStreamTimes(PVR_STREAM_TIMES *times) { return PVR_ERROR_NOT_IMPLEMENTED; }
+    PVR_ERROR GetEPGTagEdl(const EPG_TAG* epgTag, PVR_EDL_ENTRY edl[], int *size) { return PVR_ERROR_NOT_IMPLEMENTED; }
+    PVR_ERROR GetEPGTagStreamProperties(const EPG_TAG* tag, PVR_NAMED_VALUE* properties, unsigned int* iPropertiesCount) { return PVR_ERROR_NOT_IMPLEMENTED; }
+    PVR_ERROR GetRecordingStreamProperties(const PVR_RECORDING* recording, PVR_NAMED_VALUE* properties, unsigned int* iPropertiesCount){ return PVR_ERROR_NOT_IMPLEMENTED; }
+    PVR_ERROR IsEPGTagPlayable(const EPG_TAG* tag, bool* bIsPlayable) { return PVR_ERROR_NOT_IMPLEMENTED; }
 }

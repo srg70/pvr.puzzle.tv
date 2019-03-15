@@ -30,7 +30,8 @@
 #endif
 
 #include <algorithm>
-#include "kodi/kodi_vfs_utils.hpp"
+#include "kodi/libXBMC_addon.h"
+#include "kodi/Filesystem.h"
 #include "file_cache_buffer.hpp"
 #include "libXBMC_addon.h"
 #include "helpers.h"
@@ -252,11 +253,17 @@ namespace Buffers
     static int64_t CalculateDataSize(const std::string& bufferCacheDir)
     {
         int64_t result = 0;
-        std::vector<CVFSDirEntry> files;
-        VFSUtils::GetDirectory(XBMC, bufferCacheDir, "*.bin", files);
-        for (auto& f : files) {
-            if(!f.IsFolder())
-                result += f.Size();
+        VFSDirEntry* files;
+        unsigned int num_files;
+        if(XBMC->GetDirectory(bufferCacheDir.c_str(), "*.bin", &files, &num_files)) {
+            for (int i = 0; i < num_files; ++i) {
+                const VFSDirEntry& f = files[i];
+                if(!f.folder)
+                    result += f.size;
+            }
+            XBMC->FreeDirectory(files, num_files);
+        } else {
+            LogError( "Failed obtain content of FileCacheBuffer folder %s", bufferCacheDir.c_str());
         }
         return result;
     }
@@ -272,25 +279,38 @@ namespace Buffers
         }
         Init();
         // Load *.bin files
-        std::vector<CVFSDirEntry> files;
-        VFSUtils::GetDirectory(XBMC, m_bufferDir, "*.bin", files);
-        // run "neutral sorting" on files list
-        struct cvf_alphanum_less : public std::binary_function<CVFSDirEntry, CVFSDirEntry, bool>
-        {
-            bool operator()(const CVFSDirEntry& left, const CVFSDirEntry& right) const
+        VFSDirEntry* files;
+        std::vector<const VFSDirEntry*> binFiles;
+        unsigned int num_files;
+        if(XBMC->GetDirectory(bufferCacheDir.c_str(), "*.bin", &files, &num_files)) {
+            for (int i = 0; i < num_files; ++i) {
+                const VFSDirEntry& f = files[i];
+                if(!f.folder)
+                    binFiles.push_back(&f);
+            }
+            // run "neutral sorting" on files list
+            struct cvf_alphanum_less : public std::binary_function<const VFSDirEntry*, const VFSDirEntry*, bool>
             {
-                return doj::alphanum_comp(left.Path(), right.Path()) < 0;
+                bool operator()(const VFSDirEntry*& left, const VFSDirEntry*& right) const
+                {
+                    return doj::alphanum_comp(left->path, right->path) < 0;
+                }
+            } neutral_sorter;
+            std::sort(binFiles.begin(), binFiles.end(), neutral_sorter);
+            for (auto& f : binFiles) {
+                if(!f->folder) {
+                    ChunkFilePtr newChunk = new CAddonFile(f->path, m_autoDelete);
+                    m_length += f->size;
+                    m_ChunkFileSwarm.push_back(ChunkFileSwarm::value_type(newChunk));
+                    m_ReadChunks.push_back(newChunk);
+                }
             }
-        } neutral_sorter;
-        std::sort(files.begin(), files.end(), neutral_sorter);
-        for (auto& f : files) {
-            if(!f.IsFolder()) {
-                ChunkFilePtr newChunk = new CAddonFile(f.Path().c_str(), m_autoDelete);
-                m_length += f.Size();
-                m_ChunkFileSwarm.push_back(ChunkFileSwarm::value_type(newChunk));
-                m_ReadChunks.push_back(newChunk);
-            }
+            
+            XBMC->FreeDirectory(files, num_files);
+        } else {
+            LogError( "Failed obtain content of FileCacheBuffer folder %s", bufferCacheDir.c_str());
         }
+
 
     }
 

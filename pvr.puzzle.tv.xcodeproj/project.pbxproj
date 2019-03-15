@@ -18,91 +18,6 @@
 		4C08C7FC1D81E34A004CAAE3 /* input_buffer.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C08C7F91D81E34A004CAAE3 /* input_buffer.h */; };
 		4C08C7FE1D8290F6004CAAE3 /* addon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C08C7FD1D8290F6004CAAE3 /* addon.cpp */; };
 		4C08C8001D829449004CAAE3 /* addon.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C08C7FF1D829449004CAAE3 /* addon.h */; };
-		4C49D1EF1E27C4BF0026F43E /* AEChannelData.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1901E27C4BF0026F43E /* AEChannelData.h */; };
-		4C49D1F01E27C4BF0026F43E /* DVDDemuxPacket.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1911E27C4BF0026F43E /* DVDDemuxPacket.h */; };
-		4C49D1F11E27C4BF0026F43E /* IFileTypes.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1921E27C4BF0026F43E /* IFileTypes.h */; };
-		4C49D1F21E27C4BF0026F43E /* kodi_adsp_dll.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1931E27C4BF0026F43E /* kodi_adsp_dll.h */; };
-		4C49D1F31E27C4BF0026F43E /* kodi_adsp_types.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1941E27C4BF0026F43E /* kodi_adsp_types.h */; };
-		4C49D1F41E27C4BF0026F43E /* kodi_audiodec_dll.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1951E27C4BF0026F43E /* kodi_audiodec_dll.h */; };
-		4C49D1F51E27C4BF0026F43E /* kodi_audiodec_types.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1961E27C4BF0026F43E /* kodi_audiodec_types.h */; };
-		4C49D1F61E27C4BF0026F43E /* kodi_audioengine_types.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1971E27C4BF0026F43E /* kodi_audioengine_types.h */; };
-		4C49D1F71E27C4BF0026F43E /* kodi_inputstream_dll.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1981E27C4BF0026F43E /* kodi_inputstream_dll.h */; };
-		4C49D1F81E27C4BF0026F43E /* kodi_inputstream_types.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1991E27C4BF0026F43E /* kodi_inputstream_types.h */; };
-		4C49D1F91E27C4BF0026F43E /* kodi_peripheral_callbacks.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D19A1E27C4BF0026F43E /* kodi_peripheral_callbacks.h */; };
-		4C49D1FA1E27C4BF0026F43E /* kodi_peripheral_dll.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D19B1E27C4BF0026F43E /* kodi_peripheral_dll.h */; };
-		4C49D1FB1E27C4BF0026F43E /* kodi_peripheral_types.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D19C1E27C4BF0026F43E /* kodi_peripheral_types.h */; };
-		4C49D1FC1E27C4BF0026F43E /* kodi_peripheral_utils.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D19D1E27C4BF0026F43E /* kodi_peripheral_utils.hpp */; };
-		4C49D1FD1E27C4BF0026F43E /* kodi_vfs_types.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D19E1E27C4BF0026F43E /* kodi_vfs_types.h */; };
-		4C49D1FE1E27C4BF0026F43E /* kodi_vfs_utils.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D19F1E27C4BF0026F43E /* kodi_vfs_utils.hpp */; };
-		4C49D1FF1E27C4BF0026F43E /* libKODI_adsp.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1A01E27C4BF0026F43E /* libKODI_adsp.h */; };
-		4C49D2001E27C4BF0026F43E /* libKODI_audioengine.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1A11E27C4BF0026F43E /* libKODI_audioengine.h */; };
-		4C49D2011E27C4BF0026F43E /* libKODI_guilib.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1A21E27C4BF0026F43E /* libKODI_guilib.h */; };
-		4C49D2021E27C4BF0026F43E /* libKODI_inputstream.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1A31E27C4BF0026F43E /* libKODI_inputstream.h */; };
-		4C49D2031E27C4BF0026F43E /* libKODI_peripheral.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1A41E27C4BF0026F43E /* libKODI_peripheral.h */; };
-		4C49D2041E27C4BF0026F43E /* libXBMC_addon.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1A51E27C4BF0026F43E /* libXBMC_addon.h */; };
-		4C49D2051E27C4BF0026F43E /* libXBMC_codec.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1A61E27C4BF0026F43E /* libXBMC_codec.h */; };
-		4C49D2061E27C4BF0026F43E /* libXBMC_pvr.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1A71E27C4BF0026F43E /* libXBMC_pvr.h */; };
-		4C49D2071E27C4BF0026F43E /* XMLUtils.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1A91E27C4BF0026F43E /* XMLUtils.h */; };
-		4C49D2081E27C4BF0026F43E /* xbmc_addon_cpp_dll.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1AA1E27C4BF0026F43E /* xbmc_addon_cpp_dll.h */; };
-		4C49D2091E27C4BF0026F43E /* xbmc_addon_dll.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1AB1E27C4BF0026F43E /* xbmc_addon_dll.h */; };
-		4C49D20A1E27C4BF0026F43E /* xbmc_addon_types.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1AC1E27C4BF0026F43E /* xbmc_addon_types.h */; };
-		4C49D20B1E27C4BF0026F43E /* xbmc_audioenc_dll.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1AD1E27C4BF0026F43E /* xbmc_audioenc_dll.h */; };
-		4C49D20C1E27C4BF0026F43E /* xbmc_audioenc_types.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1AE1E27C4BF0026F43E /* xbmc_audioenc_types.h */; };
-		4C49D20D1E27C4BF0026F43E /* xbmc_codec_types.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1AF1E27C4BF0026F43E /* xbmc_codec_types.h */; };
-		4C49D20E1E27C4BF0026F43E /* xbmc_epg_types.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1B01E27C4BF0026F43E /* xbmc_epg_types.h */; };
-		4C49D20F1E27C4BF0026F43E /* xbmc_pvr_dll.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1B11E27C4BF0026F43E /* xbmc_pvr_dll.h */; };
-		4C49D2101E27C4BF0026F43E /* xbmc_pvr_types.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1B21E27C4BF0026F43E /* xbmc_pvr_types.h */; };
-		4C49D2111E27C4BF0026F43E /* xbmc_scr_dll.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1B31E27C4BF0026F43E /* xbmc_scr_dll.h */; };
-		4C49D2121E27C4BF0026F43E /* xbmc_scr_types.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1B41E27C4BF0026F43E /* xbmc_scr_types.h */; };
-		4C49D2131E27C4BF0026F43E /* xbmc_vis_dll.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1B51E27C4BF0026F43E /* xbmc_vis_dll.h */; };
-		4C49D2141E27C4BF0026F43E /* xbmc_vis_types.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1B61E27C4BF0026F43E /* xbmc_vis_types.h */; };
-		4C49D2151E27C4BF0026F43E /* os.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1B81E27C4BF0026F43E /* os.h */; };
-		4C49D2161E27C4BF0026F43E /* os-socket.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1BA1E27C4BF0026F43E /* os-socket.h */; };
-		4C49D2171E27C4BF0026F43E /* os-threads.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1BB1E27C4BF0026F43E /* os-threads.h */; };
-		4C49D2181E27C4BF0026F43E /* os-types.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1BC1E27C4BF0026F43E /* os-types.h */; };
-		4C49D2191E27C4BF0026F43E /* cdevsocket.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1BE1E27C4BF0026F43E /* cdevsocket.h */; };
-		4C49D21A1E27C4BF0026F43E /* socket.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1BF1E27C4BF0026F43E /* socket.h */; };
-		4C49D21B1E27C4BF0026F43E /* tcp.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1C01E27C4BF0026F43E /* tcp.h */; };
-		4C49D21C1E27C4BF0026F43E /* atomics.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1C21E27C4BF0026F43E /* atomics.h */; };
-		4C49D21D1E27C4BF0026F43E /* mutex.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1C31E27C4BF0026F43E /* mutex.h */; };
-		4C49D21E1E27C4BF0026F43E /* threads.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1C41E27C4BF0026F43E /* threads.h */; };
-		4C49D21F1E27C4BF0026F43E /* atomic.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1C61E27C4BF0026F43E /* atomic.h */; };
-		4C49D2201E27C4BF0026F43E /* buffer.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1C71E27C4BF0026F43E /* buffer.h */; };
-		4C49D2211E27C4BF0026F43E /* StdString.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1C81E27C4BF0026F43E /* StdString.h */; };
-		4C49D2221E27C4BF0026F43E /* StringUtils.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1C91E27C4BF0026F43E /* StringUtils.h */; };
-		4C49D2231E27C4BF0026F43E /* timeutils.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1CA1E27C4BF0026F43E /* timeutils.h */; };
-		4C49D2241E27C4BF0026F43E /* util.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1CB1E27C4BF0026F43E /* util.h */; };
-		4C49D2251E27C4BF0026F43E /* allocators.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1CD1E27C4BF0026F43E /* allocators.h */; };
-		4C49D2261E27C4BF0026F43E /* document.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1CE1E27C4BF0026F43E /* document.h */; };
-		4C49D2271E27C4BF0026F43E /* encodedstream.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1CF1E27C4BF0026F43E /* encodedstream.h */; };
-		4C49D2281E27C4BF0026F43E /* encodings.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1D01E27C4BF0026F43E /* encodings.h */; };
-		4C49D2291E27C4BF0026F43E /* en.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1D21E27C4BF0026F43E /* en.h */; };
-		4C49D22A1E27C4BF0026F43E /* error.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1D31E27C4BF0026F43E /* error.h */; };
-		4C49D22B1E27C4BF0026F43E /* filereadstream.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1D41E27C4BF0026F43E /* filereadstream.h */; };
-		4C49D22C1E27C4BF0026F43E /* filewritestream.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1D51E27C4BF0026F43E /* filewritestream.h */; };
-		4C49D22D1E27C4BF0026F43E /* biginteger.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1D71E27C4BF0026F43E /* biginteger.h */; };
-		4C49D22E1E27C4BF0026F43E /* diyfp.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1D81E27C4BF0026F43E /* diyfp.h */; };
-		4C49D22F1E27C4BF0026F43E /* dtoa.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1D91E27C4BF0026F43E /* dtoa.h */; };
-		4C49D2301E27C4BF0026F43E /* ieee754.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1DA1E27C4BF0026F43E /* ieee754.h */; };
-		4C49D2311E27C4BF0026F43E /* itoa.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1DB1E27C4BF0026F43E /* itoa.h */; };
-		4C49D2321E27C4BF0026F43E /* meta.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1DC1E27C4BF0026F43E /* meta.h */; };
-		4C49D2331E27C4BF0026F43E /* pow10.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1DD1E27C4BF0026F43E /* pow10.h */; };
-		4C49D2341E27C4BF0026F43E /* stack.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1DE1E27C4BF0026F43E /* stack.h */; };
-		4C49D2351E27C4BF0026F43E /* strfunc.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1DF1E27C4BF0026F43E /* strfunc.h */; };
-		4C49D2361E27C4BF0026F43E /* strtod.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1E01E27C4BF0026F43E /* strtod.h */; };
-		4C49D2371E27C4BF0026F43E /* memorybuffer.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1E11E27C4BF0026F43E /* memorybuffer.h */; };
-		4C49D2381E27C4BF0026F43E /* memorystream.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1E21E27C4BF0026F43E /* memorystream.h */; };
-		4C49D2391E27C4BF0026F43E /* inttypes.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1E41E27C4BF0026F43E /* inttypes.h */; };
-		4C49D23A1E27C4BF0026F43E /* stdint.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1E51E27C4BF0026F43E /* stdint.h */; };
-		4C49D23B1E27C4BF0026F43E /* prettywriter.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1E61E27C4BF0026F43E /* prettywriter.h */; };
-		4C49D23C1E27C4BF0026F43E /* rapidjson.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1E71E27C4BF0026F43E /* rapidjson.h */; };
-		4C49D23D1E27C4BF0026F43E /* reader.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1E81E27C4BF0026F43E /* reader.h */; };
-		4C49D23E1E27C4BF0026F43E /* stringbuffer.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1E91E27C4BF0026F43E /* stringbuffer.h */; };
-		4C49D23F1E27C4BF0026F43E /* writer.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1EA1E27C4BF0026F43E /* writer.h */; };
-		4C49D2401E27C4BF0026F43E /* tinystr.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1EB1E27C4BF0026F43E /* tinystr.h */; };
-		4C49D2411E27C4BF0026F43E /* tinyxml.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1EC1E27C4BF0026F43E /* tinyxml.h */; };
-		4C49D2421E27C4BF0026F43E /* zconf.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1ED1E27C4BF0026F43E /* zconf.h */; };
-		4C49D2431E27C4BF0026F43E /* zlib.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C49D1EE1E27C4BF0026F43E /* zlib.h */; };
 		4C534CC31F347CD50038539D /* file_cache_buffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C534CC11F347CD50038539D /* file_cache_buffer.cpp */; };
 		4C534CC41F347CD50038539D /* file_cache_buffer.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4C534CC21F347CD50038539D /* file_cache_buffer.hpp */; };
 		4C534CD21F418BB50038539D /* memory_cache_buffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C534CD01F418BB50038539D /* memory_cache_buffer.cpp */; };
@@ -140,6 +55,132 @@
 		4CDC11E520BDC48100EA9E2B /* globals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CDC11E320BDC48100EA9E2B /* globals.cpp */; };
 		4CDC11E620BDC48100EA9E2B /* globals.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4CDC11E420BDC48100EA9E2B /* globals.hpp */; };
 		4CE40890220DAACE00CC92CC /* playlist_cache.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CC578D921D378A200871747 /* playlist_cache.cpp */; };
+		4CEE3EA22239395000AB8F2C /* mprintf.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3E9A2239394F00AB8F2C /* mprintf.h */; };
+		4CEE3EA32239395000AB8F2C /* system.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3E9B2239394F00AB8F2C /* system.h */; };
+		4CEE3EA42239395000AB8F2C /* typecheck-gcc.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3E9C2239394F00AB8F2C /* typecheck-gcc.h */; };
+		4CEE3EA52239395000AB8F2C /* easy.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3E9D2239394F00AB8F2C /* easy.h */; };
+		4CEE3EA62239395000AB8F2C /* stdcheaders.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3E9E2239394F00AB8F2C /* stdcheaders.h */; };
+		4CEE3EA72239395000AB8F2C /* curlver.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3E9F2239394F00AB8F2C /* curlver.h */; };
+		4CEE3EA82239395000AB8F2C /* curl.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EA02239394F00AB8F2C /* curl.h */; };
+		4CEE3EA92239395000AB8F2C /* multi.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EA12239394F00AB8F2C /* multi.h */; };
+		4CEE3EC52239397900AB8F2C /* DemuxPacket.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EAB2239397800AB8F2C /* DemuxPacket.h */; };
+		4CEE3EC62239397900AB8F2C /* DemuxCrypto.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EAC2239397800AB8F2C /* DemuxCrypto.h */; };
+		4CEE3EC72239397900AB8F2C /* kodi_game_types.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EAD2239397800AB8F2C /* kodi_game_types.h */; };
+		4CEE3EC82239397900AB8F2C /* xbmc_pvr_types.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EAE2239397800AB8F2C /* xbmc_pvr_types.h */; };
+		4CEE3EC92239397900AB8F2C /* libKODI_guilib.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EAF2239397800AB8F2C /* libKODI_guilib.h */; };
+		4CEE3ECA2239397900AB8F2C /* StreamCodec.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EB02239397800AB8F2C /* StreamCodec.h */; };
+		4CEE3ECB2239397900AB8F2C /* libXBMC_pvr.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EB12239397800AB8F2C /* libXBMC_pvr.h */; };
+		4CEE3ECC2239397900AB8F2C /* ActionIDs.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EB22239397800AB8F2C /* ActionIDs.h */; };
+		4CEE3ECD2239397900AB8F2C /* Filesystem.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EB32239397800AB8F2C /* Filesystem.h */; };
+		4CEE3ECE2239397900AB8F2C /* IFileTypes.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EB42239397800AB8F2C /* IFileTypes.h */; };
+		4CEE3ECF2239397900AB8F2C /* libKODI_game.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EB52239397800AB8F2C /* libKODI_game.h */; };
+		4CEE3ED02239397900AB8F2C /* TimingConstants.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EB62239397800AB8F2C /* TimingConstants.h */; };
+		4CEE3ED12239397900AB8F2C /* AEChannelData.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EB72239397800AB8F2C /* AEChannelData.h */; };
+		4CEE3ED22239397900AB8F2C /* kodi_game_dll.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EB82239397800AB8F2C /* kodi_game_dll.h */; };
+		4CEE3ED32239397900AB8F2C /* versions.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EB92239397800AB8F2C /* versions.h */; };
+		4CEE3ED42239397900AB8F2C /* xbmc_epg_types.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EBA2239397800AB8F2C /* xbmc_epg_types.h */; };
+		4CEE3ED52239397900AB8F2C /* libXBMC_addon.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EBB2239397800AB8F2C /* libXBMC_addon.h */; };
+		4CEE3ED62239397900AB8F2C /* StreamCrypto.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EBC2239397900AB8F2C /* StreamCrypto.h */; };
+		4CEE3ED72239397900AB8F2C /* xbmc_addon_dll.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EBD2239397900AB8F2C /* xbmc_addon_dll.h */; };
+		4CEE3ED82239397900AB8F2C /* xbmc_pvr_dll.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EBE2239397900AB8F2C /* xbmc_pvr_dll.h */; };
+		4CEE3ED92239397900AB8F2C /* kodi_vfs_types.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EBF2239397900AB8F2C /* kodi_vfs_types.h */; };
+		4CEE3EDA2239397900AB8F2C /* XBMC_vkeys.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EC02239397900AB8F2C /* XBMC_vkeys.h */; };
+		4CEE3EDB2239397900AB8F2C /* General.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EC12239397900AB8F2C /* General.h */; };
+		4CEE3EDC2239397900AB8F2C /* Network.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EC22239397900AB8F2C /* Network.h */; };
+		4CEE3EDD2239397900AB8F2C /* AddonBase.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EC32239397900AB8F2C /* AddonBase.h */; };
+		4CEE3EDE2239397900AB8F2C /* xbmc_addon_types.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EC42239397900AB8F2C /* xbmc_addon_types.h */; };
+		4CEE3EE42239398F00AB8F2C /* Window.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EE02239398F00AB8F2C /* Window.h */; };
+		4CEE3EE52239398F00AB8F2C /* definitions.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EE12239398F00AB8F2C /* definitions.h */; };
+		4CEE3EE62239398F00AB8F2C /* ListItem.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EE22239398F00AB8F2C /* ListItem.h */; };
+		4CEE3EE72239398F00AB8F2C /* General.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EE32239398F00AB8F2C /* General.h */; };
+		4CEE3EF5223939A100AB8F2C /* Label.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EE9223939A100AB8F2C /* Label.h */; };
+		4CEE3EF6223939A100AB8F2C /* FadeLabel.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EEA223939A100AB8F2C /* FadeLabel.h */; };
+		4CEE3EF7223939A100AB8F2C /* Edit.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EEB223939A100AB8F2C /* Edit.h */; };
+		4CEE3EF8223939A100AB8F2C /* Slider.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EEC223939A100AB8F2C /* Slider.h */; };
+		4CEE3EF9223939A100AB8F2C /* Button.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EED223939A100AB8F2C /* Button.h */; };
+		4CEE3EFA223939A100AB8F2C /* Rendering.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EEE223939A100AB8F2C /* Rendering.h */; };
+		4CEE3EFB223939A100AB8F2C /* Spin.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EEF223939A100AB8F2C /* Spin.h */; };
+		4CEE3EFC223939A100AB8F2C /* TextBox.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EF0223939A100AB8F2C /* TextBox.h */; };
+		4CEE3EFD223939A100AB8F2C /* Progress.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EF1223939A100AB8F2C /* Progress.h */; };
+		4CEE3EFE223939A100AB8F2C /* Image.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EF2223939A100AB8F2C /* Image.h */; };
+		4CEE3EFF223939A100AB8F2C /* RadioButton.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EF3223939A100AB8F2C /* RadioButton.h */; };
+		4CEE3F00223939A100AB8F2C /* SettingsSlider.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EF4223939A100AB8F2C /* SettingsSlider.h */; };
+		4CEE3F0C223939BA00AB8F2C /* Keyboard.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F02223939B900AB8F2C /* Keyboard.h */; };
+		4CEE3F0D223939BA00AB8F2C /* YesNo.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F03223939B900AB8F2C /* YesNo.h */; };
+		4CEE3F0E223939BA00AB8F2C /* ContextMenu.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F04223939B900AB8F2C /* ContextMenu.h */; };
+		4CEE3F0F223939BA00AB8F2C /* FileBrowser.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F05223939B900AB8F2C /* FileBrowser.h */; };
+		4CEE3F10223939BA00AB8F2C /* ExtendedProgress.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F06223939B900AB8F2C /* ExtendedProgress.h */; };
+		4CEE3F11223939BA00AB8F2C /* Select.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F07223939BA00AB8F2C /* Select.h */; };
+		4CEE3F12223939BA00AB8F2C /* OK.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F08223939BA00AB8F2C /* OK.h */; };
+		4CEE3F13223939BA00AB8F2C /* TextViewer.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F09223939BA00AB8F2C /* TextViewer.h */; };
+		4CEE3F14223939BA00AB8F2C /* Numeric.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F0A223939BA00AB8F2C /* Numeric.h */; };
+		4CEE3F15223939BA00AB8F2C /* Progress.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F0B223939BA00AB8F2C /* Progress.h */; };
+		4CEE3F1B22393A0B00AB8F2C /* XMLUtils.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F1A22393A0B00AB8F2C /* XMLUtils.h */; };
+		4CEE3F1E22393A3500AB8F2C /* os.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F1D22393A3500AB8F2C /* os.h */; };
+		4CEE3F2322393A4500AB8F2C /* os-socket.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F2022393A4500AB8F2C /* os-socket.h */; };
+		4CEE3F2422393A4500AB8F2C /* os-types.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F2122393A4500AB8F2C /* os-types.h */; };
+		4CEE3F2522393A4500AB8F2C /* os-threads.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F2222393A4500AB8F2C /* os-threads.h */; };
+		4CEE3F2A22393A5700AB8F2C /* cdevsocket.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F2722393A5700AB8F2C /* cdevsocket.h */; };
+		4CEE3F2B22393A5700AB8F2C /* socket.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F2822393A5700AB8F2C /* socket.h */; };
+		4CEE3F2C22393A5700AB8F2C /* tcp.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F2922393A5700AB8F2C /* tcp.h */; };
+		4CEE3F3122393A6F00AB8F2C /* threads.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F2E22393A6F00AB8F2C /* threads.h */; };
+		4CEE3F3222393A6F00AB8F2C /* atomics.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F2F22393A6F00AB8F2C /* atomics.h */; };
+		4CEE3F3322393A6F00AB8F2C /* mutex.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F3022393A6F00AB8F2C /* mutex.h */; };
+		4CEE3F3B22393A7F00AB8F2C /* timeutils.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F3522393A7F00AB8F2C /* timeutils.h */; };
+		4CEE3F3C22393A7F00AB8F2C /* StringUtils.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F3622393A7F00AB8F2C /* StringUtils.h */; };
+		4CEE3F3D22393A7F00AB8F2C /* util.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F3722393A7F00AB8F2C /* util.h */; };
+		4CEE3F3E22393A7F00AB8F2C /* buffer.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F3822393A7F00AB8F2C /* buffer.h */; };
+		4CEE3F3F22393A7F00AB8F2C /* StdString.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F3922393A7F00AB8F2C /* StdString.h */; };
+		4CEE3F4022393A7F00AB8F2C /* atomic.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F3A22393A7F00AB8F2C /* atomic.h */; };
+		4CEE3F4522393A9900AB8F2C /* tinyxml.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F4122393A9900AB8F2C /* tinyxml.h */; };
+		4CEE3F4622393A9900AB8F2C /* tinystr.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F4222393A9900AB8F2C /* tinystr.h */; };
+		4CEE3F4722393A9900AB8F2C /* zconf.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F4322393A9900AB8F2C /* zconf.h */; };
+		4CEE3F4822393A9900AB8F2C /* zlib.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F4422393A9900AB8F2C /* zlib.h */; };
+		4CEE3F5D22393AB300AB8F2C /* stringbuffer.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F4A22393AB300AB8F2C /* stringbuffer.h */; };
+		4CEE3F5E22393AB300AB8F2C /* encodings.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F4B22393AB300AB8F2C /* encodings.h */; };
+		4CEE3F5F22393AB300AB8F2C /* fwd.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F4C22393AB300AB8F2C /* fwd.h */; };
+		4CEE3F6022393AB300AB8F2C /* filewritestream.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F4D22393AB300AB8F2C /* filewritestream.h */; };
+		4CEE3F6122393AB300AB8F2C /* memorybuffer.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F4E22393AB300AB8F2C /* memorybuffer.h */; };
+		4CEE3F6222393AB300AB8F2C /* memorystream.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F4F22393AB300AB8F2C /* memorystream.h */; };
+		4CEE3F6322393AB300AB8F2C /* document.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F5022393AB300AB8F2C /* document.h */; };
+		4CEE3F6422393AB300AB8F2C /* schema.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F5122393AB300AB8F2C /* schema.h */; };
+		4CEE3F6522393AB300AB8F2C /* prettywriter.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F5222393AB300AB8F2C /* prettywriter.h */; };
+		4CEE3F6622393AB300AB8F2C /* encodedstream.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F5322393AB300AB8F2C /* encodedstream.h */; };
+		4CEE3F6722393AB300AB8F2C /* ostreamwrapper.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F5422393AB300AB8F2C /* ostreamwrapper.h */; };
+		4CEE3F6822393AB300AB8F2C /* istreamwrapper.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F5522393AB300AB8F2C /* istreamwrapper.h */; };
+		4CEE3F6922393AB300AB8F2C /* rapidjson.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F5622393AB300AB8F2C /* rapidjson.h */; };
+		4CEE3F6A22393AB300AB8F2C /* reader.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F5722393AB300AB8F2C /* reader.h */; };
+		4CEE3F6B22393AB300AB8F2C /* stream.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F5822393AB300AB8F2C /* stream.h */; };
+		4CEE3F6C22393AB300AB8F2C /* allocators.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F5922393AB300AB8F2C /* allocators.h */; };
+		4CEE3F6D22393AB300AB8F2C /* pointer.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F5A22393AB300AB8F2C /* pointer.h */; };
+		4CEE3F6E22393AB300AB8F2C /* writer.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F5B22393AB300AB8F2C /* writer.h */; };
+		4CEE3F6F22393AB300AB8F2C /* filereadstream.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F5C22393AB300AB8F2C /* filereadstream.h */; };
+		4CEE3F7522393ADB00AB8F2C /* inttypes.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F7322393ADB00AB8F2C /* inttypes.h */; };
+		4CEE3F7622393ADB00AB8F2C /* stdint.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F7422393ADB00AB8F2C /* stdint.h */; };
+		4CEE3F8322393AE300AB8F2C /* regex.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F7722393AE300AB8F2C /* regex.h */; };
+		4CEE3F8422393AE300AB8F2C /* swap.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F7822393AE300AB8F2C /* swap.h */; };
+		4CEE3F8522393AE300AB8F2C /* ieee754.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F7922393AE300AB8F2C /* ieee754.h */; };
+		4CEE3F8622393AE300AB8F2C /* meta.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F7A22393AE300AB8F2C /* meta.h */; };
+		4CEE3F8722393AE300AB8F2C /* dtoa.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F7B22393AE300AB8F2C /* dtoa.h */; };
+		4CEE3F8822393AE300AB8F2C /* itoa.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F7C22393AE300AB8F2C /* itoa.h */; };
+		4CEE3F8922393AE300AB8F2C /* strtod.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F7D22393AE300AB8F2C /* strtod.h */; };
+		4CEE3F8A22393AE300AB8F2C /* strfunc.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F7E22393AE300AB8F2C /* strfunc.h */; };
+		4CEE3F8B22393AE300AB8F2C /* biginteger.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F7F22393AE300AB8F2C /* biginteger.h */; };
+		4CEE3F8C22393AE300AB8F2C /* stack.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F8022393AE300AB8F2C /* stack.h */; };
+		4CEE3F8D22393AE300AB8F2C /* diyfp.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F8122393AE300AB8F2C /* diyfp.h */; };
+		4CEE3F8E22393AE300AB8F2C /* pow10.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F8222393AE300AB8F2C /* pow10.h */; };
+		4CEE3F9122393AEA00AB8F2C /* error.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F8F22393AEA00AB8F2C /* error.h */; };
+		4CEE3F9222393AEA00AB8F2C /* en.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F9022393AEA00AB8F2C /* en.h */; };
+		4CEE3F9E223958B100AB8F2C /* AudioEncoder.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F94223958B100AB8F2C /* AudioEncoder.h */; };
+		4CEE3F9F223958B100AB8F2C /* VideoCodec.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F95223958B100AB8F2C /* VideoCodec.h */; };
+		4CEE3FA0223958B100AB8F2C /* ImageDecoder.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F96223958B100AB8F2C /* ImageDecoder.h */; };
+		4CEE3FA1223958B100AB8F2C /* Inputstream.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F97223958B100AB8F2C /* Inputstream.h */; };
+		4CEE3FA2223958B100AB8F2C /* Visualization.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F98223958B100AB8F2C /* Visualization.h */; };
+		4CEE3FA3223958B100AB8F2C /* Screensaver.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F99223958B100AB8F2C /* Screensaver.h */; };
+		4CEE3FA4223958B100AB8F2C /* VFS.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F9A223958B100AB8F2C /* VFS.h */; };
+		4CEE3FA5223958B100AB8F2C /* PeripheralUtils.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F9B223958B100AB8F2C /* PeripheralUtils.h */; };
+		4CEE3FA6223958B100AB8F2C /* Peripheral.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F9C223958B100AB8F2C /* Peripheral.h */; };
+		4CEE3FA7223958B100AB8F2C /* AudioDecoder.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3F9D223958B100AB8F2C /* AudioDecoder.h */; };
 		4CFEAA8F1E4DA81A002C2BA4 /* ActionQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CFEAA8D1E4DA81A002C2BA4 /* ActionQueue.cpp */; };
 		4CFEAA901E4DA81A002C2BA4 /* ActionQueue.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4CFEAA8E1E4DA81A002C2BA4 /* ActionQueue.hpp */; };
 /* End PBXBuildFile section */
@@ -160,91 +201,6 @@
 		4C08C7FD1D8290F6004CAAE3 /* addon.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = addon.cpp; sourceTree = "<group>"; };
 		4C08C7FF1D829449004CAAE3 /* addon.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = addon.h; sourceTree = "<group>"; };
 		4C3EEDBE210C670B001C0DB8 /* neutral_sorting.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = neutral_sorting.h; sourceTree = "<group>"; };
-		4C49D1901E27C4BF0026F43E /* AEChannelData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AEChannelData.h; sourceTree = "<group>"; };
-		4C49D1911E27C4BF0026F43E /* DVDDemuxPacket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DVDDemuxPacket.h; sourceTree = "<group>"; };
-		4C49D1921E27C4BF0026F43E /* IFileTypes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IFileTypes.h; sourceTree = "<group>"; };
-		4C49D1931E27C4BF0026F43E /* kodi_adsp_dll.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = kodi_adsp_dll.h; sourceTree = "<group>"; };
-		4C49D1941E27C4BF0026F43E /* kodi_adsp_types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = kodi_adsp_types.h; sourceTree = "<group>"; };
-		4C49D1951E27C4BF0026F43E /* kodi_audiodec_dll.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = kodi_audiodec_dll.h; sourceTree = "<group>"; };
-		4C49D1961E27C4BF0026F43E /* kodi_audiodec_types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = kodi_audiodec_types.h; sourceTree = "<group>"; };
-		4C49D1971E27C4BF0026F43E /* kodi_audioengine_types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = kodi_audioengine_types.h; sourceTree = "<group>"; };
-		4C49D1981E27C4BF0026F43E /* kodi_inputstream_dll.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = kodi_inputstream_dll.h; sourceTree = "<group>"; };
-		4C49D1991E27C4BF0026F43E /* kodi_inputstream_types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = kodi_inputstream_types.h; sourceTree = "<group>"; };
-		4C49D19A1E27C4BF0026F43E /* kodi_peripheral_callbacks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = kodi_peripheral_callbacks.h; sourceTree = "<group>"; };
-		4C49D19B1E27C4BF0026F43E /* kodi_peripheral_dll.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = kodi_peripheral_dll.h; sourceTree = "<group>"; };
-		4C49D19C1E27C4BF0026F43E /* kodi_peripheral_types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = kodi_peripheral_types.h; sourceTree = "<group>"; };
-		4C49D19D1E27C4BF0026F43E /* kodi_peripheral_utils.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = kodi_peripheral_utils.hpp; sourceTree = "<group>"; };
-		4C49D19E1E27C4BF0026F43E /* kodi_vfs_types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = kodi_vfs_types.h; sourceTree = "<group>"; };
-		4C49D19F1E27C4BF0026F43E /* kodi_vfs_utils.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = kodi_vfs_utils.hpp; sourceTree = "<group>"; };
-		4C49D1A01E27C4BF0026F43E /* libKODI_adsp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = libKODI_adsp.h; sourceTree = "<group>"; };
-		4C49D1A11E27C4BF0026F43E /* libKODI_audioengine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = libKODI_audioengine.h; sourceTree = "<group>"; };
-		4C49D1A21E27C4BF0026F43E /* libKODI_guilib.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = libKODI_guilib.h; sourceTree = "<group>"; };
-		4C49D1A31E27C4BF0026F43E /* libKODI_inputstream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = libKODI_inputstream.h; sourceTree = "<group>"; };
-		4C49D1A41E27C4BF0026F43E /* libKODI_peripheral.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = libKODI_peripheral.h; sourceTree = "<group>"; };
-		4C49D1A51E27C4BF0026F43E /* libXBMC_addon.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = libXBMC_addon.h; sourceTree = "<group>"; };
-		4C49D1A61E27C4BF0026F43E /* libXBMC_codec.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = libXBMC_codec.h; sourceTree = "<group>"; };
-		4C49D1A71E27C4BF0026F43E /* libXBMC_pvr.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = libXBMC_pvr.h; sourceTree = "<group>"; };
-		4C49D1A91E27C4BF0026F43E /* XMLUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = XMLUtils.h; sourceTree = "<group>"; };
-		4C49D1AA1E27C4BF0026F43E /* xbmc_addon_cpp_dll.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = xbmc_addon_cpp_dll.h; sourceTree = "<group>"; };
-		4C49D1AB1E27C4BF0026F43E /* xbmc_addon_dll.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = xbmc_addon_dll.h; sourceTree = "<group>"; };
-		4C49D1AC1E27C4BF0026F43E /* xbmc_addon_types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = xbmc_addon_types.h; sourceTree = "<group>"; };
-		4C49D1AD1E27C4BF0026F43E /* xbmc_audioenc_dll.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = xbmc_audioenc_dll.h; sourceTree = "<group>"; };
-		4C49D1AE1E27C4BF0026F43E /* xbmc_audioenc_types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = xbmc_audioenc_types.h; sourceTree = "<group>"; };
-		4C49D1AF1E27C4BF0026F43E /* xbmc_codec_types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = xbmc_codec_types.h; sourceTree = "<group>"; };
-		4C49D1B01E27C4BF0026F43E /* xbmc_epg_types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = xbmc_epg_types.h; sourceTree = "<group>"; };
-		4C49D1B11E27C4BF0026F43E /* xbmc_pvr_dll.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = xbmc_pvr_dll.h; sourceTree = "<group>"; };
-		4C49D1B21E27C4BF0026F43E /* xbmc_pvr_types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = xbmc_pvr_types.h; sourceTree = "<group>"; };
-		4C49D1B31E27C4BF0026F43E /* xbmc_scr_dll.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = xbmc_scr_dll.h; sourceTree = "<group>"; };
-		4C49D1B41E27C4BF0026F43E /* xbmc_scr_types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = xbmc_scr_types.h; sourceTree = "<group>"; };
-		4C49D1B51E27C4BF0026F43E /* xbmc_vis_dll.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = xbmc_vis_dll.h; sourceTree = "<group>"; };
-		4C49D1B61E27C4BF0026F43E /* xbmc_vis_types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = xbmc_vis_types.h; sourceTree = "<group>"; };
-		4C49D1B81E27C4BF0026F43E /* os.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = os.h; sourceTree = "<group>"; };
-		4C49D1BA1E27C4BF0026F43E /* os-socket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "os-socket.h"; sourceTree = "<group>"; };
-		4C49D1BB1E27C4BF0026F43E /* os-threads.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "os-threads.h"; sourceTree = "<group>"; };
-		4C49D1BC1E27C4BF0026F43E /* os-types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "os-types.h"; sourceTree = "<group>"; };
-		4C49D1BE1E27C4BF0026F43E /* cdevsocket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cdevsocket.h; sourceTree = "<group>"; };
-		4C49D1BF1E27C4BF0026F43E /* socket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = socket.h; sourceTree = "<group>"; };
-		4C49D1C01E27C4BF0026F43E /* tcp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tcp.h; sourceTree = "<group>"; };
-		4C49D1C21E27C4BF0026F43E /* atomics.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = atomics.h; sourceTree = "<group>"; };
-		4C49D1C31E27C4BF0026F43E /* mutex.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mutex.h; sourceTree = "<group>"; };
-		4C49D1C41E27C4BF0026F43E /* threads.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = threads.h; sourceTree = "<group>"; };
-		4C49D1C61E27C4BF0026F43E /* atomic.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = atomic.h; sourceTree = "<group>"; };
-		4C49D1C71E27C4BF0026F43E /* buffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = buffer.h; sourceTree = "<group>"; };
-		4C49D1C81E27C4BF0026F43E /* StdString.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StdString.h; sourceTree = "<group>"; };
-		4C49D1C91E27C4BF0026F43E /* StringUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StringUtils.h; sourceTree = "<group>"; };
-		4C49D1CA1E27C4BF0026F43E /* timeutils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = timeutils.h; sourceTree = "<group>"; };
-		4C49D1CB1E27C4BF0026F43E /* util.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = util.h; sourceTree = "<group>"; };
-		4C49D1CD1E27C4BF0026F43E /* allocators.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = allocators.h; sourceTree = "<group>"; };
-		4C49D1CE1E27C4BF0026F43E /* document.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = document.h; sourceTree = "<group>"; };
-		4C49D1CF1E27C4BF0026F43E /* encodedstream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = encodedstream.h; sourceTree = "<group>"; };
-		4C49D1D01E27C4BF0026F43E /* encodings.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = encodings.h; sourceTree = "<group>"; };
-		4C49D1D21E27C4BF0026F43E /* en.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = en.h; sourceTree = "<group>"; };
-		4C49D1D31E27C4BF0026F43E /* error.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = error.h; sourceTree = "<group>"; };
-		4C49D1D41E27C4BF0026F43E /* filereadstream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = filereadstream.h; sourceTree = "<group>"; };
-		4C49D1D51E27C4BF0026F43E /* filewritestream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = filewritestream.h; sourceTree = "<group>"; };
-		4C49D1D71E27C4BF0026F43E /* biginteger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = biginteger.h; sourceTree = "<group>"; };
-		4C49D1D81E27C4BF0026F43E /* diyfp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = diyfp.h; sourceTree = "<group>"; };
-		4C49D1D91E27C4BF0026F43E /* dtoa.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = dtoa.h; sourceTree = "<group>"; };
-		4C49D1DA1E27C4BF0026F43E /* ieee754.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ieee754.h; sourceTree = "<group>"; };
-		4C49D1DB1E27C4BF0026F43E /* itoa.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = itoa.h; sourceTree = "<group>"; };
-		4C49D1DC1E27C4BF0026F43E /* meta.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = meta.h; sourceTree = "<group>"; };
-		4C49D1DD1E27C4BF0026F43E /* pow10.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pow10.h; sourceTree = "<group>"; };
-		4C49D1DE1E27C4BF0026F43E /* stack.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = stack.h; sourceTree = "<group>"; };
-		4C49D1DF1E27C4BF0026F43E /* strfunc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = strfunc.h; sourceTree = "<group>"; };
-		4C49D1E01E27C4BF0026F43E /* strtod.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = strtod.h; sourceTree = "<group>"; };
-		4C49D1E11E27C4BF0026F43E /* memorybuffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = memorybuffer.h; sourceTree = "<group>"; };
-		4C49D1E21E27C4BF0026F43E /* memorystream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = memorystream.h; sourceTree = "<group>"; };
-		4C49D1E41E27C4BF0026F43E /* inttypes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = inttypes.h; sourceTree = "<group>"; };
-		4C49D1E51E27C4BF0026F43E /* stdint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = stdint.h; sourceTree = "<group>"; };
-		4C49D1E61E27C4BF0026F43E /* prettywriter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = prettywriter.h; sourceTree = "<group>"; };
-		4C49D1E71E27C4BF0026F43E /* rapidjson.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = rapidjson.h; sourceTree = "<group>"; };
-		4C49D1E81E27C4BF0026F43E /* reader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = reader.h; sourceTree = "<group>"; };
-		4C49D1E91E27C4BF0026F43E /* stringbuffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = stringbuffer.h; sourceTree = "<group>"; };
-		4C49D1EA1E27C4BF0026F43E /* writer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = writer.h; sourceTree = "<group>"; };
-		4C49D1EB1E27C4BF0026F43E /* tinystr.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tinystr.h; sourceTree = "<group>"; };
-		4C49D1EC1E27C4BF0026F43E /* tinyxml.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tinyxml.h; sourceTree = "<group>"; };
-		4C49D1ED1E27C4BF0026F43E /* zconf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = zconf.h; sourceTree = "<group>"; };
-		4C49D1EE1E27C4BF0026F43E /* zlib.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = zlib.h; sourceTree = "<group>"; };
 		4C534CC01F3473570038539D /* cache_buffer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cache_buffer.h; sourceTree = "<group>"; };
 		4C534CC11F347CD50038539D /* file_cache_buffer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = file_cache_buffer.cpp; sourceTree = "<group>"; };
 		4C534CC21F347CD50038539D /* file_cache_buffer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = file_cache_buffer.hpp; sourceTree = "<group>"; };
@@ -295,6 +251,134 @@
 		4CDC11DF20B4531900EA9E2B /* client_core_base.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = client_core_base.hpp; sourceTree = "<group>"; };
 		4CDC11E320BDC48100EA9E2B /* globals.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = globals.cpp; sourceTree = "<group>"; };
 		4CDC11E420BDC48100EA9E2B /* globals.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = globals.hpp; sourceTree = "<group>"; };
+		4CEE3E9A2239394F00AB8F2C /* mprintf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = mprintf.h; path = build/build/depends/include/curl/mprintf.h; sourceTree = SOURCE_ROOT; };
+		4CEE3E9B2239394F00AB8F2C /* system.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = system.h; path = build/build/depends/include/curl/system.h; sourceTree = SOURCE_ROOT; };
+		4CEE3E9C2239394F00AB8F2C /* typecheck-gcc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "typecheck-gcc.h"; path = "build/build/depends/include/curl/typecheck-gcc.h"; sourceTree = SOURCE_ROOT; };
+		4CEE3E9D2239394F00AB8F2C /* easy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = easy.h; path = build/build/depends/include/curl/easy.h; sourceTree = SOURCE_ROOT; };
+		4CEE3E9E2239394F00AB8F2C /* stdcheaders.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = stdcheaders.h; path = build/build/depends/include/curl/stdcheaders.h; sourceTree = SOURCE_ROOT; };
+		4CEE3E9F2239394F00AB8F2C /* curlver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = curlver.h; path = build/build/depends/include/curl/curlver.h; sourceTree = SOURCE_ROOT; };
+		4CEE3EA02239394F00AB8F2C /* curl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = curl.h; path = build/build/depends/include/curl/curl.h; sourceTree = SOURCE_ROOT; };
+		4CEE3EA12239394F00AB8F2C /* multi.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = multi.h; path = build/build/depends/include/curl/multi.h; sourceTree = SOURCE_ROOT; };
+		4CEE3EAB2239397800AB8F2C /* DemuxPacket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DemuxPacket.h; path = build/build/depends/include/kodi/DemuxPacket.h; sourceTree = "<group>"; };
+		4CEE3EAC2239397800AB8F2C /* DemuxCrypto.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DemuxCrypto.h; path = build/build/depends/include/kodi/DemuxCrypto.h; sourceTree = "<group>"; };
+		4CEE3EAD2239397800AB8F2C /* kodi_game_types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = kodi_game_types.h; path = build/build/depends/include/kodi/kodi_game_types.h; sourceTree = "<group>"; };
+		4CEE3EAE2239397800AB8F2C /* xbmc_pvr_types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = xbmc_pvr_types.h; path = build/build/depends/include/kodi/xbmc_pvr_types.h; sourceTree = "<group>"; };
+		4CEE3EAF2239397800AB8F2C /* libKODI_guilib.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = libKODI_guilib.h; path = build/build/depends/include/kodi/libKODI_guilib.h; sourceTree = "<group>"; };
+		4CEE3EB02239397800AB8F2C /* StreamCodec.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = StreamCodec.h; path = build/build/depends/include/kodi/StreamCodec.h; sourceTree = "<group>"; };
+		4CEE3EB12239397800AB8F2C /* libXBMC_pvr.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = libXBMC_pvr.h; path = build/build/depends/include/kodi/libXBMC_pvr.h; sourceTree = "<group>"; };
+		4CEE3EB22239397800AB8F2C /* ActionIDs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ActionIDs.h; path = build/build/depends/include/kodi/ActionIDs.h; sourceTree = "<group>"; };
+		4CEE3EB32239397800AB8F2C /* Filesystem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Filesystem.h; path = build/build/depends/include/kodi/Filesystem.h; sourceTree = "<group>"; };
+		4CEE3EB42239397800AB8F2C /* IFileTypes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = IFileTypes.h; path = build/build/depends/include/kodi/IFileTypes.h; sourceTree = "<group>"; };
+		4CEE3EB52239397800AB8F2C /* libKODI_game.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = libKODI_game.h; path = build/build/depends/include/kodi/libKODI_game.h; sourceTree = "<group>"; };
+		4CEE3EB62239397800AB8F2C /* TimingConstants.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TimingConstants.h; path = build/build/depends/include/kodi/TimingConstants.h; sourceTree = "<group>"; };
+		4CEE3EB72239397800AB8F2C /* AEChannelData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AEChannelData.h; path = build/build/depends/include/kodi/AEChannelData.h; sourceTree = "<group>"; };
+		4CEE3EB82239397800AB8F2C /* kodi_game_dll.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = kodi_game_dll.h; path = build/build/depends/include/kodi/kodi_game_dll.h; sourceTree = "<group>"; };
+		4CEE3EB92239397800AB8F2C /* versions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = versions.h; path = build/build/depends/include/kodi/versions.h; sourceTree = "<group>"; };
+		4CEE3EBA2239397800AB8F2C /* xbmc_epg_types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = xbmc_epg_types.h; path = build/build/depends/include/kodi/xbmc_epg_types.h; sourceTree = "<group>"; };
+		4CEE3EBB2239397800AB8F2C /* libXBMC_addon.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = libXBMC_addon.h; path = build/build/depends/include/kodi/libXBMC_addon.h; sourceTree = "<group>"; };
+		4CEE3EBC2239397900AB8F2C /* StreamCrypto.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = StreamCrypto.h; path = build/build/depends/include/kodi/StreamCrypto.h; sourceTree = "<group>"; };
+		4CEE3EBD2239397900AB8F2C /* xbmc_addon_dll.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = xbmc_addon_dll.h; path = build/build/depends/include/kodi/xbmc_addon_dll.h; sourceTree = "<group>"; };
+		4CEE3EBE2239397900AB8F2C /* xbmc_pvr_dll.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = xbmc_pvr_dll.h; path = build/build/depends/include/kodi/xbmc_pvr_dll.h; sourceTree = "<group>"; };
+		4CEE3EBF2239397900AB8F2C /* kodi_vfs_types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = kodi_vfs_types.h; path = build/build/depends/include/kodi/kodi_vfs_types.h; sourceTree = "<group>"; };
+		4CEE3EC02239397900AB8F2C /* XBMC_vkeys.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = XBMC_vkeys.h; path = build/build/depends/include/kodi/XBMC_vkeys.h; sourceTree = "<group>"; };
+		4CEE3EC12239397900AB8F2C /* General.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = General.h; path = build/build/depends/include/kodi/General.h; sourceTree = "<group>"; };
+		4CEE3EC22239397900AB8F2C /* Network.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Network.h; path = build/build/depends/include/kodi/Network.h; sourceTree = "<group>"; };
+		4CEE3EC32239397900AB8F2C /* AddonBase.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AddonBase.h; path = build/build/depends/include/kodi/AddonBase.h; sourceTree = "<group>"; };
+		4CEE3EC42239397900AB8F2C /* xbmc_addon_types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = xbmc_addon_types.h; path = build/build/depends/include/kodi/xbmc_addon_types.h; sourceTree = "<group>"; };
+		4CEE3EE02239398F00AB8F2C /* Window.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Window.h; path = build/build/depends/include/kodi/gui/Window.h; sourceTree = SOURCE_ROOT; };
+		4CEE3EE12239398F00AB8F2C /* definitions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = definitions.h; path = build/build/depends/include/kodi/gui/definitions.h; sourceTree = SOURCE_ROOT; };
+		4CEE3EE22239398F00AB8F2C /* ListItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ListItem.h; path = build/build/depends/include/kodi/gui/ListItem.h; sourceTree = SOURCE_ROOT; };
+		4CEE3EE32239398F00AB8F2C /* General.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = General.h; path = build/build/depends/include/kodi/gui/General.h; sourceTree = SOURCE_ROOT; };
+		4CEE3EE9223939A100AB8F2C /* Label.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Label.h; path = build/build/depends/include/kodi/gui/controls/Label.h; sourceTree = SOURCE_ROOT; };
+		4CEE3EEA223939A100AB8F2C /* FadeLabel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FadeLabel.h; path = build/build/depends/include/kodi/gui/controls/FadeLabel.h; sourceTree = SOURCE_ROOT; };
+		4CEE3EEB223939A100AB8F2C /* Edit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Edit.h; path = build/build/depends/include/kodi/gui/controls/Edit.h; sourceTree = SOURCE_ROOT; };
+		4CEE3EEC223939A100AB8F2C /* Slider.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Slider.h; path = build/build/depends/include/kodi/gui/controls/Slider.h; sourceTree = SOURCE_ROOT; };
+		4CEE3EED223939A100AB8F2C /* Button.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Button.h; path = build/build/depends/include/kodi/gui/controls/Button.h; sourceTree = SOURCE_ROOT; };
+		4CEE3EEE223939A100AB8F2C /* Rendering.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Rendering.h; path = build/build/depends/include/kodi/gui/controls/Rendering.h; sourceTree = SOURCE_ROOT; };
+		4CEE3EEF223939A100AB8F2C /* Spin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Spin.h; path = build/build/depends/include/kodi/gui/controls/Spin.h; sourceTree = SOURCE_ROOT; };
+		4CEE3EF0223939A100AB8F2C /* TextBox.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TextBox.h; path = build/build/depends/include/kodi/gui/controls/TextBox.h; sourceTree = SOURCE_ROOT; };
+		4CEE3EF1223939A100AB8F2C /* Progress.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Progress.h; path = build/build/depends/include/kodi/gui/controls/Progress.h; sourceTree = SOURCE_ROOT; };
+		4CEE3EF2223939A100AB8F2C /* Image.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Image.h; path = build/build/depends/include/kodi/gui/controls/Image.h; sourceTree = SOURCE_ROOT; };
+		4CEE3EF3223939A100AB8F2C /* RadioButton.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RadioButton.h; path = build/build/depends/include/kodi/gui/controls/RadioButton.h; sourceTree = SOURCE_ROOT; };
+		4CEE3EF4223939A100AB8F2C /* SettingsSlider.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SettingsSlider.h; path = build/build/depends/include/kodi/gui/controls/SettingsSlider.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F02223939B900AB8F2C /* Keyboard.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Keyboard.h; path = build/build/depends/include/kodi/gui/dialogs/Keyboard.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F03223939B900AB8F2C /* YesNo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = YesNo.h; path = build/build/depends/include/kodi/gui/dialogs/YesNo.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F04223939B900AB8F2C /* ContextMenu.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ContextMenu.h; path = build/build/depends/include/kodi/gui/dialogs/ContextMenu.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F05223939B900AB8F2C /* FileBrowser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FileBrowser.h; path = build/build/depends/include/kodi/gui/dialogs/FileBrowser.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F06223939B900AB8F2C /* ExtendedProgress.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ExtendedProgress.h; path = build/build/depends/include/kodi/gui/dialogs/ExtendedProgress.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F07223939BA00AB8F2C /* Select.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Select.h; path = build/build/depends/include/kodi/gui/dialogs/Select.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F08223939BA00AB8F2C /* OK.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = OK.h; path = build/build/depends/include/kodi/gui/dialogs/OK.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F09223939BA00AB8F2C /* TextViewer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TextViewer.h; path = build/build/depends/include/kodi/gui/dialogs/TextViewer.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F0A223939BA00AB8F2C /* Numeric.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Numeric.h; path = build/build/depends/include/kodi/gui/dialogs/Numeric.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F0B223939BA00AB8F2C /* Progress.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Progress.h; path = build/build/depends/include/kodi/gui/dialogs/Progress.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F17223939E900AB8F2C /* platform */ = {isa = PBXFileReference; lastKnownFileType = folder; name = platform; path = build/build/depends/include/kodi/platform; sourceTree = "<group>"; };
+		4CEE3F18223939F300AB8F2C /* tools */ = {isa = PBXFileReference; lastKnownFileType = folder; name = tools; path = build/build/depends/include/kodi/tools; sourceTree = "<group>"; };
+		4CEE3F1A22393A0B00AB8F2C /* XMLUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = XMLUtils.h; path = build/build/depends/include/kodi/util/XMLUtils.h; sourceTree = "<group>"; };
+		4CEE3F1D22393A3500AB8F2C /* os.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = os.h; path = "build/build/depends/include/p8-platform/os.h"; sourceTree = "<group>"; };
+		4CEE3F2022393A4500AB8F2C /* os-socket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "os-socket.h"; path = "build/build/depends/include/p8-platform/posix/os-socket.h"; sourceTree = SOURCE_ROOT; };
+		4CEE3F2122393A4500AB8F2C /* os-types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "os-types.h"; path = "build/build/depends/include/p8-platform/posix/os-types.h"; sourceTree = SOURCE_ROOT; };
+		4CEE3F2222393A4500AB8F2C /* os-threads.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "os-threads.h"; path = "build/build/depends/include/p8-platform/posix/os-threads.h"; sourceTree = SOURCE_ROOT; };
+		4CEE3F2722393A5700AB8F2C /* cdevsocket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = cdevsocket.h; path = "build/build/depends/include/p8-platform/sockets/cdevsocket.h"; sourceTree = "<group>"; };
+		4CEE3F2822393A5700AB8F2C /* socket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = socket.h; path = "build/build/depends/include/p8-platform/sockets/socket.h"; sourceTree = "<group>"; };
+		4CEE3F2922393A5700AB8F2C /* tcp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = tcp.h; path = "build/build/depends/include/p8-platform/sockets/tcp.h"; sourceTree = "<group>"; };
+		4CEE3F2E22393A6F00AB8F2C /* threads.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = threads.h; path = "build/build/depends/include/p8-platform/threads/threads.h"; sourceTree = "<group>"; };
+		4CEE3F2F22393A6F00AB8F2C /* atomics.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = atomics.h; path = "build/build/depends/include/p8-platform/threads/atomics.h"; sourceTree = "<group>"; };
+		4CEE3F3022393A6F00AB8F2C /* mutex.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = mutex.h; path = "build/build/depends/include/p8-platform/threads/mutex.h"; sourceTree = "<group>"; };
+		4CEE3F3522393A7F00AB8F2C /* timeutils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = timeutils.h; path = "build/build/depends/include/p8-platform/util/timeutils.h"; sourceTree = SOURCE_ROOT; };
+		4CEE3F3622393A7F00AB8F2C /* StringUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = StringUtils.h; path = "build/build/depends/include/p8-platform/util/StringUtils.h"; sourceTree = SOURCE_ROOT; };
+		4CEE3F3722393A7F00AB8F2C /* util.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = util.h; path = "build/build/depends/include/p8-platform/util/util.h"; sourceTree = SOURCE_ROOT; };
+		4CEE3F3822393A7F00AB8F2C /* buffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = buffer.h; path = "build/build/depends/include/p8-platform/util/buffer.h"; sourceTree = SOURCE_ROOT; };
+		4CEE3F3922393A7F00AB8F2C /* StdString.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = StdString.h; path = "build/build/depends/include/p8-platform/util/StdString.h"; sourceTree = SOURCE_ROOT; };
+		4CEE3F3A22393A7F00AB8F2C /* atomic.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = atomic.h; path = "build/build/depends/include/p8-platform/util/atomic.h"; sourceTree = SOURCE_ROOT; };
+		4CEE3F4122393A9900AB8F2C /* tinyxml.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = tinyxml.h; path = build/build/depends/include/tinyxml.h; sourceTree = "<group>"; };
+		4CEE3F4222393A9900AB8F2C /* tinystr.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = tinystr.h; path = build/build/depends/include/tinystr.h; sourceTree = "<group>"; };
+		4CEE3F4322393A9900AB8F2C /* zconf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = zconf.h; path = build/build/depends/include/zconf.h; sourceTree = "<group>"; };
+		4CEE3F4422393A9900AB8F2C /* zlib.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = zlib.h; path = build/build/depends/include/zlib.h; sourceTree = "<group>"; };
+		4CEE3F4A22393AB300AB8F2C /* stringbuffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = stringbuffer.h; path = build/build/depends/include/rapidjson/stringbuffer.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F4B22393AB300AB8F2C /* encodings.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = encodings.h; path = build/build/depends/include/rapidjson/encodings.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F4C22393AB300AB8F2C /* fwd.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = fwd.h; path = build/build/depends/include/rapidjson/fwd.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F4D22393AB300AB8F2C /* filewritestream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = filewritestream.h; path = build/build/depends/include/rapidjson/filewritestream.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F4E22393AB300AB8F2C /* memorybuffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = memorybuffer.h; path = build/build/depends/include/rapidjson/memorybuffer.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F4F22393AB300AB8F2C /* memorystream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = memorystream.h; path = build/build/depends/include/rapidjson/memorystream.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F5022393AB300AB8F2C /* document.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = document.h; path = build/build/depends/include/rapidjson/document.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F5122393AB300AB8F2C /* schema.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = schema.h; path = build/build/depends/include/rapidjson/schema.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F5222393AB300AB8F2C /* prettywriter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = prettywriter.h; path = build/build/depends/include/rapidjson/prettywriter.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F5322393AB300AB8F2C /* encodedstream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = encodedstream.h; path = build/build/depends/include/rapidjson/encodedstream.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F5422393AB300AB8F2C /* ostreamwrapper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ostreamwrapper.h; path = build/build/depends/include/rapidjson/ostreamwrapper.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F5522393AB300AB8F2C /* istreamwrapper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = istreamwrapper.h; path = build/build/depends/include/rapidjson/istreamwrapper.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F5622393AB300AB8F2C /* rapidjson.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = rapidjson.h; path = build/build/depends/include/rapidjson/rapidjson.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F5722393AB300AB8F2C /* reader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = reader.h; path = build/build/depends/include/rapidjson/reader.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F5822393AB300AB8F2C /* stream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = stream.h; path = build/build/depends/include/rapidjson/stream.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F5922393AB300AB8F2C /* allocators.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = allocators.h; path = build/build/depends/include/rapidjson/allocators.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F5A22393AB300AB8F2C /* pointer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = pointer.h; path = build/build/depends/include/rapidjson/pointer.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F5B22393AB300AB8F2C /* writer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = writer.h; path = build/build/depends/include/rapidjson/writer.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F5C22393AB300AB8F2C /* filereadstream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = filereadstream.h; path = build/build/depends/include/rapidjson/filereadstream.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F7322393ADB00AB8F2C /* inttypes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = inttypes.h; path = build/build/depends/include/rapidjson/msinttypes/inttypes.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F7422393ADB00AB8F2C /* stdint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = stdint.h; path = build/build/depends/include/rapidjson/msinttypes/stdint.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F7722393AE300AB8F2C /* regex.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = regex.h; path = build/build/depends/include/rapidjson/internal/regex.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F7822393AE300AB8F2C /* swap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = swap.h; path = build/build/depends/include/rapidjson/internal/swap.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F7922393AE300AB8F2C /* ieee754.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ieee754.h; path = build/build/depends/include/rapidjson/internal/ieee754.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F7A22393AE300AB8F2C /* meta.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = meta.h; path = build/build/depends/include/rapidjson/internal/meta.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F7B22393AE300AB8F2C /* dtoa.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = dtoa.h; path = build/build/depends/include/rapidjson/internal/dtoa.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F7C22393AE300AB8F2C /* itoa.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = itoa.h; path = build/build/depends/include/rapidjson/internal/itoa.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F7D22393AE300AB8F2C /* strtod.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = strtod.h; path = build/build/depends/include/rapidjson/internal/strtod.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F7E22393AE300AB8F2C /* strfunc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = strfunc.h; path = build/build/depends/include/rapidjson/internal/strfunc.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F7F22393AE300AB8F2C /* biginteger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = biginteger.h; path = build/build/depends/include/rapidjson/internal/biginteger.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F8022393AE300AB8F2C /* stack.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = stack.h; path = build/build/depends/include/rapidjson/internal/stack.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F8122393AE300AB8F2C /* diyfp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = diyfp.h; path = build/build/depends/include/rapidjson/internal/diyfp.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F8222393AE300AB8F2C /* pow10.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = pow10.h; path = build/build/depends/include/rapidjson/internal/pow10.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F8F22393AEA00AB8F2C /* error.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = error.h; path = build/build/depends/include/rapidjson/error/error.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F9022393AEA00AB8F2C /* en.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = en.h; path = build/build/depends/include/rapidjson/error/en.h; sourceTree = SOURCE_ROOT; };
+		4CEE3F94223958B100AB8F2C /* AudioEncoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AudioEncoder.h; path = "build/build/depends/include/kodi/addon-instance/AudioEncoder.h"; sourceTree = "<group>"; };
+		4CEE3F95223958B100AB8F2C /* VideoCodec.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = VideoCodec.h; path = "build/build/depends/include/kodi/addon-instance/VideoCodec.h"; sourceTree = "<group>"; };
+		4CEE3F96223958B100AB8F2C /* ImageDecoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ImageDecoder.h; path = "build/build/depends/include/kodi/addon-instance/ImageDecoder.h"; sourceTree = "<group>"; };
+		4CEE3F97223958B100AB8F2C /* Inputstream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Inputstream.h; path = "build/build/depends/include/kodi/addon-instance/Inputstream.h"; sourceTree = "<group>"; };
+		4CEE3F98223958B100AB8F2C /* Visualization.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Visualization.h; path = "build/build/depends/include/kodi/addon-instance/Visualization.h"; sourceTree = "<group>"; };
+		4CEE3F99223958B100AB8F2C /* Screensaver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Screensaver.h; path = "build/build/depends/include/kodi/addon-instance/Screensaver.h"; sourceTree = "<group>"; };
+		4CEE3F9A223958B100AB8F2C /* VFS.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = VFS.h; path = "build/build/depends/include/kodi/addon-instance/VFS.h"; sourceTree = "<group>"; };
+		4CEE3F9B223958B100AB8F2C /* PeripheralUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PeripheralUtils.h; path = "build/build/depends/include/kodi/addon-instance/PeripheralUtils.h"; sourceTree = "<group>"; };
+		4CEE3F9C223958B100AB8F2C /* Peripheral.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Peripheral.h; path = "build/build/depends/include/kodi/addon-instance/Peripheral.h"; sourceTree = "<group>"; };
+		4CEE3F9D223958B100AB8F2C /* AudioDecoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AudioDecoder.h; path = "build/build/depends/include/kodi/addon-instance/AudioDecoder.h"; sourceTree = "<group>"; };
 		4CFEAA8D1E4DA81A002C2BA4 /* ActionQueue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ActionQueue.cpp; sourceTree = "<group>"; };
 		4CFEAA8E1E4DA81A002C2BA4 /* ActionQueue.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ActionQueue.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -313,7 +397,7 @@
 		4C08C7801D81831B004CAAE3 = {
 			isa = PBXGroup;
 			children = (
-				4C49D18E1E27C4BF0026F43E /* include */,
+				4CEE3E97223938F300AB8F2C /* include */,
 				4C08C78B1D818381004CAAE3 /* src */,
 				4C08C7E01D81D27A004CAAE3 /* Products */,
 				4C534CCF1F3D35310038539D /* Resources */,
@@ -356,187 +440,6 @@
 				4C08C7DF1D81D27A004CAAE3 /* libcomple.test.dylib */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		4C49D18E1E27C4BF0026F43E /* include */ = {
-			isa = PBXGroup;
-			children = (
-				4C49D18F1E27C4BF0026F43E /* kodi */,
-				4C49D1B71E27C4BF0026F43E /* p8-platform */,
-				4C49D1CC1E27C4BF0026F43E /* rapidjson */,
-				4C49D1EB1E27C4BF0026F43E /* tinystr.h */,
-				4C49D1EC1E27C4BF0026F43E /* tinyxml.h */,
-				4C49D1ED1E27C4BF0026F43E /* zconf.h */,
-				4C49D1EE1E27C4BF0026F43E /* zlib.h */,
-			);
-			name = include;
-			path = build/build/depends/include;
-			sourceTree = "<group>";
-		};
-		4C49D18F1E27C4BF0026F43E /* kodi */ = {
-			isa = PBXGroup;
-			children = (
-				4C49D1901E27C4BF0026F43E /* AEChannelData.h */,
-				4C49D1911E27C4BF0026F43E /* DVDDemuxPacket.h */,
-				4C49D1921E27C4BF0026F43E /* IFileTypes.h */,
-				4C49D1931E27C4BF0026F43E /* kodi_adsp_dll.h */,
-				4C49D1941E27C4BF0026F43E /* kodi_adsp_types.h */,
-				4C49D1951E27C4BF0026F43E /* kodi_audiodec_dll.h */,
-				4C49D1961E27C4BF0026F43E /* kodi_audiodec_types.h */,
-				4C49D1971E27C4BF0026F43E /* kodi_audioengine_types.h */,
-				4C49D1981E27C4BF0026F43E /* kodi_inputstream_dll.h */,
-				4C49D1991E27C4BF0026F43E /* kodi_inputstream_types.h */,
-				4C49D19A1E27C4BF0026F43E /* kodi_peripheral_callbacks.h */,
-				4C49D19B1E27C4BF0026F43E /* kodi_peripheral_dll.h */,
-				4C49D19C1E27C4BF0026F43E /* kodi_peripheral_types.h */,
-				4C49D19D1E27C4BF0026F43E /* kodi_peripheral_utils.hpp */,
-				4C49D19E1E27C4BF0026F43E /* kodi_vfs_types.h */,
-				4C49D19F1E27C4BF0026F43E /* kodi_vfs_utils.hpp */,
-				4C49D1A01E27C4BF0026F43E /* libKODI_adsp.h */,
-				4C49D1A11E27C4BF0026F43E /* libKODI_audioengine.h */,
-				4C49D1A21E27C4BF0026F43E /* libKODI_guilib.h */,
-				4C49D1A31E27C4BF0026F43E /* libKODI_inputstream.h */,
-				4C49D1A41E27C4BF0026F43E /* libKODI_peripheral.h */,
-				4C49D1A51E27C4BF0026F43E /* libXBMC_addon.h */,
-				4C49D1A61E27C4BF0026F43E /* libXBMC_codec.h */,
-				4C49D1A71E27C4BF0026F43E /* libXBMC_pvr.h */,
-				4C49D1A81E27C4BF0026F43E /* util */,
-				4C49D1AA1E27C4BF0026F43E /* xbmc_addon_cpp_dll.h */,
-				4C49D1AB1E27C4BF0026F43E /* xbmc_addon_dll.h */,
-				4C49D1AC1E27C4BF0026F43E /* xbmc_addon_types.h */,
-				4C49D1AD1E27C4BF0026F43E /* xbmc_audioenc_dll.h */,
-				4C49D1AE1E27C4BF0026F43E /* xbmc_audioenc_types.h */,
-				4C49D1AF1E27C4BF0026F43E /* xbmc_codec_types.h */,
-				4C49D1B01E27C4BF0026F43E /* xbmc_epg_types.h */,
-				4C49D1B11E27C4BF0026F43E /* xbmc_pvr_dll.h */,
-				4C49D1B21E27C4BF0026F43E /* xbmc_pvr_types.h */,
-				4C49D1B31E27C4BF0026F43E /* xbmc_scr_dll.h */,
-				4C49D1B41E27C4BF0026F43E /* xbmc_scr_types.h */,
-				4C49D1B51E27C4BF0026F43E /* xbmc_vis_dll.h */,
-				4C49D1B61E27C4BF0026F43E /* xbmc_vis_types.h */,
-			);
-			path = kodi;
-			sourceTree = "<group>";
-		};
-		4C49D1A81E27C4BF0026F43E /* util */ = {
-			isa = PBXGroup;
-			children = (
-				4C49D1A91E27C4BF0026F43E /* XMLUtils.h */,
-			);
-			path = util;
-			sourceTree = "<group>";
-		};
-		4C49D1B71E27C4BF0026F43E /* p8-platform */ = {
-			isa = PBXGroup;
-			children = (
-				4C49D1B81E27C4BF0026F43E /* os.h */,
-				4C49D1B91E27C4BF0026F43E /* posix */,
-				4C49D1BD1E27C4BF0026F43E /* sockets */,
-				4C49D1C11E27C4BF0026F43E /* threads */,
-				4C49D1C51E27C4BF0026F43E /* util */,
-			);
-			path = "p8-platform";
-			sourceTree = "<group>";
-		};
-		4C49D1B91E27C4BF0026F43E /* posix */ = {
-			isa = PBXGroup;
-			children = (
-				4C49D1BA1E27C4BF0026F43E /* os-socket.h */,
-				4C49D1BB1E27C4BF0026F43E /* os-threads.h */,
-				4C49D1BC1E27C4BF0026F43E /* os-types.h */,
-			);
-			path = posix;
-			sourceTree = "<group>";
-		};
-		4C49D1BD1E27C4BF0026F43E /* sockets */ = {
-			isa = PBXGroup;
-			children = (
-				4C49D1BE1E27C4BF0026F43E /* cdevsocket.h */,
-				4C49D1BF1E27C4BF0026F43E /* socket.h */,
-				4C49D1C01E27C4BF0026F43E /* tcp.h */,
-			);
-			path = sockets;
-			sourceTree = "<group>";
-		};
-		4C49D1C11E27C4BF0026F43E /* threads */ = {
-			isa = PBXGroup;
-			children = (
-				4C49D1C21E27C4BF0026F43E /* atomics.h */,
-				4C49D1C31E27C4BF0026F43E /* mutex.h */,
-				4C49D1C41E27C4BF0026F43E /* threads.h */,
-			);
-			path = threads;
-			sourceTree = "<group>";
-		};
-		4C49D1C51E27C4BF0026F43E /* util */ = {
-			isa = PBXGroup;
-			children = (
-				4C49D1C61E27C4BF0026F43E /* atomic.h */,
-				4C49D1C71E27C4BF0026F43E /* buffer.h */,
-				4C49D1C81E27C4BF0026F43E /* StdString.h */,
-				4C49D1C91E27C4BF0026F43E /* StringUtils.h */,
-				4C49D1CA1E27C4BF0026F43E /* timeutils.h */,
-				4C49D1CB1E27C4BF0026F43E /* util.h */,
-			);
-			path = util;
-			sourceTree = "<group>";
-		};
-		4C49D1CC1E27C4BF0026F43E /* rapidjson */ = {
-			isa = PBXGroup;
-			children = (
-				4C49D1CD1E27C4BF0026F43E /* allocators.h */,
-				4C49D1CE1E27C4BF0026F43E /* document.h */,
-				4C49D1CF1E27C4BF0026F43E /* encodedstream.h */,
-				4C49D1D01E27C4BF0026F43E /* encodings.h */,
-				4C49D1D11E27C4BF0026F43E /* error */,
-				4C49D1D41E27C4BF0026F43E /* filereadstream.h */,
-				4C49D1D51E27C4BF0026F43E /* filewritestream.h */,
-				4C49D1D61E27C4BF0026F43E /* internal */,
-				4C49D1E11E27C4BF0026F43E /* memorybuffer.h */,
-				4C49D1E21E27C4BF0026F43E /* memorystream.h */,
-				4C49D1E31E27C4BF0026F43E /* msinttypes */,
-				4C49D1E61E27C4BF0026F43E /* prettywriter.h */,
-				4C49D1E71E27C4BF0026F43E /* rapidjson.h */,
-				4C49D1E81E27C4BF0026F43E /* reader.h */,
-				4C49D1E91E27C4BF0026F43E /* stringbuffer.h */,
-				4C49D1EA1E27C4BF0026F43E /* writer.h */,
-			);
-			path = rapidjson;
-			sourceTree = "<group>";
-		};
-		4C49D1D11E27C4BF0026F43E /* error */ = {
-			isa = PBXGroup;
-			children = (
-				4C49D1D21E27C4BF0026F43E /* en.h */,
-				4C49D1D31E27C4BF0026F43E /* error.h */,
-			);
-			path = error;
-			sourceTree = "<group>";
-		};
-		4C49D1D61E27C4BF0026F43E /* internal */ = {
-			isa = PBXGroup;
-			children = (
-				4C49D1D71E27C4BF0026F43E /* biginteger.h */,
-				4C49D1D81E27C4BF0026F43E /* diyfp.h */,
-				4C49D1D91E27C4BF0026F43E /* dtoa.h */,
-				4C49D1DA1E27C4BF0026F43E /* ieee754.h */,
-				4C49D1DB1E27C4BF0026F43E /* itoa.h */,
-				4C49D1DC1E27C4BF0026F43E /* meta.h */,
-				4C49D1DD1E27C4BF0026F43E /* pow10.h */,
-				4C49D1DE1E27C4BF0026F43E /* stack.h */,
-				4C49D1DF1E27C4BF0026F43E /* strfunc.h */,
-				4C49D1E01E27C4BF0026F43E /* strtod.h */,
-			);
-			path = internal;
-			sourceTree = "<group>";
-		};
-		4C49D1E31E27C4BF0026F43E /* msinttypes */ = {
-			isa = PBXGroup;
-			children = (
-				4C49D1E41E27C4BF0026F43E /* inttypes.h */,
-				4C49D1E51E27C4BF0026F43E /* stdint.h */,
-			);
-			path = msinttypes;
 			sourceTree = "<group>";
 		};
 		4C4FBFA41E77C0590027911E /* Buffers */ = {
@@ -695,6 +598,269 @@
 			name = "Client Base";
 			sourceTree = "<group>";
 		};
+		4CEE3E97223938F300AB8F2C /* include */ = {
+			isa = PBXGroup;
+			children = (
+				4CEE3E992239393F00AB8F2C /* curl */,
+				4CEE3EAA2239396000AB8F2C /* kodi */,
+				4CEE3F1C22393A2100AB8F2C /* p8-platform */,
+				4CEE3F4922393A9F00AB8F2C /* rapidjson */,
+				4CEE3F4222393A9900AB8F2C /* tinystr.h */,
+				4CEE3F4122393A9900AB8F2C /* tinyxml.h */,
+				4CEE3F4322393A9900AB8F2C /* zconf.h */,
+				4CEE3F4422393A9900AB8F2C /* zlib.h */,
+			);
+			name = include;
+			sourceTree = "<group>";
+		};
+		4CEE3E992239393F00AB8F2C /* curl */ = {
+			isa = PBXGroup;
+			children = (
+				4CEE3EA02239394F00AB8F2C /* curl.h */,
+				4CEE3E9F2239394F00AB8F2C /* curlver.h */,
+				4CEE3E9D2239394F00AB8F2C /* easy.h */,
+				4CEE3E9A2239394F00AB8F2C /* mprintf.h */,
+				4CEE3EA12239394F00AB8F2C /* multi.h */,
+				4CEE3E9E2239394F00AB8F2C /* stdcheaders.h */,
+				4CEE3E9B2239394F00AB8F2C /* system.h */,
+				4CEE3E9C2239394F00AB8F2C /* typecheck-gcc.h */,
+			);
+			path = curl;
+			sourceTree = "<group>";
+		};
+		4CEE3EAA2239396000AB8F2C /* kodi */ = {
+			isa = PBXGroup;
+			children = (
+				4CEE3F932239589B00AB8F2C /* addon-instance */,
+				4CEE3EB22239397800AB8F2C /* ActionIDs.h */,
+				4CEE3EC32239397900AB8F2C /* AddonBase.h */,
+				4CEE3EB72239397800AB8F2C /* AEChannelData.h */,
+				4CEE3EAC2239397800AB8F2C /* DemuxCrypto.h */,
+				4CEE3EAB2239397800AB8F2C /* DemuxPacket.h */,
+				4CEE3EB32239397800AB8F2C /* Filesystem.h */,
+				4CEE3EC12239397900AB8F2C /* General.h */,
+				4CEE3EDF2239397D00AB8F2C /* gui */,
+				4CEE3EB42239397800AB8F2C /* IFileTypes.h */,
+				4CEE3EB82239397800AB8F2C /* kodi_game_dll.h */,
+				4CEE3EAD2239397800AB8F2C /* kodi_game_types.h */,
+				4CEE3EBF2239397900AB8F2C /* kodi_vfs_types.h */,
+				4CEE3EB52239397800AB8F2C /* libKODI_game.h */,
+				4CEE3EAF2239397800AB8F2C /* libKODI_guilib.h */,
+				4CEE3EBB2239397800AB8F2C /* libXBMC_addon.h */,
+				4CEE3EB12239397800AB8F2C /* libXBMC_pvr.h */,
+				4CEE3EC22239397900AB8F2C /* Network.h */,
+				4CEE3F17223939E900AB8F2C /* platform */,
+				4CEE3EB02239397800AB8F2C /* StreamCodec.h */,
+				4CEE3EBC2239397900AB8F2C /* StreamCrypto.h */,
+				4CEE3EB62239397800AB8F2C /* TimingConstants.h */,
+				4CEE3F18223939F300AB8F2C /* tools */,
+				4CEE3F19223939FC00AB8F2C /* util */,
+				4CEE3EB92239397800AB8F2C /* versions.h */,
+				4CEE3EBD2239397900AB8F2C /* xbmc_addon_dll.h */,
+				4CEE3EC42239397900AB8F2C /* xbmc_addon_types.h */,
+				4CEE3EBA2239397800AB8F2C /* xbmc_epg_types.h */,
+				4CEE3EBE2239397900AB8F2C /* xbmc_pvr_dll.h */,
+				4CEE3EAE2239397800AB8F2C /* xbmc_pvr_types.h */,
+				4CEE3EC02239397900AB8F2C /* XBMC_vkeys.h */,
+			);
+			name = kodi;
+			sourceTree = "<group>";
+		};
+		4CEE3EDF2239397D00AB8F2C /* gui */ = {
+			isa = PBXGroup;
+			children = (
+				4CEE3EE82239399300AB8F2C /* controls */,
+				4CEE3EE12239398F00AB8F2C /* definitions.h */,
+				4CEE3F01223939AC00AB8F2C /* dialogs */,
+				4CEE3EE32239398F00AB8F2C /* General.h */,
+				4CEE3EE22239398F00AB8F2C /* ListItem.h */,
+				4CEE3EE02239398F00AB8F2C /* Window.h */,
+			);
+			path = gui;
+			sourceTree = "<group>";
+		};
+		4CEE3EE82239399300AB8F2C /* controls */ = {
+			isa = PBXGroup;
+			children = (
+				4CEE3EED223939A100AB8F2C /* Button.h */,
+				4CEE3EEB223939A100AB8F2C /* Edit.h */,
+				4CEE3EEA223939A100AB8F2C /* FadeLabel.h */,
+				4CEE3EF2223939A100AB8F2C /* Image.h */,
+				4CEE3EE9223939A100AB8F2C /* Label.h */,
+				4CEE3EF1223939A100AB8F2C /* Progress.h */,
+				4CEE3EF3223939A100AB8F2C /* RadioButton.h */,
+				4CEE3EEE223939A100AB8F2C /* Rendering.h */,
+				4CEE3EF4223939A100AB8F2C /* SettingsSlider.h */,
+				4CEE3EEC223939A100AB8F2C /* Slider.h */,
+				4CEE3EEF223939A100AB8F2C /* Spin.h */,
+				4CEE3EF0223939A100AB8F2C /* TextBox.h */,
+			);
+			name = controls;
+			sourceTree = "<group>";
+		};
+		4CEE3F01223939AC00AB8F2C /* dialogs */ = {
+			isa = PBXGroup;
+			children = (
+				4CEE3F04223939B900AB8F2C /* ContextMenu.h */,
+				4CEE3F06223939B900AB8F2C /* ExtendedProgress.h */,
+				4CEE3F05223939B900AB8F2C /* FileBrowser.h */,
+				4CEE3F02223939B900AB8F2C /* Keyboard.h */,
+				4CEE3F0A223939BA00AB8F2C /* Numeric.h */,
+				4CEE3F08223939BA00AB8F2C /* OK.h */,
+				4CEE3F0B223939BA00AB8F2C /* Progress.h */,
+				4CEE3F07223939BA00AB8F2C /* Select.h */,
+				4CEE3F09223939BA00AB8F2C /* TextViewer.h */,
+				4CEE3F03223939B900AB8F2C /* YesNo.h */,
+			);
+			path = dialogs;
+			sourceTree = "<group>";
+		};
+		4CEE3F19223939FC00AB8F2C /* util */ = {
+			isa = PBXGroup;
+			children = (
+				4CEE3F1A22393A0B00AB8F2C /* XMLUtils.h */,
+			);
+			name = util;
+			sourceTree = "<group>";
+		};
+		4CEE3F1C22393A2100AB8F2C /* p8-platform */ = {
+			isa = PBXGroup;
+			children = (
+				4CEE3F3422393A7400AB8F2C /* util */,
+				4CEE3F2D22393A6000AB8F2C /* threads */,
+				4CEE3F2622393A4E00AB8F2C /* sokets */,
+				4CEE3F1F22393A3900AB8F2C /* posix */,
+				4CEE3F1D22393A3500AB8F2C /* os.h */,
+			);
+			name = "p8-platform";
+			sourceTree = "<group>";
+		};
+		4CEE3F1F22393A3900AB8F2C /* posix */ = {
+			isa = PBXGroup;
+			children = (
+				4CEE3F2022393A4500AB8F2C /* os-socket.h */,
+				4CEE3F2222393A4500AB8F2C /* os-threads.h */,
+				4CEE3F2122393A4500AB8F2C /* os-types.h */,
+			);
+			path = posix;
+			sourceTree = "<group>";
+		};
+		4CEE3F2622393A4E00AB8F2C /* sokets */ = {
+			isa = PBXGroup;
+			children = (
+				4CEE3F2722393A5700AB8F2C /* cdevsocket.h */,
+				4CEE3F2822393A5700AB8F2C /* socket.h */,
+				4CEE3F2922393A5700AB8F2C /* tcp.h */,
+			);
+			name = sokets;
+			sourceTree = "<group>";
+		};
+		4CEE3F2D22393A6000AB8F2C /* threads */ = {
+			isa = PBXGroup;
+			children = (
+				4CEE3F2F22393A6F00AB8F2C /* atomics.h */,
+				4CEE3F3022393A6F00AB8F2C /* mutex.h */,
+				4CEE3F2E22393A6F00AB8F2C /* threads.h */,
+			);
+			name = threads;
+			sourceTree = "<group>";
+		};
+		4CEE3F3422393A7400AB8F2C /* util */ = {
+			isa = PBXGroup;
+			children = (
+				4CEE3F3A22393A7F00AB8F2C /* atomic.h */,
+				4CEE3F3822393A7F00AB8F2C /* buffer.h */,
+				4CEE3F3922393A7F00AB8F2C /* StdString.h */,
+				4CEE3F3622393A7F00AB8F2C /* StringUtils.h */,
+				4CEE3F3522393A7F00AB8F2C /* timeutils.h */,
+				4CEE3F3722393A7F00AB8F2C /* util.h */,
+			);
+			path = util;
+			sourceTree = "<group>";
+		};
+		4CEE3F4922393A9F00AB8F2C /* rapidjson */ = {
+			isa = PBXGroup;
+			children = (
+				4CEE3F5922393AB300AB8F2C /* allocators.h */,
+				4CEE3F5022393AB300AB8F2C /* document.h */,
+				4CEE3F5322393AB300AB8F2C /* encodedstream.h */,
+				4CEE3F4B22393AB300AB8F2C /* encodings.h */,
+				4CEE3F7022393AB700AB8F2C /* error */,
+				4CEE3F5C22393AB300AB8F2C /* filereadstream.h */,
+				4CEE3F4D22393AB300AB8F2C /* filewritestream.h */,
+				4CEE3F4C22393AB300AB8F2C /* fwd.h */,
+				4CEE3F7122393ABF00AB8F2C /* internal */,
+				4CEE3F5522393AB300AB8F2C /* istreamwrapper.h */,
+				4CEE3F4E22393AB300AB8F2C /* memorybuffer.h */,
+				4CEE3F4F22393AB300AB8F2C /* memorystream.h */,
+				4CEE3F7222393AD100AB8F2C /* msinttypes */,
+				4CEE3F5422393AB300AB8F2C /* ostreamwrapper.h */,
+				4CEE3F5A22393AB300AB8F2C /* pointer.h */,
+				4CEE3F5222393AB300AB8F2C /* prettywriter.h */,
+				4CEE3F5622393AB300AB8F2C /* rapidjson.h */,
+				4CEE3F5722393AB300AB8F2C /* reader.h */,
+				4CEE3F5122393AB300AB8F2C /* schema.h */,
+				4CEE3F5822393AB300AB8F2C /* stream.h */,
+				4CEE3F4A22393AB300AB8F2C /* stringbuffer.h */,
+				4CEE3F5B22393AB300AB8F2C /* writer.h */,
+			);
+			path = rapidjson;
+			sourceTree = "<group>";
+		};
+		4CEE3F7022393AB700AB8F2C /* error */ = {
+			isa = PBXGroup;
+			children = (
+				4CEE3F9022393AEA00AB8F2C /* en.h */,
+				4CEE3F8F22393AEA00AB8F2C /* error.h */,
+			);
+			name = error;
+			sourceTree = "<group>";
+		};
+		4CEE3F7122393ABF00AB8F2C /* internal */ = {
+			isa = PBXGroup;
+			children = (
+				4CEE3F7F22393AE300AB8F2C /* biginteger.h */,
+				4CEE3F8122393AE300AB8F2C /* diyfp.h */,
+				4CEE3F7B22393AE300AB8F2C /* dtoa.h */,
+				4CEE3F7922393AE300AB8F2C /* ieee754.h */,
+				4CEE3F7C22393AE300AB8F2C /* itoa.h */,
+				4CEE3F7A22393AE300AB8F2C /* meta.h */,
+				4CEE3F8222393AE300AB8F2C /* pow10.h */,
+				4CEE3F7722393AE300AB8F2C /* regex.h */,
+				4CEE3F8022393AE300AB8F2C /* stack.h */,
+				4CEE3F7E22393AE300AB8F2C /* strfunc.h */,
+				4CEE3F7D22393AE300AB8F2C /* strtod.h */,
+				4CEE3F7822393AE300AB8F2C /* swap.h */,
+			);
+			path = internal;
+			sourceTree = "<group>";
+		};
+		4CEE3F7222393AD100AB8F2C /* msinttypes */ = {
+			isa = PBXGroup;
+			children = (
+				4CEE3F7322393ADB00AB8F2C /* inttypes.h */,
+				4CEE3F7422393ADB00AB8F2C /* stdint.h */,
+			);
+			name = msinttypes;
+			sourceTree = "<group>";
+		};
+		4CEE3F932239589B00AB8F2C /* addon-instance */ = {
+			isa = PBXGroup;
+			children = (
+				4CEE3F9D223958B100AB8F2C /* AudioDecoder.h */,
+				4CEE3F94223958B100AB8F2C /* AudioEncoder.h */,
+				4CEE3F96223958B100AB8F2C /* ImageDecoder.h */,
+				4CEE3F97223958B100AB8F2C /* Inputstream.h */,
+				4CEE3F9C223958B100AB8F2C /* Peripheral.h */,
+				4CEE3F9B223958B100AB8F2C /* PeripheralUtils.h */,
+				4CEE3F99223958B100AB8F2C /* Screensaver.h */,
+				4CEE3F9A223958B100AB8F2C /* VFS.h */,
+				4CEE3F95223958B100AB8F2C /* VideoCodec.h */,
+				4CEE3F98223958B100AB8F2C /* Visualization.h */,
+			);
+			name = "addon-instance";
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -702,114 +868,155 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4C49D2431E27C4BF0026F43E /* zlib.h in Headers */,
+				4CEE3F8E22393AE300AB8F2C /* pow10.h in Headers */,
+				4CEE3F8C22393AE300AB8F2C /* stack.h in Headers */,
+				4CEE3F8B22393AE300AB8F2C /* biginteger.h in Headers */,
+				4CEE3F8722393AE300AB8F2C /* dtoa.h in Headers */,
+				4CEE3F3D22393A7F00AB8F2C /* util.h in Headers */,
 				4C08C8001D829449004CAAE3 /* addon.h in Headers */,
+				4CEE3F0E223939BA00AB8F2C /* ContextMenu.h in Headers */,
+				4CEE3EF6223939A100AB8F2C /* FadeLabel.h in Headers */,
+				4CEE3F2A22393A5700AB8F2C /* cdevsocket.h in Headers */,
+				4CEE3EDC2239397900AB8F2C /* Network.h in Headers */,
+				4CEE3F10223939BA00AB8F2C /* ExtendedProgress.h in Headers */,
+				4CEE3F0D223939BA00AB8F2C /* YesNo.h in Headers */,
+				4CEE3F7522393ADB00AB8F2C /* inttypes.h in Headers */,
+				4CEE3F00223939A100AB8F2C /* SettingsSlider.h in Headers */,
+				4CEE3F3322393A6F00AB8F2C /* mutex.h in Headers */,
+				4CEE3FA0223958B100AB8F2C /* ImageDecoder.h in Headers */,
+				4CEE3ECA2239397900AB8F2C /* StreamCodec.h in Headers */,
+				4CEE3F2B22393A5700AB8F2C /* socket.h in Headers */,
+				4CEE3F4522393A9900AB8F2C /* tinyxml.h in Headers */,
+				4CEE3F6122393AB300AB8F2C /* memorybuffer.h in Headers */,
+				4CEE3F4822393A9900AB8F2C /* zlib.h in Headers */,
+				4CEE3ED62239397900AB8F2C /* StreamCrypto.h in Headers */,
+				4CEE3F13223939BA00AB8F2C /* TextViewer.h in Headers */,
+				4CEE3FA1223958B100AB8F2C /* Inputstream.h in Headers */,
+				4CEE3F14223939BA00AB8F2C /* Numeric.h in Headers */,
+				4CEE3F2C22393A5700AB8F2C /* tcp.h in Headers */,
+				4CEE3EFE223939A100AB8F2C /* Image.h in Headers */,
+				4CEE3F0C223939BA00AB8F2C /* Keyboard.h in Headers */,
+				4CEE3F3E22393A7F00AB8F2C /* buffer.h in Headers */,
+				4CEE3ED42239397900AB8F2C /* xbmc_epg_types.h in Headers */,
+				4CEE3F8A22393AE300AB8F2C /* strfunc.h in Headers */,
 				4CAC99BD2188D7C1005D8902 /* Playlist.hpp in Headers */,
-				4C49D20B1E27C4BF0026F43E /* xbmc_audioenc_dll.h in Headers */,
-				4C49D1FD1E27C4BF0026F43E /* kodi_vfs_types.h in Headers */,
-				4C49D2111E27C4BF0026F43E /* xbmc_scr_dll.h in Headers */,
-				4C49D2181E27C4BF0026F43E /* os-types.h in Headers */,
-				4C49D1F11E27C4BF0026F43E /* IFileTypes.h in Headers */,
-				4C49D20D1E27C4BF0026F43E /* xbmc_codec_types.h in Headers */,
-				4C49D1FE1E27C4BF0026F43E /* kodi_vfs_utils.hpp in Headers */,
-				4C49D21E1E27C4BF0026F43E /* threads.h in Headers */,
-				4C49D2371E27C4BF0026F43E /* memorybuffer.h in Headers */,
-				4C49D2321E27C4BF0026F43E /* meta.h in Headers */,
-				4C49D23F1E27C4BF0026F43E /* writer.h in Headers */,
+				4CEE3EE42239398F00AB8F2C /* Window.h in Headers */,
+				4CEE3ED32239397900AB8F2C /* versions.h in Headers */,
 				4C08C7F61D81E2A8004CAAE3 /* timeshift_buffer.h in Headers */,
+				4CEE3F3F22393A7F00AB8F2C /* StdString.h in Headers */,
+				4CEE3F8D22393AE300AB8F2C /* diyfp.h in Headers */,
+				4CEE3EDE2239397900AB8F2C /* xbmc_addon_types.h in Headers */,
+				4CEE3ECC2239397900AB8F2C /* ActionIDs.h in Headers */,
 				4C534CD31F418BB50038539D /* memory_cache_buffer.hpp in Headers */,
-				4C49D23B1E27C4BF0026F43E /* prettywriter.h in Headers */,
-				4C49D22C1E27C4BF0026F43E /* filewritestream.h in Headers */,
+				4CEE3F6622393AB300AB8F2C /* encodedstream.h in Headers */,
 				4CDC11E620BDC48100EA9E2B /* globals.hpp in Headers */,
-				4C49D21B1E27C4BF0026F43E /* tcp.h in Headers */,
-				4C49D2251E27C4BF0026F43E /* allocators.h in Headers */,
-				4C49D2411E27C4BF0026F43E /* tinyxml.h in Headers */,
+				4CEE3F9F223958B100AB8F2C /* VideoCodec.h in Headers */,
+				4CEE3FA5223958B100AB8F2C /* PeripheralUtils.h in Headers */,
+				4CEE3F1B22393A0B00AB8F2C /* XMLUtils.h in Headers */,
+				4CEE3F8622393AE300AB8F2C /* meta.h in Headers */,
 				4C08C7FC1D81E34A004CAAE3 /* input_buffer.h in Headers */,
+				4CEE3ECB2239397900AB8F2C /* libXBMC_pvr.h in Headers */,
+				4CEE3F3222393A6F00AB8F2C /* atomics.h in Headers */,
+				4CEE3F7622393ADB00AB8F2C /* stdint.h in Headers */,
+				4CEE3F5F22393AB300AB8F2C /* fwd.h in Headers */,
 				4C8506E51EF478A000213131 /* pvr_client_base.h in Headers */,
-				4C49D1FA1E27C4BF0026F43E /* kodi_peripheral_dll.h in Headers */,
-				4C49D1F81E27C4BF0026F43E /* kodi_inputstream_types.h in Headers */,
-				4C49D1F41E27C4BF0026F43E /* kodi_audiodec_dll.h in Headers */,
-				4C49D1EF1E27C4BF0026F43E /* AEChannelData.h in Headers */,
-				4C49D2171E27C4BF0026F43E /* os-threads.h in Headers */,
-				4C49D2021E27C4BF0026F43E /* libKODI_inputstream.h in Headers */,
-				4C49D2331E27C4BF0026F43E /* pow10.h in Headers */,
-				4C49D2231E27C4BF0026F43E /* timeutils.h in Headers */,
+				4CEE3ED12239397900AB8F2C /* AEChannelData.h in Headers */,
+				4CEE3EFB223939A100AB8F2C /* Spin.h in Headers */,
 				4C08C7FB1D81E34A004CAAE3 /* helpers.h in Headers */,
-				4C49D2381E27C4BF0026F43E /* memorystream.h in Headers */,
-				4C49D23C1E27C4BF0026F43E /* rapidjson.h in Headers */,
-				4C49D2051E27C4BF0026F43E /* libXBMC_codec.h in Headers */,
+				4CEE3F15223939BA00AB8F2C /* Progress.h in Headers */,
 				4CFEAA901E4DA81A002C2BA4 /* ActionQueue.hpp in Headers */,
+				4CEE3F6022393AB300AB8F2C /* filewritestream.h in Headers */,
+				4CEE3EF9223939A100AB8F2C /* Button.h in Headers */,
+				4CEE3F8922393AE300AB8F2C /* strtod.h in Headers */,
+				4CEE3ED02239397900AB8F2C /* TimingConstants.h in Headers */,
+				4CEE3EA62239395000AB8F2C /* stdcheaders.h in Headers */,
+				4CEE3F6922393AB300AB8F2C /* rapidjson.h in Headers */,
+				4CEE3F0F223939BA00AB8F2C /* FileBrowser.h in Headers */,
+				4CEE3EFC223939A100AB8F2C /* TextBox.h in Headers */,
+				4CEE3EC82239397900AB8F2C /* xbmc_pvr_types.h in Headers */,
+				4CEE3F6322393AB300AB8F2C /* document.h in Headers */,
+				4CEE3EDA2239397900AB8F2C /* XBMC_vkeys.h in Headers */,
+				4CEE3F3C22393A7F00AB8F2C /* StringUtils.h in Headers */,
+				4CEE3F6B22393AB300AB8F2C /* stream.h in Headers */,
+				4CEE3FA3223958B100AB8F2C /* Screensaver.h in Headers */,
+				4CEE3F6F22393AB300AB8F2C /* filereadstream.h in Headers */,
+				4CEE3F4022393A7F00AB8F2C /* atomic.h in Headers */,
+				4CEE3EA52239395000AB8F2C /* easy.h in Headers */,
+				4CEE3F3122393A6F00AB8F2C /* threads.h in Headers */,
+				4CEE3F6222393AB300AB8F2C /* memorystream.h in Headers */,
+				4CEE3F9222393AEA00AB8F2C /* en.h in Headers */,
+				4CEE3ED72239397900AB8F2C /* xbmc_addon_dll.h in Headers */,
+				4CEE3F2422393A4500AB8F2C /* os-types.h in Headers */,
+				4CEE3F8822393AE300AB8F2C /* itoa.h in Headers */,
+				4CEE3F12223939BA00AB8F2C /* OK.h in Headers */,
 				4C534CC41F347CD50038539D /* file_cache_buffer.hpp in Headers */,
-				4C49D1FC1E27C4BF0026F43E /* kodi_peripheral_utils.hpp in Headers */,
-				4C49D1F31E27C4BF0026F43E /* kodi_adsp_types.h in Headers */,
-				4C49D2341E27C4BF0026F43E /* stack.h in Headers */,
-				4C49D1F61E27C4BF0026F43E /* kodi_audioengine_types.h in Headers */,
-				4C49D2041E27C4BF0026F43E /* libXBMC_addon.h in Headers */,
-				4C49D21C1E27C4BF0026F43E /* atomics.h in Headers */,
-				4C49D2281E27C4BF0026F43E /* encodings.h in Headers */,
-				4C49D2131E27C4BF0026F43E /* xbmc_vis_dll.h in Headers */,
-				4C49D2421E27C4BF0026F43E /* zconf.h in Headers */,
-				4C49D23E1E27C4BF0026F43E /* stringbuffer.h in Headers */,
 				4CAAE7272006438600A866C9 /* edem_player.h in Headers */,
+				4CEE3F6722393AB300AB8F2C /* ostreamwrapper.h in Headers */,
+				4CEE3EA42239395000AB8F2C /* typecheck-gcc.h in Headers */,
+				4CEE3EDD2239397900AB8F2C /* AddonBase.h in Headers */,
+				4CEE3F8422393AE300AB8F2C /* swap.h in Headers */,
+				4CEE3EE52239398F00AB8F2C /* definitions.h in Headers */,
 				4C8506ED1F0E49F400213131 /* puzzle_pvr_client.h in Headers */,
 				4CAAE732200691A600A866C9 /* XMLTV_loader.hpp in Headers */,
-				4C49D2141E27C4BF0026F43E /* xbmc_vis_types.h in Headers */,
-				4C49D23A1E27C4BF0026F43E /* stdint.h in Headers */,
-				4C49D22D1E27C4BF0026F43E /* biginteger.h in Headers */,
-				4C49D2191E27C4BF0026F43E /* cdevsocket.h in Headers */,
-				4C49D2071E27C4BF0026F43E /* XMLUtils.h in Headers */,
-				4C49D2241E27C4BF0026F43E /* util.h in Headers */,
+				4CEE3EC62239397900AB8F2C /* DemuxCrypto.h in Headers */,
+				4CEE3EF7223939A100AB8F2C /* Edit.h in Headers */,
+				4CEE3ECE2239397900AB8F2C /* IFileTypes.h in Headers */,
+				4CEE3EC72239397900AB8F2C /* kodi_game_types.h in Headers */,
+				4CEE3F6D22393AB300AB8F2C /* pointer.h in Headers */,
+				4CEE3ED52239397900AB8F2C /* libXBMC_addon.h in Headers */,
+				4CEE3F6522393AB300AB8F2C /* prettywriter.h in Headers */,
+				4CEE3FA4223958B100AB8F2C /* VFS.h in Headers */,
+				4CEE3F11223939BA00AB8F2C /* Select.h in Headers */,
+				4CEE3F6822393AB300AB8F2C /* istreamwrapper.h in Headers */,
+				4CEE3EFA223939A100AB8F2C /* Rendering.h in Headers */,
+				4CEE3EC92239397900AB8F2C /* libKODI_guilib.h in Headers */,
+				4CEE3EA92239395000AB8F2C /* multi.h in Headers */,
+				4CEE3F8522393AE300AB8F2C /* ieee754.h in Headers */,
+				4CEE3F9E223958B100AB8F2C /* AudioEncoder.h in Headers */,
+				4CEE3EA32239395000AB8F2C /* system.h in Headers */,
+				4CEE3FA2223958B100AB8F2C /* Visualization.h in Headers */,
 				4C5D1C5D21B83E6A004286DA /* ttv_pvr_client.h in Headers */,
-				4C49D2121E27C4BF0026F43E /* xbmc_scr_types.h in Headers */,
+				4CEE3F9122393AEA00AB8F2C /* error.h in Headers */,
+				4CEE3F2522393A4500AB8F2C /* os-threads.h in Headers */,
+				4CEE3ED22239397900AB8F2C /* kodi_game_dll.h in Headers */,
+				4CEE3F6C22393AB300AB8F2C /* allocators.h in Headers */,
+				4CEE3F4722393A9900AB8F2C /* zconf.h in Headers */,
+				4CEE3ED92239397900AB8F2C /* kodi_vfs_types.h in Headers */,
 				4C8506F21F0E541100213131 /* puzzle_tv.h in Headers */,
-				4C49D2351E27C4BF0026F43E /* strfunc.h in Headers */,
-				4C49D2261E27C4BF0026F43E /* document.h in Headers */,
-				4C49D22B1E27C4BF0026F43E /* filereadstream.h in Headers */,
+				4CEE3EE62239398F00AB8F2C /* ListItem.h in Headers */,
+				4CEE3F5D22393AB300AB8F2C /* stringbuffer.h in Headers */,
 				4CAAE7292006438600A866C9 /* edem_pvr_client.h in Headers */,
-				4C49D1F21E27C4BF0026F43E /* kodi_adsp_dll.h in Headers */,
-				4C49D2201E27C4BF0026F43E /* buffer.h in Headers */,
-				4C49D21F1E27C4BF0026F43E /* atomic.h in Headers */,
-				4C49D21A1E27C4BF0026F43E /* socket.h in Headers */,
-				4C49D22F1E27C4BF0026F43E /* dtoa.h in Headers */,
-				4C49D2001E27C4BF0026F43E /* libKODI_audioengine.h in Headers */,
+				4CEE3EA82239395000AB8F2C /* curl.h in Headers */,
+				4CEE3EA72239395000AB8F2C /* curlver.h in Headers */,
+				4CEE3F4622393A9900AB8F2C /* tinystr.h in Headers */,
+				4CEE3EF5223939A100AB8F2C /* Label.h in Headers */,
+				4CEE3F2322393A4500AB8F2C /* os-socket.h in Headers */,
+				4CEE3F8322393AE300AB8F2C /* regex.h in Headers */,
 				4CDC11E120B4531900EA9E2B /* client_core_base.hpp in Headers */,
+				4CEE3F1E22393A3500AB8F2C /* os.h in Headers */,
+				4CEE3FA6223958B100AB8F2C /* Peripheral.h in Headers */,
+				4CEE3EFD223939A100AB8F2C /* Progress.h in Headers */,
+				4CEE3EE72239398F00AB8F2C /* General.h in Headers */,
+				4CEE3F6E22393AB300AB8F2C /* writer.h in Headers */,
+				4CEE3F6422393AB300AB8F2C /* schema.h in Headers */,
+				4CEE3ED82239397900AB8F2C /* xbmc_pvr_dll.h in Headers */,
+				4CEE3FA7223958B100AB8F2C /* AudioDecoder.h in Headers */,
+				4CEE3F5E22393AB300AB8F2C /* encodings.h in Headers */,
 				4C08C7F41D81E2A8004CAAE3 /* direct_buffer.h in Headers */,
-				4C49D2081E27C4BF0026F43E /* xbmc_addon_cpp_dll.h in Headers */,
-				4C49D1FB1E27C4BF0026F43E /* kodi_peripheral_types.h in Headers */,
 				4CBC4B8420C149F700BA0CFF /* TimersEngine.hpp in Headers */,
-				4C49D2221E27C4BF0026F43E /* StringUtils.h in Headers */,
-				4C49D2031E27C4BF0026F43E /* libKODI_peripheral.h in Headers */,
-				4C49D2311E27C4BF0026F43E /* itoa.h in Headers */,
-				4C49D22E1E27C4BF0026F43E /* diyfp.h in Headers */,
 				4CC18CE4212B2046005E64B8 /* simple_cyclic_buffer.hpp in Headers */,
-				4C49D20A1E27C4BF0026F43E /* xbmc_addon_types.h in Headers */,
+				4CEE3EFF223939A100AB8F2C /* RadioButton.h in Headers */,
 				4C5D1C5C21B83E6A004286DA /* ttv_player.h in Headers */,
-				4C49D2271E27C4BF0026F43E /* encodedstream.h in Headers */,
-				4C49D2291E27C4BF0026F43E /* en.h in Headers */,
-				4C49D20F1E27C4BF0026F43E /* xbmc_pvr_dll.h in Headers */,
 				4CD394B71F2258610073E2DF /* plist_buffer.h in Headers */,
-				4C49D2391E27C4BF0026F43E /* inttypes.h in Headers */,
-				4C49D2061E27C4BF0026F43E /* libXBMC_pvr.h in Headers */,
-				4C49D1F51E27C4BF0026F43E /* kodi_audiodec_types.h in Headers */,
-				4C49D2161E27C4BF0026F43E /* os-socket.h in Headers */,
-				4C49D2091E27C4BF0026F43E /* xbmc_addon_dll.h in Headers */,
-				4C49D20E1E27C4BF0026F43E /* xbmc_epg_types.h in Headers */,
-				4C49D2011E27C4BF0026F43E /* libKODI_guilib.h in Headers */,
-				4C49D1F71E27C4BF0026F43E /* kodi_inputstream_dll.h in Headers */,
+				4CEE3F6A22393AB300AB8F2C /* reader.h in Headers */,
+				4CEE3F3B22393A7F00AB8F2C /* timeutils.h in Headers */,
+				4CEE3ECF2239397900AB8F2C /* libKODI_game.h in Headers */,
 				4C8506E91F0E25DF00213131 /* HttpEngine.hpp in Headers */,
-				4C49D22A1E27C4BF0026F43E /* error.h in Headers */,
-				4C49D2361E27C4BF0026F43E /* strtod.h in Headers */,
-				4C49D2101E27C4BF0026F43E /* xbmc_pvr_types.h in Headers */,
-				4C49D20C1E27C4BF0026F43E /* xbmc_audioenc_types.h in Headers */,
-				4C49D2211E27C4BF0026F43E /* StdString.h in Headers */,
-				4C49D23D1E27C4BF0026F43E /* reader.h in Headers */,
-				4C49D1F01E27C4BF0026F43E /* DVDDemuxPacket.h in Headers */,
-				4C49D1FF1E27C4BF0026F43E /* libKODI_adsp.h in Headers */,
-				4C49D21D1E27C4BF0026F43E /* mutex.h in Headers */,
-				4C49D2401E27C4BF0026F43E /* tinystr.h in Headers */,
-				4C49D2151E27C4BF0026F43E /* os.h in Headers */,
-				4C49D1F91E27C4BF0026F43E /* kodi_peripheral_callbacks.h in Headers */,
-				4C49D2301E27C4BF0026F43E /* ieee754.h in Headers */,
+				4CEE3EC52239397900AB8F2C /* DemuxPacket.h in Headers */,
+				4CEE3EA22239395000AB8F2C /* mprintf.h in Headers */,
+				4CEE3ECD2239397900AB8F2C /* Filesystem.h in Headers */,
+				4CEE3EDB2239397900AB8F2C /* General.h in Headers */,
+				4CEE3EF8223939A100AB8F2C /* Slider.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
