@@ -50,10 +50,10 @@ else()
                     PATHS ${PC_CURL_LIBDIR})
     find_library(CURL_SSL_LIBRARIES NAMES ssl libssl
                     NO_CMAKE_FIND_ROOT_PATH
-                    PATHS ${PC_CURL_LIBDIR})
+                    PATHS ${PC_CURL_LIBDIR} /usr/local/ssl/lib )
     find_library(CURL_CRYPTO_LIBRARIES NAMES crypto libcrypto
                     NO_CMAKE_FIND_ROOT_PATH
-                    PATHS ${PC_CURL_LIBDIR})
+                    PATHS ${PC_CURL_LIBDIR} /usr/local/ssl/lib)
     find_library(CURL_ZLIB_LIBRARIES NAMES z libz
                     NO_CMAKE_FIND_ROOT_PATH
                     PATHS ${PC_CURL_LIBDIR})
