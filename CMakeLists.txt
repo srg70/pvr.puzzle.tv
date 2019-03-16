@@ -3,9 +3,10 @@ project(pvr.puzzle.tv)
 cmake_minimum_required(VERSION 2.6)
 
 enable_language(CXX)
-list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+list(INSERT CMAKE_MODULE_PATH 0 "${PROJECT_SOURCE_DIR}/cmake")
 
-message(CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH})
+message(CMAKE_MODULE_PATH = ${CMAKE_MODULE_PATH})
+message(CMAKE_FIND_ROOT_PATH =${CMAKE_FIND_ROOT_PATH})
 
 find_package(Kodi REQUIRED)
 find_package(kodiplatform REQUIRED)
