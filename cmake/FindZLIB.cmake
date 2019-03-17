@@ -14,7 +14,7 @@ if(PKG_CONFIG_FOUND)
   pkg_check_modules(PC_ZLIB libz QUIET)
 endif()
 
-# message(STATUS "In FindZLIB.cmake CORE_SYSTEM_NAME=${CORE_SYSTEM_NAME}")
+message(STATUS "In FindZLIB.cmake CORE_SYSTEM_NAME=${CORE_SYSTEM_NAME}")
 
 find_path(ZLIB_INCLUDE_DIRS NAMES zlib.h
                 NO_CMAKE_FIND_ROOT_PATH
