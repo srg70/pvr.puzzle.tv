@@ -16,12 +16,19 @@ endif()
 
 message(STATUS "In FindZLIB.cmake CORE_SYSTEM_NAME=${CORE_SYSTEM_NAME}")
 
-find_path(ZLIB_INCLUDE_DIRS NAMES zlib.h
-                NO_CMAKE_FIND_ROOT_PATH
-                PATHS ${PC_ZLIB_INCLUDEDIR})
-find_library(ZLIB_LIBRARIES NAMES z libz
-                NO_CMAKE_FIND_ROOT_PATH
-                PATHS ${PC_ZLIB_LIBDIR})
+if(CORE_SYSTEM_NAME STREQUAL windows)
+    find_path(CURL_INCLUDE_DIRS NAMES curl/curl.h
+                               PATHS ${PC_CURL_INCLUDEDIR})
+    find_library(CURL_LIBRARIES NAMES libcurl_a
+                                PATHS ${PC_CURL_LIBDIR})
+else()								
+	find_path(ZLIB_INCLUDE_DIRS NAMES zlib.h
+					NO_CMAKE_FIND_ROOT_PATH
+					PATHS ${PC_ZLIB_INCLUDEDIR})
+	find_library(ZLIB_LIBRARIES NAMES z libz
+					NO_CMAKE_FIND_ROOT_PATH
+					PATHS ${PC_ZLIB_LIBDIR})
+endif()
 
 set(ZLIB_VERSION ${PC_ZLIB_VERSION})
 
