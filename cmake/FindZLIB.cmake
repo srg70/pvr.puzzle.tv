@@ -18,9 +18,9 @@ message(STATUS "In FindZLIB.cmake CORE_SYSTEM_NAME=${CORE_SYSTEM_NAME}")
 
 if(CORE_SYSTEM_NAME STREQUAL windows)
     find_path(ZLIB_INCLUDE_DIRS NAMES zlib.h
-                               PATHS ${PC_CURL_INCLUDEDIR})
+                               PATHS ${PC_ZLIB_INCLUDEDIR})
     find_library(ZLIB_LIBRARIES NAMES z libz
-                                PATHS ${PC_CURL_LIBDIR})
+                                PATHS ${PC_ZLIB_LIBDIR})
 else()								
 	find_path(ZLIB_INCLUDE_DIRS NAMES zlib.h
 					NO_CMAKE_FIND_ROOT_PATH
