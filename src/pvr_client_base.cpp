@@ -36,6 +36,19 @@
 #include <list>
 #include "kodi/libXBMC_addon.h"
 #include "kodi/Filesystem.h"
+// Patch for Kodi buggy VFSDirEntry declaration
+struct VFSDirEntry_Patch
+{
+    char* label;             //!< item label
+    char* title;             //!< item title
+    char* path;              //!< item path
+    unsigned int num_props;  //!< Number of properties attached to item
+    VFSProperty* properties; //!< Properties
+    //    time_t date_time;        //!< file creation date & time
+    bool folder;             //!< Item is a folder
+    uint64_t size;           //!< Size of file represented by item
+};
+
 #include "p8-platform/util/util.h"
 #include "p8-platform/util/timeutils.h"
 #include "p8-platform/threads/mutex.h"
@@ -318,8 +331,9 @@ void PVRClientBase::SetTimeshiftPath(const std::string& path){
         VFSDirEntry* files;
         unsigned int num_files;
         if(XBMC->GetDirectory(nonEmptyPath, "*.bin", &files, &num_files)) {
+            VFSDirEntry_Patch* patched_files = (VFSDirEntry_Patch*) files;
             for (int i = 0; i < num_files; ++i) {
-                const VFSDirEntry& f = files[i];
+                const VFSDirEntry_Patch& f = patched_files[i];
                 if(!f.folder)
                     if(!XBMC->DeleteFile(f.path))
                         LogError( "Failed to delete timeshift folder entry %s", f.path);
@@ -697,8 +711,9 @@ int PVRClientBase::GetRecordingsAmount(bool deleted)
         VFSDirEntry* files;
         unsigned int num_files;
         if(XBMC->GetDirectory(m_recordingsDir.c_str(), "", &files, &num_files)) {
+            VFSDirEntry_Patch* patched_files = (VFSDirEntry_Patch*) files;
             for (int i = 0; i < num_files; ++i) {
-                const VFSDirEntry& f = files[i];
+                const VFSDirEntry_Patch& f = patched_files[i];
                 if(f.folder)
                     ++size;
 
@@ -792,8 +807,9 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
         VFSDirEntry* files;
         unsigned int num_files;
         if(XBMC->GetDirectory(m_recordingsDir.c_str(), "", &files, &num_files)) {
+            VFSDirEntry_Patch* patched_files = (VFSDirEntry_Patch*) files;
             for (int i = 0; i < num_files; ++i) {
-                const VFSDirEntry& f = files[i];
+                const VFSDirEntry_Patch& f = patched_files[i];
                 if(f.folder)
                     continue;
                 std::string infoPath = f.path;
@@ -836,8 +852,9 @@ PVR_ERROR PVRClientBase::DeleteRecording(const PVR_RECORDING &recording)
         VFSDirEntry* files;
         unsigned int num_files;
         if(XBMC->GetDirectory(m_recordingsDir.c_str(), "", &files, &num_files)) {
+            VFSDirEntry_Patch* patched_files = (VFSDirEntry_Patch*) files;
             for (int i = 0; i < num_files; ++i) {
-                const VFSDirEntry& f = files[i];
+                const VFSDirEntry_Patch& f = patched_files[i];
                 if(f.folder)
                     continue;
                 if(!XBMC->DeleteFile(f.path))

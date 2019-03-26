@@ -32,6 +32,18 @@
 #include <algorithm>
 #include "kodi/libXBMC_addon.h"
 #include "kodi/Filesystem.h"
+// Patch for Kodi buggy VFSDirEntry declaration
+struct VFSDirEntry_Patch
+{
+    char* label;             //!< item label
+    char* title;             //!< item title
+    char* path;              //!< item path
+    unsigned int num_props;  //!< Number of properties attached to item
+    VFSProperty* properties; //!< Properties
+    //    time_t date_time;        //!< file creation date & time
+    bool folder;             //!< Item is a folder
+    uint64_t size;           //!< Size of file represented by item
+};
 #include "file_cache_buffer.hpp"
 #include "libXBMC_addon.h"
 #include "helpers.h"
@@ -256,8 +268,9 @@ namespace Buffers
         VFSDirEntry* files;
         unsigned int num_files;
         if(XBMC->GetDirectory(bufferCacheDir.c_str(), "*.bin", &files, &num_files)) {
+            VFSDirEntry_Patch* patched_files = (VFSDirEntry_Patch*) files;
             for (int i = 0; i < num_files; ++i) {
-                const VFSDirEntry& f = files[i];
+                const VFSDirEntry_Patch& f = patched_files[i];
                 if(!f.folder)
                     result += f.size;
             }
@@ -280,18 +293,19 @@ namespace Buffers
         Init();
         // Load *.bin files
         VFSDirEntry* files;
-        std::vector<const VFSDirEntry*> binFiles;
+        std::vector<const VFSDirEntry_Patch*> binFiles;
         unsigned int num_files;
         if(XBMC->GetDirectory(bufferCacheDir.c_str(), "*.bin", &files, &num_files)) {
+            VFSDirEntry_Patch* patched_files = (VFSDirEntry_Patch*) files;
             for (int i = 0; i < num_files; ++i) {
-                const VFSDirEntry& f = files[i];
+                const VFSDirEntry_Patch& f = patched_files[i];
                 if(!f.folder)
                     binFiles.push_back(&f);
             }
             // run "neutral sorting" on files list
             struct cvf_alphanum_less : public std::binary_function<const VFSDirEntry*, const VFSDirEntry*, bool>
             {
-                bool operator()(const VFSDirEntry*& left, const VFSDirEntry*& right) const
+                bool operator()(const VFSDirEntry_Patch*& left, const VFSDirEntry_Patch*& right) const
                 {
                     return doj::alphanum_comp(left->path, right->path) < 0;
                 }
