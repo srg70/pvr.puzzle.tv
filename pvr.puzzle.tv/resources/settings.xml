@@ -20,11 +20,12 @@
 
 <!-- Puzzle TV -->
   <category label="20010">
+      <setting id="puzzle_server_version" type="enum" label="20008" lvalues="20009|20011" default="1" />
       <setting id="puzzle_server_uri" type="text" label="20000" default="127.0.0.1"/>
-      <setting id="puzzle_server_port" type="number" label="20001" default="8089"/>
+      <setting id="puzzle_server_port" type="number" label="20001" default="8185"/>
       <setting id="puzzle_server_retries" type="number" label="20002" default="4"/>
       <setting id="puzzle_server_epg_provider_type" type="enum" label="20005" lvalues="20006|20007" default="0" />
-      <setting id="puzzle_server_epg_url" type="text" label="20003" default="http://api.torrent-tv.ru/ttv.xmltv.xml.gz" visible="eq(-1,0)"/>
+      <setting id="puzzle_server_epg_url" type="text" label="20003" default="https://iptvx.one/epg/epg.xml.gz" visible="eq(-1,0)"/>
       <setting id="puzzle_server_epg_port" type="number" label="20004" default="8085" visible="eq(-2,1)"/>
 </category>
 
@@ -67,7 +68,7 @@
 <category label="60010">
     <setting id="ttv_mode" type="enum" label="60007" lvalues="60003|60004" default="1" />
     <setting id="ttv_playlist_url" type="text" label="60000" default="http://asplaylist.net/***/tv.m3u" visible="eq(-1,1)" subsetting="true"/>
-    <setting id="ttv_epg_url" type="text" label="60001" default="http://api.torrent-tv.ru/ttv.xmltv.xml.gz" visible="eq(-2,1)" subsetting="true"/>
+    <setting id="ttv_epg_url" type="text" label="60001" default="https://iptvx.one/epg/epg.xml.gz" visible="eq(-2,1)" subsetting="true"/>
     <setting id="ttv_user" type="text" label="60005" default="anonymous" visible="eq(-3,0)" subsetting="true"/>
     <setting id="ttv_password" type="text" label="60006" default="anonymous"  option="hidden" visible="eq(-4,0)" subsetting="true"/>
     <setting id="ttv_use_acestream" type="bool" label="60008" default="false" visible="eq(-5,0)"/>

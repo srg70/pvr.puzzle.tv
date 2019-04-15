@@ -115,9 +115,21 @@ msgctxt "#20007"
 msgid "Puzzle EPG"
 msgstr "Puzzle EPG"
 
+msgctxt "#20008"
+msgid "Server Version"
+msgstr "Server Version"
+
+msgctxt "#20009"
+msgid "Puzzle 2"
+msgstr "Puzzle 2"
+
 msgctxt "#20010"
 msgid "Puzzle TV"
 msgstr "Puzzle TV"
+
+msgctxt "#20011"
+msgid "Puzzle 3"
+msgstr "Puzzle 3"
 
 #=========== Sovok TV Settings ===============
 

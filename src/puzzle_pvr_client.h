@@ -72,6 +72,7 @@ private:
     //    bool m_shouldAddFavoritesGroup;
     int m_epgType;
     int m_epgPort;
+    int m_serverVersion;
 };
 
 #endif //__puzzle_pvr_client_h__
