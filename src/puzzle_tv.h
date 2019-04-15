@@ -71,10 +71,15 @@ namespace PuzzleEngine
         c_EpgType_Server = 1
     } EpgType;
 
+    typedef enum {
+        c_PuzzleServer2 = 0,
+        c_PuzzleServer3 = 1
+    } ServerVersion;
+    
     class PuzzleTV : public PvrClient::ClientCoreBase
     {
     public:
-        PuzzleTV(const char* serverUrl, uint16_t serverPort);
+        PuzzleTV(ServerVersion serverVersion, const char* serverUrl, uint16_t serverPort);
         ~PuzzleTV();
 
         const PvrClient::EpgEntryList& GetEpgList() const;
@@ -118,7 +123,7 @@ namespace PuzzleEngine
         std::string m_epgUrl;
         long m_serverTimeShift;
         std::map<PvrClient::ChannelId, PvrClient::ChannelId> m_epgToServerLut;
-
+        const ServerVersion m_serverVersion;
     };
 }
 #endif //__puzzle_tv_h__

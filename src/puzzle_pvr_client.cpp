@@ -53,6 +53,7 @@ static const char* c_server_retries_setting = "puzzle_server_retries";
 static const char* c_epg_provider_setting = "puzzle_server_epg_provider_type";
 static const char* c_epg_url_setting = "puzzle_server_epg_url";
 static const char* c_epg_port_setting = "puzzle_server_epg_port";
+static const char* c_server_version_setting = "puzzle_server_version";
 
 
 ADDON_STATUS PuzzlePVRClient::Init(PVR_PROPERTIES* pvrprops)
@@ -82,7 +83,10 @@ ADDON_STATUS PuzzlePVRClient::Init(PVR_PROPERTIES* pvrprops)
     if(!XBMC->GetSetting(c_epg_port_setting, &m_epgPort)){
         m_epgPort = 8085;
     }
-    
+    XBMC->GetSetting(c_server_version_setting, &m_serverVersion);
+    if(m_serverVersion != c_PuzzleServer3){
+        m_serverVersion = c_PuzzleServer2;
+    }
     retVal = CreateCoreSafe(false);
     
     //    PVR_MENUHOOK hook = {1, 30020, PVR_MENUHOOK_EPG};
@@ -134,7 +138,7 @@ void PuzzlePVRClient::CreateCore(bool clearEpgCache)
 {
     DestroyCoreSafe();
     
-    m_clientCore = m_puzzleTV = new PuzzleTV(m_serverUri.c_str(), m_serverPort);
+    m_clientCore = m_puzzleTV = new PuzzleTV((ServerVersion) m_serverVersion, m_serverUri.c_str(), m_serverPort);
     m_puzzleTV->SetMaxServerRetries(m_maxServerRetries);
     m_puzzleTV->SetEpgParams(EpgType(m_epgType), m_epgUrl, m_epgPort);
     m_puzzleTV->IncludeCurrentEpgToArchive(m_addCurrentEpgToArchive);
@@ -161,6 +165,9 @@ ADDON_STATUS PuzzlePVRClient::SetSetting(const char *settingName, const void *se
         result = ADDON_STATUS_NEED_RESTART;
     }
     else if(strcmp(settingName,  c_epg_provider_setting) == 0) {
+        result = ADDON_STATUS_NEED_RESTART;
+    }
+    else if(strcmp(settingName,  c_server_version_setting) == 0) {
         result = ADDON_STATUS_NEED_RESTART;
     }
     else if(strcmp(settingName,  c_epg_port_setting) == 0) {

@@ -66,11 +66,12 @@ struct PuzzleTV::ApiFunctionData
     mutable int attempt;
 };
 
-PuzzleTV::PuzzleTV(const char* serverUrl, uint16_t serverPort) :
+PuzzleTV::PuzzleTV(ServerVersion serverVersion, const char* serverUrl, uint16_t serverPort) :
     m_serverUri(serverUrl),
     m_serverPort(serverPort),
     m_epgServerPort(8085),
-    m_epgUrl("http://api.torrent-tv.ru/ttv.xmltv.xml.gz")
+    m_epgUrl("https://iptvx.one/epg/epg.xml.gz"),
+    m_serverVersion(serverVersion)
 {
 }
 
@@ -131,7 +132,8 @@ void PuzzleTV::BuildChannelAndGroupList()
         PlaylistContent plistContent;
 
         // Get channels from server
-        ApiFunctionData params("/get/json", m_serverPort);
+        const char* cmd = m_serverVersion == c_PuzzleServer2 ? "/get/json" : "/channels/json";
+        ApiFunctionData params(cmd, m_serverPort);
         CallApiFunction(params, [&plistContent] (Document& jsonRoot)
         {
             const Value &channels = jsonRoot["channels"];
@@ -386,7 +388,7 @@ string PuzzleTV::GetUrl(ChannelId channelId)
     {
         urls.clear();
             try {
-                string cmd = "/get/streams/";
+                std::string cmd = m_serverVersion == c_PuzzleServer2 ? "/get/streams/" : "/streams/json/";
                 cmd += n_to_string_hex(channelId);
                 
                 ApiFunctionData apiParams(cmd.c_str(), m_serverPort);
