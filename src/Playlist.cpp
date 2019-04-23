@@ -33,13 +33,17 @@ namespace Buffers {
     
     static std::string ToAbsoluteUrl(const std::string& url, const std::string& baseUrl){
         const char* c_HTTP = "http://";
-        
+        const char* c_HTTPS = "https://";
+
         // If Reliative URL
         if(std::string::npos == url.find(c_HTTP)) {
             // Append site prefix...
             auto urlPos = baseUrl.find(c_HTTP);
-            if(std::string::npos == urlPos)
-                throw PlaylistException((std::string("Missing http:// in base URL: ") + baseUrl).c_str());
+            if(std::string::npos == urlPos){
+                urlPos = baseUrl.find(c_HTTPS);
+                if(std::string::npos == urlPos)
+                    throw PlaylistException((std::string("Missing http:// or https:// in base URL: ") + baseUrl).c_str());
+            }
             urlPos = baseUrl.rfind('/');
             if(std::string::npos == urlPos)
                 throw PlaylistException((std::string("No '/' in base URL: ") + baseUrl).c_str());
