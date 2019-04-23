@@ -215,14 +215,14 @@ namespace Buffers {
                     if(PlaylistCache::k_SegmentStatus_Loading == segmentStatus ||
                        PlaylistCache::k_SegmentStatus_CacheEmpty == segmentStatus)
                     {
-                        if(waitingCounter++ != 0 && IsRunning()){
+                        if(waitingCounter++ == 0 && IsRunning()){
                             LogNotice("PlaylistBuffer: waiting for segment loading...");
                             // NOTE: timeout is set by Timeshift buffer
                             // Do not change it! May cause long waiting on stopping/exit.
                             //timeoutMs = 5*1000;
                             m_writeEvent.Wait(timeoutMs);
                         } else {
-                            LogError("PlaylistBuffer: segment loading  timeout! %d sec.", timeoutMs * (waitingCounter) / 1000);
+                            LogError("PlaylistBuffer: segment loading  timeout! %d sec.", timeoutMs * (waitingCounter -1) / 1000);
                             break;
                         }
                     } else {
