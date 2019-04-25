@@ -109,13 +109,13 @@ namespace XMLTV {
         return c_CacheFolder + std::to_string(std::hash<std::string>{}(original));
     }
     
-    static int GetCachedFileContents(const std::string &filePath, std::string &strContents)
+    static bool ShouldreloadCahcedFile(const std::string &filePath, const std::string& strCachedPath)
     {
         bool bNeedReload = false;
-        std::string strCachedPath = GetCachedPathFor(filePath);
+        
         
         XBMC->Log(LOG_DEBUG, "XMLTV Loader: open cached file %s." , filePath.c_str());
-
+        
         // check cached file is exists
         if (XBMC->FileExists(strCachedPath.c_str(), false))
         {
@@ -130,35 +130,65 @@ namespace XMLTV {
             // It should be safe to compare file sizes.
             bNeedReload = statOrig.st_size == 0 ||  statOrig.st_size != statCached.st_size;
             XBMC->Log(LOG_DEBUG, "XMLTV Loader: cached file exists. Reload?  %s." , bNeedReload ? "Yes" : "No");
-
+            
         }
         else
             bNeedReload = true;
+        return bNeedReload;
+    }
+    
+    static bool ReloadCachedFile(const std::string &filePath, const std::string& strCachedPath, std::string &strContents)
+    {
+        bool succeeded = false;
+        
+        GetFileContents(filePath, strContents);
+        
+        // write to cache
+        if (strContents.length() > 0)
+        {
+            void* fileHandle = XBMC->OpenFileForWrite(strCachedPath.c_str(), true);
+            if(!fileHandle) {
+                XBMC->CreateDirectory(c_CacheFolder.c_str());
+                fileHandle = XBMC->OpenFileForWrite(strCachedPath.c_str(), true);
+            }
+            if (fileHandle)
+            {
+                auto bytesToWrite = strContents.length();
+                succeeded = bytesToWrite == XBMC->WriteFile(fileHandle, strContents.c_str(), bytesToWrite);
+                XBMC->CloseFile(fileHandle);
+            }
+        }
+        return succeeded;
+    }
+    
+    int GetCachedFileContents(const std::string &filePath, std::string &strContents)
+    {
+        std::string strCachedPath =  GetCachedPathFor(filePath);
+        bool bNeedReload =  ShouldreloadCahcedFile(filePath, strCachedPath);
         
         if (bNeedReload)
         {
-            GetFileContents(filePath, strContents);
-            
-            // write to cache
-            if (strContents.length() > 0)
-            {
-                void* fileHandle = XBMC->OpenFileForWrite(strCachedPath.c_str(), true);
-                if(!fileHandle) {
-                    XBMC->CreateDirectory(c_CacheFolder.c_str());
-                    fileHandle = XBMC->OpenFileForWrite(strCachedPath.c_str(), true);
-                }
-                if (fileHandle)
-                {
-                    XBMC->WriteFile(fileHandle, strContents.c_str(), strContents.length());
-                    XBMC->CloseFile(fileHandle);
-                }
-            }
+            ReloadCachedFile(filePath, strCachedPath, strContents);
             return strContents.length();
         }
         
         return GetFileContents(strCachedPath, strContents);
     }
 
+    std::string GetCachedFilePath(const std::string &filePath)
+    {
+        std::string strCachedPath =  GetCachedPathFor(filePath);
+        bool bNeedReload =  ShouldreloadCahcedFile(filePath, strCachedPath);
+        
+        if (!bNeedReload)
+            return strCachedPath;
+
+        std::string strContents;
+        if(ReloadCachedFile(filePath, strCachedPath, strContents))
+            return strCachedPath;
+        
+        return std::string();
+    }
     
     static int ParseDateTime(std::string& strDate, bool iDateFormat = true)
     {
@@ -207,7 +237,7 @@ namespace XMLTV {
      * Author: Andrew Lim Chong Liang
      * http://windrealm.org
      */
-    static bool GzipInflate( const string& compressedBytes, string& uncompressedBytes ) {
+    bool GzipInflate( const string& compressedBytes, string& uncompressedBytes ) {
         
 #define HANDLE_CALL_ZLIB(status) {   \
 if(status != Z_OK) {        \
@@ -276,6 +306,11 @@ return false;             \
         free( uncomp );
         return true ;
     }
+   
+    bool IsDataCompressed(const std::string& data)
+    {
+        return (data[0] == '\x1F' && data[1] == '\x8B' && data[2] == '\x08');
+    }
     
    bool CreateDocument(const std::string& url,  XmlDocumentAndData& xmlDoc)
     {
@@ -296,7 +331,7 @@ return false;             \
         
         char * buffer;
         // gzip packed
-        if (data[0] == '\x1F' && data[1] == '\x8B' && data[2] == '\x08')
+        if (IsDataCompressed(data))
         {
             if (!GzipInflate(data, decompressed))
             {

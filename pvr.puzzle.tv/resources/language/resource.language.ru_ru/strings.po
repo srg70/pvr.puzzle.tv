@@ -263,16 +263,16 @@ msgid "Data Source"
 msgstr "Источник данных"
 
 msgctxt "#60008"
-msgid "Use Ace Strem"
-msgstr "Исплоьзовать Ace Strem"
+msgid "Ace Strem"
+msgstr "Ace Strem"
 
 msgctxt "#60009"
 msgid "Server"
 msgstr "Сервер"
 
 msgctxt "#60010"
-msgid "TTV Player"
-msgstr "Торрент ТВ"
+msgid "Trash Player"
+msgstr "Помойка"
 
 msgctxt "#60011"
 msgid "Port"
