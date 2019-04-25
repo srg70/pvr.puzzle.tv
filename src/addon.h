@@ -103,18 +103,18 @@ public:
 
 };
 
-class PuzzleTvAddon : public ::kodi::addon::CAddonBase
-{
-public:
-    virtual ~PuzzleTvAddon() override;
-    
-    virtual ADDON_STATUS Create() override;
-    
-    virtual ADDON_STATUS GetStatus() override;
-    
-    virtual ADDON_STATUS SetSetting(const std::string& settingName, const ::kodi::CSettingValue& settingValue) override;
-
-    
-};
+//class PuzzleTvAddon : public ::kodi::addon::CAddonBase
+//{
+//public:
+//    virtual ~PuzzleTvAddon() override;
+//    
+//    virtual ADDON_STATUS Create() override;
+//    
+//    virtual ADDON_STATUS GetStatus() override;
+//    
+//    virtual ADDON_STATUS SetSetting(const std::string& settingName, const ::kodi::CSettingValue& settingValue) override;
+//
+//    
+//};
 
 #endif /* __Iptv_Pvr_Addoin_h__ */

@@ -390,4 +390,7 @@ msgctxt "#32051"
 msgid "Reload Recordings"
 msgstr "Reload Recordings"
 
+msgctxt "#32052"
+msgid "Update channel streams"
+msgstr "Update channel streams"
 

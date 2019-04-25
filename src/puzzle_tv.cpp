@@ -131,10 +131,11 @@ void PuzzleTV::BuildChannelAndGroupList()
 
         PlaylistContent plistContent;
 
+        const bool isPuzzle2 = m_serverVersion == c_PuzzleServer2;
         // Get channels from server
-        const char* cmd = m_serverVersion == c_PuzzleServer2 ? "/get/json" : "/channels/json";
+        const char* cmd = isPuzzle2 ? "/get/json" : "/channels/json";
         ApiFunctionData params(cmd, m_serverPort);
-        CallApiFunction(params, [&plistContent] (Document& jsonRoot)
+        CallApiFunction(params, [&plistContent, isPuzzle2] (Document& jsonRoot)
         {
             const Value &channels = jsonRoot["channels"];
             Value::ConstValueIterator itChannel = channels.Begin();
@@ -148,7 +149,8 @@ void PuzzleTV::BuildChannelAndGroupList()
                 channel.IconPath = (*itChannel)["icon"].GetString();
                 channel.IsRadio = false ;
                 channel.HasArchive = false;
-                channel.Urls.push_back((*itChannel)["url"].GetString());
+                if(isPuzzle2)
+                    channel.Urls.push_back((*itChannel)["url"].GetString());
                 std::string groupName = (*itChannel)["group"].GetString();
                 plistContent[channel.Name] = PlaylistContent::mapped_type(channel,groupName);
             }
@@ -362,65 +364,80 @@ void PuzzleTV::LoadEpg()
     }
 }
 
+bool PuzzleTV::CheckChannelId(ChannelId channelId)
+{
+    if(m_channelList.count( channelId ) != 1) {
+        LogError("PuzzleTV::CheckChannelId: Unknown channel ID= %d", channelId);
+        return false;
+    }
+    return true;
+}
+
 string PuzzleTV::GetNextStream(ChannelId channelId, int currentChannelIdx)
 {
-    auto& channelList = m_channelList;
-    if(channelList.count( channelId ) != 1) {
-        LogError(" >>>>   PuzzleTV::GetNextStream: Unknown channel ID= %d <<<<<", channelId);
+    if(!CheckChannelId(channelId))
         return string();
-    }
-    auto& urls = channelList.at(channelId).Urls;
+    
+    auto& urls = m_channelList.at(channelId).Urls;
     if(urls.size() > currentChannelIdx + 1)
         return urls[currentChannelIdx + 1];
     return string();
 
 }
-string PuzzleTV::GetUrl(ChannelId channelId)
+
+void PuzzleTV::UpdateChannelStreams(ChannelId channelId)
 {
-    auto& channelList = m_channelList;
-    if(channelList.count( channelId ) != 1) {
-        LogError(" >>>>   PuzzleTV::GetUrl: unknown channel ID= %d <<<<<", channelId);
-        return string();
-    }
-    Channel ch = channelList.at(channelId);
+    if(!CheckChannelId(channelId))
+        return;
+ 
+    Channel ch = m_channelList.at(channelId);
     auto& urls = ch.Urls;
-    if(urls.size() <2)
+    //if(urls.size() <2)
     {
         urls.clear();
-            try {
-                std::string cmd = m_serverVersion == c_PuzzleServer2 ? "/get/streams/" : "/streams/json/";
-                cmd += n_to_string_hex(channelId);
-                
-                ApiFunctionData apiParams(cmd.c_str(), m_serverPort);
-                CallApiFunction(apiParams, [&] (Document& jsonRoot)
-               {
-                    if(!jsonRoot.IsArray())
-                        return;
-                   std::for_each(jsonRoot.Begin(), jsonRoot.End(), [&]  (const Value & i) mutable
-                                {
-                                    auto url = i.GetString();
-                                    urls.push_back(url);
-                                    LogDebug(" >>>>  URL: %s <<<<<",  url);
-
-                                });
-               });
-            } catch (ServerErrorException& ex) {
-                char* message  = XBMC->GetLocalizedString(32006);
-                XBMC->QueueNotification(QUEUE_ERROR, message, ex.reason.c_str());
-                XBMC->FreeString(message);
-           } catch (...) {
-               LogError(" >>>>  FAILED to get URL for channel ID=%d <<<<<", channelId);
-           }
+        try {
+            std::string cmd = m_serverVersion == c_PuzzleServer2 ? "/get/streams/" : "/streams/json/";
+            cmd += n_to_string_hex(channelId);
+            
+            ApiFunctionData apiParams(cmd.c_str(), m_serverPort);
+            CallApiFunction(apiParams, [&] (Document& jsonRoot)
+                            {
+                                if(!jsonRoot.IsArray())
+                                    return;
+                                std::for_each(jsonRoot.Begin(), jsonRoot.End(), [&]  (const Value & i) mutable
+                                              {
+                                                  auto url = i.GetString();
+                                                  urls.push_back(url);
+                                                  LogDebug(" >>>>  URL: %s <<<<<",  url);
+                                                  
+                                              });
+                            });
+        } catch (ServerErrorException& ex) {
+            char* message  = XBMC->GetLocalizedString(32006);
+            XBMC->QueueNotification(QUEUE_ERROR, message, ex.reason.c_str());
+            XBMC->FreeString(message);
+        } catch (...) {
+            LogError(" >>>>  FAILED to get URL for channel ID=%d <<<<<", channelId);
+        }
         AddChannel(ch);
-
     }
-    if(ch.Urls.size() == 0) {
+}
+string PuzzleTV::GetUrl(ChannelId channelId)
+{
+    if(!CheckChannelId(channelId))
+        return string();
+    
+    auto& urls = m_channelList.at(channelId).Urls;
+    if(urls.size() == 0)
+        UpdateChannelStreams(channelId);
+    
+    if(urls.size() == 0) {
         char* message  = XBMC->GetLocalizedString(32017);
         XBMC->QueueNotification(QUEUE_ERROR, message);
         XBMC->FreeString(message);
         return string();
     }
-    return  ch.Urls[0];
+    return  urls[0];
 }
 
 template <typename TParser>
