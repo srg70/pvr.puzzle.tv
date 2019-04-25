@@ -390,5 +390,7 @@ msgctxt "#32051"
 msgid "Reload Recordings"
 msgstr "Обновить архив"
 
-
+msgctxt "#32052"
+msgid "Update channel streams"
+msgstr "Обновить потоки канала"
 

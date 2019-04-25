@@ -94,6 +94,8 @@ namespace PuzzleEngine
             m_epgServerPort = serverPort;
             m_epgType = epgType;
         }
+        
+        void UpdateChannelStreams(PvrClient::ChannelId channelId);
     protected:
         void Init(bool clearEpgCache);
         virtual void UpdateHasArchive(PvrClient::EpgEntry& entry);
@@ -106,7 +108,8 @@ namespace PuzzleEngine
         bool AddXmlEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
         void LoadEpg();
         void UpdateArhivesAsync();
-
+        
+        bool CheckChannelId(PvrClient::ChannelId channelId);
         void Cleanup();
 
         template <typename TParser>
