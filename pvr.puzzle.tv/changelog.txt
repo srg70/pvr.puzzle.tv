@@ -1,3 +1,13 @@
+0.9.4
+- Puzzle Server 3 support
+
+0.9.3
+- first Kodi 18.* version
+
+0.8.16
+- few fixes for playlist playback engine (live and archive)
+- split for Kodi 18.* support
+
 0.8.11
 - Refactoring of archive engine.
 - Implemented rewinding for VOD archives (TTV TS Proxy, OTT)
