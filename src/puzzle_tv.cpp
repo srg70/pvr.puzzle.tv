@@ -397,7 +397,11 @@ void PuzzleTV::UpdateChannelStreams(ChannelId channelId)
         urls.clear();
         try {
             std::string cmd = m_serverVersion == c_PuzzleServer2 ? "/get/streams/" : "/streams/json/";
-            cmd += n_to_string_hex(channelId);
+            string strId = n_to_string_hex(channelId);
+            int leadingZeros = 8 - strId.size();
+            while(leadingZeros--)
+                strId = "0" + strId;
+            cmd += strId;
             
             ApiFunctionData apiParams(cmd.c_str(), m_serverPort);
             CallApiFunction(apiParams, [&] (Document& jsonRoot)
