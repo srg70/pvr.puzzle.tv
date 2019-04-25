@@ -42,36 +42,26 @@ public:
     ADDON_STATUS SetSetting(const char *settingName, const void *settingValue);
     PVR_ERROR GetAddonCapabilities(PVR_ADDON_CAPABILITIES* pCapabilities);
     PVR_ERROR SignalStatus(PVR_SIGNAL_STATUS &signalStatus);
-    bool OpenRecordedStream(const PVR_RECORDING &recording);
 
 protected:
     std::string GetStreamUrl(PvrClient::ChannelId channelId);
     std::string GetNextStreamUrl(PvrClient::ChannelId channelId);
     PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
     ADDON_STATUS OnReloadEpg();
-
+    
+    bool OpenRecordedStream(const PVR_RECORDING &recording);
+    
     ADDON_STATUS CreateCoreSafe(bool clearEpgCache);
     void DestroyCoreSafe();
 
 private:
     void CreateCore(bool clearEpgCache);
-    void SetPlaylistUrl(const std::string& url) {m_playlistUrl = url;};
 
     TtvEngine::Core* m_core;
-    std::string m_playlistUrl;
     std::string m_epgUrl;
     int m_currentChannelStreamIdx;
 
-    bool m_supportSeek;
     bool m_enableAdultContent;
-    enum TTVMode{
-        TTVMode_api = 0,
-        TTVMode_playlist = 1
-    };
-    TTVMode m_ttvMode;
-    std::string m_user;
-    std::string m_password;
-    bool m_useAce;
     std::string m_aceServerUri;
     int m_aceServerPort;
 };

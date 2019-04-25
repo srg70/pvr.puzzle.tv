@@ -56,7 +56,12 @@ namespace XMLTV {
 
     bool ParseChannels(const std::string& url,  const ChannelCallback& onChannelFound);
     bool ParseEpg(const std::string& url,  const EpgEntryCallback& onEpgEntryFound);
+   
     long LocalTimeOffset();
+    bool IsDataCompressed(const std::string& data);
+    bool GzipInflate( const std::string& compressedBytes, std::string& uncompressedBytes);
+    int GetCachedFileContents(const std::string &filePath, std::string &strContents);
+    std::string GetCachedFilePath(const std::string &filePath);
 }
 
 #endif /* XMLTV_loader_hpp */
