@@ -36,6 +36,9 @@ namespace Buffers {
     class TimeshiftBuffer;
     class ICacheBuffer;
 }
+namespace ActionQueue {
+    class CActionQueue;
+}
 
 namespace PvrClient
 {
@@ -44,6 +47,7 @@ namespace PvrClient
     {
     public:
         
+        static const unsigned int s_lastCommonMenuHookId;
         typedef enum {
             k_TimeshiftBufferMemory = 0,
             k_TimeshiftBufferFile = 1
@@ -163,6 +167,8 @@ namespace PvrClient
         
         int m_rpcPort;
         int m_channelIndexOffset;
+        
+        ActionQueue::CActionQueue* m_destroyer;
     };
 }
 #endif //pvr_client_base_h

@@ -55,7 +55,8 @@ static const char* c_epg_url_setting = "puzzle_server_epg_url";
 static const char* c_epg_port_setting = "puzzle_server_epg_port";
 static const char* c_server_version_setting = "puzzle_server_version";
 
-const int UPDATE_CHANNEL_STREAMS_MENU_HOOK = 3;
+const unsigned int UPDATE_CHANNEL_STREAMS_MENU_HOOK = PVRClientBase::s_lastCommonMenuHookId + 1;
+const unsigned int UPDATE_CHANNELS_MENU_HOOK = UPDATE_CHANNEL_STREAMS_MENU_HOOK + 1;
 
 
 ADDON_STATUS PuzzlePVRClient::Init(PVR_PROPERTIES* pvrprops)
@@ -91,6 +92,9 @@ ADDON_STATUS PuzzlePVRClient::Init(PVR_PROPERTIES* pvrprops)
     }
     
     PVR_MENUHOOK hook = {UPDATE_CHANNEL_STREAMS_MENU_HOOK, 32052, PVR_MENUHOOK_CHANNEL};
+    PVR->AddMenuHook(&hook);
+
+    hook = {UPDATE_CHANNELS_MENU_HOOK, 32053, PVR_MENUHOOK_CHANNEL};
     PVR->AddMenuHook(&hook);
 
     retVal = CreateCoreSafe(false);
@@ -206,11 +210,16 @@ PVR_ERROR PuzzlePVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabil
 
 PVR_ERROR  PuzzlePVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
 {
-    if(UPDATE_CHANNEL_STREAMS_MENU_HOOK != menuhook.iHookId)
+    if(menuhook.iHookId <= PVRClientBase::s_lastCommonMenuHookId)
         return PVRClientBase::MenuHook(menuhook, item);
     if(m_puzzleTV == nullptr)
         return PVR_ERROR_SERVER_ERROR;
-    m_puzzleTV->UpdateChannelStreams(item.data.channel.iUniqueId);
+    if(UPDATE_CHANNEL_STREAMS_MENU_HOOK == menuhook.iHookId) {
+        m_puzzleTV->UpdateChannelStreams(item.data.channel.iUniqueId);
+    } else if (UPDATE_CHANNELS_MENU_HOOK == menuhook.iHookId) {
+        CreateCoreSafe(false);
+        PVR->TriggerChannelUpdate();
+    }
     return PVR_ERROR_NO_ERROR;
 }
 
