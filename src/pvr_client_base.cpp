@@ -53,6 +53,7 @@
 #include "globals.hpp"
 #include "HttpEngine.hpp"
 #include "client_core_base.hpp"
+#include "ActionQueue.hpp"
 
 
 using namespace std;
@@ -61,6 +62,7 @@ using namespace Buffers;
 using namespace PvrClient;
 using namespace Globals;
 using namespace P8PLATFORM;
+using namespace ActionQueue;
 
 namespace CurlUtils
 {
@@ -72,8 +74,9 @@ static const char* s_DefaultRecordingsDir = "special://temp/pvr-puzzle-tv/record
 static std::string s_LocalRecPrefix = "Local";
 static std::string s_RemoteRecPrefix = "On Server";
 
-const int RELOAD_EPG_MENU_HOOK = 1;
-const int RELOAD_RECORDINGS_MENU_HOOK = 2;
+const unsigned int RELOAD_EPG_MENU_HOOK = 1;
+const unsigned int RELOAD_RECORDINGS_MENU_HOOK = 2;
+const unsigned int PVRClientBase::s_lastCommonMenuHookId = RELOAD_RECORDINGS_MENU_HOOK;
 
 ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
 {
@@ -177,6 +180,9 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     m_lastBytesRead = 1;
     m_lastRecordingsAmount = 0;
     
+    m_destroyer = new CActionQueue(100, "Streams Destroyer");
+    m_destroyer->CreateThread();
+    
     return ADDON_STATUS_OK;
     
 }
@@ -184,6 +190,8 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
 PVRClientBase::~PVRClientBase()
 {
     Cleanup();
+    if(m_destroyer)
+        SAFE_DELETE(m_destroyer);
 }
 void PVRClientBase::Cleanup()
 {
@@ -580,11 +588,24 @@ void PVRClientBase::CloseLiveStream()
     m_liveChannelId = UnknownChannelId;
     if(m_inputBuffer && !IsLiveInRecording()) {
         LogNotice("PVRClientBase: closing input sream...");
-        SAFE_DELETE(m_inputBuffer);
-        LogNotice("PVRClientBase: input sream closed.");
-    } else{
-        m_inputBuffer = nullptr;
+        auto oldBuffer = m_inputBuffer;
+        m_destroyer->PerformAsync([oldBuffer] (){
+            delete oldBuffer;
+        }, [] (const ActionResult& result) {
+            if(result.exception){
+                try {
+                    std::rethrow_exception(result.exception);
+                } catch (std::exception ex) {
+                    LogError("PVRClientBase: exception thrown during closing of input stream: %s.", ex.what());
+
+                }
+            } else {
+                LogNotice("PVRClientBase: input sream closed.");
+            }
+        });
     }
+    
+    m_inputBuffer = nullptr;
 }
 
 int PVRClientBase::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize)
@@ -594,10 +615,12 @@ int PVRClientBase::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSi
     int bytesRead = m_inputBuffer->Read(pBuffer, iBufferSize, m_channelReloadTimeout * 1000);
     // Assuming stream hanging.
     // Try to restart current channel only when previous read operation succeeded.
-    if (bytesRead != iBufferSize && m_lastBytesRead > 0 && !IsLiveInRecording()) {
+    if (bytesRead != iBufferSize && m_lastBytesRead >= 0 && !IsLiveInRecording()) {
         LogError("PVRClientBase:: trying to restart current channel.");
-
-        string url = GetStreamUrl(GetLiveChannelId());
+        ChannelId chId = GetLiveChannelId();
+        string url = GetNextStreamUrl(chId);
+        if(url.empty())
+            url = GetStreamUrl(chId);
         if(!url.empty()){
             char* message = XBMC->GetLocalizedString(32000);
             XBMC->QueueNotification(QUEUE_INFO, message);

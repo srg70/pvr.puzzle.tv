@@ -394,3 +394,7 @@ msgctxt "#32052"
 msgid "Update channel streams"
 msgstr "Обновить потоки канала"
 
+msgctxt "#32053"
+msgid "Update channels list"
+msgstr "Обновить список каналов"
+

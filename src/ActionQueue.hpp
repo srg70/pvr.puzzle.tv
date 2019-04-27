@@ -73,7 +73,7 @@ namespace ActionQueue
             void Failed(std::exception_ptr e) {_completion(ActionResult(kActionFailed, e));}
         };
     public:
-        CActionQueue(size_t maxSize, const char* name = nullptr)
+        CActionQueue(size_t maxSize, const char* name = "")
         : _actions(maxSize)
         , _willStop(false)
         , _priorityAction(nullptr)
