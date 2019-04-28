@@ -7,7 +7,7 @@
 #
 # ZLIB_FOUND - system has ZLib
 # ZLIB_INCLUDE_DIRS - the Zlib include directory
-# ZLIB_LIBRARIES - the Curl libraries
+# ZLIB_LIBRARIES - the ZLib libraries
 # ZLIB_DEFINITIONS - the ZLib definitions
 #
 # and the following imported targets::
@@ -26,9 +26,9 @@ endif()
 #    find_library(CURL_LIBRARIES NAMES curl libcurl
 #                                PATHS ${PC_CURL_LIBDIR})
 if(CORE_SYSTEM_NAME STREQUAL windows)
-    find_path(CURL_INCLUDE_DIRS NAMES zlib.h
+    find_path(ZLIB_INCLUDE_DIRS NAMES zlib.h
                                PATHS ${PC_ZLIB_INCLUDEDIR})
-    find_library(CURL_LIBRARIES NAMES z zlib
+    find_library(ZLIB_LIBRARIES NAMES z zlib
                                 PATHS ${PC_ZLIB_LIBDIR})
 else()
     find_path(ZLIB_INCLUDE_DIRS NAMES zlib.h
