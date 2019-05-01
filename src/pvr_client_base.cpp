@@ -615,7 +615,7 @@ int PVRClientBase::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSi
     int bytesRead = m_inputBuffer->Read(pBuffer, iBufferSize, m_channelReloadTimeout * 1000);
     // Assuming stream hanging.
     // Try to restart current channel only when previous read operation succeeded.
-    if (bytesRead != iBufferSize && m_lastBytesRead >= 0 && !IsLiveInRecording()) {
+    if (bytesRead != iBufferSize &&  /*m_lastBytesRead >= 0 &&*/ !IsLiveInRecording()) {
         LogError("PVRClientBase:: trying to restart current channel.");
         ChannelId chId = GetLiveChannelId();
         string url = GetNextStreamUrl(chId);
@@ -625,8 +625,10 @@ int PVRClientBase::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSi
             char* message = XBMC->GetLocalizedString(32000);
             XBMC->QueueNotification(QUEUE_INFO, message);
             XBMC->FreeString(message);
-            SwitchChannel(GetLiveChannelId(), url);
-            bytesRead = m_inputBuffer->Read(pBuffer, iBufferSize, m_channelReloadTimeout * 1000);
+            if(SwitchChannel(GetLiveChannelId(), url))
+                bytesRead = m_inputBuffer->Read(pBuffer, iBufferSize, m_channelReloadTimeout * 1000);
+            else
+                bytesRead = -1;
         }
    }
     m_lastBytesRead = bytesRead;
@@ -660,12 +662,16 @@ bool PVRClientBase::SwitchChannel(ChannelId channelId, const std::string& url)
 {
     if(url.empty())
         return false;
+
     CLockObject lock(m_mutex);
-    if(IsLiveInRecording() || channelId == m_localRecordChannelId)
-        return OpenLiveStream(channelId, url); // Split/join live and recording streams (when nesessry)
-    
-    m_liveChannelId = channelId;
-    return m_inputBuffer->SwitchStream(url); // Just change live stream
+    CloseLiveStream();
+    return OpenLiveStream(channelId, url); // Split/join live and recording streams (when nesessry)
+//    CLockObject lock(m_mutex);
+//    if(IsLiveInRecording() || channelId == m_localRecordChannelId)
+//        return OpenLiveStream(channelId, url); // Split/join live and recording streams (when nesessry)
+//
+//    m_liveChannelId = channelId;
+//    return m_inputBuffer->SwitchStream(url); // Just change live stream
 }
 
 void PVRClientBase::SetTimeshiftEnabled(bool enable)
