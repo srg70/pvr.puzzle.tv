@@ -256,7 +256,7 @@ namespace Buffers {
 
         }
 
-        return isEof ? -1 : totalBytesRead;
+        return !isEof && IsRunning() ?  totalBytesRead : -1;
     }
     
     bool PlaylistBuffer::SwitchStream(const std::string &newUrl)
