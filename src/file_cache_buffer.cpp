@@ -413,7 +413,8 @@ namespace Buffers
             CLockObject lock(m_SyncAccess);
             while(m_length - m_begin >=  m_maxSize)
             {
-                m_begin  +=CHUNK_FILE_SIZE_LIMIT;
+                m_startTime += CHUNK_FILE_SIZE_LIMIT * (m_endTime - m_startTime)/(m_length - m_begin);
+                m_begin  +=  CHUNK_FILE_SIZE_LIMIT;
                 m_ReadChunks.pop_front();
                 m_ChunkFileSwarm.pop_front();
             }
@@ -424,6 +425,9 @@ namespace Buffers
     
     // Write interface
     bool FileCacheBuffer::LockUnitForWrite(uint8_t** pBuf) {
+        if(!m_ReadChunks.size()) {
+            m_startTime = time(NULL);
+        }
         *pBuf = m_chunkForLock.get();
         return true;
     }
@@ -449,6 +453,7 @@ namespace Buffers
                 if(NULL == chunk)  {
                     CLockObject lock(m_SyncAccess);
                     
+                    m_endTime = time(NULL);
                     if(m_ReadChunks.size()) {
                         chunk = m_ReadChunks.back();
                         if(chunk->m_writer.Length() >= CHUNK_FILE_SIZE_LIMIT) {
