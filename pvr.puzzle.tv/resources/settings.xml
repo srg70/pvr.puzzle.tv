@@ -26,7 +26,7 @@
       <setting id="puzzle_server_retries" type="number" label="20002" default="4"/>
       <setting id="puzzle_server_epg_provider_type" type="enum" label="20005" lvalues="20006|20007" default="0" />
       <setting id="puzzle_server_epg_url" type="text" label="20003" default="https://iptvx.one/epg/epg.xml.gz" visible="eq(-1,0)"/>
-      <setting id="puzzle_server_epg_port" type="number" label="20004" default="8085" visible="eq(-2,1)"/>
+      <setting id="puzzle_server_epg_port" type="number" label="20004" default="8085" visible="eq(-2,1) + eq(-6,0)"/>
 </category>
 
 <!-- Sovok TV -->

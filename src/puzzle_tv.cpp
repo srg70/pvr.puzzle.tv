@@ -297,69 +297,77 @@ void PuzzleTV::LoadEpg()
         
         XMLTV::ParseEpg(m_epgUrl, onEpgEntry);
     } else if(m_epgType == c_EpgType_Server) {
-        
-        auto pThis = this;
-        // Assuming Moscow time EPG +3:00
-        long offset = -(3 * 60 * 60) - XMLTV::LocalTimeOffset();
-        
-        ApiFunctionData apiParams("/channel/json/id=all", m_epgServerPort);
-        try {
-            CallApiFunction(apiParams, [pThis, offset] (Document& jsonRoot) {
-                if(!jsonRoot.IsObject()) {
-                    LogError("PuzzleTV: wrong JSON format of EPG ");
-                    return;
-                }
-                
-                std::for_each(jsonRoot.MemberBegin(), jsonRoot.MemberEnd(), [pThis, offset]  ( Value::ConstMemberIterator::Reference & i) {
-                    // Find channel object
-                    if(i.value.IsObject() && i.value.HasMember("title") && !i.value.HasMember("plot")) {
-                        auto channelIdStr = i.name.GetString();
-                        char* dummy;
-                        ChannelId channelId  = strtoul(channelIdStr, &dummy, 16);
-                        LogDebug("Found channel %s (0x%X)", i.name.GetString(), channelId);
-                        
-                        // Parse EPG items of channel object
-                        auto& epgObj = i.value;
-                        list<EpgEntry> serverEpg;
-                        std::for_each(epgObj.MemberBegin(), epgObj.MemberEnd(), [pThis, offset, channelId, &serverEpg]  ( Value::ConstMemberIterator::Reference & epgItem) {
-                            // Find EPG item
-                            if(epgItem.value.IsObject() && epgItem.value.HasMember("plot")  && epgItem.value.HasMember("img")  && epgItem.value.HasMember("title")) {
-                                EpgEntry epgEntry;
-                                epgEntry.ChannelId = channelId;
-                                string s = epgItem.name.GetString();
-                                s = s.substr(0, s.find('.'));
-                                unsigned long l = stoul(s.c_str());
-                                epgEntry.StartTime = (time_t)l + offset;
-                                epgEntry.Title = epgItem.value["title"].GetString();
-                                epgEntry.Description = epgItem.value["plot"].GetString();
-                                // Causes Kodi crash on reload epg
-//                                epgEntry.IconPath = epgItem.value["img"].GetString();
-                                serverEpg.push_back(epgEntry);
-                            }
-                        });
-                        serverEpg.sort(time_compare);
-                        auto runner = serverEpg.begin();
-                        auto end = serverEpg.end();
-                        if(runner != end){
-                            auto pItem = runner++;
-                            while(runner != end) {
-                                pItem->EndTime = runner->StartTime;
-                                pThis->AddEpgEntry(pItem->StartTime, *pItem);
-                                runner++; pItem++;
-                            }
-                            LogDebug(" Puzzle Server: channel ID=%X has %d EPGs. From %s to %s",
-                                     channelId,
-                                     serverEpg.size(),
-                                     time_t_to_string(serverEpg.front().StartTime).c_str(),
-                                     time_t_to_string(serverEpg.back().StartTime).c_str());
-                        }
+        if(m_serverVersion == c_PuzzleServer3){
+            string url = "http://";
+            url += m_serverUri;
+            url += n_to_string(m_serverPort);
+            url += "epg/xmltv";
+            XMLTV::EpgEntryCallback onEpgEntry = [pThis] (const XMLTV::EpgEntry& newEntry) {pThis->AddXmlEpgEntry(newEntry);};
+            XMLTV::ParseEpg(url, onEpgEntry);
+        } else { // Puzzle 2 server
+            auto pThis = this;
+            // Assuming Moscow time EPG +3:00
+            long offset = -(3 * 60 * 60) - XMLTV::LocalTimeOffset();
+            
+            ApiFunctionData apiParams("/channel/json/id=all", m_epgServerPort);
+            try {
+                CallApiFunction(apiParams, [pThis, offset] (Document& jsonRoot) {
+                    if(!jsonRoot.IsObject()) {
+                        LogError("PuzzleTV: wrong JSON format of EPG ");
+                        return;
                     }
+                    
+                    std::for_each(jsonRoot.MemberBegin(), jsonRoot.MemberEnd(), [pThis, offset]  ( Value::ConstMemberIterator::Reference & i) {
+                        // Find channel object
+                        if(i.value.IsObject() && i.value.HasMember("title") && !i.value.HasMember("plot")) {
+                            auto channelIdStr = i.name.GetString();
+                            char* dummy;
+                            ChannelId channelId  = strtoul(channelIdStr, &dummy, 16);
+                            LogDebug("Found channel %s (0x%X)", i.name.GetString(), channelId);
+                            
+                            // Parse EPG items of channel object
+                            auto& epgObj = i.value;
+                            list<EpgEntry> serverEpg;
+                            std::for_each(epgObj.MemberBegin(), epgObj.MemberEnd(), [pThis, offset, channelId, &serverEpg]  ( Value::ConstMemberIterator::Reference & epgItem) {
+                                // Find EPG item
+                                if(epgItem.value.IsObject() && epgItem.value.HasMember("plot")  && epgItem.value.HasMember("img")  && epgItem.value.HasMember("title")) {
+                                    EpgEntry epgEntry;
+                                    epgEntry.ChannelId = channelId;
+                                    string s = epgItem.name.GetString();
+                                    s = s.substr(0, s.find('.'));
+                                    unsigned long l = stoul(s.c_str());
+                                    epgEntry.StartTime = (time_t)l + offset;
+                                    epgEntry.Title = epgItem.value["title"].GetString();
+                                    epgEntry.Description = epgItem.value["plot"].GetString();
+                                    // Causes Kodi crash on reload epg
+                                    //                                epgEntry.IconPath = epgItem.value["img"].GetString();
+                                    serverEpg.push_back(epgEntry);
+                                }
+                            });
+                            serverEpg.sort(time_compare);
+                            auto runner = serverEpg.begin();
+                            auto end = serverEpg.end();
+                            if(runner != end){
+                                auto pItem = runner++;
+                                while(runner != end) {
+                                    pItem->EndTime = runner->StartTime;
+                                    pThis->AddEpgEntry(pItem->StartTime, *pItem);
+                                    runner++; pItem++;
+                                }
+                                LogDebug(" Puzzle Server: channel ID=%X has %d EPGs. From %s to %s",
+                                         channelId,
+                                         serverEpg.size(),
+                                         time_t_to_string(serverEpg.front().StartTime).c_str(),
+                                         time_t_to_string(serverEpg.back().StartTime).c_str());
+                            }
+                        }
+                    });
                 });
-            });
-        } catch (...) {
-            LogError("PuzzleTV: exception on lodaing JSON EPG");
+            } catch (...) {
+                LogError("PuzzleTV: exception on lodaing JSON EPG");
+            }
         }
-    }else {
+    } else {
         LogError("PuzzleTV: unknown EPG source type %d", m_epgType);
     }
 }
