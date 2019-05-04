@@ -415,7 +415,29 @@ extern "C" {
 
     PVR_ERROR GetTimerTypes(PVR_TIMER_TYPE types[], int *size) { return PVR_ERROR_NOT_IMPLEMENTED; }
 
-    /** UNUSED API FUNCTIONS */
+    /********************************************************************************/
+    /**************************** TIMESHIFT API FUNCTIONS ***************************/
+    /********************************************************************************/
+    
+    PVR_ERROR GetStreamTimes(PVR_STREAM_TIMES *times)
+    {
+        return m_DataSource->GetStreamTimes(times);
+    }
+    
+    bool IsTimeshifting(void)
+    {
+        return m_DataSource->CanSeekStream();
+    }
+    
+    bool IsRealTimeStream(void)
+    {
+        return m_DataSource->IsRealTimeStream();        
+    }
+
+    /********************************************************************************/
+    /**************************** UNUSED API FUNCTIONS ******************************/
+    /********************************************************************************/
+
     const char * GetLiveStreamURL(const PVR_CHANNEL &channel)  { return ""; }
     PVR_ERROR OpenDialogChannelScan(void) { return PVR_ERROR_NOT_IMPLEMENTED; }
     
@@ -433,9 +455,6 @@ extern "C" {
     PVR_ERROR GetRecordingEdl(const PVR_RECORDING&, PVR_EDL_ENTRY[], int*) { return PVR_ERROR_NOT_IMPLEMENTED; };
     void DemuxAbort(void) {}
     DemuxPacket* DemuxRead(void) { return NULL; }
-    unsigned int GetChannelSwitchDelay(void) { return 0; }
-    bool IsTimeshifting(void) { return false; }
-    bool IsRealTimeStream(void) { return true; }
     void PauseStream(bool bPaused) {}
     bool SeekTime(double,bool,double*) { return false; }
     void SetSpeed(int) {};

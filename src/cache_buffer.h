@@ -57,6 +57,9 @@ namespace Buffers
         // Write interface
         virtual bool LockUnitForWrite(uint8_t** pBuf) = 0;
         virtual void UnlockAfterWriten(uint8_t* pBuf, ssize_t writtenBytes = -1) = 0;
+        
+        virtual time_t StartTime() const = 0;
+        virtual time_t EndTime() const = 0;
 
         virtual ~ICacheBuffer() {};
         

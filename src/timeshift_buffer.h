@@ -59,6 +59,9 @@ namespace Buffers {
          */
         virtual bool StopThread(int iWaitMs = 5000);
         
+        inline time_t StartTime() { return m_cache->StartTime(); }
+        inline time_t EndTime() { return m_cache->EndTime(); }
+
     private:
         void *Process();
         
