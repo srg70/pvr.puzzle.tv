@@ -63,6 +63,9 @@ namespace Buffers
         virtual bool LockUnitForWrite(uint8_t** pBuf);
         virtual void UnlockAfterWriten(uint8_t* pBuf, ssize_t writtenBytes = -1);
 
+        virtual time_t StartTime() const {return m_startTime;}
+        virtual time_t EndTime() const {return m_endTime;}
+
         ~MemoryCacheBuffer();
         
     private:
@@ -83,6 +86,8 @@ namespace Buffers
         int64_t m_begin;// virtual start of cache
         const int64_t m_maxSize;
         ChunkPtr m_lockedChunk;
+        time_t m_startTime;
+        time_t m_endTime;
     };
 }
 #endif // __memory_cache_buffer_hpp__

@@ -95,7 +95,9 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
 {
     m_clientCore = NULL;
     m_inputBuffer = NULL;
-    m_recordBuffer = m_localRecordBuffer = NULL;
+    m_recordBuffer.buffer = NULL;
+    m_recordBuffer.duration = 0;
+    m_localRecordBuffer = NULL;
     
     LogDebug( "User path: %s", pvrprops->strUserPath);
     LogDebug( "Client path: %s", pvrprops->strClientPath);
@@ -313,6 +315,57 @@ bool PVRClientBase::CanPauseStream()
 bool PVRClientBase::CanSeekStream()
 {
     return IsTimeshiftEnabled();
+}
+
+bool PVRClientBase::IsRealTimeStream(void)
+{
+    // Archive is not RTS
+    if(m_recordBuffer.buffer)
+        return false;
+    // No timeshift means RTS
+    if(!IsTimeshiftEnabled())
+        return true;
+    // Return true when timeshift buffer position close to end of buffer for < 10 sec
+    // https://github.com/kodi-pvr/pvr.hts/issues/173
+    CLockObject lock(m_mutex);
+    double reliativePos = (double)(m_inputBuffer->GetLength() - m_inputBuffer->GetPosition()) / m_inputBuffer->GetLength();
+    time_t timeToEnd = reliativePos * (m_inputBuffer->EndTime() - m_inputBuffer->StartTime());
+    const bool isRTS = timeToEnd < 10;
+    LogDebug("PVRClientBase: is RTS? %s. Reliative pos: %f. Time to end: %d", ((isRTS) ? "YES" : "NO"), reliativePos, timeToEnd );
+    return isRTS;
+}
+
+PVR_ERROR PVRClientBase::GetStreamTimes(PVR_STREAM_TIMES *times)
+{
+
+    if (!times)
+        return PVR_ERROR_INVALID_PARAMETERS;
+//    if(!IsTimeshiftEnabled())
+//        return PVR_ERROR_NOT_IMPLEMENTED;
+    
+    int64_t timeStart = 0;
+    int64_t  timeEnd = 0;
+    if (m_inputBuffer)
+    {
+
+        CLockObject lock(m_mutex);
+        timeStart = m_inputBuffer->StartTime();
+        timeEnd   = m_inputBuffer->EndTime();
+    }
+    else if (m_recordBuffer.buffer){
+        {
+            timeStart = 0;
+            timeEnd   = m_recordBuffer.duration;
+        }
+    }
+    else
+        return PVR_ERROR_NOT_IMPLEMENTED;
+    
+    times->startTime = timeStart;
+    times->ptsStart  = 0;
+    times->ptsBegin  = 0;
+    times->ptsEnd    = (timeEnd - timeStart) * DVD_TIME_BASE;
+    return PVR_ERROR_NO_ERROR;
 }
 
 ADDON_STATUS PVRClientBase::GetStatus()
@@ -920,9 +973,10 @@ bool PVRClientBase::OpenRecordedStream(const PVR_RECORDING &recording)
     try {
         InputBuffer* buffer = new DirectBuffer(new FileCacheBuffer(DirectoryForRecording(stoul(recording.strRecordingId))));
         
-        if(m_recordBuffer)
-            SAFE_DELETE(m_recordBuffer);
-        m_recordBuffer = buffer;
+        if(m_recordBuffer.buffer)
+            SAFE_DELETE(m_recordBuffer.buffer);
+        m_recordBuffer.buffer = buffer;
+        m_recordBuffer.duration = recording.iDuration;
     } catch (std::exception ex) {
         LogError("OpenRecordedStream (local) exception: %s", ex.what());
     }
@@ -948,7 +1002,8 @@ bool PVRClientBase::OpenRecordedStream(const std::string& url,  Buffers::IPlayli
         else
             buffer = new ArchiveBuffer(url);
 
-        m_recordBuffer = buffer;
+        m_recordBuffer.buffer = buffer;
+        m_recordBuffer.duration = (delegate) ? delegate->Duration() : 0;
     }
     catch (InputBufferException & ex)
     {
@@ -961,9 +1016,9 @@ bool PVRClientBase::OpenRecordedStream(const std::string& url,  Buffers::IPlayli
 }
 void PVRClientBase::CloseRecordedStream(void)
 {
-    if(m_recordBuffer) {
+    if(m_recordBuffer.buffer) {
         LogNotice("PVRClientBase: closing recorded sream...");
-        SAFE_DELETE(m_recordBuffer);
+        SAFE_DELETE(m_recordBuffer.buffer);
         LogNotice("PVRClientBase: input recorded closed.");
     }
     
@@ -978,21 +1033,21 @@ PVR_ERROR PVRClientBase::GetStreamReadChunkSize(int* chunksize) {
 int PVRClientBase::ReadRecordedStream(unsigned char *pBuffer, unsigned int iBufferSize)
 {
     uint32_t timeoutMs = 5000;
-    return (m_recordBuffer == NULL) ? -1 : m_recordBuffer->Read(pBuffer, iBufferSize, timeoutMs);
+    return (m_recordBuffer.buffer == NULL) ? -1 : m_recordBuffer.buffer->Read(pBuffer, iBufferSize, timeoutMs);
 }
 
 long long PVRClientBase::SeekRecordedStream(long long iPosition, int iWhence)
 {
-    return (m_recordBuffer == NULL) ? -1 : m_recordBuffer->Seek(iPosition, iWhence);
+    return (m_recordBuffer.buffer == NULL) ? -1 : m_recordBuffer.buffer->Seek(iPosition, iWhence);
 }
 
 long long PVRClientBase::PositionRecordedStream(void)
 {
-    return (m_recordBuffer == NULL) ? -1 : m_recordBuffer->GetPosition();
+    return (m_recordBuffer.buffer == NULL) ? -1 : m_recordBuffer.buffer->GetPosition();
 }
 long long PVRClientBase::LengthRecordedStream(void)
 {
-    return (m_recordBuffer == NULL) ? -1 : m_recordBuffer->GetLength();
+    return (m_recordBuffer.buffer == NULL) ? -1 : m_recordBuffer.buffer->GetLength();
 }
 
 PVR_ERROR PVRClientBase::IsEPGTagRecordable(const EPG_TAG*, bool* bIsRecordable)

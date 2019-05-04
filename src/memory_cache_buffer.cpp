@@ -106,6 +106,8 @@ namespace Buffers
     
     MemoryCacheBuffer::MemoryCacheBuffer(uint32_t  sizeFactor)
     : m_maxSize(std::max(uint32_t(3), sizeFactor) * CHUNK_SIZE_LIMIT)
+    , m_startTime(0)
+    , m_endTime(0)
     {
         //Init();
     }
@@ -227,7 +229,10 @@ namespace Buffers
             // NOTE: write will not wait, just will drop current unit.
             while(m_length - m_begin >=  m_maxSize - 1024*1024 && GetChunkIndexFor(m_position) > 0)
             {
-                m_begin  +=m_ReadChunks.front()->Capacity();
+                int64_t bytesToRemove = m_ReadChunks.front()->Capacity();
+                // Forvard start time for (bitrate * removed bytes) seconds.
+                m_startTime += bytesToRemove * (m_endTime - m_startTime)/(m_length - m_begin);
+                m_begin  += bytesToRemove;
                 m_ReadChunks.pop_front();
                 m_ChunkSwarm.pop_front();
             }
@@ -263,6 +268,7 @@ namespace Buffers
         else {
             chunk = CreateChunk();
             m_ReadChunks.push_back(chunk);
+            m_startTime = time(NULL);
         }
         m_lockedChunk = chunk;
         *pBuf = chunk->LockForWrite();
@@ -279,6 +285,7 @@ namespace Buffers
             size_t byteToUnlock = writtenBytes < 0  ? UnitSize() : writtenBytes;
             m_lockedChunk->UnlockAfterWriten(byteToUnlock);
             m_length += byteToUnlock;
+            m_endTime = time(NULL);
         }
         m_lockedChunk = nullptr;
     }

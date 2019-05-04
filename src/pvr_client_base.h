@@ -59,9 +59,12 @@ namespace PvrClient
         ADDON_STATUS SetSetting(const char *settingName, const void *settingValue);
         
         PVR_ERROR GetAddonCapabilities(PVR_ADDON_CAPABILITIES* pCapabilities);
+        
         bool CanPauseStream();
         bool CanSeekStream();
-        
+        bool IsRealTimeStream(void);
+        PVR_ERROR GetStreamTimes(PVR_STREAM_TIMES *times);
+
         int GetChannelsAmount();
         PVR_ERROR GetChannels(ADDON_HANDLE handle, bool bRadio);
 
@@ -149,7 +152,10 @@ namespace PvrClient
 
         ChannelId m_liveChannelId;
         Buffers::TimeshiftBuffer *m_inputBuffer;
-        Buffers::InputBuffer *m_recordBuffer;
+        struct {
+            Buffers::InputBuffer * buffer;
+            time_t duration;
+        } m_recordBuffer;
         ChannelId m_localRecordChannelId;
         Buffers::TimeshiftBuffer *m_localRecordBuffer;
         bool m_isTimeshiftEnabled;

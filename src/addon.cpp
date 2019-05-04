@@ -382,6 +382,25 @@ extern "C" {
     PVR_ERROR GetTimerTypes(PVR_TIMER_TYPE types[], int *size) { return PVR_ERROR_NOT_IMPLEMENTED; }
 
     /********************************************************************************/
+    /**************************** TIMESHIFT API FUNCTIONS ***************************/
+    /********************************************************************************/
+    
+    PVR_ERROR GetStreamTimes(PVR_STREAM_TIMES *times)
+    {
+        return m_DataSource->GetStreamTimes(times);
+    }
+    
+    bool IsTimeshifting(void)
+    {
+        return m_DataSource->CanSeekStream();
+    }
+    
+    bool IsRealTimeStream(void)
+    {
+        return m_DataSource->IsRealTimeStream();        
+    }
+
+    /********************************************************************************/
     /**************************** UNUSED API FUNCTIONS ******************************/
     /********************************************************************************/
 
@@ -404,8 +423,6 @@ extern "C" {
     PVR_ERROR GetRecordingEdl(const PVR_RECORDING&, PVR_EDL_ENTRY[], int*) { return PVR_ERROR_NOT_IMPLEMENTED; };
     void DemuxAbort(void) {}
     DemuxPacket* DemuxRead(void) { return NULL; }
-    bool IsTimeshifting(void) { return false; }
-    bool IsRealTimeStream(void) { return true; }
     void PauseStream(bool bPaused) {}
     bool SeekTime(double,bool,double*) { return false; }
     void SetSpeed(int) {};
@@ -417,7 +434,7 @@ extern "C" {
     PVR_ERROR SetEPGTimeFrame(int) { return PVR_ERROR_NOT_IMPLEMENTED; }
     PVR_ERROR GetDescrambleInfo(PVR_DESCRAMBLE_INFO*) { return PVR_ERROR_NOT_IMPLEMENTED; }
     PVR_ERROR SetRecordingLifetime(const PVR_RECORDING*) { return PVR_ERROR_NOT_IMPLEMENTED; }
-    PVR_ERROR GetStreamTimes(PVR_STREAM_TIMES *times) { return PVR_ERROR_NOT_IMPLEMENTED; }
+//    PVR_ERROR GetStreamTimes(PVR_STREAM_TIMES *times) { return PVR_ERROR_NOT_IMPLEMENTED; }
     PVR_ERROR GetEPGTagEdl(const EPG_TAG* epgTag, PVR_EDL_ENTRY edl[], int *size) { return PVR_ERROR_NOT_IMPLEMENTED; }
     PVR_ERROR GetEPGTagStreamProperties(const EPG_TAG* tag, PVR_NAMED_VALUE* properties, unsigned int* iPropertiesCount) { return PVR_ERROR_NOT_IMPLEMENTED; }
     PVR_ERROR GetRecordingStreamProperties(const PVR_RECORDING* recording, PVR_NAMED_VALUE* properties, unsigned int* iPropertiesCount){ return PVR_ERROR_NOT_IMPLEMENTED; }

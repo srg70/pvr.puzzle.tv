@@ -166,6 +166,9 @@ namespace Buffers
 //            Globals::LogDebug("SimpleCyclicBuffer::UnlockAfterWriten(): written %d bytes", writtenBytes >= 0 ? writtenBytes : Unit::size);
 
         }
+        
+        virtual time_t StartTime() const {return 0;}
+        virtual time_t EndTime() const {return 0;}
 
         ~SimpleCyclicBuffer(){}
     };

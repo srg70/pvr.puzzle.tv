@@ -65,6 +65,9 @@ namespace Buffers
         virtual bool LockUnitForWrite(uint8_t** pBuf);
         virtual void UnlockAfterWriten(uint8_t* pBuf, ssize_t writtenBytes = -1);
 
+        virtual time_t StartTime() const {return m_startTime;}
+        virtual time_t EndTime() const {return m_endTime;}
+
         ~FileCacheBuffer();
         
     private:
@@ -88,6 +91,8 @@ namespace Buffers
         const bool m_autoDelete;
         const bool m_isReadOnly;
         std::unique_ptr<uint8_t> m_chunkForLock;
+        time_t m_startTime;
+        time_t m_endTime;
     };
 }
 #endif // __file_cache_buffer_hpp__

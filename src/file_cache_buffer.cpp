@@ -252,6 +252,8 @@ namespace Buffers
     , m_maxSize(std::max(uint8_t(3), sizeFactor) * CHUNK_FILE_SIZE_LIMIT)
     , m_autoDelete(autoDelete)
     , m_isReadOnly(false)
+    , m_startTime(0)
+    , m_endTime(0)
     , m_chunkForLock(new uint8_t[STREAM_READ_BUFFER_SIZE])
     {
         if(!XBMC->DirectoryExists(m_bufferDir.c_str())) {
