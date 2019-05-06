@@ -216,6 +216,8 @@ PVR_ERROR  PuzzlePVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MEN
     if(m_puzzleTV == nullptr)
         return PVR_ERROR_SERVER_ERROR;
     if(UPDATE_CHANNEL_STREAMS_MENU_HOOK == menuhook.iHookId) {
+//        const char* items[] = {"Item 1", "Item 2"};
+//        int selected = GUI->Dialog_Select("TEST", &items[0], sizeof(items)/sizeof(items[0]));
         m_puzzleTV->UpdateChannelStreams(item.data.channel.iUniqueId);
     } else if (UPDATE_CHANNELS_MENU_HOOK == menuhook.iHookId) {
         CreateCoreSafe(false);

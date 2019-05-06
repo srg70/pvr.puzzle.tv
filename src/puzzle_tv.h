@@ -90,9 +90,16 @@ namespace PuzzleEngine
 
         void SetMaxServerRetries(int maxServerRetries) {m_maxServerRetries = maxServerRetries;}
         void SetEpgParams(EpgType epgType, const std::string& epgUrl, uint16_t serverPort) {
-            m_epgUrl = epgUrl;
+            
+            if(m_serverVersion == c_PuzzleServer3 && epgType == c_EpgType_Server) {
+                // Override settings for Puzzle 3 server (like a file)
+                m_epgUrl = EpgUrlForPuzzle3();
+                m_epgType = c_EpgType_File;
+            } else {
+                m_epgUrl = epgUrl;
+                m_epgType = epgType;
+             }
             m_epgServerPort = serverPort;
-            m_epgType = epgType;
         }
         
         void UpdateChannelStreams(PvrClient::ChannelId channelId);
@@ -116,7 +123,12 @@ namespace PuzzleEngine
         void CallApiFunction(const ApiFunctionData& data, TParser parser);
         template <typename TParser, typename TCompletion>
         void CallApiAsync(const ApiFunctionData& data, TParser parser, TCompletion completion);
+        template <typename TParser, typename TCompletion>
+        void CallApiAsync(const std::string& strRequest, const std::string& name, TParser parser, TCompletion completion);
 
+        bool CheckAceEngineRunning(const char* aceServerUrlBase);
+        std::string EpgUrlForPuzzle3() const;
+        
         const uint16_t m_serverPort;
         const std::string m_serverUri;
         uint16_t m_epgServerPort;
@@ -127,6 +139,8 @@ namespace PuzzleEngine
         long m_serverTimeShift;
         std::map<PvrClient::ChannelId, PvrClient::ChannelId> m_epgToServerLut;
         const ServerVersion m_serverVersion;
+        
+        bool m_isAceRunning;
     };
 }
 #endif //__puzzle_tv_h__
