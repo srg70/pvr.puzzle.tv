@@ -29,8 +29,11 @@ namespace Globals
 {
     static CHelper_libXBMC_pvr* __pvr = nullptr;
     static ADDON::CHelper_libXBMC_addon* __xbmc = nullptr;
+    static CHelper_libKODI_guilib* __gui = nullptr;
+    
     CHelper_libXBMC_pvr* const& PVR(__pvr);
     ADDON::CHelper_libXBMC_addon* const& XBMC(__xbmc);
+    CHelper_libKODI_guilib* const& GUI(__gui);
 
     static ADDON::addon_log_t  __debugLogLevel = ADDON::LOG_DEBUG;
     void Cleanup();
@@ -52,7 +55,16 @@ namespace Globals
             SAFE_DELETE(__xbmc);
             return false;
         }
-
+        
+        __gui = new CHelper_libKODI_guilib();
+        if (!__gui->RegisterMe(hdl))
+        {
+            SAFE_DELETE(__pvr);
+            SAFE_DELETE(__xbmc);
+            SAFE_DELETE(__gui);
+            return false;
+        }
+        
         return true;
     }
     
@@ -62,7 +74,9 @@ namespace Globals
             SAFE_DELETE(__pvr);
         if(__xbmc)
             SAFE_DELETE(__xbmc);
-        
+        if(__gui)
+            SAFE_DELETE(__gui);
+
     }
     
 # define PrintToLog(loglevel) \
