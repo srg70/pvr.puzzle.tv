@@ -27,6 +27,7 @@
  */
 
 #include "p8-platform/util/StringUtils.h"
+#include "p8-platform/util/timeutils.h"
 #include "p8-platform/os.h"
 #include "XMLTV_loader.hpp"
 #include "zlib.h"
@@ -128,7 +129,12 @@ namespace XMLTV {
             //bNeedReload = statCached.st_mtime < statOrig.st_mtime || statOrig.st_mtime == 0;
             // Modification time is not provided by some servers.
             // It should be safe to compare file sizes.
-            bNeedReload = statOrig.st_size == 0 ||  statOrig.st_size != statCached.st_size;
+            // Path: Puzzle server does not provide file attributes. If we have cached file less than 5 min old - use it
+            struct timeval cur_time = {0};
+            if(0 != gettimeofday(&cur_time,nullptr)){
+                cur_time.tv_sec = statCached.st_mtimespec.tv_sec;
+            }
+            bNeedReload = (cur_time.tv_sec - statCached.st_mtimespec.tv_sec) > 5 * 60  && (statOrig.st_size == 0 ||  statOrig.st_size != statCached.st_size);
             XBMC->Log(LOG_DEBUG, "XMLTV Loader: cached file exists. Reload?  %s." , bNeedReload ? "Yes" : "No");
             
         }
