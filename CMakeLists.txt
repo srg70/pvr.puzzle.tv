@@ -109,7 +109,7 @@ src/ActionQueueTypes.hpp
 src/client_core_base.hpp
 src/guid.hpp
 src/httplib.h
-src/basen.h
+src/basen.hpp
 )
 
 build_addon(pvr.puzzle.tv IPTV DEPLIBS)
