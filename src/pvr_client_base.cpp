@@ -638,6 +638,7 @@ bool PVRClientBase::OpenLiveStream(ChannelId channelId, const std::string& url )
     {
         LogError(  "PVRClientBase: input buffer error in OpenLiveStream: %s", ex.what());
         RateStream(url, false);
+        OnOpenStremFailed(channelId, url);
         return false;
     }
     m_liveChannelId = channelId;
@@ -901,7 +902,7 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
             VFSDirEntry_Patch* patched_files = (VFSDirEntry_Patch*) files;
             for (int i = 0; i < num_files; ++i) {
                 const VFSDirEntry_Patch& f = patched_files[i];
-                if(f.folder)
+                if(!f.folder)
                     continue;
                 std::string infoPath = f.path;
                 infoPath += PATH_SEPARATOR_CHAR;
@@ -942,7 +943,7 @@ PVR_ERROR PVRClientBase::DeleteRecording(const PVR_RECORDING &recording)
     {
         VFSDirEntry* files;
         unsigned int num_files;
-        if(XBMC->GetDirectory(m_recordingsDir.c_str(), "", &files, &num_files)) {
+        if(XBMC->GetDirectory(dir.c_str(), "", &files, &num_files)) {
             VFSDirEntry_Patch* patched_files = (VFSDirEntry_Patch*) files;
             for (int i = 0; i < num_files; ++i) {
                 const VFSDirEntry_Patch& f = patched_files[i];

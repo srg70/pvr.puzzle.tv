@@ -363,6 +363,15 @@ void PuzzlePVRClient::RateStream(const std::string& streamUrl, bool isGood)
     
 }
 
+void PuzzlePVRClient::OnOpenStremFailed(ChannelId channelId, const std::string& streamUrl)
+{
+//    const PuzzleTV::TChannelStreams& streams = m_puzzleTV->GetStreamsForChannel(channelId);
+
+  //  for (const auto& stream : streams) {
+        
+   // }
+    //m_puzzleTV->DisableStream(channelId, streamUrl);
+}
 //int PuzzlePVRClient::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize)
 //{
 //    int readBytes = PVRClientBase::ReadLiveStream(pBuffer,iBufferSize);
