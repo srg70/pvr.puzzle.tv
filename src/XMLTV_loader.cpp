@@ -134,7 +134,7 @@ namespace XMLTV {
             if(0 != gettimeofday(&cur_time,nullptr)){
                 cur_time.tv_sec = statCached.st_mtime;//st_mtimespec.tv_sec;
             }
-            bNeedReload = (cur_time.tv_sec - statCached.st_mtimespec.tv_sec) > 5 * 60  && (statOrig.st_size == 0 ||  statOrig.st_size != statCached.st_size);
+            bNeedReload = (cur_time.tv_sec - statCached.st_mtime) > 5 * 60  && (statOrig.st_size == 0 ||  statOrig.st_size != statCached.st_size);
             XBMC->Log(LOG_DEBUG, "XMLTV Loader: cached file exists. Reload?  %s." , bNeedReload ? "Yes" : "No");
             
         }
