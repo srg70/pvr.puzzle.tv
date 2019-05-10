@@ -53,6 +53,7 @@ public:
     bool OpenRecordedStream(const PVR_RECORDING &recording);
 protected:
     virtual void RateStream(const std::string& streamUrl, bool isGood);
+    virtual void OnOpenStremFailed(PvrClient::ChannelId channelId, const std::string& streamUrl);
     std::string GetStreamUrl(PvrClient::ChannelId channelId);
     std::string GetNextStreamUrl(PvrClient::ChannelId channelId);
     PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);

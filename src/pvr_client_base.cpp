@@ -629,6 +629,7 @@ bool PVRClientBase::OpenLiveStream(ChannelId channelId, const std::string& url )
     {
         LogError(  "PVRClientBase: input buffer error in OpenLiveStream: %s", ex.what());
         RateStream(url, false);
+        OnOpenStremFailed(channelId, url);
         return false;
     }
     m_liveChannelId = channelId;
