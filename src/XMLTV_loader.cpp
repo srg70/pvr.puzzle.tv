@@ -130,8 +130,9 @@ namespace XMLTV {
             // Modification time is not provided by some servers.
             // It should be safe to compare file sizes.
             // Patch: Puzzle server does not provide file attributes. If we have cached file less than 5 min old - use it
+            using namespace P8PLATFORM;
             struct timeval cur_time = {0};
-            if(0 != gettimeofday(&cur_time,nullptr)){
+            if(0 != gettimeofday(&cur_time, nullptr)){
                 cur_time.tv_sec = statCached.st_mtime;//st_mtimespec.tv_sec;
             }
             bNeedReload = (cur_time.tv_sec - statCached.st_mtime) > 5 * 60  && (statOrig.st_size == 0 ||  statOrig.st_size != statCached.st_size);
