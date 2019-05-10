@@ -30,6 +30,7 @@
 #include "p8-platform/os.h"
 #include <stdint.h>
 #include <exception>
+#include <string>
 
 namespace Buffers {
     
@@ -47,7 +48,8 @@ namespace Buffers {
     {
     public:
         virtual ~InputBuffer() {}
-        
+
+        virtual const std::string& GetUrl() const = 0;
         virtual int64_t GetLength() const = 0;
         virtual int64_t GetPosition() const = 0;
         virtual ssize_t Read(unsigned char *buffer, size_t bufferSize, uint32_t timeoutMs) = 0;

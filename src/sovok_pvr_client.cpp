@@ -104,9 +104,7 @@ ADDON_STATUS SovokPVRClient::CreateCoreSafe(bool clearEpgCache)
         CreateCore(clearEpgCache);
     }
     catch (AuthFailedException &) {
-        char* message  = XBMC->GetLocalizedString(32007);
-        XBMC->QueueNotification(QUEUE_ERROR, message);
-        XBMC->FreeString(message);
+        XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32007));
     }
     catch (MissingHttpsSupportException &) {
         XBMC->QueueNotification(QUEUE_ERROR, "Missing HTTPS support.");
@@ -174,9 +172,7 @@ void SovokPVRClient::CreateCore(bool clearEpgCache)
     auto current = streamersList[GetStreamerId()];
     if (current != m_strimmer)
     {
-        char* message  = XBMC->GetLocalizedString(32008);
-        XBMC->QueueNotification(QUEUE_WARNING, message);
-        XBMC->FreeString(message);
+        XBMC->QueueNotification(QUEUE_WARNING, XBMC_Message(32008));
     }
 
     
@@ -222,9 +218,7 @@ ADDON_STATUS SovokPVRClient::SetSetting(const char *settingName, const void *set
             });
             if(currentId != GetStreamerId()) {
                 if(currentId == streamersList.size() ) {
-                    char* message  = XBMC->GetLocalizedString(32008);
-                    XBMC->QueueNotification(QUEUE_WARNING, message);
-                    XBMC->FreeString(message);
+                    XBMC->QueueNotification(QUEUE_WARNING, XBMC_Message(32008));
                 }
                 SetStreamerId(currentId);
                 result = ADDON_STATUS_NEED_RESTART;

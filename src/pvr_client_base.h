@@ -122,6 +122,7 @@ namespace PvrClient
 
         virtual std::string GetStreamUrl(ChannelId channelId);
         virtual std::string GetNextStreamUrl(ChannelId channelId) {return std::string();}
+        virtual void RateStream(const std::string& streamUrl, bool isGood) {}
         ChannelId GetLiveChannelId() { return  m_liveChannelId;}
         bool IsLiveInRecording() const;
         bool SwitchChannel(ChannelId channelId, const std::string& url);

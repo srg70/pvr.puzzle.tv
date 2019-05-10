@@ -79,6 +79,24 @@ namespace PuzzleEngine
     class PuzzleTV : public PvrClient::ClientCoreBase
     {
     public:
+        
+        struct PuzzleStream
+        {
+            PuzzleStream()
+            : RatingGood(0)
+            , RatingBad(0)
+            , IsOn (true)
+            {}
+            
+            std::string Url;
+            int64_t RatingGood;
+            int64_t RatingBad;
+            bool IsOn;
+            std::string Server;
+        };
+        typedef std::vector<PuzzleStream> TChannelStreams;
+
+        
         PuzzleTV(ServerVersion serverVersion, const char* serverUrl, uint16_t serverPort);
         ~PuzzleTV();
 
@@ -87,6 +105,7 @@ namespace PuzzleEngine
 
         std::string GetUrl(PvrClient::ChannelId channelId);
         std::string GetNextStream(PvrClient::ChannelId channelId, int currentChannelIdx);
+        void RateStream(const std::string& streamUrl, bool isGood);
 
         void SetMaxServerRetries(int maxServerRetries) {m_maxServerRetries = maxServerRetries;}
         void SetEpgParams(EpgType epgType, const std::string& epgUrl, uint16_t serverPort) {
@@ -101,7 +120,9 @@ namespace PuzzleEngine
              }
             m_epgServerPort = serverPort;
         }
-        
+        const TChannelStreams& GetStreamsForChannel(PvrClient::ChannelId channelId);
+        void EnableStream(PvrClient::ChannelId channelId, const PuzzleStream& stream);
+        void DisableStream(PvrClient::ChannelId channelId, const PuzzleStream& stream);
         void UpdateChannelStreams(PvrClient::ChannelId channelId);
     protected:
         void Init(bool clearEpgCache);
@@ -110,13 +131,14 @@ namespace PuzzleEngine
 
     private:
         typedef std::vector<std::string> StreamerIdsList;
-
+        
         struct ApiFunctionData;
         bool AddXmlEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
         void LoadEpg();
         void UpdateArhivesAsync();
         
         bool CheckChannelId(PvrClient::ChannelId channelId);
+        void UpdateUrlsForChannel(PvrClient::ChannelId channelId);
         void Cleanup();
 
         template <typename TParser>
@@ -128,7 +150,8 @@ namespace PuzzleEngine
 
         bool CheckAceEngineRunning(const char* aceServerUrlBase);
         std::string EpgUrlForPuzzle3() const;
-        
+        void GetStreamMetadata(PuzzleStream& stream);
+
         const uint16_t m_serverPort;
         const std::string m_serverUri;
         uint16_t m_epgServerPort;
@@ -136,9 +159,11 @@ namespace PuzzleEngine
         int m_maxServerRetries;
 
         std::string m_epgUrl;
-        long m_serverTimeShift;
+
         std::map<PvrClient::ChannelId, PvrClient::ChannelId> m_epgToServerLut;
         const ServerVersion m_serverVersion;
+        
+        std::map<PvrClient::ChannelId, TChannelStreams> m_streams;
         
         bool m_isAceRunning;
     };

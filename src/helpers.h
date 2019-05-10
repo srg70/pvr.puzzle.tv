@@ -63,5 +63,14 @@ inline void trim(std::string &s) {
     rtrim(s);
 }
 
+class XBMC_Message{
+public:
+    XBMC_Message(int code);
+    inline operator const char*() const {return m_message;}
+    ~XBMC_Message();
+private:
+    char* m_message;
+};
+
 
 #endif //helpers_h

@@ -98,9 +98,7 @@ ADDON_STATUS EdemPVRClient::CreateCoreSafe(bool clearEpgCache)
     }
     catch (AuthFailedException &)
     {
-        char* message = XBMC->GetLocalizedString(32011);
-        XBMC->QueueNotification(QUEUE_ERROR, message);
-        XBMC->FreeString(message);
+        XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32011));
     }
     catch(...)
     {
@@ -156,9 +154,7 @@ ADDON_STATUS EdemPVRClient::SetSetting(const char *settingName, const void *sett
             result = CreateCoreSafe(false);
             m_clientCore->CallRpcAsync("{\"jsonrpc\": \"2.0\", \"method\": \"GUI.ActivateWindow\", \"params\": {\"window\": \"pvrsettings\"},\"id\": 1}",
                                        [&] (rapidjson::Document& jsonRoot) {
-                                           char* message = XBMC->GetLocalizedString(32016);
-                                           XBMC->QueueNotification(QUEUE_INFO, message);
-                                           XBMC->FreeString(message);
+                                           XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32016));
                                        },
                                        [&](const ActionQueue::ActionResult& s) {});
         }

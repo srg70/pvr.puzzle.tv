@@ -86,6 +86,8 @@ static const char* s_DefaultCacheDir = "special://temp/pvr-puzzle-tv";
 static const char* s_DefaultRecordingsDir = "special://temp/pvr-puzzle-tv/recordings";
 static std::string s_LocalRecPrefix = "Local";
 static std::string s_RemoteRecPrefix = "On Server";
+static const int c_InitialLastByteRead = 1;
+
 
 const unsigned int RELOAD_EPG_MENU_HOOK = 1;
 const unsigned int RELOAD_RECORDINGS_MENU_HOOK = 2;
@@ -147,9 +149,7 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     XBMC->GetSetting("wait_for_inet", &waitForInetTimeout);
     
     if(waitForInetTimeout > 0){
-        char* message = XBMC->GetLocalizedString(32022);
-        XBMC->QueueNotification(QUEUE_INFO, message);
-        XBMC->FreeString(message);
+        XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32022));
         
         P8PLATFORM::CTimeout waitForInet(waitForInetTimeout * 1000);
         bool connected = false;
@@ -161,9 +161,7 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
                 P8PLATFORM::CEvent::Sleep(1000);
         }while(!connected && timeLeft > 0);
         if(!connected) {
-            char* message = XBMC->GetLocalizedString(32023);
-            XBMC->QueueNotification(QUEUE_ERROR, message);
-            XBMC->FreeString(message);
+            XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32023));
         }
     }
     
@@ -192,7 +190,7 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     XBMC->FreeString(localizedString);
     
     m_liveChannelId =  m_localRecordChannelId = UnknownChannelId;
-    m_lastBytesRead = 1;
+    m_lastBytesRead = c_InitialLastByteRead;
     m_lastRecordingsAmount = 0;
     
     m_destroyer = new CActionQueue(100, "Streams Destroyer");
@@ -328,6 +326,9 @@ bool PVRClientBase::IsRealTimeStream(void)
     // Return true when timeshift buffer position close to end of buffer for < 10 sec
     // https://github.com/kodi-pvr/pvr.hts/issues/173
     CLockObject lock(m_mutex);
+    if(nullptr == m_inputBuffer){
+        return true;
+    }
     double reliativePos = (double)(m_inputBuffer->GetLength() - m_inputBuffer->GetPosition()) / m_inputBuffer->GetLength();
     time_t timeToEnd = reliativePos * (m_inputBuffer->EndTime() - m_inputBuffer->StartTime());
     const bool isRTS = timeToEnd < 10;
@@ -412,15 +413,11 @@ PVR_ERROR  PVRClientBase::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUH
 {
     
     if(menuhook.iHookId == RELOAD_EPG_MENU_HOOK ) {
-        char* message = XBMC->GetLocalizedString(32012);
-        XBMC->QueueNotification(QUEUE_INFO, message);
-        XBMC->FreeString(message);
+        XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32012));
         OnReloadEpg();
         m_clientCore->CallRpcAsync("{\"jsonrpc\": \"2.0\", \"method\": \"GUI.ActivateWindow\", \"params\": {\"window\": \"pvrsettings\"},\"id\": 1}",
                      [&] (rapidjson::Document& jsonRoot) {
-                         char* message = XBMC->GetLocalizedString(32016);
-                         XBMC->QueueNotification(QUEUE_INFO, message);
-                         XBMC->FreeString(message);
+                         XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32016));
                      },
                      [&](const ActionQueue::ActionResult& s) {});
 
@@ -582,15 +579,17 @@ std::string PVRClientBase::GetStreamUrl(ChannelId channel)
 
 bool PVRClientBase::OpenLiveStream(const PVR_CHANNEL& channel)
 {
-    m_lastBytesRead = 1;
+    m_lastBytesRead = c_InitialLastByteRead;
     bool succeeded = OpenLiveStream(channel.iUniqueId, GetStreamUrl(channel.iUniqueId));
     bool tryToRecover = !succeeded;
     while(tryToRecover) {
         string url = GetNextStreamUrl(channel.iUniqueId);
         if(url.empty()) {// nomore streams
             LogDebug("No alternative stream found.");
+            XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32026));
             break;
         }
+        XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32025));
         succeeded = OpenLiveStream(channel.iUniqueId, url);
         tryToRecover = !succeeded;
     }
@@ -638,6 +637,7 @@ bool PVRClientBase::OpenLiveStream(ChannelId channelId, const std::string& url )
     catch (InputBufferException &ex)
     {
         LogError(  "PVRClientBase: input buffer error in OpenLiveStream: %s", ex.what());
+        RateStream(url, false);
         return false;
     }
     m_liveChannelId = channelId;
@@ -673,26 +673,32 @@ void PVRClientBase::CloseLiveStream()
 int PVRClientBase::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize)
 {
     CLockObject lock(m_mutex);
+    if(nullptr == m_inputBuffer){
+        return -1;
+    }
 
     int bytesRead = m_inputBuffer->Read(pBuffer, iBufferSize, m_channelReloadTimeout * 1000);
     // Assuming stream hanging.
     // Try to restart current channel only when previous read operation succeeded.
-    if (bytesRead != iBufferSize &&  /*m_lastBytesRead >= 0 &&*/ !IsLiveInRecording()) {
+    if (bytesRead != iBufferSize &&  m_lastBytesRead >= 0 && !IsLiveInRecording()) {
         LogError("PVRClientBase:: trying to restart current channel.");
         ChannelId chId = GetLiveChannelId();
-        string url = GetNextStreamUrl(chId);
-        if(url.empty())
-            url = GetStreamUrl(chId);
+        string  url = m_inputBuffer->GetUrl();
+        // Rate if channel hanging
+        // rate it as bad.
+        RateStream(m_inputBuffer->GetUrl(), false);
         if(!url.empty()){
-            char* message = XBMC->GetLocalizedString(32000);
-            XBMC->QueueNotification(QUEUE_INFO, message);
-            XBMC->FreeString(message);
-            if(SwitchChannel(GetLiveChannelId(), url))
+            XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32000));
+            if(SwitchChannel(chId, url))
                 bytesRead = m_inputBuffer->Read(pBuffer, iBufferSize, m_channelReloadTimeout * 1000);
             else
                 bytesRead = -1;
         }
-   }
+    } else if(bytesRead == iBufferSize &&  m_lastBytesRead == c_InitialLastByteRead){
+        // If we succeeded to read from stream first time,
+        // rate it as good stream
+        RateStream(m_inputBuffer->GetUrl(), true);
+    }
     m_lastBytesRead = bytesRead;
     return bytesRead;
 }
@@ -700,18 +706,27 @@ int PVRClientBase::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSi
 long long PVRClientBase::SeekLiveStream(long long iPosition, int iWhence)
 {
     CLockObject lock(m_mutex);
+    if(nullptr == m_inputBuffer){
+        return -1;
+    }
     return m_inputBuffer->Seek(iPosition, iWhence);
 }
 
 long long PVRClientBase::PositionLiveStream()
 {
     CLockObject lock(m_mutex);
+    if(nullptr == m_inputBuffer){
+        return -1;
+    }
     return m_inputBuffer->GetPosition();
 }
 
 long long PVRClientBase::LengthLiveStream()
 {
     CLockObject lock(m_mutex);
+    if(nullptr == m_inputBuffer){
+        return -1;
+    }
     return m_inputBuffer->GetLength();
 }
 
@@ -728,12 +743,6 @@ bool PVRClientBase::SwitchChannel(ChannelId channelId, const std::string& url)
     CLockObject lock(m_mutex);
     CloseLiveStream();
     return OpenLiveStream(channelId, url); // Split/join live and recording streams (when nesessry)
-//    CLockObject lock(m_mutex);
-//    if(IsLiveInRecording() || channelId == m_localRecordChannelId)
-//        return OpenLiveStream(channelId, url); // Split/join live and recording streams (when nesessry)
-//
-//    m_liveChannelId = channelId;
-//    return m_inputBuffer->SwitchStream(url); // Just change live stream
 }
 
 void PVRClientBase::SetTimeshiftEnabled(bool enable)
@@ -1215,9 +1224,7 @@ bool PVRClientBase::CheckPlaylistUrl(const std::string& url)
     auto f  = XBMC->OpenFile(url.c_str(), 0);
     
     if (nullptr == f) {
-        char* message = XBMC->GetLocalizedString(32010);
-        XBMC->QueueNotification(QUEUE_ERROR, message);
-        XBMC->FreeString(message);
+        XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32010));
         return false;
     }
     

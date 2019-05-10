@@ -304,9 +304,7 @@ namespace OttEngine
                          });
             
         } catch (ServerErrorException& ex) {
-            char* message  = XBMC->GetLocalizedString(32002);
-            XBMC->QueueNotification(QUEUE_ERROR, message, ex.reason.c_str());
-            XBMC->FreeString(message);
+            XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32002), ex.reason.c_str());
         } catch (...) {
             LogError(" >>>>  FAILED receive EPG <<<<<");
         }

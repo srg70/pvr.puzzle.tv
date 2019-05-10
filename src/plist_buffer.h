@@ -44,6 +44,7 @@ namespace Buffers
         PlaylistBuffer(const std::string &streamUrl,  PlaylistBufferDelegate delegate);
         ~PlaylistBuffer();
         
+        const std::string& GetUrl() const { return m_url; };
         int64_t GetLength() const;
         int64_t GetPosition() const;
         int64_t Seek(int64_t iPosition, int iWhence);
@@ -64,6 +65,7 @@ namespace Buffers
         PlaylistCache* m_cache;
         Segment* m_currentSegment;
         uint64_t m_loadingSegmentIndex;
+        std::string m_url;
         
         void *Process();
         void Init(const std::string &playlistUrl);

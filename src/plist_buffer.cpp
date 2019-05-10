@@ -46,6 +46,7 @@ namespace Buffers {
     PlaylistBuffer::PlaylistBuffer(const std::string &playListUrl,  PlaylistBufferDelegate delegate)
     : m_delegate(delegate)
     , m_cache(nullptr)
+    , m_url(playListUrl)
     {
         Init(playListUrl);
     }
@@ -67,9 +68,7 @@ namespace Buffers {
             try {
                 m_cache = new PlaylistCache(playlistUrl, m_delegate);
             } catch (PlaylistException ex) {
-                char* message  = XBMC->GetLocalizedString(32024);
-                XBMC->QueueNotification(QUEUE_ERROR, message);
-                XBMC->FreeString(message);
+                XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32024));
                 throw InputBufferException((std::string("Playlist exception: ") + ex.what()).c_str());
             }
             m_position = 0;

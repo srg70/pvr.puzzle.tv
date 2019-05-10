@@ -37,6 +37,7 @@
 #include "HttpEngine.hpp"
 #include "XMLTV_loader.hpp"
 #include "globals.hpp"
+#include "base64.h"
 
 using namespace Globals;
 using namespace std;
@@ -47,6 +48,7 @@ using namespace PvrClient;
 
 static const int secondsPerHour = 60 * 60;
 static const char* c_EpgCacheFile = "puzzle_epg_cache.txt";
+//static PuzzleTV::TChannelStreams s_NoStreams;
 
 struct PuzzleTV::ApiFunctionData
 {
@@ -79,6 +81,14 @@ static bool IsAceUrl(const std::string& url, std::string& aceServerUrlBase)
         }
     }
     return isAce;
+}
+
+static std::string ToPuzzleChannelId(PvrClient::ChannelId channelId){
+    string strId = n_to_string_hex(channelId);
+    int leadingZeros = 8 - strId.size();
+    while(leadingZeros--)
+    strId = "0" + strId;
+    return strId;
 }
 
 std::string PuzzleTV::EpgUrlForPuzzle3() const {
@@ -216,9 +226,7 @@ void PuzzleTV::BuildChannelAndGroupList()
         }
        
     } catch (ServerErrorException& ex) {
-        char* message  = XBMC->GetLocalizedString(32006);
-        XBMC->QueueNotification(QUEUE_ERROR, message, ex.reason.c_str());
-        XBMC->FreeString(message);
+        XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32006), ex.reason.c_str());
     } catch (...) {
         LogError(">>>>  FAILED to build channel list <<<<<");
     }
@@ -393,6 +401,31 @@ bool PuzzleTV::CheckChannelId(ChannelId channelId)
     return true;
 }
 
+#pragma mark - Streams
+
+string PuzzleTV::GetUrl(ChannelId channelId)
+{
+    if(!CheckChannelId(channelId))
+    return string();
+    
+    auto& urls = m_channelList.at(channelId).Urls;
+    if(urls.size() == 0)
+    UpdateUrlsForChannel(channelId);
+    
+    if(urls.size() == 0) {
+        XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32017));
+        return string();
+    }
+    const string & url = urls[0];
+    string aceServerUrlBase;
+    if(IsAceUrl(url, aceServerUrlBase)){
+        if(!CheckAceEngineRunning(aceServerUrlBase.c_str()))  {
+            XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32021));
+        }
+    }
+    return  url;
+}
+
 string PuzzleTV::GetNextStream(ChannelId channelId, int currentChannelIdx)
 {
     if(!CheckChannelId(channelId))
@@ -404,8 +437,53 @@ string PuzzleTV::GetNextStream(ChannelId channelId, int currentChannelIdx)
     return string();
 
 }
+void PuzzleTV::RateStream(const std::string& streamUrl, bool isGood)
+{
+    if(streamUrl.empty())
+        return;
+    string encoded = base64_encode(reinterpret_cast<const unsigned char*>(streamUrl.c_str()), streamUrl.length());
+    std::string strRequest = string("http://") + m_serverUri + ":" + n_to_string(m_serverPort) + "/ratio/" + encoded + (isGood ? "/good" : "/bad");
 
-void PuzzleTV::UpdateChannelStreams(ChannelId channelId)
+    m_httpEngine->CallApiAsync(strRequest, [](const std::string& responce) {},  [](const ActionQueue::ActionResult& ss){
+        if(ss.exception != nullptr){
+            try {
+                std::rethrow_exception(ss.exception);
+            } catch (std::exception& ex) {
+                LogError("PuzzleTV::RateStream(): FAILED with error %s", ex.what());
+           }
+        }
+    });
+}
+
+void PuzzleTV::GetStreamMetadata(PuzzleStream& stream)
+{
+    return;
+    if(m_serverVersion == c_PuzzleServer2)
+        return;
+    
+    try {
+        string encoded = base64_encode(reinterpret_cast<const unsigned char*>(stream.Url.c_str()), stream.Url.length());
+        std::string cmd =  string("/ratio/") + encoded + "/json";
+        
+        ApiFunctionData apiParams(cmd.c_str(), m_serverPort);
+        CallApiFunction(apiParams, [&] (Document& jsonRoot)
+                        {
+                            if(jsonRoot.HasMember("good")){
+                                stream.RatingGood = jsonRoot["good"].GetInt64();
+                            }
+                            if(jsonRoot.HasMember("bad")){
+                                stream.RatingBad = jsonRoot["bad"].GetInt64();
+                            }
+                         });
+    } catch (ServerErrorException& ex) {
+        XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32006), ex.reason.c_str());
+    } catch (...) {
+        LogError("PuzzleTV::GetStreamRating:  FAILED to get metadata for stream %s", stream.Url.c_str());
+    }
+}
+
+
+void PuzzleTV::UpdateUrlsForChannel(PvrClient::ChannelId channelId)
 {
     if(!CheckChannelId(channelId))
         return;
@@ -417,14 +495,11 @@ void PuzzleTV::UpdateChannelStreams(ChannelId channelId)
         urls.clear();
         try {
             std::string cmd = m_serverVersion == c_PuzzleServer2 ? "/get/streams/" : "/streams/json/";
-            string strId = n_to_string_hex(channelId);
-            int leadingZeros = 8 - strId.size();
-            while(leadingZeros--)
-                strId = "0" + strId;
+            const string  strId = ToPuzzleChannelId(channelId);
             cmd += strId;
             
             ApiFunctionData apiParams(cmd.c_str(), m_serverPort);
-            CallApiFunction(apiParams, [&] (Document& jsonRoot)
+            CallApiFunction(apiParams, [&urls] (Document& jsonRoot)
                             {
                                 if(!jsonRoot.IsArray())
                                     return;
@@ -436,10 +511,9 @@ void PuzzleTV::UpdateChannelStreams(ChannelId channelId)
                                                   
                                               });
                             });
+  
         } catch (ServerErrorException& ex) {
-            char* message  = XBMC->GetLocalizedString(32006);
-            XBMC->QueueNotification(QUEUE_ERROR, message, ex.reason.c_str());
-            XBMC->FreeString(message);
+            XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32006), ex.reason.c_str());
         } catch (...) {
             LogError(" >>>>  FAILED to get URL for channel ID=%d <<<<<", channelId);
         }
@@ -447,32 +521,120 @@ void PuzzleTV::UpdateChannelStreams(ChannelId channelId)
     }
 }
 
-string PuzzleTV::GetUrl(ChannelId channelId)
+void PuzzleTV::UpdateChannelStreams(ChannelId channelId)
 {
-    if(!CheckChannelId(channelId))
-        return string();
+    if(m_serverVersion == c_PuzzleServer2 || !CheckChannelId(channelId))
+        return;
     
-    auto& urls = m_channelList.at(channelId).Urls;
-    if(urls.size() == 0)
-        UpdateChannelStreams(channelId);
+    TChannelStreams streams;
+    try {
+        string cmd = string("/cache_url/") + ToPuzzleChannelId(channelId) + "/json";
+        ApiFunctionData apiParams(cmd.c_str(), m_serverPort);
+        CallApiFunction(apiParams, [&streams] (Document& jsonRoot)
+                        {
+                            if(!jsonRoot.IsArray())
+                                return;
+                            dump_json(jsonRoot);
+
+                            PuzzleStream stream;
+                            std::for_each(jsonRoot.Begin(), jsonRoot.End(), [&]  (const Value & i) mutable
+                                          {
+                                              if(i.HasMember("url")) {
+                                                  stream.Url = i["url"].GetString();
+                                              }
+                                              if(i.HasMember("serv")) {
+                                                  stream.Server = i["serv"].GetString();
+                                              } else {
+                                                  stream.Server = stream.Url.find("acesearch") != string::npos ?  "ASE" : "HTTP";
+                                              }
+                                              if(i.HasMember("lock")) {
+                                                  stream.IsOn = !i["lock"].GetBool();
+                                              }
+                                              streams.push_back(stream);
+                                          });
+                        });
+    } catch (ServerErrorException& ex) {
+        XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32006), ex.reason.c_str());
+    } catch (...) {
+        LogError(" >>>>  FAILED to get streams list for channel ID=%d <<<<<", channelId);
+    }
     
-    if(urls.size() == 0) {
-        char* message  = XBMC->GetLocalizedString(32017);
-        XBMC->QueueNotification(QUEUE_ERROR, message);
-        XBMC->FreeString(message);
-        return string();
+    Channel ch = m_channelList.at(channelId);
+    ch.Urls.clear();
+    AddChannel(ch);
+
+    for (auto& stream : streams) {
+        GetStreamMetadata(stream);
     }
-    const string & url = urls[0];
-    string aceServerUrlBase;
-    if(IsAceUrl(url, aceServerUrlBase)){
-       if(!CheckAceEngineRunning(aceServerUrlBase.c_str()))  {
-           char* message  = XBMC->GetLocalizedString(32021);
-           XBMC->QueueNotification(QUEUE_ERROR, message);
-           XBMC->FreeString(message);
-       }
-    }
-    return  url;
+    m_streams[channelId] = streams;
 }
+const PuzzleTV::TChannelStreams& PuzzleTV::GetStreamsForChannel(ChannelId channelId)
+{
+    if(m_streams.count(channelId) == 0) {
+        UpdateChannelStreams(channelId);
+    }
+    return m_streams[channelId];
+}
+
+void PuzzleTV::EnableStream(PvrClient::ChannelId channelId, const PuzzleStream& s)
+{
+    if(m_streams.count(channelId) == 0)
+        return;
+    for (auto& stream : m_streams[channelId]) {
+        if(stream.Url == s.Url && !stream.IsOn){
+            stream.IsOn = true;
+            //http://127.0.0.1:8185/back_list/base64url/unlock/CID
+            const string  strId = ToPuzzleChannelId(channelId);
+            string encoded = base64_encode(reinterpret_cast<const unsigned char*>(stream.Url.c_str()), stream.Url.length());
+            string cmd = string("/back_list/")+ encoded + "/unlock/" + strId;
+            
+            
+            ApiFunctionData apiParams(cmd.c_str(), m_serverPort);
+            CallApiAsync(apiParams, [](Document&){}, [channelId, strId](const ActionQueue::ActionResult& s) {
+                if(s.exception){
+                    LogError("PuzzleTV: FAILED to disble stream for channel %s", strId.c_str());
+                }
+            });
+            // Prepare channel to update streams, when start next time
+            Channel ch = m_channelList.at(channelId);
+            ch.Urls.clear();
+            AddChannel(ch);
+
+           break;
+        }
+    }
+}
+void PuzzleTV::DisableStream(PvrClient::ChannelId channelId, const PuzzleStream& s)
+{
+    if(m_streams.count(channelId) == 0)
+        return;
+    for (auto& stream : m_streams[channelId]) {
+        if(stream.Url == s.Url && stream.IsOn){
+            stream.IsOn = false;
+            //http://127.0.0.1:8185/back_list/base64url/lock/CID
+            const string  strId = ToPuzzleChannelId(channelId);
+            string encoded = base64_encode(reinterpret_cast<const unsigned char*>(stream.Url.c_str()), stream.Url.length());
+            string cmd = string("/back_list/")+ encoded + "/lock/" + strId;
+            
+            
+            ApiFunctionData apiParams(cmd.c_str(), m_serverPort);
+            CallApiAsync(apiParams, [](Document&){}, [channelId, strId](const ActionQueue::ActionResult& s) {
+                if(s.exception){
+                    LogError("PuzzleTV: FAILED to disble stream for channel %s", strId.c_str());
+                }
+            });
+            // Prepare channel to update streams, when start next time
+            Channel ch = m_channelList.at(channelId);
+            ch.Urls.clear();
+            AddChannel(ch);
+           break;
+        }
+    }
+
+}
+
+
+#pragma mark - API Call
 
 template <typename TParser>
 void PuzzleTV::CallApiFunction(const ApiFunctionData& data, TParser parser)
@@ -495,9 +657,7 @@ void PuzzleTV::CallApiFunction(const ApiFunctionData& data, TParser parser)
             // Probably server doesn't start yet
             // Wait and retry
             data.attempt += 1;
-            char* message  = XBMC->GetLocalizedString(32013);
-            XBMC->QueueNotification(QUEUE_INFO, message, data.attempt);
-            XBMC->FreeString(message);
+            XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32013), data.attempt);
             P8PLATFORM::CEvent::Sleep(4000);
            
             CallApiFunction(data, parser);

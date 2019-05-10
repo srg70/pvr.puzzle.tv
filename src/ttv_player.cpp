@@ -51,9 +51,7 @@ catch (ServerErrorException& ex) { \
     auto err = ex.what(); \
     LogError("%s. TTV API error: %s", __FUNCTION__,  err); \
     if(strcmp(err, "noepg") != 0) { \
-        char* message = XBMC->GetLocalizedString(32019); \
-        XBMC->QueueNotification(QUEUE_ERROR, message, ex.what() ); \
-        XBMC->FreeString(message); \
+        XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32019), ex.what() ); \
     } \
 } catch(CurlErrorException& ex) { \
     LogError("%s. CURL error: %s", __FUNCTION__,  ex.what()); \
@@ -101,9 +99,7 @@ namespace TtvEngine
     {
         m_isAceRunning = false;
         if(!CheckAceEngineRunning()) {
-            char* message = XBMC->GetLocalizedString(32021);
-            XBMC->QueueNotification(QUEUE_ERROR, message);
-            XBMC->FreeString(message);
+            XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32021));
         }
 
         RebuildChannelAndGroupList();
