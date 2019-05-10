@@ -42,6 +42,7 @@ namespace Buffers {
         TimeshiftBuffer(InputBuffer* inputBuffer, ICacheBuffer* cache);
         ~TimeshiftBuffer();
         
+        const std::string& GetUrl() const { return m_inputBuffer->GetUrl(); };
         int64_t GetLength() const;
         int64_t GetPosition() const;
         ssize_t Read(unsigned char *buffer, size_t bufferSize, uint32_t timeoutMs);

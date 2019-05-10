@@ -377,6 +377,14 @@ msgctxt "#32024"
 msgid "Playlist is invalid or missing!"
 msgstr "Playlist is invalid or missing!"
 
+msgctxt "#32025"
+msgid "Opening next stream..."
+msgstr "Opening next stream..."
+
+msgctxt "#32026"
+msgid "No streams available."
+msgstr "No streams available."
+
 #============= Menus ================
 
 msgctxt "#32050"
@@ -388,9 +396,34 @@ msgid "Reload Recordings"
 msgstr "Reload Recordings"
 
 msgctxt "#32052"
-msgid "Update channel streams"
-msgstr "Update channel streams"
+msgid "Streams"
+msgstr "Streams"
 
 msgctxt "#32053"
 msgid "Update channels list"
 msgstr "Update channels list"
+
+msgctxt "#32054"
+msgid "Enable Stream"
+msgstr "Enable Stream"
+
+msgctxt "#32055"
+msgid "Disable Stream"
+msgstr "Disable Stream"
+
+msgctxt "#32056"
+msgid "Update Stream List"
+msgstr "Update Stream List"
+
+msgctxt "#32057"
+msgid "Channel Streams Operations"
+msgstr "Channel Streams Operations"
+
+msgctxt "#32058"
+msgid "Choose Stream to Disable"
+msgstr "Choose Stream to Disable"
+
+msgctxt "#32059"
+msgid "Choose Stream to Enable"
+msgstr "Choose Stream to Enable"
+

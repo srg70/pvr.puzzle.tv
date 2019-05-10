@@ -40,6 +40,7 @@ namespace Buffers {
         DirectBuffer(ICacheBuffer* cacheBuffer);
         ~DirectBuffer();
         
+        const std::string& GetUrl() const { return m_url; };
         int64_t GetLength() const;
         int64_t GetPosition() const;
         int64_t Seek(int64_t iPosition, int iWhence);
@@ -51,6 +52,7 @@ namespace Buffers {
     private:
         static void* Open(const std::string &path);
         ICacheBuffer* m_cacheBuffer;
+        std::string m_url;
     };
     
     class ArchiveBuffer : public DirectBuffer

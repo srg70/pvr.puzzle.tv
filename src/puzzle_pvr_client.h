@@ -52,6 +52,7 @@ public:
     
     bool OpenRecordedStream(const PVR_RECORDING &recording);
 protected:
+    virtual void RateStream(const std::string& streamUrl, bool isGood);
     std::string GetStreamUrl(PvrClient::ChannelId channelId);
     std::string GetNextStreamUrl(PvrClient::ChannelId channelId);
     PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
@@ -62,6 +63,7 @@ protected:
 
 private:
     void CreateCore(bool clearEpgCache);
+    void HandleStreamsMenuHook(PvrClient::ChannelId channelId);
 
     PuzzleEngine::PuzzleTV* m_puzzleTV;
     int m_currentChannelStreamIdx;

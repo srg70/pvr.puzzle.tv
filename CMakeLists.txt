@@ -71,6 +71,7 @@ src/ttv_player.cpp
 src/ttv_pvr_client.cpp
 src/guid.cpp
 src/playlist_cache.cpp
+src/base64.cpp
 )
 
 set(IPTV_HEADERS
@@ -109,7 +110,7 @@ src/ActionQueueTypes.hpp
 src/client_core_base.hpp
 src/guid.hpp
 src/httplib.h
-src/basen.hpp
+src/base64.h
 )
 
 build_addon(pvr.puzzle.tv IPTV DEPLIBS)

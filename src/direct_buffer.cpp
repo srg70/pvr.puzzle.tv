@@ -48,6 +48,7 @@ namespace Buffers {
     DirectBuffer::DirectBuffer(const std::string &streamUrl)
     : m_streamHandle(Open(streamUrl))
     , m_cacheBuffer(nullptr)
+    , m_url(streamUrl)
     {
         if (!m_streamHandle)
             throw InputBufferException();
