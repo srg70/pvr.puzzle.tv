@@ -67,7 +67,6 @@ public:
     virtual bool CanPauseStream(void) = 0;
     virtual bool CanSeekStream(void) = 0;
     virtual bool IsRealTimeStream(void) = 0;
-    virtual PVR_ERROR GetStreamTimes(PVR_STREAM_TIMES *times) = 0;
     virtual long long SeekLiveStream(long long iPosition, int iWhence) = 0;
     virtual long long PositionLiveStream(void) = 0;
     virtual long long LengthLiveStream(void)  = 0;

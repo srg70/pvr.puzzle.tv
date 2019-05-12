@@ -419,11 +419,6 @@ extern "C" {
     /**************************** TIMESHIFT API FUNCTIONS ***************************/
     /********************************************************************************/
     
-    PVR_ERROR GetStreamTimes(PVR_STREAM_TIMES *times)
-    {
-        return m_DataSource->GetStreamTimes(times);
-    }
-    
     bool IsTimeshifting(void)
     {
         return m_DataSource->CanSeekStream();
@@ -455,6 +450,7 @@ extern "C" {
     PVR_ERROR GetRecordingEdl(const PVR_RECORDING&, PVR_EDL_ENTRY[], int*) { return PVR_ERROR_NOT_IMPLEMENTED; };
     void DemuxAbort(void) {}
     DemuxPacket* DemuxRead(void) { return NULL; }
+    unsigned int GetChannelSwitchDelay(void) { return 0; }
     void PauseStream(bool bPaused) {}
     bool SeekTime(double,bool,double*) { return false; }
     void SetSpeed(int) {};

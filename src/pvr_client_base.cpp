@@ -334,39 +334,6 @@ bool PVRClientBase::IsRealTimeStream(void)
     return isRTS;
 }
 
-PVR_ERROR PVRClientBase::GetStreamTimes(PVR_STREAM_TIMES *times)
-{
-
-    if (!times)
-        return PVR_ERROR_INVALID_PARAMETERS;
-//    if(!IsTimeshiftEnabled())
-//        return PVR_ERROR_NOT_IMPLEMENTED;
-    
-    int64_t timeStart = 0;
-    int64_t  timeEnd = 0;
-    if (m_inputBuffer)
-    {
-
-        CLockObject lock(m_mutex);
-        timeStart = m_inputBuffer->StartTime();
-        timeEnd   = m_inputBuffer->EndTime();
-    }
-    else if (m_recordBuffer.buffer){
-        {
-            timeStart = 0;
-            timeEnd   = m_recordBuffer.duration;
-        }
-    }
-    else
-        return PVR_ERROR_NOT_IMPLEMENTED;
-    
-    times->startTime = timeStart;
-    times->ptsStart  = 0;
-    times->ptsBegin  = 0;
-    times->ptsEnd    = (timeEnd - timeStart) * DVD_TIME_BASE;
-    return PVR_ERROR_NO_ERROR;
-}
-
 ADDON_STATUS PVRClientBase::GetStatus()
 {
     return  /*(m_sovokTV == NULL)? ADDON_STATUS_LOST_CONNECTION : */ADDON_STATUS_OK;

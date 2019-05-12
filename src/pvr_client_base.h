@@ -65,7 +65,6 @@ namespace PvrClient
         bool CanPauseStream();
         bool CanSeekStream();
         bool IsRealTimeStream(void);
-        PVR_ERROR GetStreamTimes(PVR_STREAM_TIMES *times);
 
         int GetChannelsAmount();
         PVR_ERROR GetChannels(ADDON_HANDLE handle, bool bRadio);
