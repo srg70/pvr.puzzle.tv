@@ -211,8 +211,11 @@ namespace Engines
 
             PVR->TriggerTimerUpdate();
 
-            time_t waitTimeout = (nextWakeUpTime - now);
-            LogDebug("Timer Engine: thread waiting %d sec (0 - forever)", waitTimeout);
+            double waitTimeout = difftime(nextWakeUpTime, now);
+            if(waitTimeout < 0) {
+                waitTimeout = 1; // Shouldn't be true
+            }
+            LogDebug("Timer Engine: thread waiting %f sec (0 - forever)", waitTimeout);
             m_checkTimers.Wait(waitTimeout * 1000 );
         }
         LogDebug("Timer Engine: thread stopped.");
