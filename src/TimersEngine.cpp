@@ -54,7 +54,7 @@ namespace Engines
         }
         inline time_t EndTime() const
         {
-            return m_pvrTimer.endTime + - m_pvrTimer.iMarginEnd * 60;
+            return m_pvrTimer.endTime + m_pvrTimer.iMarginEnd * 60;
         }
         inline void Schedule()
         {
@@ -179,12 +179,14 @@ namespace Engines
             for (auto& pTimer : m_timers) {
                 const time_t startTime = pTimer->StartTime();
                 const time_t endTime = pTimer->EndTime();
+                double delta = difftime(endTime, now);
                 // Check for recording timers to STOP recording
                 if(pTimer->m_pvrTimer.state == PVR_TIMER_STATE_RECORDING){
-                    if(endTime <= now) {
+                    if(delta <= 0) {
                         pTimer->StopRecording(m_delegate);
                     } else {
-                        nextWakeUpTime = nextWakeUpTime == now ? endTime : std::min(nextWakeUpTime, endTime);
+                        nextWakeUpTime = nextWakeUpTime == now ? endTime :
+                            difftime(nextWakeUpTime, endTime) > 0 ? endTime : nextWakeUpTime;
                     }
                 }
             }
@@ -192,13 +194,16 @@ namespace Engines
             for (auto& pTimer : m_timers) {
                 const time_t startTime = pTimer->StartTime();
                 const time_t endTime = pTimer->EndTime();
+                double delta = difftime(startTime, now);
                 // Check for scheduled timers to START recording
                 if(pTimer->m_pvrTimer.state == PVR_TIMER_STATE_SCHEDULED && endTime > now){
-                    if( startTime <= now ) {
+                    if( delta <= 0 ) {
                         pTimer->StartRecording(m_delegate);
-                        nextWakeUpTime = nextWakeUpTime == now ? endTime : std::min(nextWakeUpTime, endTime);
+                        nextWakeUpTime = nextWakeUpTime == now ? endTime :
+                            difftime(nextWakeUpTime, endTime) > 0 ? endTime : nextWakeUpTime;
                     } else {
-                        nextWakeUpTime = nextWakeUpTime == now ? startTime : std::min(nextWakeUpTime, startTime);
+                        nextWakeUpTime = nextWakeUpTime == now ? startTime :
+                            difftime(nextWakeUpTime, startTime) > 0 ? startTime : nextWakeUpTime; 
                     }
                 }
 
