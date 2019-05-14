@@ -632,7 +632,9 @@ bool PVRClientBase::OpenLiveStream(ChannelId channelId, const std::string& url )
         InputBuffer* buffer = BufferForUrl(url);
         CLockObject lock(m_mutex);
         m_inputBuffer = new Buffers::TimeshiftBuffer(buffer, CreateLiveCache());
-
+        if(!m_inputBuffer->WaitForInput(m_channelReloadTimeout * 1000)) {
+            throw InputBufferException("no data available diring reload timeout (bad ace link?)");
+        }
     }
     catch (InputBufferException &ex)
     {
