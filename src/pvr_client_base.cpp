@@ -595,7 +595,7 @@ bool PVRClientBase::OpenLiveStream(ChannelId channelId, const std::string& url )
     catch (InputBufferException &ex)
     {
         LogError(  "PVRClientBase: input buffer error in OpenLiveStream: %s", ex.what());
-        RateStream(url, false);
+        RateStream(channelId, url, false);
         OnOpenStremFailed(channelId, url);
         return false;
     }
@@ -636,16 +636,16 @@ int PVRClientBase::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSi
         return -1;
     }
 
+    ChannelId chId = GetLiveChannelId();
     int bytesRead = m_inputBuffer->Read(pBuffer, iBufferSize, m_channelReloadTimeout * 1000);
     // Assuming stream hanging.
     // Try to restart current channel only when previous read operation succeeded.
     if (bytesRead != iBufferSize &&  m_lastBytesRead >= 0 && !IsLiveInRecording()) {
         LogError("PVRClientBase:: trying to restart current channel.");
-        ChannelId chId = GetLiveChannelId();
         string  url = m_inputBuffer->GetUrl();
         // Rate if channel hanging
         // rate it as bad.
-        RateStream(m_inputBuffer->GetUrl(), false);
+        RateStream(chId, m_inputBuffer->GetUrl(), false);
         if(!url.empty()){
             XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32000));
             if(SwitchChannel(chId, url))
@@ -656,7 +656,7 @@ int PVRClientBase::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSi
     } else if(bytesRead == iBufferSize &&  m_lastBytesRead == c_InitialLastByteRead){
         // If we succeeded to read from stream first time,
         // rate it as good stream
-        RateStream(m_inputBuffer->GetUrl(), true);
+        RateStream(chId, m_inputBuffer->GetUrl(), true);
     }
     m_lastBytesRead = bytesRead;
     return bytesRead;

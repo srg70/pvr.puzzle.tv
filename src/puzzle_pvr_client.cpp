@@ -249,7 +249,7 @@ static int ShowStreamsMenu(const char * title, std::vector<StreamMenuItem>& item
     return lut[selected];
 }
 
-static void FillStreamTitle(const PuzzleTV::PuzzleStream& stream,  std::string& title)
+static void FillStreamTitle(const PuzzleTV::PuzzleSource& stream,  std::string& title)
 {
     char buf[100];
     int totalRating = (stream.RatingGood + stream.RatingBad);
@@ -259,6 +259,7 @@ static void FillStreamTitle(const PuzzleTV::PuzzleStream& stream,  std::string& 
     sprintf(buf, /*"%-3s%% */"%s", /*rating.c_str(), */stream.Server.c_str());
     title = buf;
 }
+
 void PuzzlePVRClient::HandleStreamsMenuHook(ChannelId channelId)
 {
     int selected;
@@ -268,11 +269,28 @@ void PuzzlePVRClient::HandleStreamsMenuHook(ChannelId channelId)
     do {
         StreamMenuItem enableItem(enableStreamLable, false);
         StreamMenuItem disableItem(disableStreamLable, false);
-        const PuzzleTV::TChannelStreams& streams = m_puzzleTV->GetStreamsForChannel(channelId);
+        PuzzleTV::TPrioritizedSources sources = m_puzzleTV->GetSourcesForChannel(channelId);
         
-        for (const auto& stream : streams) {
-            enableItem.IsEnabled |= !stream.IsOn;
-            disableItem.IsEnabled |= stream.IsOn;
+        
+        std::vector<StreamMenuItem> disableMenu;
+        std::vector<StreamMenuItem> enableMenu;
+        std::vector<PuzzleTV::TCacheUrl> cacheUrls;
+        while(!sources.empty()) {
+            const auto source = sources.top();
+            sources.pop();
+            cacheUrls.push_back(source->first);
+            enableItem.IsEnabled |= !source->second.IsOn() && source->second.CanBeOn();
+            disableItem.IsEnabled |= source->second.IsOn();
+            {
+                StreamMenuItem item("", source->second.IsOn());
+                FillStreamTitle(source->second, item.Title);
+                disableMenu.push_back(item);
+            }
+            {
+                StreamMenuItem item("", !source->second.IsOn() && source->second.CanBeOn());
+                FillStreamTitle(source->second, item.Title);
+                enableMenu.push_back(item);
+            }
         }
         
         std::vector<StreamMenuItem> rootItems;
@@ -286,36 +304,24 @@ void PuzzlePVRClient::HandleStreamsMenuHook(ChannelId channelId)
             // Disable stream
             case 0:
             {
-                std::vector<StreamMenuItem> menu;
-                for (const auto& stream : streams) {
-                    StreamMenuItem item("", stream.IsOn);
-                    FillStreamTitle(stream, item.Title);
-                    menu.push_back(item);
-                }
-                int selectedStream = ShowStreamsMenu(XBMC_Message(32058), menu);
-                if(selectedStream >= 0) {
-                    m_puzzleTV->DisableStream(channelId, streams[selectedStream]);
+                int selectedSource = ShowStreamsMenu(XBMC_Message(32058), disableMenu);
+                if(selectedSource >= 0) {
+                    m_puzzleTV->DisableSource(channelId, cacheUrls[selectedSource]);
                 }
                 break;
             }
             // Enable stream
             case 1:
             {
-                std::vector<StreamMenuItem> menu;
-                for (const auto& stream : streams) {
-                    StreamMenuItem item("", !stream.IsOn);
-                    FillStreamTitle(stream, item.Title);
-                    menu.push_back(item);
-                }
-                int selectedStream = ShowStreamsMenu(XBMC_Message(32059), menu);
-                if(selectedStream >= 0){
-                    m_puzzleTV->EnableStream(channelId, streams[selectedStream]);
+                int selectedSource = ShowStreamsMenu(XBMC_Message(32059), enableMenu);
+                if(selectedSource >= 0){
+                    m_puzzleTV->EnableSource(channelId, cacheUrls[selectedSource]);
                 }
                 break;
             }
             // Update stream list
             case 2:
-                m_puzzleTV->UpdateChannelStreams(channelId);
+                m_puzzleTV->UpdateChannelSources(channelId);
                 break;
             default:
                 break;
@@ -356,38 +362,21 @@ string PuzzlePVRClient::GetNextStreamUrl(ChannelId channelId)
    return m_puzzleTV->GetNextStream(channelId, m_currentChannelStreamIdx++);
 }
 
-void PuzzlePVRClient::RateStream(const std::string& streamUrl, bool isGood)
+void PuzzlePVRClient::RateStream(ChannelId channelId, const std::string& streamUrl, bool isGood)
 {
     if(m_puzzleTV == nullptr)
         return;
-    m_puzzleTV->RateStream(streamUrl, isGood);
+    m_puzzleTV->RateStream(channelId, streamUrl, isGood);
     
 }
 
 void PuzzlePVRClient::OnOpenStremFailed(ChannelId channelId, const std::string& streamUrl)
 {
-//    const PuzzleTV::TChannelStreams& streams = m_puzzleTV->GetStreamsForChannel(channelId);
-
-  //  for (const auto& stream : streams) {
-        
-   // }
-    //m_puzzleTV->DisableStream(channelId, streamUrl);
+    if(m_puzzleTV == nullptr)
+        return;
+    m_puzzleTV->OnOpenStremFailed(channelId, streamUrl);
+    // Expe
 }
-//int PuzzlePVRClient::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize)
-//{
-//    int readBytes = PVRClientBase::ReadLiveStream(pBuffer,iBufferSize);
-//    bool tryToRecover = readBytes < 0;
-//    while(tryToRecover) {
-//        string url = GetNextStreamUrl(GetLiveChannelId());
-//        if(url.empty()) // nomore streams
-//            break;
-//        SwitchChannel(GetLiveChannelId(), url);
-//        readBytes = PVRClientBase::ReadLiveStream(pBuffer,iBufferSize);
-//        tryToRecover = readBytes < 0;
-//    }
-//
-//    return readBytes;
-//}
 
 bool PuzzlePVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
 {
