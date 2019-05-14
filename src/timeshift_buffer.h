@@ -62,6 +62,16 @@ namespace Buffers {
         
         inline time_t StartTime() { return m_cache->StartTime(); }
         inline time_t EndTime() { return m_cache->EndTime(); }
+        inline bool WaitForInput(uint32_t timeoutMs) {
+            if(m_isInputBufferValid)
+                return true;
+            
+            if(m_writeEvent.Wait(timeoutMs)) { // not timeout
+                m_writeEvent.Signal();
+            }
+            return m_isInputBufferValid;
+        }
+        
 
     private:
         void *Process();
@@ -76,6 +86,7 @@ namespace Buffers {
         InputBuffer* m_inputBuffer;
         ICacheBuffer* m_cache;
         ICacheBuffer* m_cacheToSwap;
+        bool m_isInputBufferValid;
         
     };
 }

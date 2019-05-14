@@ -67,6 +67,7 @@ namespace Buffers {
         m_writerWaitingForCacheSwap  = false;
         m_writeEvent.Reset();
         m_cache->Init();
+        m_isInputBufferValid = false;
         CreateThread();
 
     }
@@ -159,6 +160,7 @@ namespace Buffers {
                 }
                 if(nullptr != buffer) {
                     m_cache->UnlockAfterWriten(buffer, bytesRead);
+                    m_isInputBufferValid = true;
                     m_writeEvent.Signal();
                 }
 //                if(bytesRead > 0) {
