@@ -113,6 +113,9 @@ src/httplib.h
 src/base64.h
 )
 
+addon_version(pvr.puzzle.tv IPTV)
+add_definitions(-DIPTV_VERSION=${IPTV_VERSION})
+
 build_addon(pvr.puzzle.tv IPTV DEPLIBS)
 
 include(CPack)
