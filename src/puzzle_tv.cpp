@@ -24,7 +24,7 @@
 #include <rapidjson/error/en.h>
 #include <assert.h>
 #include <algorithm>
-#include <sstream>
+#include <string>
 #include <cstdlib>
 #include <ctime>
 #include <list>
@@ -259,9 +259,14 @@ void PuzzleTV::BuildChannelAndGroupList()
 //    return url;
 //}
 
-bool PuzzleTV::AddXmlEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry)
+UniqueBroadcastIdType PuzzleTV::AddXmlEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry)
 {
-    unsigned int id = xmlEpgEntry.startTime;
+    if(m_epgToServerLut.count(xmlEpgEntry.iChannelId) == 0) {
+        //LogError("PuzzleTV::AddXmlEpgEntry(): XML EPG entry '%s' for unknown channel %d", xmlEpgEntry.strTitle.c_str(), xmlEpgEntry.iChannelId);
+        return c_UniqueBroadcastIdUnknown;
+    }
+    
+    unsigned int id = (unsigned int)xmlEpgEntry.startTime;
 
     EpgEntry epgEntry;
     epgEntry.ChannelId = m_epgToServerLut[xmlEpgEntry.iChannelId];
@@ -405,18 +410,32 @@ bool PuzzleTV::CheckChannelId(ChannelId channelId)
 
 string PuzzleTV::GetUrl(ChannelId channelId)
 {
-    if(!CheckChannelId(channelId))
-    return string();
-    
-    auto& urls = m_channelList.at(channelId).Urls;
-    if(urls.size() == 0)
-    UpdateUrlsForChannel(channelId);
-    
-    if(urls.size() == 0) {
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32017));
+    if(!CheckChannelId(channelId)) {
         return string();
     }
-    const string & url = urls[0];
+    
+    if(m_channelList.at(channelId).Urls.size() == 0){
+        UpdateChannelSources(channelId);
+    }
+    //auto& urls = m_channelList.at(channelId).Urls;
+
+    string url;
+
+    auto sources = GetSourcesForChannel(channelId);
+    while (!sources.empty()) {
+        const auto streams = sources.top()->second.Streams;
+        auto goodStream = std::find_if(streams.begin(), streams.end(), [](PuzzleSource::TStreamsQuality::const_reference stream) {return stream.second;});
+        if(goodStream != streams.end()) {
+            url = goodStream->first;
+            break;
+        }
+        sources.pop();
+    }
+    
+    if(url.empty()) {
+        XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32017));
+        return url;
+    }
     string aceServerUrlBase;
     if(IsAceUrl(url, aceServerUrlBase)){
         if(!CheckAceEngineRunning(aceServerUrlBase.c_str()))  {
@@ -430,14 +449,25 @@ string PuzzleTV::GetNextStream(ChannelId channelId, int currentChannelIdx)
 {
     if(!CheckChannelId(channelId))
         return string();
-    
-    auto& urls = m_channelList.at(channelId).Urls;
-    if(urls.size() > currentChannelIdx + 1)
-        return urls[currentChannelIdx + 1];
-    return string();
 
+    // NOTE: assuming call to PuzzleTV::OnOpenStremFailed before GetNextStream()
+    // where bad stream should be marked as bad. So return first good stream
+    string url;
+    auto sources = GetSourcesForChannel(channelId);
+    while (!sources.empty()) {
+        const auto streams = sources.top()->second.Streams;
+        auto goodStream = std::find_if(streams.begin(), streams.end(), [](PuzzleSource::TStreamsQuality::const_reference stream) {return stream.second;});
+        if(goodStream != streams.end()) {
+            url = goodStream->first;
+            break;
+        }
+        sources.pop();
+    }
+    
+    return url;
 }
-void PuzzleTV::RateStream(const std::string& streamUrl, bool isGood)
+
+void PuzzleTV::RateStream(ChannelId channelId, const std::string& streamUrl, bool isGood)
 {
     if(streamUrl.empty())
         return;
@@ -455,30 +485,48 @@ void PuzzleTV::RateStream(const std::string& streamUrl, bool isGood)
     });
 }
 
-void PuzzleTV::GetStreamMetadata(PuzzleStream& stream)
+void PuzzleTV::OnOpenStremFailed(ChannelId channelId, const std::string& streamUrl)
+{
+    // Mark stream as bad and optionaly disable bad source
+    TChannelSources& sources = m_sources[channelId];
+    for(auto& source : sources) {
+        if(source.second.Streams.count(streamUrl) != 0){
+            source.second.Streams.at(streamUrl) = false;
+            if ( std::none_of(source.second.Streams.begin(), source.second.Streams.end(), [](const PuzzleSource::TStreamsQuality::value_type& isGood){return isGood.second;}) ) {
+                DisableSource(channelId, source.first);
+            }
+            break;
+        }
+    }
+}
+
+void PuzzleTV::GetSourcesMetadata(TChannelSources& channelSources)
 {
     return;
+    
     if(m_serverVersion == c_PuzzleServer2)
         return;
     
     try {
-        string encoded = base64_encode(reinterpret_cast<const unsigned char*>(stream.Url.c_str()), stream.Url.length());
-        std::string cmd =  string("/ratio/") + encoded + "/json";
-        
-        ApiFunctionData apiParams(cmd.c_str(), m_serverPort);
-        CallApiFunction(apiParams, [&] (Document& jsonRoot)
-                        {
-                            if(jsonRoot.HasMember("good")){
-                                stream.RatingGood = jsonRoot["good"].GetInt64();
-                            }
-                            if(jsonRoot.HasMember("bad")){
-                                stream.RatingBad = jsonRoot["bad"].GetInt64();
-                            }
-                         });
+        for (auto& source : channelSources) {
+            string encoded = base64_encode(reinterpret_cast<const unsigned char*>(source.first.c_str()), source.first.length());
+            std::string cmd =  string("/ratio/") + encoded + "/json";
+            
+            ApiFunctionData apiParams(cmd.c_str(), m_serverPort);
+            CallApiFunction(apiParams, [&] (Document& jsonRoot)
+                            {
+                                if(jsonRoot.HasMember("good")){
+                                    source.second.RatingGood = jsonRoot["good"].GetInt64();
+                                }
+                                if(jsonRoot.HasMember("bad")){
+                                    source.second.RatingBad = jsonRoot["bad"].GetInt64();
+                                }
+                            });
+        }
     } catch (ServerErrorException& ex) {
         XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32006), ex.reason.c_str());
     } catch (...) {
-        LogError("PuzzleTV::GetStreamRating:  FAILED to get metadata for stream %s", stream.Url.c_str());
+        LogError("PuzzleTV::GetSourceMetadata:  FAILED to get metadata");
     }
 }
 
@@ -494,140 +542,191 @@ void PuzzleTV::UpdateUrlsForChannel(PvrClient::ChannelId channelId)
     {
         urls.clear();
         try {
-            std::string cmd = m_serverVersion == c_PuzzleServer2 ? "/get/streams/" : "/streams/json/";
             const string  strId = ToPuzzleChannelId(channelId);
-            cmd += strId;
+            if(m_serverVersion == c_PuzzleServer2){
+                std::string cmd = string("/get/streams/") + strId;
+                ApiFunctionData apiParams(cmd.c_str(), m_serverPort);
+                CallApiFunction(apiParams, [&urls] (Document& jsonRoot)
+                                {
+                                    if(!jsonRoot.IsArray())
+                                        return;
+                                    std::for_each(jsonRoot.Begin(), jsonRoot.End(), [&]  (const Value & i) mutable
+                                                  {
+                                                      auto url = i.GetString();
+                                                      urls.push_back(url);
+                                                      LogDebug(" >>>>  URL: %s <<<<<",  url);
+                                                      
+                                                  });
+                                });
+            } else {
+                auto& cacheSources = m_sources[channelId];
+                std::string cmd = string("/streams/json_ds/") + strId;
+                ApiFunctionData apiParams(cmd.c_str(), m_serverPort);
+                CallApiFunction(apiParams, [&urls, &cacheSources] (Document& jsonRoot)
+                                {
+                                    if(!jsonRoot.IsArray())
+                                        return;
+                                    
+                                    dump_json(jsonRoot);
+
+                                    std::for_each(jsonRoot.Begin(), jsonRoot.End(), [&]  (const Value & s) mutable
+                                                  {
+                                                      if(!s.HasMember("cache")) {
+                                                          throw MissingApiException("Missing 'cache' field");
+                                                      }
+                                                      if(!s.HasMember("streams")) {
+                                                          throw MissingApiException("Missing 'streams' field");
+                                                      }
+                                                      auto cacheUrl = s["cache"].GetString();
+                                                      PuzzleSource& source =  cacheSources[cacheUrl];
+
+ 
+                                                      auto streams = s["streams"].GetArray();
+                                                      std::for_each(streams.Begin(), streams.End(), [&]  (const Value & st){
+                                                          auto url = st.GetString();
+                                                          urls.push_back(url);
+                                                          source.Streams[url] = true;
+                                                          LogDebug(" >>>>  URL: %s <<<<<",  url);
+                                                      });
+                                                  });
+                                });
+            }
             
-            ApiFunctionData apiParams(cmd.c_str(), m_serverPort);
-            CallApiFunction(apiParams, [&urls] (Document& jsonRoot)
-                            {
-                                if(!jsonRoot.IsArray())
-                                    return;
-                                std::for_each(jsonRoot.Begin(), jsonRoot.End(), [&]  (const Value & i) mutable
-                                              {
-                                                  auto url = i.GetString();
-                                                  urls.push_back(url);
-                                                  LogDebug(" >>>>  URL: %s <<<<<",  url);
-                                                  
-                                              });
-                            });
-  
+            AddChannel(ch);
         } catch (ServerErrorException& ex) {
             XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32006), ex.reason.c_str());
+        } catch (MissingApiException& ex){
+            LogError(" Bad JSON responce for '/streams/json_ds/': %s", ex.what());
         } catch (...) {
             LogError(" >>>>  FAILED to get URL for channel ID=%d <<<<<", channelId);
         }
-        AddChannel(ch);
     }
 }
 
-void PuzzleTV::UpdateChannelStreams(ChannelId channelId)
+void PuzzleTV::UpdateChannelSources(ChannelId channelId)
 {
     if(m_serverVersion == c_PuzzleServer2 || !CheckChannelId(channelId))
         return;
     
-    TChannelStreams streams;
+    TChannelSources sources;
     try {
         string cmd = string("/cache_url/") + ToPuzzleChannelId(channelId) + "/json";
         ApiFunctionData apiParams(cmd.c_str(), m_serverPort);
-        CallApiFunction(apiParams, [&streams] (Document& jsonRoot)
+        CallApiFunction(apiParams, [&sources] (Document& jsonRoot)
                         {
                             if(!jsonRoot.IsArray())
                                 return;
                             dump_json(jsonRoot);
 
-                            PuzzleStream stream;
                             std::for_each(jsonRoot.Begin(), jsonRoot.End(), [&]  (const Value & i) mutable
                                           {
-                                              if(i.HasMember("url")) {
-                                                  stream.Url = i["url"].GetString();
+                                              if(!i.HasMember("url")) {
+                                                  return;
                                               }
+                                              TCacheUrl cacheUrl = i["url"].GetString();
+                                              PuzzleSource& source =  sources[cacheUrl];
+
                                               if(i.HasMember("serv")) {
-                                                  stream.Server = i["serv"].GetString();
+                                                  source.Server = i["serv"].GetString();
                                               } else {
-                                                  stream.Server = stream.Url.find("acesearch") != string::npos ?  "ASE" : "HTTP";
+                                                  source.Server = cacheUrl.find("acesearch") != string::npos ?  "ASE" : "HTTP";
                                               }
                                               if(i.HasMember("lock")) {
-                                                  stream.IsOn = !i["lock"].GetBool();
+                                                  source.IsChannelLocked = i["lock"].GetBool();
                                               }
-                                              streams.push_back(stream);
+                                              if(i.HasMember("serv_on")) {
+                                                  source.IsServerOn = i["serv_on"].GetBool();
+                                              }
+                                              if(i.HasMember("priority")) {
+                                                  auto s = i["priority"].GetString();
+                                                  if(strlen(s) > 0) {
+                                                      source.Priority = atoi(s);
+                                                  }
+                                              }
+                                              if(i.HasMember("id")) {
+                                                  auto s = i["id"].GetString();
+                                                  if(strlen(s) > 0) {
+                                                      source.Id = atoi(s);
+                                                  }
+                                              }
                                           });
                         });
     } catch (ServerErrorException& ex) {
         XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32006), ex.reason.c_str());
     } catch (...) {
-        LogError(" >>>>  FAILED to get streams list for channel ID=%d <<<<<", channelId);
+        LogError(" >>>>  FAILED to get sources list for channel ID=%d <<<<<", channelId);
     }
     
-    Channel ch = m_channelList.at(channelId);
-    ch.Urls.clear();
-    AddChannel(ch);
 
-    for (auto& stream : streams) {
-        GetStreamMetadata(stream);
-    }
-    m_streams[channelId] = streams;
-}
-const PuzzleTV::TChannelStreams& PuzzleTV::GetStreamsForChannel(ChannelId channelId)
-{
-    if(m_streams.count(channelId) == 0) {
-        UpdateChannelStreams(channelId);
-    }
-    return m_streams[channelId];
+    GetSourcesMetadata(sources);
+    m_sources[channelId] = sources;
+    
+    UpdateUrlsForChannel(channelId);
+
 }
 
-void PuzzleTV::EnableStream(PvrClient::ChannelId channelId, const PuzzleStream& s)
+PuzzleTV::TPrioritizedSources PuzzleTV::GetSourcesForChannel(ChannelId channelId)
 {
-    if(m_streams.count(channelId) == 0)
+    if(m_sources.count(channelId) == 0) {
+        UpdateChannelSources(channelId);
+    }
+    
+    TPrioritizedSources result;
+    const auto& sources = m_sources[channelId];
+
+    for (const auto& source : sources) {
+        result.push(&source);
+    }
+    return result;
+}
+
+void PuzzleTV::EnableSource(PvrClient::ChannelId channelId, const TCacheUrl& cacheUrl)
+{
+    if(m_sources.count(channelId) == 0)
         return;
-    for (auto& stream : m_streams[channelId]) {
-        if(stream.Url == s.Url && !stream.IsOn){
-            stream.IsOn = true;
+    for (auto& source : m_sources[channelId]) {
+        if(source.first == cacheUrl && !source.second.IsOn()){
+            source.second.IsChannelLocked = false;
             //http://127.0.0.1:8185/back_list/base64url/unlock/CID
             const string  strId = ToPuzzleChannelId(channelId);
-            string encoded = base64_encode(reinterpret_cast<const unsigned char*>(stream.Url.c_str()), stream.Url.length());
+            string encoded = base64_encode(reinterpret_cast<const unsigned char*>(cacheUrl.c_str()), cacheUrl.length());
             string cmd = string("/back_list/")+ encoded + "/unlock/" + strId;
             
             
             ApiFunctionData apiParams(cmd.c_str(), m_serverPort);
             CallApiAsync(apiParams, [](Document&){}, [channelId, strId](const ActionQueue::ActionResult& s) {
                 if(s.exception){
-                    LogError("PuzzleTV: FAILED to disble stream for channel %s", strId.c_str());
+                    LogError("PuzzleTV: FAILED to disble source for channel %s", strId.c_str());
                 }
             });
-            // Prepare channel to update streams, when start next time
-            Channel ch = m_channelList.at(channelId);
-            ch.Urls.clear();
-            AddChannel(ch);
 
+            UpdateUrlsForChannel(channelId);
            break;
         }
     }
 }
-void PuzzleTV::DisableStream(PvrClient::ChannelId channelId, const PuzzleStream& s)
+void PuzzleTV::DisableSource(PvrClient::ChannelId channelId, const TCacheUrl& cacheUrl)
 {
-    if(m_streams.count(channelId) == 0)
+    if(m_sources.count(channelId) == 0)
         return;
-    for (auto& stream : m_streams[channelId]) {
-        if(stream.Url == s.Url && stream.IsOn){
-            stream.IsOn = false;
+    for (auto& source : m_sources[channelId]) {
+        if(source.first == cacheUrl && source.second.IsOn()){
+            source.second.IsChannelLocked = true;
             //http://127.0.0.1:8185/back_list/base64url/lock/CID
             const string  strId = ToPuzzleChannelId(channelId);
-            string encoded = base64_encode(reinterpret_cast<const unsigned char*>(stream.Url.c_str()), stream.Url.length());
+            string encoded = base64_encode(reinterpret_cast<const unsigned char*>(cacheUrl.c_str()), cacheUrl.length());
             string cmd = string("/back_list/")+ encoded + "/lock/" + strId;
             
             
             ApiFunctionData apiParams(cmd.c_str(), m_serverPort);
             CallApiAsync(apiParams, [](Document&){}, [channelId, strId](const ActionQueue::ActionResult& s) {
                 if(s.exception){
-                    LogError("PuzzleTV: FAILED to disble stream for channel %s", strId.c_str());
+                    LogError("PuzzleTV: FAILED to disble source for channel %s", strId.c_str());
                 }
             });
-            // Prepare channel to update streams, when start next time
-            Channel ch = m_channelList.at(channelId);
-            ch.Urls.clear();
-            AddChannel(ch);
-           break;
+            
+            UpdateUrlsForChannel(channelId);
+            break;
         }
     }
 

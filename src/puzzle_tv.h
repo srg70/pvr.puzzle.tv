@@ -30,7 +30,7 @@
 #include "client_core_base.hpp"
 #include <string>
 #include <map>
-#include <set>
+#include <queue>
 #include <vector>
 #include <functional>
 #include <list>
@@ -80,21 +80,40 @@ namespace PuzzleEngine
     {
     public:
         
-        struct PuzzleStream
+        struct PuzzleSource
         {
-            PuzzleStream()
+            typedef std::map<std::string, bool> TStreamsQuality;
+            
+            PuzzleSource()
             : RatingGood(0)
             , RatingBad(0)
-            , IsOn (true)
+            , IsServerOn (true)
+            , IsChannelLocked (false)
+            , Priority (0)
+            , Id (0)
             {}
             
-            std::string Url;
             int64_t RatingGood;
             int64_t RatingBad;
-            bool IsOn;
+            bool IsServerOn;
+            bool IsChannelLocked;
+            int Id;
+            int Priority;
             std::string Server;
+            TStreamsQuality Streams;
+            
+            bool IsOn() const {return IsServerOn && !IsChannelLocked && Streams.size() > 0; }
+            bool CanBeOn() const {return Streams.size() > 0; }
         };
-        typedef std::vector<PuzzleStream> TChannelStreams;
+        typedef std::string TCacheUrl;
+
+        typedef std::map<TCacheUrl, PuzzleSource> TChannelSources;
+        typedef const TChannelSources::value_type* TPrioritizedSource;
+        
+        struct PriorityComparator{
+          bool operator()(const TPrioritizedSource& left, const TPrioritizedSource& right) { return left->second.Priority > right->second.Priority; }
+        };
+        typedef std::priority_queue<TPrioritizedSource, std::vector<TPrioritizedSource>, PriorityComparator >  TPrioritizedSources;
 
         
         PuzzleTV(ServerVersion serverVersion, const char* serverUrl, uint16_t serverPort);
@@ -105,7 +124,8 @@ namespace PuzzleEngine
 
         std::string GetUrl(PvrClient::ChannelId channelId);
         std::string GetNextStream(PvrClient::ChannelId channelId, int currentChannelIdx);
-        void RateStream(const std::string& streamUrl, bool isGood);
+        void RateStream(PvrClient::ChannelId channelId, const std::string& streamUrl, bool isGood);
+        void OnOpenStremFailed(PvrClient::ChannelId channelId, const std::string& streamUrl);
 
         void SetMaxServerRetries(int maxServerRetries) {m_maxServerRetries = maxServerRetries;}
         void SetEpgParams(EpgType epgType, const std::string& epgUrl, uint16_t serverPort) {
@@ -120,20 +140,20 @@ namespace PuzzleEngine
              }
             m_epgServerPort = serverPort;
         }
-        const TChannelStreams& GetStreamsForChannel(PvrClient::ChannelId channelId);
-        void EnableStream(PvrClient::ChannelId channelId, const PuzzleStream& stream);
-        void DisableStream(PvrClient::ChannelId channelId, const PuzzleStream& stream);
-        void UpdateChannelStreams(PvrClient::ChannelId channelId);
+        TPrioritizedSources GetSourcesForChannel(PvrClient::ChannelId channelId);
+        void EnableSource(PvrClient::ChannelId channelId, const TCacheUrl& source);
+        void DisableSource(PvrClient::ChannelId channelId, const TCacheUrl& source);
+        void UpdateChannelSources(PvrClient::ChannelId channelId);
     protected:
         void Init(bool clearEpgCache);
         virtual void UpdateHasArchive(PvrClient::EpgEntry& entry);
         void BuildChannelAndGroupList();
 
     private:
-        typedef std::vector<std::string> StreamerIdsList;
-        
+        typedef std::map<PvrClient::ChannelId, TChannelSources> TChannelSourcesMap;
+
         struct ApiFunctionData;
-        bool AddXmlEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
+        PvrClient::UniqueBroadcastIdType AddXmlEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
         void LoadEpg();
         void UpdateArhivesAsync();
         
@@ -150,7 +170,7 @@ namespace PuzzleEngine
 
         bool CheckAceEngineRunning(const char* aceServerUrlBase);
         std::string EpgUrlForPuzzle3() const;
-        void GetStreamMetadata(PuzzleStream& stream);
+        void GetSourcesMetadata(TChannelSources& channelSources);
 
         const uint16_t m_serverPort;
         const std::string m_serverUri;
@@ -162,8 +182,8 @@ namespace PuzzleEngine
 
         std::map<PvrClient::ChannelId, PvrClient::ChannelId> m_epgToServerLut;
         const ServerVersion m_serverVersion;
-        
-        std::map<PvrClient::ChannelId, TChannelStreams> m_streams;
+
+        TChannelSourcesMap m_sources;
         
         bool m_isAceRunning;
     };
