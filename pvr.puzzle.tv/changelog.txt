@@ -1,3 +1,20 @@
+0.9.14
+- Puzzle3 streams prioritizing and auto-disabling.
+
+0.9.13
+- Fixed recording accessability.
+- Fixed recording complition on Windows
+
+0.9.10
+- Puzzle3 streams management (context menu)
+
+0.9.8
+- Kodi 18 timeshift API
+- Speedup channel switching
+
+0.9.6
+- TTV to Trash exchange
+
 0.9.4
 - Puzzle Server 3 support
 
