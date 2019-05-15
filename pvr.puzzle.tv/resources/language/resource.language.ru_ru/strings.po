@@ -408,7 +408,7 @@ msgstr "Обновить список каналов"
 
 msgctxt "#32054"
 msgid "Enable Stream"
-msgstr "Подключить поток"
+msgstr "Добавить поток"
 
 msgctxt "#32055"
 msgid "Disable Stream"
@@ -429,3 +429,7 @@ msgstr "Выберете поток для отключения"
 msgctxt "#32059"
 msgid "Choose Stream to Enable"
 msgstr "Выберете новый поток"
+
+msgctxt "#32060"
+msgid "Disable Empty Stream"
+msgstr "Отключить пустой поток"

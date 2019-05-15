@@ -265,37 +265,47 @@ void PuzzlePVRClient::HandleStreamsMenuHook(ChannelId channelId)
     int selected;
     XBMC_Message enableStreamLable(32054);
     XBMC_Message disableStreamLable(32055);
+    XBMC_Message emptyStreamLable(32060);
     XBMC_Message updateStreamsLable(32056);
     do {
-        StreamMenuItem enableItem(enableStreamLable, false);
-        StreamMenuItem disableItem(disableStreamLable, false);
         PuzzleTV::TPrioritizedSources sources = m_puzzleTV->GetSourcesForChannel(channelId);
         
-        
+        StreamMenuItem disableItem(disableStreamLable, false);
         std::vector<StreamMenuItem> disableMenu;
+        StreamMenuItem enableItem(enableStreamLable, false);
         std::vector<StreamMenuItem> enableMenu;
+        StreamMenuItem emptyItem(emptyStreamLable, false);
+        std::vector<StreamMenuItem> emptyMenu;
+        
         std::vector<PuzzleTV::TCacheUrl> cacheUrls;
         while(!sources.empty()) {
             const auto source = sources.top();
             sources.pop();
             cacheUrls.push_back(source->first);
-            enableItem.IsEnabled |= !source->second.IsOn() && source->second.CanBeOn();
-            disableItem.IsEnabled |= source->second.IsOn();
+            disableItem.IsEnabled |= source->second.IsOn() && !source->second.IsEmpty();
             {
-                StreamMenuItem item("", source->second.IsOn());
+                StreamMenuItem item("", !source->second.IsEmpty());
                 FillStreamTitle(source->second, item.Title);
                 disableMenu.push_back(item);
             }
+            enableItem.IsEnabled |= source->second.CanBeOn();
             {
-                StreamMenuItem item("", !source->second.IsOn() && source->second.CanBeOn());
+                StreamMenuItem item("", source->second.CanBeOn());
                 FillStreamTitle(source->second, item.Title);
                 enableMenu.push_back(item);
+            }
+            emptyItem.IsEnabled |= source->second.IsOn() && source->second.IsEmpty();
+            {
+                StreamMenuItem item("", source->second.IsOn() && source->second.IsEmpty());
+                FillStreamTitle(source->second, item.Title);
+                emptyMenu.push_back(item);
             }
         }
         
         std::vector<StreamMenuItem> rootItems;
         rootItems.push_back(disableItem);
         rootItems.push_back(enableItem);
+        rootItems.push_back(emptyItem);
         rootItems.push_back(StreamMenuItem(updateStreamsLable, true));
 
         selected = ShowStreamsMenu(XBMC_Message(32057), rootItems);
@@ -319,8 +329,17 @@ void PuzzlePVRClient::HandleStreamsMenuHook(ChannelId channelId)
                 }
                 break;
             }
-            // Update stream list
+            // Disable empty stream
             case 2:
+            {
+                int selectedSource = ShowStreamsMenu(XBMC_Message(32058), emptyMenu);
+                if(selectedSource >= 0){
+                    m_puzzleTV->DisableSource(channelId, cacheUrls[selectedSource]);
+                }
+                break;
+            }
+            // Update stream list
+            case 3:
                 m_puzzleTV->UpdateChannelSources(channelId);
                 break;
             default:

@@ -429,3 +429,7 @@ msgstr "Choose Stream to Disable"
 msgctxt "#32059"
 msgid "Choose Stream to Enable"
 msgstr "Choose Stream to Enable"
+
+msgctxt "#32060"
+msgid "Disable Empty Stream"
+msgstr "Disable Empty Stream"
