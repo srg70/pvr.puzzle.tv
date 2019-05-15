@@ -102,8 +102,9 @@ namespace PuzzleEngine
             std::string Server;
             TStreamsQuality Streams;
             
-            bool IsOn() const {return IsServerOn && !IsChannelLocked && Streams.size() > 0; }
-            bool CanBeOn() const {return Streams.size() > 0; }
+            bool IsOn() const {return IsServerOn && !IsChannelLocked; }
+            bool CanBeOn() const {return IsServerOn && IsChannelLocked; }
+            bool IsEmpty() const {return Streams.size() == 0; }
         };
         typedef std::string TCacheUrl;
 
