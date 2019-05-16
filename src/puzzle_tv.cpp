@@ -440,6 +440,7 @@ string PuzzleTV::GetUrl(ChannelId channelId)
     if(IsAceUrl(url, aceServerUrlBase)){
         if(!CheckAceEngineRunning(aceServerUrlBase.c_str()))  {
             XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32021));
+            return string();
         }
     }
     return  url;
@@ -459,7 +460,13 @@ string PuzzleTV::GetNextStream(ChannelId channelId, int currentChannelIdx)
         auto goodStream = std::find_if(streams.begin(), streams.end(), [](PuzzleSource::TStreamsQuality::const_reference stream) {return stream.second;});
         if(goodStream != streams.end()) {
             url = goodStream->first;
-            break;
+            // Check whether Ace Engine is running for ace link
+            string aceServerUrlBase;
+            if(IsAceUrl(url, aceServerUrlBase)){
+                if(CheckAceEngineRunning(aceServerUrlBase.c_str()))  {
+                    break;
+                }
+            }
         }
         sources.pop();
     }
@@ -471,6 +478,15 @@ void PuzzleTV::RateStream(ChannelId channelId, const std::string& streamUrl, boo
 {
     if(streamUrl.empty())
         return;
+    if(!isGood) {
+        string aceServerUrlBase;
+        if(IsAceUrl(streamUrl, aceServerUrlBase)){
+            if(!CheckAceEngineRunning(aceServerUrlBase.c_str()))  {
+                // Don't rate bad ace stream link when engine is not running.
+                return;
+            }
+        }
+    }
     string encoded = base64_encode(reinterpret_cast<const unsigned char*>(streamUrl.c_str()), streamUrl.length());
     std::string strRequest = string("http://") + m_serverUri + ":" + n_to_string(m_serverPort) + "/ratio/" + encoded + (isGood ? "/good" : "/bad");
 
@@ -828,8 +844,11 @@ void PuzzleTV::CallApiAsync(const std::string& strRequest, const std::string& na
 
 bool PuzzleTV::CheckAceEngineRunning(const char* aceServerUrlBase)
 {
-    if (m_isAceRunning)
-        return true;
+    static time_t last_check = 0;
+    if (m_isAceRunning || difftime(time(NULL), last_check) < 60) {
+        // Checke ace engine one time per minute
+        return m_isAceRunning;
+    }
     
     //http://127.0.0.1:6878/webui/api/service?method=get_version&format=jsonp
     bool isRunning = false;
@@ -852,6 +871,9 @@ bool PuzzleTV::CheckAceEngineRunning(const char* aceServerUrlBase)
         LogError("Puzzle TV:  CheckAceEngineRunning() unknown exception.");
     }
     event.Wait();
+    
+    last_check = time(NULL);
+    
     return m_isAceRunning = isRunning;
 }
 
