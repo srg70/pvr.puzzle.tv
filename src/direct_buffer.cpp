@@ -31,6 +31,7 @@
 #endif
 #endif
 
+#include "p8-platform/util/timeutils.h"
 #include "direct_buffer.h"
 #include "libXBMC_addon.h"
 #include "globals.hpp"
@@ -82,8 +83,15 @@ namespace Buffers {
     
     ssize_t DirectBuffer::Read(unsigned char *buffer, size_t bufferSize, uint32_t timeoutMs)
     {
-        if(m_cacheBuffer)
-            return m_cacheBuffer->Read(buffer, bufferSize);
+        if(m_cacheBuffer) {
+            ssize_t result = m_cacheBuffer->Read(buffer, bufferSize);
+            if(0 == result){
+                using namespace P8PLATFORM;
+                usleep(timeoutMs * 1000);
+                result = m_cacheBuffer->Read(buffer, bufferSize);
+            }
+            return result;
+        }
 
         return XBMC->ReadFile(m_streamHandle, buffer, bufferSize);
     }
