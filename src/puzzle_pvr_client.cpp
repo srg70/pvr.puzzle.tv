@@ -284,7 +284,7 @@ void PuzzlePVRClient::HandleStreamsMenuHook(ChannelId channelId)
             cacheUrls.push_back(source->first);
             disableItem.IsEnabled |= source->second.IsOn() && !source->second.IsEmpty();
             {
-                StreamMenuItem item("", !source->second.IsEmpty());
+                StreamMenuItem item("", source->second.IsOn() && !source->second.IsEmpty());
                 FillStreamTitle(source->second, item.Title);
                 disableMenu.push_back(item);
             }
@@ -409,6 +409,27 @@ PVR_ERROR PuzzlePVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
 {
     snprintf(signalStatus.strAdapterName, sizeof(signalStatus.strAdapterName), "IPTV Puzzle Server");
     snprintf(signalStatus.strAdapterStatus, sizeof(signalStatus.strAdapterStatus), (m_puzzleTV == NULL) ? "Not connected" :"OK");
+    string liveUrl = GetLiveUrl();
+    string serviceName;
+    if(!liveUrl.empty()) {
+        PuzzleTV::TPrioritizedSources sources = m_puzzleTV->GetSourcesForChannel(GetLiveChannelId());
+        string currentSource;
+        while(!sources.empty()) {
+            const auto source = sources.top();
+            sources.pop();
+            for (const auto& stream  : source->second.Streams) {
+                if(stream.first == liveUrl) {
+                    serviceName = source->second.Server;
+                    break;
+                }
+            }
+            if(!serviceName.empty()) {
+                break;
+            }
+        }
+        snprintf(signalStatus.strProviderName, sizeof(signalStatus.strServiceName), "%s", serviceName.c_str());
+        
+    }
     return PVR_ERROR_NO_ERROR;
 }
        
