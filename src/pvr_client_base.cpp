@@ -558,6 +558,11 @@ PVR_ERROR PVRClientBase::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL
 
 #pragma mark - Streams
 
+std::string PVRClientBase::GetLiveUrl() const {
+    return (m_inputBuffer) ? m_inputBuffer->GetUrl() : std::string();
+    
+}
+
 InputBuffer*  PVRClientBase::BufferForUrl(const std::string& url )
 {
     InputBuffer* buffer = NULL;
@@ -652,10 +657,12 @@ void PVRClientBase::CloseLiveStream()
     CLockObject lock(m_mutex);
     m_liveChannelId = UnknownChannelId;
     if(m_inputBuffer && !IsLiveInRecording()) {
-        LogNotice("PVRClientBase: closing input sream...");
+        LogNotice("PVRClientBase: closing input stream...");
         auto oldBuffer = m_inputBuffer;
         m_destroyer->PerformAsync([oldBuffer] (){
+            LogDebug("PVRClientBase: destroying input stream...");
             delete oldBuffer;
+            LogDebug("PVRClientBase: input stream been destroyed");
         }, [] (const ActionResult& result) {
             if(result.exception){
                 try {
@@ -665,7 +672,7 @@ void PVRClientBase::CloseLiveStream()
 
                 }
             } else {
-                LogNotice("PVRClientBase: input sream closed.");
+                LogNotice("PVRClientBase: input stream closed.");
             }
         });
     }
