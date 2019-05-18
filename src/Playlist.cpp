@@ -245,10 +245,15 @@ namespace Buffers {
         // For VOD plist we can't reload/refresh.
         if(m_isVod)
             return true;
-        std::string data;
-        LoadPlaylist(data);
-        // Empty playlist treat as EOF.
-        return ParsePlaylist(data);
+        try {
+            std::string data;
+            LoadPlaylist(data);
+            // Empty playlist treat as EOF.
+            return ParsePlaylist(data);
+        } catch (std::exception& ex) {
+            LogError("Playlist: FAILED to reload playlist. Error: %s", ex.what());
+        }
+        return false;
     }
     
     bool Playlist::NextSegment(SegmentInfo& info, bool& hasMoreSegments) {
