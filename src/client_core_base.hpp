@@ -45,6 +45,7 @@ namespace PvrClient {
         
         const PvrClient::ChannelList &GetChannelList();
         const PvrClient::GroupList &GetGroupList();
+        PvrClient::GroupId GroupForChannel(PvrClient::ChannelId chId);
         void RebuildChannelAndGroupList();
 
         void ReloadRecordings();
@@ -107,6 +108,8 @@ namespace PvrClient {
 
         PvrClient::ChannelList m_mutableChannelList;
         PvrClient::GroupList m_mutableGroupList;
+        std::map<PvrClient::ChannelId, PvrClient::GroupId> m_channelToGroupLut;
+
         
         PvrClient::EpgEntryList m_epgEntries;
         mutable P8PLATFORM::CMutex m_epgAccessMutex;
