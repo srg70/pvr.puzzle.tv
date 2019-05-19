@@ -132,6 +132,9 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     m_addCurrentEpgToArchive = true;
     XBMC->GetSetting("archive_for_current_epg_item", &m_addCurrentEpgToArchive);
 
+    m_addChannelGroupForArchive = false;
+    XBMC->GetSetting("archive_use_channel_groups", &m_addChannelGroupForArchive);
+    
     long waitForInetTimeout = 0;
     XBMC->GetSetting("wait_for_inet", &waitForInetTimeout);
     
@@ -265,6 +268,11 @@ ADDON_STATUS PVRClientBase::SetSetting(const char *settingName, const void *sett
     else if (strcmp(settingName, "archive_for_current_epg_item") == 0)
     {
         m_addCurrentEpgToArchive = *(bool *)(settingValue);
+        return ADDON_STATUS_NEED_RESTART;
+    }
+    else if (strcmp(settingName, "archive_use_channel_groups") == 0)
+    {
+        m_addChannelGroupForArchive = *(bool *)(settingValue);
         return ADDON_STATUS_NEED_RESTART;
     }
     else if (strcmp(settingName, "channel_index_offset") == 0)
@@ -788,10 +796,11 @@ void PVRClientBase::FillRecording(const EpgEntryList::value_type& epgEntry, PVR_
 {
     const auto& epgTag = epgEntry.second;
     
+    const Channel& ch = m_clientCore->GetChannelList().at(epgTag.ChannelId);
     sprintf(tag.strRecordingId, "%d",  epgEntry.first);
     strncpy(tag.strTitle, epgTag.Title.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
     strncpy(tag.strPlot, epgTag.Description.c_str(), PVR_ADDON_DESC_STRING_LENGTH - 1);
-    strncpy(tag.strChannelName, m_clientCore->GetChannelList().at(epgTag.ChannelId).Name.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
+    strncpy(tag.strChannelName, ch.Name.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
     tag.recordingTime = epgTag.StartTime;
     tag.iLifetime = 0; /* not implemented */
     
@@ -804,6 +813,11 @@ void PVRClientBase::FillRecording(const EpgEntryList::value_type& epgEntry, PVR_
     
     string dirName(dirPrefix);
     dirName += '/';
+    if(m_addChannelGroupForArchive) {
+        GroupId groupId = m_clientCore->GroupForChannel(ch.Id);
+        dirName += (-1 == groupId) ? "---" : m_clientCore->GetGroupList().at(groupId).Name.c_str();
+        dirName += '/';
+    }
     dirName += tag.strChannelName;
     char buff[20];
     strftime(buff, sizeof(buff), "/%d-%m-%y", localtime(&epgTag.StartTime));

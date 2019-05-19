@@ -199,10 +199,18 @@ namespace PvrClient{
         return m_groupList;
     }
     
+    PvrClient::GroupId ClientCoreBase::GroupForChannel(PvrClient::ChannelId chId) {
+        if(m_channelToGroupLut.count(chId) > 0) {
+            return m_channelToGroupLut[chId];
+        }
+        return -1;
+    }
+
     void ClientCoreBase::RebuildChannelAndGroupList()
     {
         m_mutableChannelList.clear();
         m_mutableGroupList.clear();
+        m_channelToGroupLut.clear();
         BuildChannelAndGroupList();
         m_phases[k_ChannelsLoadingPhase]->Broadcast();
     }
@@ -219,6 +227,7 @@ namespace PvrClient{
     void ClientCoreBase::AddChannelToGroup(GroupId groupId, ChannelId channelId)
     {
         m_mutableGroupList[groupId].Channels.insert(channelId);
+        m_channelToGroupLut[channelId] = groupId;
     }
     
 #pragma mark - EPG

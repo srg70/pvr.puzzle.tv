@@ -81,6 +81,22 @@ msgctxt "#10015"
 msgid "Channel index offset"
 msgstr "Channel index offset"
 
+msgctxt "#10016"
+msgid "Arrange archive by channel groups"
+msgstr "Arrange archive by channel groups"
+
+msgctxt "#10097"
+msgid "Other"
+msgstr "Other"
+
+msgctxt "#10098"
+msgid "Recordings"
+msgstr "Recordings"
+
+msgctxt "#10099"
+msgid "Network"
+msgstr "Network"
+
 #============ Puzzle Server Settings ============
 
 msgctxt "#20000"

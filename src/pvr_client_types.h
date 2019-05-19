@@ -193,6 +193,7 @@ namespace PvrClient {
 
         virtual const ChannelList& GetChannelList() = 0;
         virtual const GroupList &GetGroupList() = 0;
+        virtual PvrClient::GroupId GroupForChannel(PvrClient::ChannelId chId) = 0;
         virtual void GetEpg(ChannelId  channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries) = 0;
         virtual bool GetEpgEntry(UniqueBroadcastIdType i,  EpgEntry& enrty) = 0;
         virtual void ForEachEpg(const EpgEntryAction& action) const = 0;

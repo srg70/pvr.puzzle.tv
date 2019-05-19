@@ -583,7 +583,7 @@ void PuzzleTV::UpdateUrlsForChannel(PvrClient::ChannelId channelId)
                                     if(!jsonRoot.IsArray())
                                         return;
                                     
-                                    dump_json(jsonRoot);
+                                    //dump_json(jsonRoot);
 
                                     std::for_each(jsonRoot.Begin(), jsonRoot.End(), [&]  (const Value & s) mutable
                                                   {
@@ -632,7 +632,7 @@ void PuzzleTV::UpdateChannelSources(ChannelId channelId)
                         {
                             if(!jsonRoot.IsArray())
                                 return;
-                            dump_json(jsonRoot);
+                            //dump_json(jsonRoot);
 
                             std::for_each(jsonRoot.Begin(), jsonRoot.End(), [&]  (const Value & i) mutable
                                           {
