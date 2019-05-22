@@ -279,8 +279,8 @@ msgid "Data Source"
 msgstr "Источник данных"
 
 msgctxt "#60008"
-msgid "Ace Strem"
-msgstr "Ace Strem"
+msgid "Ace Stream"
+msgstr "Ace Stream"
 
 msgctxt "#60009"
 msgid "Server"
@@ -381,8 +381,8 @@ msgid "Favourites"
 msgstr "Избранное"
 
 msgctxt "#32021"
-msgid "Ace Strem not found!"
-msgstr "Ace Strem не запущен!"
+msgid "Ace Stream not found!"
+msgstr "Ace Stream не запущен!"
 
 msgctxt "#32022"
 msgid "Checking Internet connection..."
