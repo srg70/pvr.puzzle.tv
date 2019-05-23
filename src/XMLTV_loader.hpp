@@ -56,7 +56,8 @@ namespace XMLTV {
 
     bool ParseChannels(const std::string& url,  const ChannelCallback& onChannelFound);
     bool ParseEpg(const std::string& url,  const EpgEntryCallback& onEpgEntryFound);
-   
+    PvrClient::KodiChannelId ChannelIdForChannelName(const std::string& strId);
+
     long LocalTimeOffset();
     bool IsDataCompressed(const std::string& data);
     bool GzipInflate( const std::string& compressedBytes, std::string& uncompressedBytes);
