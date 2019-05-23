@@ -213,7 +213,7 @@ PVR_ERROR  PuzzlePVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MEN
     if(m_puzzleTV == nullptr)
         return PVR_ERROR_SERVER_ERROR;
     if(UPDATE_CHANNEL_STREAMS_MENU_HOOK == menuhook.iHookId) {
-        HandleStreamsMenuHook(item.data.channel.iUniqueId);
+        HandleStreamsMenuHook(ChannelIdForBrodcastId(item.data.channel.iUniqueId));
     } else if (UPDATE_CHANNELS_MENU_HOOK == menuhook.iHookId) {
         CreateCoreSafe(false);
         PVR->TriggerChannelUpdate();
@@ -252,11 +252,7 @@ static int ShowStreamsMenu(const char * title, std::vector<StreamMenuItem>& item
 static void FillStreamTitle(const PuzzleTV::PuzzleSource& stream,  std::string& title)
 {
     char buf[100];
-    int totalRating = (stream.RatingGood + stream.RatingBad);
-    string rating("--");
-    if(totalRating)
-    rating = n_to_string(stream.RatingGood / (stream.RatingGood + stream.RatingBad));
-    sprintf(buf, /*"%-3s%% */"%s", /*rating.c_str(), */stream.Server.c_str());
+    sprintf(buf, "%s", stream.Server.c_str());
     title = buf;
 }
 
@@ -379,14 +375,6 @@ string PuzzlePVRClient::GetNextStreamUrl(ChannelId channelId)
         return string();
     LogError("PuzzlePVRClient:: trying to move to next stream from [%d].", m_currentChannelStreamIdx);
    return m_puzzleTV->GetNextStream(channelId, m_currentChannelStreamIdx++);
-}
-
-void PuzzlePVRClient::RateStream(ChannelId channelId, const std::string& streamUrl, bool isGood)
-{
-    if(m_puzzleTV == nullptr)
-        return;
-    m_puzzleTV->RateStream(channelId, streamUrl, isGood);
-    
 }
 
 void PuzzlePVRClient::OnOpenStremFailed(ChannelId channelId, const std::string& streamUrl)

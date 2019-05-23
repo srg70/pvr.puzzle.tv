@@ -50,6 +50,21 @@ static const int secondsPerHour = 60 * 60;
 static const char* c_EpgCacheFile = "puzzle_epg_cache.txt";
 //static PuzzleTV::TChannelStreams s_NoStreams;
 
+
+static void DumpStreams(const PuzzleTV::TPrioritizedSources& s)
+{
+    PuzzleTV::TPrioritizedSources sources(s);
+    while (!sources.empty()) {
+        const auto& source = sources.top()->second;
+        const auto& streams = source.Streams;
+        std::for_each(streams.begin(), streams.end(), [&source](PuzzleTV::PuzzleSource::TStreamsQuality::const_reference stream) {
+            LogDebug("URL %s: %s",  source.Server.c_str(), stream.first.c_str());
+        });
+        sources.pop();
+    }
+    
+}
+
 struct PuzzleTV::ApiFunctionData
 {
      ApiFunctionData(const char* _name,  uint16_t _port,  const ParamList* _params = nullptr)
@@ -423,7 +438,7 @@ string PuzzleTV::GetUrl(ChannelId channelId)
 
     auto sources = GetSourcesForChannel(channelId);
     while (!sources.empty()) {
-        const auto streams = sources.top()->second.Streams;
+        const auto& streams = sources.top()->second.Streams;
         auto goodStream = std::find_if(streams.begin(), streams.end(), [](PuzzleSource::TStreamsQuality::const_reference stream) {return stream.second;});
         if(goodStream != streams.end()) {
             url = goodStream->first;
@@ -455,50 +470,26 @@ string PuzzleTV::GetNextStream(ChannelId channelId, int currentChannelIdx)
     // where bad stream should be marked as bad. So return first good stream
     string url;
     auto sources = GetSourcesForChannel(channelId);
+    DumpStreams(sources);
     while (!sources.empty()) {
-        const auto streams = sources.top()->second.Streams;
+        const auto& streams = sources.top()->second.Streams;
         auto goodStream = std::find_if(streams.begin(), streams.end(), [](PuzzleSource::TStreamsQuality::const_reference stream) {return stream.second;});
         if(goodStream != streams.end()) {
             url = goodStream->first;
             // Check whether Ace Engine is running for ace link
             string aceServerUrlBase;
-            if(IsAceUrl(url, aceServerUrlBase)){
-                if(CheckAceEngineRunning(aceServerUrlBase.c_str()))  {
-                    break;
-                }
+            if(!IsAceUrl(url, aceServerUrlBase)){
+                break; // return non ase stream immideatelly
             }
+            if(CheckAceEngineRunning(aceServerUrlBase.c_str()))  {
+                break; // ase engin running, so return ase stream.
+            }
+            
         }
         sources.pop();
     }
     
     return url;
-}
-
-void PuzzleTV::RateStream(ChannelId channelId, const std::string& streamUrl, bool isGood)
-{
-    if(streamUrl.empty())
-        return;
-    if(!isGood) {
-        string aceServerUrlBase;
-        if(IsAceUrl(streamUrl, aceServerUrlBase)){
-            if(!CheckAceEngineRunning(aceServerUrlBase.c_str()))  {
-                // Don't rate as bad ace stream link when engine is not running.
-                return;
-            }
-        }
-    }
-    string encoded = base64_encode(reinterpret_cast<const unsigned char*>(streamUrl.c_str()), streamUrl.length());
-    std::string strRequest = string("http://") + m_serverUri + ":" + n_to_string(m_serverPort) + "/ratio/" + encoded + (isGood ? "/good" : "/bad");
-
-    m_httpEngine->CallApiAsync(strRequest, [](const std::string& responce) {},  [](const ActionQueue::ActionResult& ss){
-        if(ss.exception != nullptr){
-            try {
-                std::rethrow_exception(ss.exception);
-            } catch (std::exception& ex) {
-                LogError("PuzzleTV::RateStream(): FAILED with error %s", ex.what());
-           }
-        }
-    });
 }
 
 void PuzzleTV::OnOpenStremFailed(ChannelId channelId, const std::string& streamUrl)
@@ -513,41 +504,10 @@ void PuzzleTV::OnOpenStremFailed(ChannelId channelId, const std::string& streamU
             }
             break;
         } else {
-            LogError("PuzzleTV::OnOpenStremFailed(): failed to open inknown stream!");
+            LogError("PuzzleTV::OnOpenStremFailed(): failed to open unknown stream!");
         }
     }
 }
-
-void PuzzleTV::GetSourcesMetadata(TChannelSources& channelSources)
-{
-    return;
-    
-    if(m_serverVersion == c_PuzzleServer2)
-        return;
-    
-    try {
-        for (auto& source : channelSources) {
-            string encoded = base64_encode(reinterpret_cast<const unsigned char*>(source.first.c_str()), source.first.length());
-            std::string cmd =  string("/ratio/") + encoded + "/json";
-            
-            ApiFunctionData apiParams(cmd.c_str(), m_serverPort);
-            CallApiFunction(apiParams, [&] (Document& jsonRoot)
-                            {
-                                if(jsonRoot.HasMember("good")){
-                                    source.second.RatingGood = jsonRoot["good"].GetInt64();
-                                }
-                                if(jsonRoot.HasMember("bad")){
-                                    source.second.RatingBad = jsonRoot["bad"].GetInt64();
-                                }
-                            });
-        }
-    } catch (ServerErrorException& ex) {
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32006), ex.reason.c_str());
-    } catch (...) {
-        LogError("PuzzleTV::GetSourceMetadata:  FAILED to get metadata");
-    }
-}
-
 
 void PuzzleTV::UpdateUrlsForChannel(PvrClient::ChannelId channelId)
 {
@@ -604,7 +564,7 @@ void PuzzleTV::UpdateUrlsForChannel(PvrClient::ChannelId channelId)
                                                           auto url = st.GetString();
                                                           urls.push_back(url);
                                                           source.Streams[url] = true;
-                                                          LogDebug(" >>>>  URL: %s <<<<<",  url);
+                                                          //LogDebug("URL %s: %s",  source.Server.c_str(), url);
                                                       });
                                                   });
                                 });
@@ -676,7 +636,6 @@ void PuzzleTV::UpdateChannelSources(ChannelId channelId)
     }
     
 
-    GetSourcesMetadata(sources);
     m_sources[channelId] = sources;
     
     UpdateUrlsForChannel(channelId);
@@ -705,10 +664,10 @@ void PuzzleTV::EnableSource(PvrClient::ChannelId channelId, const TCacheUrl& cac
     for (auto& source : m_sources[channelId]) {
         if(source.first == cacheUrl && !source.second.IsOn()){
             source.second.IsChannelLocked = false;
-            //http://127.0.0.1:8185/back_list/base64url/unlock/CID
+            //http://127.0.0.1:8185/black_list/base64url/unlock/CID
             const string  strId = ToPuzzleChannelId(channelId);
             string encoded = base64_encode(reinterpret_cast<const unsigned char*>(cacheUrl.c_str()), cacheUrl.length());
-            string cmd = string("/back_list/")+ encoded + "/unlock/" + strId + "/nofollow";
+            string cmd = string("/black_list/")+ encoded + "/unlock/" + strId + "/nofollow";
             
             
             ApiFunctionData apiParams(cmd.c_str(), m_serverPort);
@@ -717,9 +676,9 @@ void PuzzleTV::EnableSource(PvrClient::ChannelId channelId, const TCacheUrl& cac
                     LogError("PuzzleTV: FAILED to disble source for channel %s", strId.c_str());
                 }
             });
-
-            UpdateUrlsForChannel(channelId);
-           break;
+        
+            UpdateChannelSources(channelId);
+            break;
         }
     }
 }
@@ -730,10 +689,10 @@ void PuzzleTV::DisableSource(PvrClient::ChannelId channelId, const TCacheUrl& ca
     for (auto& source : m_sources[channelId]) {
         if(source.first == cacheUrl && source.second.IsOn()){
             source.second.IsChannelLocked = true;
-            //http://127.0.0.1:8185/back_list/base64url/lock/CID
+            //http://127.0.0.1:8185/black_list/base64url/lock/CID
             const string  strId = ToPuzzleChannelId(channelId);
             string encoded = base64_encode(reinterpret_cast<const unsigned char*>(cacheUrl.c_str()), cacheUrl.length());
-            string cmd = string("/back_list/")+ encoded + "/lock/" + strId + "/nofollow";
+            string cmd = string("/black_list/")+ encoded + "/lock/" + strId + "/nofollow";
             
             
             ApiFunctionData apiParams(cmd.c_str(), m_serverPort);
@@ -743,7 +702,7 @@ void PuzzleTV::DisableSource(PvrClient::ChannelId channelId, const TCacheUrl& ca
                 }
             });
             
-            UpdateUrlsForChannel(channelId);
+            UpdateChannelSources(channelId);
             break;
         }
     }

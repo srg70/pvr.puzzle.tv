@@ -75,7 +75,7 @@ namespace PvrClient {
         void LoadEpgCache(const char* cacheFile);
         void SaveEpgCache(const char* cacheFile, unsigned int daysToPreserve = 7);
         UniqueBroadcastIdType AddEpgEntry(UniqueBroadcastIdType id, EpgEntry& entry);
-        void UpdateEpgEntry(UniqueBroadcastIdType id, const EpgEntry& entry);
+//        void UpdateEpgEntry(UniqueBroadcastIdType id, const EpgEntry& entry);
 
         // Channel & group lists
         void AddChannel(const Channel& channel);

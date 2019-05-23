@@ -419,13 +419,22 @@ PVR_ERROR PVRClientBase::GetChannels(ADDON_HANDLE handle, bool bRadio)
     if(NULL == m_clientCore)
         return PVR_ERROR_SERVER_ERROR;
     
+    if(!bRadio) {
+        m_kodiToPluginLut.clear();
+        m_pluginToKodiLut.clear();
+    }
+    
     for(auto& itChannel : m_clientCore->GetChannelList())
     {
         auto & channel = itChannel.second;
         if (bRadio == channel.IsRadio)
         {
+            KodiChannelId uniqueId = XMLTV::ChannelIdForChannelName(channel.Name);
+            m_kodiToPluginLut[uniqueId] = channel.Id;
+            m_pluginToKodiLut[channel.Id] = uniqueId;
+            
             PVR_CHANNEL pvrChannel = { 0 };
-            pvrChannel.iUniqueId = channel.Id;
+            pvrChannel.iUniqueId = uniqueId;
             pvrChannel.iChannelNumber = channel.Number + m_channelIndexOffset;
             pvrChannel.bIsRadio = channel.IsRadio;
             strncpy(pvrChannel.strChannelName, channel.Name.c_str(), sizeof(pvrChannel.strChannelName));
@@ -492,7 +501,7 @@ PVR_ERROR PVRClientBase::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_C
         {
             PVR_CHANNEL_GROUP_MEMBER pvrGroupMember = { 0 };
             strncpy(pvrGroupMember.strGroupName, itGroup->second.Name.c_str(), sizeof(pvrGroupMember.strGroupName));
-            pvrGroupMember.iChannelUniqueId = it;
+            pvrGroupMember.iChannelUniqueId = m_pluginToKodiLut.at(it);
             PVR->TransferChannelGroupMember(handle, &pvrGroupMember);
         }
     }
@@ -509,14 +518,20 @@ PVR_ERROR PVRClientBase::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL
     
     m_clientCore->GetPhase(IClientCore::k_InitPhase)->Wait();
    
+    if(m_kodiToPluginLut.count(channel.iUniqueId) == 0){
+        LogError("PVRClientBase: EPG request for unknown channel ID %d", channel.iUniqueId);
+        return PVR_ERROR_NO_ERROR;
+    }
+    
     EpgEntryList epgEntries;
-    m_clientCore->GetEpg(channel.iUniqueId, iStart, iEnd, epgEntries);
+    m_clientCore->GetEpg(m_kodiToPluginLut.at(channel.iUniqueId), iStart, iEnd, epgEntries);
     EpgEntryList::const_iterator itEpgEntry = epgEntries.begin();
     for (int i = 0; itEpgEntry != epgEntries.end(); ++itEpgEntry, ++i)
     {
         EPG_TAG tag = { 0 };
         tag.iUniqueBroadcastId = itEpgEntry->first;
         itEpgEntry->second.FillEpgTag(tag);
+        tag.iUniqueChannelId = m_pluginToKodiLut.at(itEpgEntry->second.ChannelId);
         PVR->TransferEpgEntry(handle, &tag);
     }
     return PVR_ERROR_NO_ERROR;
@@ -550,18 +565,24 @@ std::string PVRClientBase::GetStreamUrl(ChannelId channel)
 
 bool PVRClientBase::OpenLiveStream(const PVR_CHANNEL& channel)
 {
+    if(m_kodiToPluginLut.count(channel.iUniqueId) == 0){
+        LogError("PVRClientBase: open stream request for unknown channel ID %d", channel.iUniqueId);
+        return false;
+    }
+    
     m_lastBytesRead = c_InitialLastByteRead;
-    bool succeeded = OpenLiveStream(channel.iUniqueId, GetStreamUrl(channel.iUniqueId));
+    const ChannelId chId = m_kodiToPluginLut.at(channel.iUniqueId);
+    bool succeeded = OpenLiveStream(chId, GetStreamUrl(chId));
     bool tryToRecover = !succeeded;
     while(tryToRecover) {
-        string url = GetNextStreamUrl(channel.iUniqueId);
+        string url = GetNextStreamUrl(chId);
         if(url.empty()) {// nomore streams
             LogDebug("No alternative stream found.");
             XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32026));
             break;
         }
         XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32025));
-        succeeded = OpenLiveStream(channel.iUniqueId, url);
+        succeeded = OpenLiveStream(chId, url);
         tryToRecover = !succeeded;
     }
     
@@ -611,7 +632,6 @@ bool PVRClientBase::OpenLiveStream(ChannelId channelId, const std::string& url )
     {
         LogError(  "PVRClientBase: input buffer error in OpenLiveStream: %s", ex.what());
         CloseLiveStream();
-        RateStream(channelId, url, false);
         OnOpenStremFailed(channelId, url);
         return false;
     }
@@ -661,9 +681,6 @@ int PVRClientBase::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSi
     if (bytesRead != iBufferSize &&  m_lastBytesRead >= 0 && !IsLiveInRecording()) {
         LogError("PVRClientBase:: trying to restart current channel.");
         string  url = m_inputBuffer->GetUrl();
-        // Rate if channel hanging
-        // rate it as bad.
-        RateStream(chId, m_inputBuffer->GetUrl(), false);
         if(!url.empty()){
             XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32000));
             if(SwitchChannel(chId, url))
@@ -671,11 +688,8 @@ int PVRClientBase::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSi
             else
                 bytesRead = -1;
         }
-    } else if(bytesRead == iBufferSize &&  m_lastBytesRead == c_InitialLastByteRead){
-        // If we succeeded to read from stream first time,
-        // rate it as good stream
-        RateStream(chId, m_inputBuffer->GetUrl(), true);
     }
+    
     m_lastBytesRead = bytesRead;
     return bytesRead;
 }
@@ -709,7 +723,8 @@ long long PVRClientBase::LengthLiveStream()
 
 bool PVRClientBase::SwitchChannel(const PVR_CHANNEL& channel)
 {
-    return SwitchChannel(channel.iUniqueId, GetStreamUrl(channel.iUniqueId));
+    const ChannelId chId = m_kodiToPluginLut.at(channel.iUniqueId);
+    return SwitchChannel(chId, GetStreamUrl(chId));
 }
 
 bool PVRClientBase::SwitchChannel(ChannelId channelId, const std::string& url)
@@ -806,7 +821,7 @@ void PVRClientBase::FillRecording(const EpgEntryList::value_type& epgEntry, PVR_
     
     tag.iDuration = epgTag.EndTime - epgTag.StartTime;
     tag.iEpgEventId = epgEntry.first;
-    tag.iChannelUid = epgTag.ChannelId;
+    tag.iChannelUid = m_pluginToKodiLut.at(epgTag.ChannelId);
     tag.channelType = PVR_RECORDING_CHANNEL_TYPE_TV;
     if(!epgTag.IconPath.empty())
         strncpy(tag.strIconPath, epgTag.IconPath.c_str(), sizeof(tag.strIconPath) -1);
@@ -1171,7 +1186,9 @@ bool PVRClientBase::CheckPlaylistUrl(const std::string& url)
 }
 
 void PvrClient::EpgEntry::FillEpgTag(EPG_TAG& tag) const{
-    tag.iChannelNumber = ChannelId;
+    // NOTE: internal channel ID is not valid for Kodi's EPG
+    // This field should be filled by caller
+    //tag.iUniqueChannelId = ChannelId;
     tag.strTitle = Title.c_str();
     tag.strPlot = Description.c_str();
     tag.startTime = StartTime;

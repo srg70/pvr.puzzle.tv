@@ -381,9 +381,9 @@ return false;             \
 
     }
     
-    static PvrClient::ChannelId PatchChannelId(const std::string& strId)
+    PvrClient::KodiChannelId ChannelIdForChannelName(const std::string& channelName)
     {
-        int id = std::hash<std::string>{}(strId);
+        int id = std::hash<std::string>{}(channelName);
         // Although Kodi defines unique broadcast ID as unsigned int for addons
         // internal DB serialisation accepts only signed positive IDs
         return id < 0 ? -id : id;
@@ -421,7 +421,7 @@ return false;             \
                 continue;
             }
             
-            channel.id = PatchChannelId(strId);
+            channel.id = ChannelIdForChannelName(strId);
             
             if(!GetNodeValue(pChannelNode, "display-name", channel.strName)){
                 XBMC->Log(LOG_DEBUG, "XMLTV Loader: no channel display name found.");
@@ -480,7 +480,7 @@ return false;             \
                 int iTmpEnd = ParseDateTime(strStop);
                 
                 EpgEntry entry;
-                entry.iChannelId = PatchChannelId(strId);
+                entry.iChannelId = ChannelIdForChannelName(strId);
                 entry.startTime = iTmpStart;
                 entry.endTime = iTmpEnd;
                 

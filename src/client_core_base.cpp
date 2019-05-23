@@ -355,23 +355,23 @@ namespace PvrClient{
         return id;
     }
     
-    void ClientCoreBase::UpdateEpgEntry(UniqueBroadcastIdType id, const EpgEntry& entry)
-    {
-        EPG_TAG tag = { 0 };
-        {
-            P8PLATFORM::CLockObject lock(m_epgAccessMutex);
-            auto & oldEntry = m_epgEntries[id];
-            bool hasArchive = oldEntry.HasArchive;
-            oldEntry =  entry;
-            oldEntry.HasArchive = hasArchive;
-            
-            // Update EPG tag
-            tag.iUniqueBroadcastId = id;
-            entry.FillEpgTag(tag);
-        }
-        PVR->EpgEventStateChange(&tag, entry.ChannelId, EPG_EVENT_UPDATED);
-
-    }
+//    void ClientCoreBase::UpdateEpgEntry(UniqueBroadcastIdType id, const EpgEntry& entry)
+//    {
+//        EPG_TAG tag = { 0 };
+//        {
+//            P8PLATFORM::CLockObject lock(m_epgAccessMutex);
+//            auto & oldEntry = m_epgEntries[id];
+//            bool hasArchive = oldEntry.HasArchive;
+//            oldEntry =  entry;
+//            oldEntry.HasArchive = hasArchive;
+//
+//            // Update EPG tag
+//            tag.iUniqueBroadcastId = id;
+//            entry.FillEpgTag(tag);
+//        }
+//        PVR->EpgEventStateChange(&tag, EPG_EVENT_UPDATED);
+//
+//    }
     
     bool ClientCoreBase::GetEpgEntry(UniqueBroadcastIdType i,  EpgEntry& entry)
     {

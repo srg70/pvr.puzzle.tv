@@ -85,16 +85,12 @@ namespace PuzzleEngine
             typedef std::map<std::string, bool> TStreamsQuality;
             
             PuzzleSource()
-            : RatingGood(0)
-            , RatingBad(0)
-            , IsServerOn (true)
+            : IsServerOn (true)
             , IsChannelLocked (false)
             , Priority (0)
             , Id (0)
             {}
             
-            int64_t RatingGood;
-            int64_t RatingBad;
             bool IsServerOn;
             bool IsChannelLocked;
             int Id;
@@ -125,7 +121,6 @@ namespace PuzzleEngine
 
         std::string GetUrl(PvrClient::ChannelId channelId);
         std::string GetNextStream(PvrClient::ChannelId channelId, int currentChannelIdx);
-        void RateStream(PvrClient::ChannelId channelId, const std::string& streamUrl, bool isGood);
         void OnOpenStremFailed(PvrClient::ChannelId channelId, const std::string& streamUrl);
 
         void SetMaxServerRetries(int maxServerRetries) {m_maxServerRetries = maxServerRetries;}
@@ -171,7 +166,6 @@ namespace PuzzleEngine
 
         bool CheckAceEngineRunning(const char* aceServerUrlBase);
         std::string EpgUrlForPuzzle3() const;
-        void GetSourcesMetadata(TChannelSources& channelSources);
 
         const uint16_t m_serverPort;
         const std::string m_serverUri;

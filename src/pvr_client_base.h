@@ -122,7 +122,6 @@ namespace PvrClient
 
         virtual std::string GetStreamUrl(ChannelId channelId);
         virtual std::string GetNextStreamUrl(ChannelId channelId) {return std::string();}
-        virtual void RateStream(ChannelId channelId, const std::string& streamUrl, bool isGood) {}
         virtual void OnOpenStremFailed(PvrClient::ChannelId channelId, const std::string& streamUrl) {}
         ChannelId GetLiveChannelId() const { return  m_liveChannelId;}
         std::string GetLiveUrl() const;
@@ -140,8 +139,13 @@ namespace PvrClient
         virtual void DestroyCoreSafe() = 0;
         
         static bool CheckPlaylistUrl(const std::string& url);
-    private:
         
+        ChannelId ChannelIdForBrodcastId(KodiChannelId uId) const {return m_kodiToPluginLut.at(uId);};
+        KodiChannelId BrodcastIdForChannelId(ChannelId chId) const {return m_pluginToKodiLut.at(chId);};
+    private:
+        typedef std::map<KodiChannelId, ChannelId> TKodiToPluginChannelIdLut;
+        typedef std::map<ChannelId, KodiChannelId> TPluginToKodiChannelIdLut;
+
         void Cleanup();
         void SetCacheLimit(uint64_t size);
         void SetChannelReloadTimeout(int timeout);
@@ -178,6 +182,8 @@ namespace PvrClient
         int m_channelIndexOffset;
         
         ActionQueue::CActionQueue* m_destroyer;
+        TKodiToPluginChannelIdLut m_kodiToPluginLut;
+        TPluginToKodiChannelIdLut m_pluginToKodiLut;
     };
 }
 #endif //pvr_client_base_h
