@@ -184,12 +184,13 @@ void PuzzleTV::BuildChannelAndGroupList()
         {
             const Value &channels = jsonRoot["channels"];
             Value::ConstValueIterator itChannel = channels.Begin();
+            unsigned int channelNumber = 0;
             for(; itChannel != channels.End(); ++itChannel)
             {
                 Channel channel;
                 char* dummy;
                 channel.Id = strtoul((*itChannel)["id"].GetString(), &dummy, 16);
-                channel.Number = channel.Id;
+                channel.Number = ++channelNumber;
                 channel.Name = (*itChannel)["name"].GetString();
                 channel.IconPath = (*itChannel)["icon"].GetString();
                 channel.IsRadio = false ;
