@@ -170,7 +170,7 @@ void PuzzleTV::BuildChannelAndGroupList()
         }
     };
 
-    typedef map<string, pair<Channel, string>, NoCaseComparator> PlaylistContent;
+    typedef map<string, pair<Channel, std::vector<string> >, NoCaseComparator> PlaylistContent;
 
     try {
 
@@ -197,8 +197,17 @@ void PuzzleTV::BuildChannelAndGroupList()
                 channel.HasArchive = false;
                 if(isPuzzle2)
                     channel.Urls.push_back((*itChannel)["url"].GetString());
-                std::string groupName = (*itChannel)["group"].GetString();
-                plistContent[channel.Name] = PlaylistContent::mapped_type(channel,groupName);
+                // Groups (string or array)
+                std::vector<string> groups;
+                const auto& jGroups = (*itChannel)["group"];
+                if(jGroups.IsString()) {
+                    groups.push_back((*itChannel)["group"].GetString());
+                } else if(jGroups.IsArray()) {
+                    for(auto groupIt = jGroups.GetArray().Begin(); groupIt < jGroups.GetArray().End(); ++groupIt){
+                        groups.push_back(groupIt->GetString());
+                    }
+                }
+                plistContent[channel.Name] = PlaylistContent::mapped_type(channel,groups);
             }
         });
 
@@ -224,21 +233,22 @@ void PuzzleTV::BuildChannelAndGroupList()
         for(const auto& channelWithGroup : plistContent)
         {
             const auto& channel = channelWithGroup.second.first;
-            const auto& groupName = channelWithGroup.second.second;
             
             AddChannel(channel);
             
-            const auto& groupList = m_groupList;
-            auto itGroup =  std::find_if(groupList.begin(), groupList.end(), [&](const GroupList::value_type& v ){
-                return groupName ==  v.second.Name;
-            });
-            if (itGroup == groupList.end()) {
-                Group newGroup;
-                newGroup.Name = groupName;
-                AddGroup(groupList.size(), newGroup);
-                itGroup = --groupList.end();
+            for (const auto& groupName : channelWithGroup.second.second) {
+                const auto& groupList = m_groupList;
+                auto itGroup =  std::find_if(groupList.begin(), groupList.end(), [&](const GroupList::value_type& v ){
+                    return groupName ==  v.second.Name;
+                });
+                if (itGroup == groupList.end()) {
+                    Group newGroup;
+                    newGroup.Name = groupName;
+                    AddGroup(groupList.size(), newGroup);
+                    itGroup = --groupList.end();
+                }
+                AddChannelToGroup(itGroup->first, channel.Id);
             }
-            AddChannelToGroup(itGroup->first, channel.Id);
         }
        
     } catch (ServerErrorException& ex) {
