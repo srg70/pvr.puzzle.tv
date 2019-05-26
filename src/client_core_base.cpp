@@ -538,10 +538,7 @@ namespace PvrClient{
             return;
 
         // Build HTTP request
-        std::string strRequest = string("http://") + "127.0.0.1" + ":";
-        strRequest += n_to_string(m_rpcPort);
-        strRequest +="/jsonrpc?request=";
-        strRequest += data;
+        std::string strRequest = string("http://") + "127.0.0.1" + ":" + n_to_string(m_rpcPort) + "/jsonrpc";
         auto start = P8PLATFORM::GetTimeMs();
         
         //    LogDebug("Calling '%s'.",  data.name.c_str());
@@ -568,7 +565,12 @@ namespace PvrClient{
                       });
         };
         
-        m_httpEngine->CallApiAsync(strRequest, parserWrapper,  [=](const ActionQueue::ActionResult& ss){completion(ss);});
+        std::vector<std::string> headers;
+        headers.push_back("Content-Type: application/json");
+        //            headers = curl_slist_append(headers, "Accept: application/json");
+        //headers = curl_slist_append(headers, "charsets: utf-8");
+
+        m_httpEngine->CallApiAsync(HttpEngine::Request(strRequest, data, headers), parserWrapper,  [=](const ActionQueue::ActionResult& ss){completion(ss);});
     }
     
 
