@@ -74,8 +74,18 @@ public:
     HttpEngine ();
     ~HttpEngine();
     
+    struct Request {
+        Request(const std::string& url) : Url(url){}
+        Request(const std::string& url, const std::string& postData) : Url(url), PostData(postData){}
+        Request(const std::string& url, const std::string& postData, const std::vector<std::string> headers) : Url(url), PostData(postData), Headers(headers){}
+        bool IsPost() const {return !PostData.empty();}
+        const std::string Url;
+        const std::string PostData;
+        const std::vector<std::string> Headers;
+    };
+    
     template <typename TParser, typename TCompletion>
-    void CallApiAsync(const std::string& request, TParser parser, TCompletion completion, RequestPriority priority = RequestPriority_Low)
+    void CallApiAsync(const Request& request, TParser parser, TCompletion completion, RequestPriority priority = RequestPriority_Low)
     {
         if(!m_apiCalls->IsRunning())
             throw QueueNotRunningException("API request queue in not running.");
@@ -107,7 +117,7 @@ public:
 
     static bool CheckInternetConnection(long timeout);
     
-    static void DoCurl(const std::string &url, const TCoocies &cookie, std::string* response, unsigned long long requestId = 0)
+    static void DoCurl(const Request &request, const TCoocies &cookie, std::string* response, unsigned long long requestId = 0)
     {
         char errorMessage[CURL_ERROR_SIZE];
         CURL *curl = curl_easy_init();
@@ -115,8 +125,19 @@ public:
             throw CurlErrorException("CURL initialisation failed.");
         
         auto start = P8PLATFORM::GetTimeMs();
-        Globals::LogInfo("Sending request: %s. ID=%llu", url.c_str(), requestId);
-        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+        Globals::LogInfo("Sending request: %s. ID=%llu", request.Url.c_str(), requestId);
+        curl_easy_setopt(curl, CURLOPT_URL, request.Url.c_str());
+        if(request.IsPost()) {
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request.PostData.c_str());
+        }
+        if(!request.Headers.empty()) {
+            struct curl_slist *headers = NULL;
+            for (const auto& header : request.Headers) {
+                headers = curl_slist_append(headers, header.c_str());
+             }
+            curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        }
+
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
         curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errorMessage);
         
@@ -180,12 +201,12 @@ private:
     mutable unsigned long long m_DebugRequestId;
 
     template <typename TResultCallback, typename TCompletion>
-    void SendHttpRequest(const std::string &url, const TCoocies &cookie, TResultCallback result, TCompletion completion, RequestPriority priority) const
+    void SendHttpRequest(const Request &request, const TCoocies &cookie, TResultCallback result, TCompletion completion, RequestPriority priority) const
     {
         std::string* response = new std::string();
         const unsigned long long requestId = m_DebugRequestId++;
         
-        DoCurl(url, cookie, response, requestId);
+        DoCurl(request, cookie, response, requestId);
         
         ActionQueue::TAction action = [result, response, requestId]() {
             Globals::LogDebug("Processing response. ID=%llu", requestId);
