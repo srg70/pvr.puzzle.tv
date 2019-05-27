@@ -210,7 +210,7 @@ void PuzzleTV::BuildChannelAndGroupList()
                 plistContent[channel.Name] = PlaylistContent::mapped_type(channel,groups);
             }
         });
-
+        
         if(m_epgType == c_EpgType_File) {
 
             m_epgToServerLut.clear();
@@ -229,7 +229,7 @@ void PuzzleTV::BuildChannelAndGroupList()
             
             XMLTV::ParseChannels(m_epgUrl, onNewChannel);
         }
-        
+
         for(const auto& channelWithGroup : plistContent)
         {
             const auto& channel = channelWithGroup.second.first;
@@ -253,6 +253,8 @@ void PuzzleTV::BuildChannelAndGroupList()
        
     } catch (ServerErrorException& ex) {
         XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32006), ex.reason.c_str());
+    } catch (std::exception& ex) {
+        LogError("PuzzleTV: FAILED to build channel list. Exception: %s", ex.what());
     } catch (...) {
         LogError(">>>>  FAILED to build channel list <<<<<");
     }
@@ -279,7 +281,7 @@ void PuzzleTV::BuildChannelAndGroupList()
 //        char* message  = XBMC->GetLocalizedString(32006);
 //        XBMC->QueueNotification(QUEUE_ERROR, message), ex.reason.c_str());
 //        XBMC->FreeString(message);
-//     } catch (...) {
+//     } 	 {
 //         LogError(" >>>>  FAILED receive archive <<<<<");
 //    }
 //    return url;
@@ -336,6 +338,8 @@ void PuzzleTV::UpdateEpgForAllChannels(time_t startTime, time_t endTime)
         SaveEpgCache(c_EpgCacheFile);
 //        } catch (ServerErrorException& ex) {
 //            XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32002), ex.reason.c_str() );
+    } catch (std::exception& ex) {
+        LogError("PuzzleTV: FAILED receive EPG. Exception: %s", ex.what());
     } catch (...) {
         LogError(" >>>>  FAILED receive EPG <<<<<");
     }
@@ -415,6 +419,8 @@ void PuzzleTV::LoadEpg()
                     }
                 });
             });
+        } catch (std::exception& ex) {
+            LogError("PuzzleTV: exception on lodaing JSON EPG: %s", ex.what());
         } catch (...) {
             LogError("PuzzleTV: exception on lodaing JSON EPG");
         }
@@ -585,8 +591,10 @@ void PuzzleTV::UpdateUrlsForChannel(PvrClient::ChannelId channelId)
         } catch (ServerErrorException& ex) {
             XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32006), ex.reason.c_str());
         } catch (MissingApiException& ex){
-            LogError(" Bad JSON responce for '/streams/json_ds/': %s", ex.what());
-        } catch (...) {
+            LogError("PuzzleTV: Bad JSON responce for '/streams/json_ds/': %s", ex.what());
+        } catch (std::exception& ex) {
+            LogError("PuzzleTV: FAILED to get URL for channel ID=%d. Exception: %s", channelId, ex.what());
+        }  catch (...) {
             LogError(" >>>>  FAILED to get URL for channel ID=%d <<<<<", channelId);
         }
     }
@@ -642,6 +650,8 @@ void PuzzleTV::UpdateChannelSources(ChannelId channelId)
                         });
     } catch (ServerErrorException& ex) {
         XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32006), ex.reason.c_str());
+    } catch (std::exception& ex) {
+        LogError("PuzzleTV: FAILED to get sources list for channel ID=%d. Exception: %s", channelId, ex.what());
     } catch (...) {
         LogError(" >>>>  FAILED to get sources list for channel ID=%d <<<<<", channelId);
     }
