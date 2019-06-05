@@ -81,6 +81,7 @@
 <category label="70010">
     <setting id="sharatv_login" type="text" label="30000" default="" />
     <setting id="sharatv_password" type="text" label="30001" option="hidden" default="" />
+    <setting id="sharatv_adult" type="bool" label="30003" default="false"/>
 </category>
 
 </settings>

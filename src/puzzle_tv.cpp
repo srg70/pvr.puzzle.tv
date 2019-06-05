@@ -302,6 +302,7 @@ UniqueBroadcastIdType PuzzleTV::AddXmlEpgEntry(const XMLTV::EpgEntry& xmlEpgEntr
     epgEntry.Description = xmlEpgEntry.strPlot;
     epgEntry.StartTime = xmlEpgEntry.startTime;
     epgEntry.EndTime = xmlEpgEntry.endTime;
+    epgEntry.IconPath = xmlEpgEntry.iconPath;
     return AddEpgEntry(id, epgEntry);
 }
 

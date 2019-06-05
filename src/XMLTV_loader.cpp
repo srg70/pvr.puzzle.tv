@@ -480,6 +480,12 @@ return false;             \
                 int iTmpEnd = ParseDateTime(strStop);
                 
                 EpgEntry entry;
+                xml_node<> * iconAttribute = pChannelNode->first_node("icon");
+                if (iconAttribute != NULL)
+                {
+                    GetAttributeValue(iconAttribute, "src", entry.iconPath);
+                }
+                
                 entry.iChannelId = idConverter(strId);
                 entry.startTime = iTmpStart;
                 entry.endTime = iTmpEnd;

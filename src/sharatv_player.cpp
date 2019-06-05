@@ -70,7 +70,8 @@ namespace SharaTvEngine
     static string FindVar(const string& data, string::size_type pos, const char* varTag);
 //    static void LoadPlaylist(const string& plistUrl, string& data);
     
-    Core::Core(const std::string &login, const std::string &password)
+    Core::Core(const std::string &login, const std::string &password, bool enableAdult)
+    : m_enableAdult(enableAdult)
     {
         if(login.empty() || password.empty())
             throw AuthFailedException();
@@ -145,6 +146,9 @@ namespace SharaTvEngine
             const auto& channel = channelWithGroup.second.first;
             const auto& groupName = channelWithGroup.second.second;
             
+            if(!m_enableAdult && groupName == "Взрослые")
+                continue;
+
             AddChannel(channel);
             
             const auto& groupList = m_groupList;
@@ -194,6 +198,7 @@ namespace SharaTvEngine
         epgEntry.Description = xmlEpgEntry.strPlot;
         epgEntry.StartTime = xmlEpgEntry.startTime;
         epgEntry.EndTime = xmlEpgEntry.endTime;
+        epgEntry.IconPath = xmlEpgEntry.iconPath;
         return ClientCoreBase::AddEpgEntry(id, epgEntry);
     }
     

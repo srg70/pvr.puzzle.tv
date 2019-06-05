@@ -51,6 +51,7 @@ using namespace PvrClient;
 
 static const char* c_login_setting = "sharatv_login";
 static const char* c_password_setting = "sharatv_password";
+static const char* c_adult_setting = "sharatv_adult";
 //static const char* c_seek_archives = "ttv_seek_archives";
 
 ADDON_STATUS SharaTvPVRClient::Init(PVR_PROPERTIES* pvrprops)
@@ -68,6 +69,9 @@ ADDON_STATUS SharaTvPVRClient::Init(PVR_PROPERTIES* pvrprops)
     
     m_supportSeek = true;
 //    XBMC->GetSetting(c_seek_archives, &m_supportSeek);
+    
+    m_enableAdult = false;
+    XBMC->GetSetting(c_adult_setting, &m_enableAdult);
     
     retVal = CreateCoreSafe(false);
     
@@ -117,7 +121,7 @@ void SharaTvPVRClient::CreateCore(bool clearEpgCache)
 {
     DestroyCoreSafe();
     
-    m_clientCore = m_core = new SharaTvEngine::Core(m_login, m_password);
+    m_clientCore = m_core = new SharaTvEngine::Core(m_login, m_password, m_enableAdult);
     m_core->IncludeCurrentEpgToArchive(m_addCurrentEpgToArchive);
     m_core->InitAsync(clearEpgCache);
 }
@@ -138,8 +142,19 @@ ADDON_STATUS SharaTvPVRClient::SetSetting(const char *settingName, const void *s
             m_password = (const char*) settingValue;
             result = ADDON_STATUS_NEED_RESTART;
         }
-    }
-    else {
+    } else if(strcmp(settingName,  c_adult_setting) == 0) {
+        bool newValue = *(const bool*) settingValue;
+        if(newValue != m_enableAdult) {
+            m_enableAdult = newValue;
+            result = CreateCoreSafe(false);
+            m_clientCore->CallRpcAsync("{\"jsonrpc\": \"2.0\", \"method\": \"GUI.ActivateWindow\", \"params\": {\"window\": \"pvrsettings\"},\"id\": 1}",
+                                       [&] (rapidjson::Document& jsonRoot) {
+                                           XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32016));
+                                       },
+                                       [&](const ActionQueue::ActionResult& s) {});
+        }
+        
+    } else {
         result = PVRClientBase::SetSetting(settingName, settingValue);
     }
     return result;

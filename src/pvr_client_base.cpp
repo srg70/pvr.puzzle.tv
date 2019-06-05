@@ -275,18 +275,27 @@ ADDON_STATUS PVRClientBase::SetSetting(const char *settingName, const void *sett
     }
     else if (strcmp(settingName, "archive_for_current_epg_item") == 0)
     {
-        m_addCurrentEpgToArchive = *(bool *)(settingValue);
-        return ADDON_STATUS_NEED_RESTART;
+        bool newValue = *(bool *)(settingValue);
+        if(newValue != m_addCurrentEpgToArchive) {
+            m_addCurrentEpgToArchive = newValue;
+            return ADDON_STATUS_NEED_RESTART;
+        }
     }
     else if (strcmp(settingName, "archive_use_channel_groups") == 0)
     {
-        m_addChannelGroupForArchive = *(bool *)(settingValue);
-        return ADDON_STATUS_NEED_RESTART;
+        bool newValue = *(bool *)(settingValue);
+        if(newValue != m_addChannelGroupForArchive) {
+            m_addChannelGroupForArchive = newValue;
+            return ADDON_STATUS_NEED_RESTART;
+        }
     }
     else if (strcmp(settingName, "channel_index_offset") == 0)
     {
-        m_channelIndexOffset = *(int *)(settingValue);
-        return ADDON_STATUS_NEED_RESTART;
+        int newValue = *(int *)(settingValue);
+        if(newValue != m_channelIndexOffset) {
+            m_channelIndexOffset = newValue;
+            return ADDON_STATUS_NEED_RESTART;
+        }
     }
 
     return ADDON_STATUS_OK;
