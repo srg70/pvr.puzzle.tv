@@ -54,7 +54,7 @@
 #include "HttpEngine.hpp"
 #include "client_core_base.hpp"
 #include "ActionQueue.hpp"
-
+#include "XMLTV_loader.hpp"
 
 using namespace std;
 using namespace ADDON;
@@ -531,7 +531,7 @@ PVR_ERROR PVRClientBase::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL
         EPG_TAG tag = { 0 };
         tag.iUniqueBroadcastId = itEpgEntry->first;
         itEpgEntry->second.FillEpgTag(tag);
-        tag.iUniqueChannelId = m_pluginToKodiLut.at(itEpgEntry->second.ChannelId);
+//        tag.iUniqueChannelId = m_pluginToKodiLut.at(itEpgEntry->second.ChannelId);
         PVR->TransferEpgEntry(handle, &tag);
     }
     return PVR_ERROR_NO_ERROR;
