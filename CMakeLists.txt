@@ -72,6 +72,8 @@ src/ttv_pvr_client.cpp
 src/guid.cpp
 src/playlist_cache.cpp
 src/base64.cpp
+src/sharatv_player.cpp
+src/sharatv_pvr_client.cpp
 )
 
 set(IPTV_HEADERS
@@ -111,6 +113,8 @@ src/client_core_base.hpp
 src/guid.hpp
 src/httplib.h
 src/base64.h
+src/sharatv_player.h
+src/sharatv_pvr_client.h
 )
 
 addon_version(pvr.puzzle.tv IPTV)

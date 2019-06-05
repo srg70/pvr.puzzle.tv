@@ -291,6 +291,12 @@ msgctxt "#60011"
 msgid "Port"
 msgstr "Port"
 
+#=============== Shara TV Player Settings ===========
+
+msgctxt "#70010"
+msgid "Shara TV"
+msgstr "Shara TV"
+
 #============= Notifications ================
 
 msgctxt "#32000"
@@ -305,9 +311,9 @@ msgctxt "#32002"
 msgid "OTT Player error: %s"
 msgstr "OTT Player error: %s"
 
-msgctxt "#32003"
-msgid "OTT Player: login failed."
-msgstr "OTT Player: login failed."
+# msgctxt "#32003"
+# msgid "OTT Player: login failed."
+# msgstr "OTT Player: login failed."
 
 msgctxt "#32004"
 msgid "Playlist error: %s"
@@ -322,8 +328,8 @@ msgid "Puzzle TV error: %s"
 msgstr "Puzzle TV error: %s"
 
 msgctxt "#32007"
-msgid "Sovok TV: login failed."
-msgstr "Sovok TV: login failed."
+msgid "%s: login failed."
+msgstr "%s: login failed."
 
 msgctxt "#32008"
 msgid "Streamer setting mismatch."

@@ -33,6 +33,7 @@
 #include "ott_pvr_client.h"
 #include "edem_pvr_client.h"
 #include "ttv_pvr_client.h"
+#include "sharatv_pvr_client.h"
 #include "xbmc_pvr_dll.h"
 #include "p8-platform/util/util.h"
 #include "kodi/xbmc_addon_cpp_dll.h"
@@ -72,7 +73,10 @@ extern "C" {
             case 4:
                 dataSource = new TtvPVRClient();
                 break;
-                
+            case 5:
+                dataSource = new SharaTvPVRClient();
+                break;
+
             default:
                 dataSource = NULL;
                 break;

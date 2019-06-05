@@ -157,20 +157,21 @@ namespace Buffers {
                  body = data.substr(pos);
                 mediaIndex += std::stoull(body, &pos);
                 m_isVod = false;
-                // Check for cache tag (obsolete)
-                pos = data.find(c_CACHE);
-                if(std::string::npos != pos) {
-                    pos += strlen(c_CACHE);
-                    body = data.substr(pos);
-                    std::string yes("YES");
-                    m_isVod =  body.substr(0,yes.size()) == yes;
-                    body=body.substr(0, body.find("#EXT-X-ENDLIST"));
-                }
-            } else {
-                // ... otherwise check plist type. VOD list may ommit sequence ID
-                pos = data.find(c_TYPE);
-                if(std::string::npos == pos)
-                    throw PlaylistException("Invalid playlist format: missing #EXT-X-MEDIA-SEQUENCE and #EXT-X-PLAYLIST-TYPE tag.");
+            }
+            // Check for cache tag (obsolete)
+            pos = data.find(c_CACHE);
+            if(std::string::npos != pos) {
+                pos += strlen(c_CACHE);
+                body = data.substr(pos);
+                std::string yes("YES");
+                m_isVod =  body.substr(0,yes.size()) == yes;
+                body=body.substr(0, body.find("#EXT-X-ENDLIST"));
+            }
+       
+            // Check plist type. VOD list may ommit sequence ID
+            pos = data.find(c_TYPE);
+            if(std::string::npos != pos){
+                //                throw PlaylistException("Invalid playlist format: missing #EXT-X-MEDIA-SEQUENCE and #EXT-X-PLAYLIST-TYPE tag.");
                 pos+= strlen(c_TYPE);
                 body = data.substr(pos);
                 std::string vod("VOD");
