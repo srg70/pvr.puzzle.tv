@@ -3,7 +3,7 @@
 
 <!-- Common -->
 <category label="10010">
-    <setting id="provider_type" type="enum" label="10000" lvalues="20010|30010|40010|50010|60010" default="1" />
+    <setting id="provider_type" type="enum" label="10000" lvalues="20010|30010|40010|50010|60010|70010" default="5" />
     <setting id="enable_timeshift" type="bool" label="10001" default="false" />
     <setting id="timeshift_size" type="slider" label="10003" default="50" range="30,5,32640" option="int" visible="eq(-1,true)" subsetting="true"/>
     <setting id="timeshift_type" type="enum" label="10004" lvalues="10005|10006" default="0"  visible="eq(-2,true)" subsetting="true"/>
@@ -77,5 +77,10 @@
     <setting id="ttv_adult" type="bool" label="30003" default="false" visible="false" />
 </category>
 
+<!-- Shara TV Player -->
+<category label="70010">
+    <setting id="sharatv_login" type="text" label="30000" default="" />
+    <setting id="sharatv_password" type="text" label="30001" option="hidden" default="" />
+</category>
 
 </settings>

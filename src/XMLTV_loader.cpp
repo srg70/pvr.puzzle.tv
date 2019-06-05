@@ -449,7 +449,7 @@ return false;             \
     }
 
     
-    bool ParseEpg(const std::string& url,  const EpgEntryCallback& onEpgEntryFound)
+    bool ParseEpg(const std::string& url,  const EpgEntryCallback& onEpgEntryFound, PvrClient::KodiChannelId (*idConverter)(const std::string& strId))
     {
         XmlDocumentAndData xmlDoc;
         
@@ -480,7 +480,7 @@ return false;             \
                 int iTmpEnd = ParseDateTime(strStop);
                 
                 EpgEntry entry;
-                entry.iChannelId = ChannelIdForChannelName(strId);
+                entry.iChannelId = idConverter(strId);
                 entry.startTime = iTmpStart;
                 entry.endTime = iTmpEnd;
                 

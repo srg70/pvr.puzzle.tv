@@ -104,7 +104,7 @@ ADDON_STATUS SovokPVRClient::CreateCoreSafe(bool clearEpgCache)
         CreateCore(clearEpgCache);
     }
     catch (AuthFailedException &) {
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32007));
+        XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32007), "Sovok TV");
     }
     catch (MissingHttpsSupportException &) {
         XBMC->QueueNotification(QUEUE_ERROR, "Missing HTTPS support.");
