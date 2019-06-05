@@ -50,6 +50,7 @@ namespace XMLTV {
         std::string strTitle;
         std::string strPlot;
         std::string strGenreString;
+        std::string iconPath;
     };
     typedef std::function<void(const EpgChannel& newChannel)> ChannelCallback;
     typedef std::function<void(const EpgEntry& newEntry)> EpgEntryCallback;

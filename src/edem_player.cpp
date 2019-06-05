@@ -180,7 +180,8 @@ namespace EdemEngine
         epgEntry.Description = xmlEpgEntry.strPlot;
         epgEntry.StartTime = xmlEpgEntry.startTime;
         epgEntry.EndTime = xmlEpgEntry.endTime;
-        return ClientCoreBase::AddEpgEntry(id, epgEntry);
+        epgEntry.IconPath = xmlEpgEntry.iconPath;
+       return ClientCoreBase::AddEpgEntry(id, epgEntry);
     }
     
     void Core::UpdateHasArchive(PvrClient::EpgEntry& entry)

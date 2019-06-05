@@ -81,7 +81,7 @@ namespace SharaTvEngine
     class Core : public PvrClient::ClientCoreBase
     {
     public:
-        Core(const std::string &login, const std::string &password);
+        Core(const std::string &login, const std::string &password, bool enableAdult);
         ~Core();
         
         std::string GetArchiveUrl(PvrClient::ChannelId channelId, time_t startTime);
@@ -104,6 +104,7 @@ namespace SharaTvEngine
         std::string m_epgUrl;
         P8PLATFORM::CTimeout m_epgUpdateInterval;
         ArchiveInfos m_archiveInfo;
+        bool m_enableAdult;
     };
 }
 #endif //_shara_tv_player_h_

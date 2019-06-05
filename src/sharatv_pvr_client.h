@@ -59,6 +59,7 @@ private:
     std::string m_password;
     //std::string m_epgUrl;
     bool m_supportSeek;
+    bool m_enableAdult;
 };
 
 #endif //__sahra_tv_pvr_client_h__

@@ -239,7 +239,8 @@ namespace TtvEngine
         epgEntry.Description = xmlEpgEntry.strPlot;
         epgEntry.StartTime = xmlEpgEntry.startTime;
         epgEntry.EndTime = xmlEpgEntry.endTime;
-        return ClientCoreBase::AddEpgEntry(id, epgEntry);
+        epgEntry.IconPath = xmlEpgEntry.iconPath;
+       return ClientCoreBase::AddEpgEntry(id, epgEntry);
     }
     
     void Core::UpdateEpgForAllChannels_Plist(time_t startTime, time_t endTime)
