@@ -1,3 +1,23 @@
+0.9.22
+- Added Shara TV provider
+- Fixed JSON-RPC call engine (Kodi 18)
+
+0.9.21
+- Fixed bug in Puzzle3 streams enumeration
+- Common brodcast ID for channels from all providers.
+- Multi-group channels support for Puzzle3
+
+0.9.18
+- Arrange recording by channel groups (option)
+
+0.9.17
+- Fixed 100% CPU lodaing issue
+- Fixed crash on missing Edem playlist during live playback
+
+0.9.16
+- Puzzle3 stream name ion PVR Info panel
+- Optimisation of Ace links bypassing when  no engine available.
+
 0.9.14
 - Puzzle3 streams prioritizing and auto-disabling.
 
