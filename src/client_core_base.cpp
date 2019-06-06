@@ -102,6 +102,8 @@ namespace PvrClient{
             };
             
             m_thread = new Action([this, action] {
+                if(m_isDone)
+                    return;
                 if(action)
                     action();
                 Broadcast();
@@ -181,6 +183,10 @@ namespace PvrClient{
                 delete ph.second;
             }
         }
+        m_phases.clear();
+        if(m_httpEngine) {
+            SAFE_DELETE(m_httpEngine);
+        }
         P8PLATFORM::CLockObject lock(m_epgAccessMutex);
         m_epgEntries.clear();
     };
@@ -189,13 +195,19 @@ namespace PvrClient{
     
     const ChannelList& ClientCoreBase::GetChannelList()
     {
-        m_phases[k_ChannelsLoadingPhase]->Wait();
+        auto phase =  GetPhase(k_ChannelsLoadingPhase);
+        if(phase) {
+            phase->Wait();
+        }
         return m_channelList;
     }
     
     const GroupList &ClientCoreBase::GetGroupList()
     {
-        m_phases[k_ChannelsLoadingPhase]->Wait();
+        auto phase =  GetPhase(k_ChannelsLoadingPhase);
+        if(phase) {
+            phase->Wait();
+        }
         return m_groupList;
     }
     
@@ -212,7 +224,10 @@ namespace PvrClient{
         m_mutableGroupList.clear();
         m_channelToGroupLut.clear();
         BuildChannelAndGroupList();
-        m_phases[k_ChannelsLoadingPhase]->Broadcast();
+        auto phase =  static_cast<ClientPhase*> (GetPhase(k_ChannelsLoadingPhase));
+        if(phase) {
+            phase->Broadcast();
+        }
     }
     
     void ClientCoreBase::AddChannel(const Channel& channel)
@@ -453,12 +468,18 @@ namespace PvrClient{
 #pragma  mark - Recordings
     void ClientCoreBase::ScheduleRecordingsUpdate()
     {
+        if(nullptr == m_httpEngine)
+            return;
         m_httpEngine->RunOnCompletionQueueAsync([this] {
             if(m_recordingsUpdateDelay.TimeLeft()) {
                 ScheduleRecordingsUpdate();
             } else {
-                if(!m_phases[k_EpgLoadingPhase]->IsDone()) {
-                    m_phases[k_EpgLoadingPhase]->Broadcast();
+                auto phase =  static_cast<ClientPhase*> (GetPhase(k_EpgLoadingPhase));
+                if(nullptr == phase) {
+                    return;
+                }
+                if(!phase->IsDone()) {
+                    phase->Broadcast();
                     ReloadRecordings();
                 }
             }
@@ -513,6 +534,9 @@ namespace PvrClient{
                                       std::function<void(rapidjson::Document&)>  parser,
                                       ActionQueue::TCompletion completion)
     {
+        if(nullptr == m_httpEngine)
+            return;
+
         // Build HTTP request
         std::string strRequest = string("http://") + "127.0.0.1" + ":" + n_to_string(m_rpcPort) + "/jsonrpc";
         auto start = P8PLATFORM::GetTimeMs();
