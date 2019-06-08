@@ -67,7 +67,7 @@ ADDON_STATUS SharaTvPVRClient::Init(PVR_PROPERTIES* pvrprops)
     if (XBMC->GetSetting(c_password_setting, &buffer))
         m_password = buffer;
     
-    m_supportSeek = true;
+    SetSeekSupported(true);
 //    XBMC->GetSetting(c_seek_archives, &m_supportSeek);
     
     m_enableAdult = false;
@@ -261,9 +261,9 @@ bool SharaTvPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     
     auto delegate = new SharaTvArchiveDelegate(m_core, recording);
     string url = delegate->UrlForTimeshift(0);
-    if(!m_supportSeek)
+    if(!IsSeekSupported())
         SAFE_DELETE(delegate);
-    return PVRClientBase::OpenRecordedStream(url, delegate);
+    return PVRClientBase::OpenRecordedStream(url, delegate, IsSeekSupported());
 }
 
 PVR_ERROR SharaTvPVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)

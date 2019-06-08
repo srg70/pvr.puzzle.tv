@@ -239,9 +239,9 @@ namespace PvrClient{
     {
         m_mutableGroupList[groupId] = group;
     }
-    void ClientCoreBase::AddChannelToGroup(GroupId groupId, ChannelId channelId)
+    void ClientCoreBase::AddChannelToGroup(GroupId groupId, ChannelId channelId, int indexInGroup)
     {
-        m_mutableGroupList[groupId].Channels.insert(channelId);
+        m_mutableGroupList[groupId].Channels[indexInGroup] = channelId;
         m_channelToGroupLut[channelId] = groupId;
     }
     
@@ -363,7 +363,7 @@ namespace PvrClient{
         while(m_epgEntries.count(id) != 0) {
             // Check duplicates.
             if(m_epgEntries[id].ChannelId == entry.ChannelId)
-                return false;
+                return id;
             ++id;
         }
         m_epgEntries[id] =  entry;
@@ -455,10 +455,10 @@ namespace PvrClient{
 //        m_lastEpgRequestEndTime = endTime;
         
         char mbstr[100];
-        if (std::strftime(mbstr, sizeof(mbstr), "%d/%m %H:%M - ", std::localtime(&startTime))) {
+        if (std::strftime(mbstr, sizeof(mbstr), "[%d/%m %H:%M - ", std::localtime(&startTime))) {
             int dec = strlen(mbstr);
-            if (std::strftime(mbstr + dec, sizeof(mbstr) - dec, "%d/%m %H:%M", std::localtime(&endTime))) {
-                LogDebug("Requested all cahnnel EPG update at %s", mbstr);
+            if (std::strftime(mbstr + dec, sizeof(mbstr) - dec, "%d/%m %H:%M]", std::localtime(&endTime))) {
+                LogDebug("Requested EPG update for %s", mbstr);
             }
         }
         
@@ -488,7 +488,7 @@ namespace PvrClient{
     
     void ClientCoreBase::OnEpgUpdateDone()
     {
-        LogNotice("Archive thread iteraton started");
+        LogNotice("Archive iteraton started");
         // Localize EPG lock
         {
             P8PLATFORM::CLockObject lock(m_epgAccessMutex);
@@ -503,7 +503,7 @@ namespace PvrClient{
         }
         if(m_didRecordingsUpadate)
             m_didRecordingsUpadate();
-        LogNotice("Archive thread iteraton done");
+        LogNotice("Archive iteraton done");
     }
     void ClientCoreBase::ReloadRecordings()
     {

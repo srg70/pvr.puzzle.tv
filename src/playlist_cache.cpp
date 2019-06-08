@@ -37,7 +37,7 @@
 using namespace Globals;
 
 namespace Buffers {
-    PlaylistCache::PlaylistCache(const std::string &playlistUrl, PlaylistBufferDelegate delegate)
+    PlaylistCache::PlaylistCache(const std::string &playlistUrl, PlaylistBufferDelegate delegate, bool seekForVod)
     : m_totalLength(0)
     , m_bitrate(0.0)
     , m_playlist(playlistUrl)
@@ -46,6 +46,7 @@ namespace Buffers {
     , m_cacheSizeInBytes(0)
     , m_currentSegmentIndex(0)
     , m_currentSegmentPositionFactor(0.0)
+    , m_seekForVod(seekForVod)
     {
         if(!ReloadPlaylist()){
             LogError("PlaylistCache: playlist initialization failed.");

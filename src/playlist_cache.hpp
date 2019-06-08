@@ -105,7 +105,7 @@ namespace Buffers {
             k_SegmentStatus_Loading,
             k_SegmentStatus_EOF
         };
-        PlaylistCache(const std::string &playlistUrl, PlaylistBufferDelegate delegate);
+        PlaylistCache(const std::string &playlistUrl, PlaylistBufferDelegate delegate, bool seekForVod);
         ~PlaylistCache();
         MutableSegment* SegmentToFill();
         void SegmentReady(MutableSegment* segment);
@@ -117,7 +117,7 @@ namespace Buffers {
         bool IsFull() const {return CanSeek() ? m_cacheSizeInBytes > m_cacheSizeLimit : m_segments.size() > 2; }
         int64_t Length() const { return CanSeek() ? m_totalLength : -1; }
         bool ReloadPlaylist();
-        bool CanSeek() const {return nullptr != m_delegate || m_playlist.IsVod(); }
+        bool CanSeek() const {return nullptr != m_delegate || (m_seekForVod && m_playlist.IsVod()); }
         bool HasSpaceForNewSegment();
     private:
        
@@ -142,6 +142,7 @@ namespace Buffers {
         float m_bitrate;
         int m_cacheSizeLimit;
         int m_cacheSizeInBytes;
+        const bool m_seekForVod;
 
     };
     

@@ -41,7 +41,7 @@ namespace Buffers
     class PlaylistBuffer :  public InputBuffer, public P8PLATFORM::CThread
     {
     public:
-        PlaylistBuffer(const std::string &streamUrl,  PlaylistBufferDelegate delegate);
+        PlaylistBuffer(const std::string &streamUrl,  PlaylistBufferDelegate delegate, bool seekForVod);
         ~PlaylistBuffer();
         
         const std::string& GetUrl() const { return m_url; };
@@ -66,6 +66,7 @@ namespace Buffers
         Segment* m_currentSegment;
         uint64_t m_loadingSegmentIndex;
         std::string m_url;
+        const bool m_seekForVod;
         
         void *Process();
         void Init(const std::string &playlistUrl);

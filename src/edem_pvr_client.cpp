@@ -68,8 +68,9 @@ ADDON_STATUS EdemPVRClient::Init(PVR_PROPERTIES* pvrprops)
     if (XBMC->GetSetting(c_epg_setting, &buffer))
         m_epgUrl = buffer;
     
-    m_supportSeek = false;
-    XBMC->GetSetting(c_seek_archives, &m_supportSeek);
+    bool supportSeek = false;
+    XBMC->GetSetting(c_seek_archives, &supportSeek);
+    SetSeekSupported(supportSeek);
     
     m_enableAdult = false;
     XBMC->GetSetting(c_edem_adult, &m_enableAdult);
@@ -146,7 +147,7 @@ ADDON_STATUS EdemPVRClient::SetSetting(const char *settingName, const void *sett
         result = CreateCoreSafe(false);
     }
     else if(strcmp(settingName,  c_seek_archives) == 0) {
-        m_supportSeek = *(const bool*) settingValue;
+        SetSeekSupported(*(const bool*) settingValue);
     }
     else if(strcmp(settingName,  c_edem_adult) == 0) {
         bool newValue = *(const bool*) settingValue;
@@ -255,9 +256,9 @@ bool EdemPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     
     auto delegate = new EdemArchiveDelegate(m_core, recording);
     string url = delegate->UrlForTimeshift(0);
-    if(!m_supportSeek)
+    if(!IsSeekSupported())
         SAFE_DELETE(delegate);
-    return PVRClientBase::OpenRecordedStream(url, delegate);
+    return PVRClientBase::OpenRecordedStream(url, delegate, IsSeekSupported());
 }
 
 PVR_ERROR EdemPVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)

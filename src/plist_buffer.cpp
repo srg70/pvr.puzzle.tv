@@ -43,10 +43,11 @@ using namespace Globals;
 
 namespace Buffers {
     
-    PlaylistBuffer::PlaylistBuffer(const std::string &playListUrl,  PlaylistBufferDelegate delegate)
+    PlaylistBuffer::PlaylistBuffer(const std::string &playListUrl,  PlaylistBufferDelegate delegate, bool seekForVod)
     : m_delegate(delegate)
     , m_cache(nullptr)
     , m_url(playListUrl)
+    , m_seekForVod(seekForVod)
     {
         Init(playListUrl);
     }
@@ -66,7 +67,7 @@ namespace Buffers {
             if(m_cache)
                 SAFE_DELETE(m_cache);
             try {
-                m_cache = new PlaylistCache(playlistUrl, m_delegate);
+                m_cache = new PlaylistCache(playlistUrl, m_delegate, m_seekForVod);
             } catch (PlaylistException ex) {
                 XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32024));
                 throw InputBufferException((std::string("Playlist exception: ") + ex.what()).c_str());

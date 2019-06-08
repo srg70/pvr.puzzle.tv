@@ -55,6 +55,7 @@ static const char* c_epg_provider_setting = "puzzle_server_epg_provider_type";
 static const char* c_epg_url_setting = "puzzle_server_epg_url";
 static const char* c_epg_port_setting = "puzzle_server_epg_port";
 static const char* c_server_version_setting = "puzzle_server_version";
+static const char* c_seek_archives = "puzzle_seek_archives";
 
 const unsigned int UPDATE_CHANNEL_STREAMS_MENU_HOOK = PVRClientBase::s_lastCommonMenuHookId + 1;
 const unsigned int UPDATE_CHANNELS_MENU_HOOK = UPDATE_CHANNEL_STREAMS_MENU_HOOK + 1;
@@ -91,6 +92,9 @@ ADDON_STATUS PuzzlePVRClient::Init(PVR_PROPERTIES* pvrprops)
     if(m_serverVersion != c_PuzzleServer3){
         m_serverVersion = c_PuzzleServer2;
     }
+    bool supportSeek = false;
+    XBMC->GetSetting(c_seek_archives, &supportSeek);
+    SetSeekSupported(supportSeek);
     
     PVR_MENUHOOK hook = {UPDATE_CHANNEL_STREAMS_MENU_HOOK, 32052, PVR_MENUHOOK_CHANNEL};
     PVR->AddMenuHook(&hook);
@@ -181,7 +185,11 @@ ADDON_STATUS PuzzlePVRClient::SetSetting(const char *settingName, const void *se
     else if(strcmp(settingName,  c_epg_port_setting) == 0) {
         result = ADDON_STATUS_NEED_RESTART;
     }
-   else {
+    else if(strcmp(settingName,  c_seek_archives) == 0) {
+        SetSeekSupported(*(const bool*) settingValue);
+        result = ADDON_STATUS_NEED_RESTART;
+    }
+    else {
         result = PVRClientBase::SetSetting(settingName, settingValue);
     }
     return result;
@@ -217,6 +225,12 @@ PVR_ERROR  PuzzlePVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MEN
     } else if (UPDATE_CHANNELS_MENU_HOOK == menuhook.iHookId) {
         CreateCoreSafe(false);
         PVR->TriggerChannelUpdate();
+        m_clientCore->CallRpcAsync("{\"jsonrpc\": \"2.0\", \"method\": \"GUI.ActivateWindow\", \"params\": {\"window\": \"pvrsettings\"},\"id\": 1}",
+                                   [&] (rapidjson::Document& jsonRoot) {
+                                       XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32016));
+                                   },
+                                   [&](const ActionQueue::ActionResult& s) {});
+
     }
     return PVR_ERROR_NO_ERROR;
 }
@@ -387,10 +401,22 @@ void PuzzlePVRClient::OnOpenStremFailed(ChannelId channelId, const std::string& 
 
 bool PuzzlePVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
 {
+    if(NULL == m_puzzleTV)
+        return false;
+
     if(IsLocalRecording(recording))
         return PVRClientBase::OpenRecordedStream(recording);
     
-   return false;
+    // NOTE: Kodi does NOT provide recording.iChannelUid for unknown reason
+    // Worrkaround: use EPG entry
+    
+    EpgEntry epgTag;
+    if(!m_puzzleTV->GetEpgEntry(stoi(recording.strRecordingId), epgTag))
+        return false;
+    
+    string url = m_puzzleTV->GetArchiveUrl(epgTag.ChannelId, recording.recordingTime);
+
+    return PVRClientBase::OpenRecordedStream(url, nullptr, IsSeekSupported());
 }
 
 PVR_ERROR PuzzlePVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
