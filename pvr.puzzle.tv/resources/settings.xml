@@ -31,28 +31,16 @@
       <setting id="puzzle_server_epg_provider_type" type="enum" label="20005" lvalues="20006|20007" default="0" />
       <setting id="puzzle_server_epg_url" type="text" label="20003" default="https://iptvx.one/epg/epg.xml.gz" visible="eq(-1,0)"/>
       <setting id="puzzle_server_epg_port" type="number" label="20004" default="8085" visible="eq(-2,1) + eq(-6,0)"/>
+      <setting id="puzzle_seek_archives" type="bool" label="50002" default="false"/>
 </category>
 
-<!-- Sovok TV -->
-  <category label="30010">
-<!--      <setting id="sep1" label="30010" type="lsep"/>-->
-      <setting id="login" type="text" label="30000" default="" />
-      <setting id="password" type="text" label="30001" option="hidden" default="" />
-      <setting id="archive_support" type="bool" label="30002" default="true" />
-      <setting id="enable_adult" type="bool" label="30003" default="false" />
-      <setting id="pin_code" type="text" label="30004" default="0000" visible="eq(-1,true)"/>
-      <setting id="streamer" type="fileenum" label="30005" values="resources/streamers"/>
-      <setting id="filter_by_country" type="bool" label="30006" default="true" />
-      <setting id="hide_LT_channels" type="bool" label="30007" default="false" visible="eq(-1,true)" subsetting="true"/>
-      <setting id="hide_US_channels" type="bool" label="30008" default="false" visible="eq(-2,true)" subsetting="true"/>
-      <setting id="hide_DE_channels" type="bool" label="30009" default="false" visible="eq(-3,true)" subsetting="true"/>
-      <setting id="hide_IL_channels" type="bool" label="300011" default="false" visible="eq(-4,true)" subsetting="true"/>
-      <setting id="hide_LV_channels" type="bool" label="300012" default="false" visible="eq(-5,true)" subsetting="true"/>
-      <setting id="hide_EE_channels" type="bool" label="300013" default="false" visible="eq(-6,true)" subsetting="true"/>
-      <setting id="hide_IT_channels" type="bool" label="300014" default="false" visible="eq(-7,true)" subsetting="true"/>
-      <setting id="hide_FR_channels" type="bool" label="300015" default="false" visible="eq(-8,true)" subsetting="true"/>
+  <!-- Shara TV Player -->
+  <category label="70010">
+      <setting id="sharatv_login" type="text" label="30000" default="" />
+      <setting id="sharatv_password" type="text" label="30001" option="hidden" default="" />
+      <setting id="sharatv_adult" type="bool" label="30003" default="false"/>
   </category>
-
+  
 <!-- OTT Player -->
 <category label="40010">
     <setting id="ott_playlist_url" type="text" label="40000" default="ott.watch"/>
@@ -77,11 +65,24 @@
     <setting id="ttv_adult" type="bool" label="30003" default="false" visible="false" />
 </category>
 
-<!-- Shara TV Player -->
-<category label="70010">
-    <setting id="sharatv_login" type="text" label="30000" default="" />
-    <setting id="sharatv_password" type="text" label="30001" option="hidden" default="" />
-    <setting id="sharatv_adult" type="bool" label="30003" default="false"/>
+<!-- Sovok TV -->
+<category label="30010">
+    <!--      <setting id="sep1" label="30010" type="lsep"/>-->
+    <setting id="login" type="text" label="30000" default="" />
+    <setting id="password" type="text" label="30001" option="hidden" default="" />
+    <setting id="archive_support" type="bool" label="30002" default="true" />
+    <setting id="enable_adult" type="bool" label="30003" default="false" />
+    <setting id="pin_code" type="text" label="30004" default="0000" visible="eq(-1,true)"/>
+    <setting id="streamer" type="fileenum" label="30005" values="resources/streamers"/>
+    <setting id="filter_by_country" type="bool" label="30006" default="true" />
+    <setting id="hide_LT_channels" type="bool" label="30007" default="false" visible="eq(-1,true)" subsetting="true"/>
+    <setting id="hide_US_channels" type="bool" label="30008" default="false" visible="eq(-2,true)" subsetting="true"/>
+    <setting id="hide_DE_channels" type="bool" label="30009" default="false" visible="eq(-3,true)" subsetting="true"/>
+    <setting id="hide_IL_channels" type="bool" label="300011" default="false" visible="eq(-4,true)" subsetting="true"/>
+    <setting id="hide_LV_channels" type="bool" label="300012" default="false" visible="eq(-5,true)" subsetting="true"/>
+    <setting id="hide_EE_channels" type="bool" label="300013" default="false" visible="eq(-6,true)" subsetting="true"/>
+    <setting id="hide_IT_channels" type="bool" label="300014" default="false" visible="eq(-7,true)" subsetting="true"/>
+    <setting id="hide_FR_channels" type="bool" label="300015" default="false" visible="eq(-8,true)" subsetting="true"/>
 </category>
 
 </settings>

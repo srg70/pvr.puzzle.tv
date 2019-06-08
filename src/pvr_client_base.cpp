@@ -103,6 +103,7 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     m_recordBuffer.buffer = NULL;
     m_recordBuffer.duration = 0;
     m_localRecordBuffer = NULL;
+    m_supportSeek = false;
     
     LogDebug( "User path: %s", pvrprops->strUserPath);
     LogDebug( "Client path: %s", pvrprops->strClientPath);
@@ -555,7 +556,8 @@ PVR_ERROR PVRClientBase::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_C
         {
             PVR_CHANNEL_GROUP_MEMBER pvrGroupMember = { 0 };
             strncpy(pvrGroupMember.strGroupName, itGroup->second.Name.c_str(), sizeof(pvrGroupMember.strGroupName));
-            pvrGroupMember.iChannelUniqueId = m_pluginToKodiLut.at(it);
+            pvrGroupMember.iChannelUniqueId = m_pluginToKodiLut.at(it.second);
+            pvrGroupMember.iChannelNumber = it.first;
             PVR->TransferChannelGroupMember(handle, &pvrGroupMember);
         }
     }
@@ -604,7 +606,7 @@ InputBuffer*  PVRClientBase::BufferForUrl(const std::string& url )
     const std::string m3uExt = ".m3u";
     const std::string m3u8Ext = ".m3u8";
     if( url.find(m3u8Ext) != std::string::npos || url.find(m3uExt) != std::string::npos)
-        buffer = new Buffers::PlaylistBuffer(url, NULL); // No segments cache for live playlist
+        buffer = new Buffers::PlaylistBuffer(url, nullptr, false); // No segments cache for live playlist
     else
         buffer = new DirectBuffer(url);
     return buffer;
@@ -1045,7 +1047,7 @@ bool PVRClientBase::OpenRecordedStream(const PVR_RECORDING &recording)
     return true;
 }
 
-bool PVRClientBase::OpenRecordedStream(const std::string& url,  Buffers::IPlaylistBufferDelegate* delegate)
+bool PVRClientBase::OpenRecordedStream(const std::string& url,  Buffers::IPlaylistBufferDelegate* delegate, bool seekForVod)
 {
      if (url.empty())
         return false;
@@ -1059,7 +1061,7 @@ bool PVRClientBase::OpenRecordedStream(const std::string& url,  Buffers::IPlayli
         const bool isM3u = url.find(m3u8Ext) != std::string::npos || url.find(m3uExt) != std::string::npos;
         Buffers::PlaylistBufferDelegate plistDelegate(delegate);
         if(isM3u)
-            buffer = new Buffers::PlaylistBuffer(url, plistDelegate);
+            buffer = new Buffers::PlaylistBuffer(url, plistDelegate, seekForVod);
         else
             buffer = new ArchiveBuffer(url);
 
@@ -1093,8 +1095,8 @@ PVR_ERROR PVRClientBase::GetStreamReadChunkSize(int* chunksize) {
 
 int PVRClientBase::ReadRecordedStream(unsigned char *pBuffer, unsigned int iBufferSize)
 {
-    uint32_t timeoutMs = 5000;
-    return (m_recordBuffer.buffer == NULL) ? -1 : m_recordBuffer.buffer->Read(pBuffer, iBufferSize, timeoutMs);
+    //uint32_t timeoutMs = 5000;
+    return (m_recordBuffer.buffer == NULL) ? -1 : m_recordBuffer.buffer->Read(pBuffer, iBufferSize, m_channelReloadTimeout * 1000);
 }
 
 long long PVRClientBase::SeekRecordedStream(long long iPosition, int iWhence)

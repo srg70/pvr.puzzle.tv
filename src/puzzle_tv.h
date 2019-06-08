@@ -36,6 +36,7 @@
 #include <list>
 #include <memory>
 #include "p8-platform/util/timeutils.h"
+#include "p8-platform/threads/mutex.h"
 
 
 namespace XMLTV {
@@ -140,6 +141,9 @@ namespace PuzzleEngine
         void EnableSource(PvrClient::ChannelId channelId, const TCacheUrl& source);
         void DisableSource(PvrClient::ChannelId channelId, const TCacheUrl& source);
         void UpdateChannelSources(PvrClient::ChannelId channelId);
+        
+        std::string GetArchiveUrl(PvrClient::ChannelId channelId, time_t startTime);
+
     protected:
         void Init(bool clearEpgCache);
         virtual void UpdateHasArchive(PvrClient::EpgEntry& entry);
@@ -152,6 +156,7 @@ namespace PuzzleEngine
         PvrClient::UniqueBroadcastIdType AddXmlEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
         void LoadEpg();
         void UpdateArhivesAsync();
+        std::string GetRecordId(PvrClient::ChannelId channelId, time_t startTime);
         
         bool CheckChannelId(PvrClient::ChannelId channelId);
         void UpdateUrlsForChannel(PvrClient::ChannelId channelId);
@@ -181,6 +186,23 @@ namespace PuzzleEngine
         TChannelSourcesMap m_sources;
         
         bool m_isAceRunning;
+        
+        // Archive
+        struct ArchiveRecord{
+            //std::vector<std::string> urls;
+            std::string id;
+            //time_t startTime;
+        };
+        typedef std::map<time_t, ArchiveRecord> TArchiveRecords;
+        
+        struct ChannelArchiveInfo{
+            std::string archiveId;
+            TArchiveRecords records;
+        };
+
+        typedef std::map<PvrClient::ChannelId, ChannelArchiveInfo> TArchiveInfo;
+        mutable P8PLATFORM::CMutex m_archiveAccessMutex;
+        TArchiveInfo m_archiveInfo;
     };
 }
 #endif //__puzzle_tv_h__

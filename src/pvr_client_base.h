@@ -129,7 +129,7 @@ namespace PvrClient
         bool IsLiveInRecording() const;
         bool SwitchChannel(ChannelId channelId, const std::string& url);
 
-        bool OpenRecordedStream(const std::string& url, Buffers::IPlaylistBufferDelegate* delegate);
+        bool OpenRecordedStream(const std::string& url, Buffers::IPlaylistBufferDelegate* delegate, bool seekForVod);
         bool IsLocalRecording(const PVR_RECORDING &recording) const;
         // Implemented for local recordings. Should be defined by derived class
         virtual bool OpenRecordedStream(const PVR_RECORDING &recording) = 0;
@@ -143,6 +143,9 @@ namespace PvrClient
         
         ChannelId ChannelIdForBrodcastId(KodiChannelId uId) const {return m_kodiToPluginLut.at(uId);};
         KodiChannelId BrodcastIdForChannelId(ChannelId chId) const {return m_pluginToKodiLut.at(chId);};
+        
+        bool IsSeekSupported() const { return m_supportSeek; }
+        void SetSeekSupported(bool yesNo) { m_supportSeek = yesNo; }
     private:
         typedef std::map<KodiChannelId, ChannelId> TKodiToPluginChannelIdLut;
         typedef std::map<ChannelId, KodiChannelId> TPluginToKodiChannelIdLut;
@@ -185,6 +188,9 @@ namespace PvrClient
         ActionQueue::CActionQueue* m_destroyer;
         TKodiToPluginChannelIdLut m_kodiToPluginLut;
         TPluginToKodiChannelIdLut m_pluginToKodiLut;
+        
+        bool m_supportSeek;
+
     };
 }
 #endif //pvr_client_base_h

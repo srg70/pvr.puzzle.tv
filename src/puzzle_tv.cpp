@@ -28,6 +28,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <list>
+#include <time.h>
 #include "p8-platform/threads/mutex.h"
 #include "p8-platform/util/timeutils.h"
 #include "p8-platform/util/util.h"
@@ -128,22 +129,7 @@ void PuzzleTV::Init(bool clearEpgCache)
     else
         LoadEpgCache(c_EpgCacheFile);
     LoadEpg();
-    UpdateArhivesAsync();
-    
-//        CallRpcAsync("{\"jsonrpc\": \"2.0\", \"method\": \"Files.GetDirectory\", \"params\": {\"directory\": \"plugin://plugin.video.pazl.arhive\"},\"id\": 1}",
-//                     [&] (Document& jsonRoot)
-//                     {
-//                         LogDebug("Puzzle Files.GetDirectory respunse. RPC version: %s", jsonRoot["jsonrpc"].GetString());
-//                         for (const auto& ch : jsonRoot["result"]["files"].GetArray()) {
-//                             LogDebug("Channel content:");
-//                             LogDebug("\t filetype = %s", ch["filetype"].GetString());
-//                             LogDebug("\t type =  %s", ch["type"].GetString());
-//                             LogDebug("\t file =  %s", ch["file"].GetString());
-//                             LogDebug("\t label =  %s", ch["label"].GetString());
-//    }
-//                     },
-//                     [&](const CActionQueue::ActionResult& s) {
-//                     });
+    UpdateArhivesAsync();   
 }
 
 PuzzleTV::~PuzzleTV()
@@ -170,7 +156,13 @@ void PuzzleTV::BuildChannelAndGroupList()
         }
     };
 
-    typedef map<string, pair<Channel, std::vector<string> >, NoCaseComparator> PlaylistContent;
+    struct GroupWithIndex{
+        GroupWithIndex(string g, int idx = 0) : name(g), index(idx) {}
+        string name;
+        int index;
+    };
+    typedef std::vector<GroupWithIndex> GroupsWithIndex;
+    typedef map<string, pair<Channel, GroupsWithIndex >, NoCaseComparator> PlaylistContent;
 
     try {
 
@@ -190,21 +182,35 @@ void PuzzleTV::BuildChannelAndGroupList()
                 Channel channel;
                 char* dummy;
                 channel.Id = strtoul((*itChannel)["id"].GetString(), &dummy, 16);
-                channel.Number = ++channelNumber;
+                if(itChannel->HasMember("num")){
+                    channel.Number = (*itChannel)["num"].GetInt();
+                } else {
+                    channel.Number = ++channelNumber;
+                }
                 channel.Name = (*itChannel)["name"].GetString();
                 channel.IconPath = (*itChannel)["icon"].GetString();
                 channel.IsRadio = false ;
                 channel.HasArchive = false;
                 if(isPuzzle2)
                     channel.Urls.push_back((*itChannel)["url"].GetString());
-                // Groups (string or array)
-                std::vector<string> groups;
-                const auto& jGroups = (*itChannel)["group"];
-                if(jGroups.IsString()) {
-                    groups.push_back((*itChannel)["group"].GetString());
-                } else if(jGroups.IsArray()) {
+                
+                GroupsWithIndex groups;
+                if(itChannel->HasMember("group_num")) {
+                    const auto& jGroups = (*itChannel)["group_num"];
                     for(auto groupIt = jGroups.GetArray().Begin(); groupIt < jGroups.GetArray().End(); ++groupIt){
-                        groups.push_back(groupIt->GetString());
+                        groups.push_back(GroupsWithIndex::value_type((*groupIt)["name"].GetString(), (*groupIt)["num"].GetInt()));
+                    }
+
+                } else {
+                    // Groups (string or array)
+                    const auto& jGroups = (*itChannel)["group"];
+                    if(jGroups.IsString()) {
+                        groups.push_back(GroupsWithIndex::value_type
+                                         ((*itChannel)["group"].GetString()));
+                    } else if(jGroups.IsArray()) {
+                        for(auto groupIt = jGroups.GetArray().Begin(); groupIt < jGroups.GetArray().End(); ++groupIt){
+                            groups.push_back(GroupsWithIndex::value_type(groupIt->GetString()));
+                        }
                     }
                 }
                 plistContent[channel.Name] = PlaylistContent::mapped_type(channel,groups);
@@ -236,18 +242,18 @@ void PuzzleTV::BuildChannelAndGroupList()
             
             AddChannel(channel);
             
-            for (const auto& groupName : channelWithGroup.second.second) {
+            for (const auto& groupWithIndex : channelWithGroup.second.second) {
                 const auto& groupList = m_groupList;
                 auto itGroup =  std::find_if(groupList.begin(), groupList.end(), [&](const GroupList::value_type& v ){
-                    return groupName ==  v.second.Name;
+                    return groupWithIndex.name ==  v.second.Name;
                 });
                 if (itGroup == groupList.end()) {
                     Group newGroup;
-                    newGroup.Name = groupName;
+                    newGroup.Name = groupWithIndex.name;
                     AddGroup(groupList.size(), newGroup);
                     itGroup = --groupList.end();
                 }
-                AddChannelToGroup(itGroup->first, channel.Id);
+                AddChannelToGroup(itGroup->first, channel.Id, groupWithIndex.index);
             }
         }
        
@@ -304,23 +310,6 @@ UniqueBroadcastIdType PuzzleTV::AddXmlEpgEntry(const XMLTV::EpgEntry& xmlEpgEntr
     epgEntry.EndTime = xmlEpgEntry.endTime;
     epgEntry.IconPath = xmlEpgEntry.iconPath;
     return AddEpgEntry(id, epgEntry);
-}
-
-void PuzzleTV::UpdateHasArchive(PvrClient::EpgEntry& entry)
-{
-    auto channel = m_channelList.find(entry.ChannelId);
-    entry.HasArchive = channel != m_channelList.end() &&  channel->second.HasArchive;
-    
-    if(!entry.HasArchive)
-        return;
-
-    time_t now = time(nullptr);
-    time_t epgTime = m_addCurrentEpgToArchive ? entry.StartTime : entry.EndTime;
-    const time_t archivePeriod = 3 * 24 * 60 * 60; //3 days in secs
-    time_t from = now - archivePeriod;
-    entry.HasArchive = epgTime > from && epgTime < now;
-
-
 }
 
 void PuzzleTV::UpdateEpgForAllChannels(time_t startTime, time_t endTime)
@@ -438,6 +427,207 @@ bool PuzzleTV::CheckChannelId(ChannelId channelId)
     }
     return true;
 }
+
+#pragma mark - Archive
+void PuzzleTV::UpdateHasArchive(PvrClient::EpgEntry& entry)
+{
+    auto channelNotFound = m_channelList.end();
+    auto channel = m_channelList.find(entry.ChannelId);
+    entry.HasArchive = channel != channelNotFound &&  channel->second.HasArchive;
+    
+    if(!entry.HasArchive)
+        return;
+    
+    time_t now = time(nullptr);
+    time_t epgTime = m_addCurrentEpgToArchive ? entry.StartTime : entry.EndTime;
+    const time_t archivePeriod = 3 * 24 * 60 * 60; //3 days in secs
+    time_t from = now - archivePeriod;
+    entry.HasArchive = epgTime > from && epgTime < now;
+    
+//    P8PLATFORM::CLockObject lock(m_archiveAccessMutex);
+//    if(m_archiveInfo.count(entry.ChannelId) != 0) {
+//        time_t now = time(nullptr);
+//        time_t epgTime = m_addCurrentEpgToArchive ? entry.StartTime : entry.EndTime;
+//        //const time_t archivePeriod = 3 * 24 * 60 * 60; //3 days in secs
+//        //time_t from = now - archivePeriod;
+//        entry.HasArchive = epgTime < now;
+//        if(!entry.HasArchive)
+//            return;
+//        try{
+//            const auto& recordds = m_archiveInfo.at(entry.ChannelId).records;
+//            entry.HasArchive = recordds.count(entry.StartTime) !=0;
+//        }
+//        catch(...){
+//            entry.HasArchive = false;
+//        }
+//    }
+    
+    
+}
+
+void PuzzleTV::UpdateArhivesAsync()
+{
+    if(m_serverVersion == c_PuzzleServer2) {
+        return; // No archive support in version 2
+    }
+    
+    auto pThis = this;
+    TArchiveInfo* localArchiveInfo = new TArchiveInfo();
+    ApiFunctionData data("/archive/json/list", m_serverPort);
+    CallApiAsync(data ,
+                 [localArchiveInfo, pThis] (Document& jsonRoot) {
+                     for (const auto& ch : jsonRoot.GetArray()) {
+                         const auto& chName = ch["name"].GetString();
+                         const auto& archiveChId = ch["id"].GetString();
+                         const auto& chId = ch["cid"].GetString();
+
+                         char* dummy;
+                         ChannelId id  = strtoul(chId, &dummy, 16);
+                         try {
+                             Channel channelWithArcive(pThis->m_channelList.at(id));
+                             channelWithArcive.HasArchive = true;
+                             pThis->AddChannel(channelWithArcive);
+                             
+                             ChannelArchiveInfo chInfo;
+                             chInfo.archiveId = archiveChId;
+                             (*localArchiveInfo)[id] = chInfo;
+                         } catch (std::out_of_range) {
+                             LogError("PuzzleTV::UpdateArhivesAsync():Unknown archive channel %s (%s)", chName, chId);
+                         }
+                         catch (...){
+                             LogError("PuzzleTV::UpdateArhivesAsync(): unknown error for channel %s (%s)", chName, chId);
+                         }
+                     }
+                 },[localArchiveInfo, pThis](const ActionQueue::ActionResult& s) {
+                     if(s.status == ActionQueue::kActionCompleted) {
+                        P8PLATFORM::CLockObject lock(pThis->m_archiveAccessMutex);
+                        pThis->m_archiveInfo = *localArchiveInfo;
+                        //pThis->ValidateArhivesAsync();
+                     }
+                     delete localArchiveInfo;
+                 });
+
+}
+
+std::string PuzzleTV::GetArchiveUrl(ChannelId channelId, time_t startTime)
+{
+    string url;
+    string recordId = GetRecordId(channelId, startTime);
+    
+    if(recordId.empty())
+        return url;
+    
+    // http://127.0.0.1:8185/archive/json/records/674962D4|4d76800bfc3a4a5b97b0ab8efc6603ce|1
+    string command("/archive/json/records/");
+    command += recordId;
+    
+    ApiFunctionData data(command.c_str(), m_serverPort);
+    try {
+        CallApiFunction(data ,
+                        [&url, recordId] (Document& jsonRoot) {
+                            if(!jsonRoot.IsArray()) {
+                                LogError("PuzzleTV::GetArchiveUrl(): wrong JSON format (not array). RID=%s", recordId.c_str());
+                                return;
+                            }
+                            url = jsonRoot.Begin()->GetString();
+                        });
+    }
+    catch(...){
+        
+    }
+    
+    return url;
+}
+
+
+std::string PuzzleTV::GetRecordId(ChannelId channelId, time_t startTime) {
+    
+    // Assuming Moscow time EPG +3:00
+    long offset = -(3 * 60 * 60) - XMLTV::LocalTimeOffset();
+    startTime += offset ;//+ 1 * 60 * 60;
+    
+    if(m_serverVersion == c_PuzzleServer2) {
+        return string(); // No archive support in version 2
+    }
+    
+    string archiveId;
+    {
+        P8PLATFORM::CLockObject lock(m_archiveAccessMutex);
+        if(m_archiveInfo.count(channelId) == 0) {
+            LogDebug("PuzzleTV::ValidateArhiveFor(): requested archive URL for unknown channel");
+            return string();
+        }
+        
+        ChannelArchiveInfo& channelArchiveInfo = m_archiveInfo[channelId];
+        archiveId = channelArchiveInfo.archiveId;
+
+       // Do we have an ID of the record already?
+        if(channelArchiveInfo.records.count(startTime) != 0) {
+            return channelArchiveInfo.records[startTime].id;
+        }
+    }
+    
+    // Request archive info from server for recording's day.
+    time_t now = time(nullptr);
+    // Check for start time in the future
+    if(startTime > now )
+        return string();
+    
+    struct tm* t = localtime(&now);
+    int day_now = t->tm_yday;
+    t = localtime(&startTime);
+    int day_start = t->tm_yday;
+    
+    // Over the year
+    if(day_now < day_start) {
+        day_now += 365;
+    }
+    int day = (day_now - day_start);
+    
+    auto pThis = this;
+    
+    string command("/archive/json/id/");
+    command += archiveId + "day/" + n_to_string(day);
+
+    ApiFunctionData data(command.c_str(), m_serverPort);
+    TArchiveRecords* records = new TArchiveRecords();
+    try {
+        CallApiFunction(data ,
+                        [records, archiveId, pThis] (Document& jsonRoot) {
+                            
+                            if(!jsonRoot.IsObject()) {
+                                LogError("PuzzleTV: wrong JSON format of archive info. AID=%s", archiveId.c_str());
+                                return;
+                            }
+                            
+                            std::for_each(jsonRoot.MemberBegin(), jsonRoot.MemberEnd(), [records, archiveId]  ( Value::ConstMemberIterator::Reference & i) {
+                                
+                                if(i.value.IsObject() && i.value.HasMember("id") && i.value.HasMember("s_time")) {
+                                    auto& arObj = i.value;
+                                    //(arObj);
+                                    double t = arObj["s_time"].GetDouble();
+                                    auto& record = (*records)[t];
+                                    record.id = arObj["id"].GetString();
+                                }
+                            });
+                        });
+        
+        {
+            P8PLATFORM::CLockObject lock(pThis->m_archiveAccessMutex);
+            pThis->m_archiveInfo[channelId].records.insert(std::begin(*records), std::end(*records));
+            
+            // Did we obtain an ID of the record?
+            if(m_archiveInfo[channelId].records.count(startTime) != 0) {
+                return m_archiveInfo[channelId].records[startTime].id;
+            }
+        }
+    } catch (...) {
+        LogError("PuzzleTV::GetRecordId(): FAILED to obtain recordings for channel %d, day %d", channelId, day);
+    }
+    return string();
+
+}
+
 
 #pragma mark - Streams
 
@@ -858,65 +1048,5 @@ bool PuzzleTV::CheckAceEngineRunning(const char* aceServerUrlBase)
     last_check = time(NULL);
     
     return m_isAceRunning = isRunning;
-}
-
-
-void PuzzleTV::UpdateArhivesAsync()
-{
-    return;
-    
-    const auto& channelList = m_channelList;
-    std::set<ChannelId>* cahnnelsWithArchive = new std::set<ChannelId>();
-    auto pThis = this;
-    ApiFunctionData data("/arh/json", m_serverPort);
-    CallApiAsync(data ,
-                 [channelList, cahnnelsWithArchive] (Document& jsonRoot) {
-                     for (const auto& ch : jsonRoot["channels"].GetArray()) {
-                         const auto& chName = ch["name"].GetString();
-                         const auto& chIdStr = ch["id"].GetString();
-//                         LogDebug("Channels with arhive:");
-//                         LogDebug("\t name = %s", chName);
-//                         LogDebug("\t id =  %s", chIdStr);
-                         
-                         char* dummy;
-                         ChannelId id  = strtoul(chIdStr, &dummy, 16);
-                         try {
-                             Channel ch(channelList.at(id));
-                             cahnnelsWithArchive->insert(ch.Id);
-//                             ch.HasArchive = true;
-//                             pThis->AddChannel(ch);
-                         } catch (std::out_of_range) {
-                             LogError("Unknown archive channel %s (%d)", chName, id);
-                         }
-                     }
-                 },
-                 [pThis, cahnnelsWithArchive](const ActionQueue::ActionResult& s) {
-
-//                     if(s.status != CActionQueue::kActionCompleted) {
-//                         return;
-//                     }
-//                     for(auto chId : *cahnnelsWithArchive) {
-//                         string cmd = "/arh/channel/";
-//                         cmd += n_to_string_hex(chId);
-//                         ApiFunctionData data(cmd.c_str(), m_serverPort);
-//                         pThis->CallApiAsync(data ,
-//                                      [pThis] (Document& jsonRoot){
-//                                          for (const auto& ch : jsonRoot["channels"].GetArray()) {
-//                                              const auto& epgName = ch["name"].GetString();
-//                                              string epgTimeStr = string(epgName).substr(5);
-//                                              const auto& chIdStr = ch["id"].GetString();
-//                                               LogDebug("EPG with arhive:");
-//                                               LogDebug("\t name = %s", epgName);
-//                                              LogDebug("\t id =  %s", chIdStr);
-//                                              LogDebug("\t time =  %s", epgTimeStr.c_str());
-//                                          }
-//                                      },
-//                                      [pThis, cahnnelsWithArchive](const CActionQueue::ActionResult& ss) {
-//                                      });
-//
-//                     }
-                     delete cahnnelsWithArchive;
-                 });
-    
 }
 

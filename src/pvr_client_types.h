@@ -64,7 +64,7 @@ namespace PvrClient {
     struct Group
     {
         std::string Name;
-        std::set<ChannelId> Channels;
+        std::map<int, ChannelId> Channels;
     };
     
     typedef std::map<ChannelId, Channel> ChannelList;

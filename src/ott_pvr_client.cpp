@@ -63,8 +63,7 @@ ADDON_STATUS OttPVRClient::Init(PVR_PROPERTIES* pvrprops)
         m_playlistUrl = buffer;
     if (XBMC->GetSetting(c_key_setting, &buffer))
         m_key = buffer;
-    m_supportSeek = false;
-    
+    SetSeekSupported(true);
     retVal = CreateCoreSafe(false);
     
     //    PVR_MENUHOOK hook = {1, 30020, PVR_MENUHOOK_EPG};
@@ -240,9 +239,9 @@ bool OttPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     
     auto delegate = new OttArchiveDelegate(m_core, recording);
     string url = delegate->UrlForTimeshift(0);
-    if(!m_supportSeek)
+    if(!IsSeekSupported())
         SAFE_DELETE(delegate);
-    return PVRClientBase::OpenRecordedStream(url, delegate);
+    return PVRClientBase::OpenRecordedStream(url, delegate, IsSeekSupported());
 }
 
 PVR_ERROR OttPVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
