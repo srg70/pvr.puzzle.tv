@@ -470,6 +470,7 @@ void PuzzleTV::UpdateArhivesAsync()
     ApiFunctionData data("/archive/json/list", m_serverPort);
     CallApiAsync(data ,
                  [localArchiveInfo, pThis] (Document& jsonRoot) {
+                     LogDebug("PuzzleTV::UpdateArhivesAsync(): recivrd %d channels with archive.", jsonRoot.GetArray().Size());
                      for (const auto& ch : jsonRoot.GetArray()) {
                          const auto& chName = ch["name"].GetString();
                          const auto& archiveChId = ch["id"].GetString();
@@ -481,7 +482,8 @@ void PuzzleTV::UpdateArhivesAsync()
                              Channel channelWithArcive(pThis->m_channelList.at(id));
                              channelWithArcive.HasArchive = true;
                              pThis->AddChannel(channelWithArcive);
-                             
+                             LogDebug("PuzzleTV::UpdateArhivesAsync(): channel with archive %s.", channelWithArcive.Name.c_str());
+
                              ChannelArchiveInfo chInfo;
                              chInfo.archiveId = archiveChId;
                              (*localArchiveInfo)[id] = chInfo;
@@ -581,14 +583,15 @@ std::string PuzzleTV::GetRecordId(ChannelId channelId, time_t startTime) {
     auto pThis = this;
     
     string command("/archive/json/id/");
-    command += archiveId + "day/" + n_to_string(day);
+    command += archiveId + "/day/" + n_to_string(day);
 
     ApiFunctionData data(command.c_str(), m_serverPort);
     TArchiveRecords* records = new TArchiveRecords();
     try {
         CallApiFunction(data ,
                         [records, archiveId, pThis] (Document& jsonRoot) {
-                            
+                            //dump_json(jsonRoot);
+
                             if(!jsonRoot.IsObject()) {
                                 LogError("PuzzleTV: wrong JSON format of archive info. AID=%s", archiveId.c_str());
                                 return;
@@ -598,7 +601,6 @@ std::string PuzzleTV::GetRecordId(ChannelId channelId, time_t startTime) {
                                 
                                 if(i.value.IsObject() && i.value.HasMember("id") && i.value.HasMember("s_time")) {
                                     auto& arObj = i.value;
-                                    //(arObj);
                                     double t = arObj["s_time"].GetDouble();
                                     auto& record = (*records)[t];
                                     record.id = arObj["id"].GetString();
