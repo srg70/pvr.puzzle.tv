@@ -75,8 +75,8 @@ namespace SharaTvEngine
     {
         if(login.empty() || password.empty())
             throw AuthFailedException();
-        
-        m_playListUrl = string("https://shara-tv.org/g/") +  login + ":" + password + "/1/playlist.m3u";
+        //http://tvfor.pro/g/xxx:yyy/1/playlist.m3u
+        m_playListUrl = string("http://tvfor.pro/g/") +  login + ":" + password + "/1/playlist.m3u";
         string data;
         // NOTE: shara TV does NOT check credentials
         // Just builds a playlist.
