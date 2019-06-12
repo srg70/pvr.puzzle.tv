@@ -258,7 +258,7 @@ bool EdemPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     string url = delegate->UrlForTimeshift(0);
     if(!IsSeekSupported())
         SAFE_DELETE(delegate);
-    return PVRClientBase::OpenRecordedStream(url, delegate, IsSeekSupported());
+    return PVRClientBase::OpenRecordedStream(url, delegate, IsSeekSupported() ? SupportVodSeek : NoRecordingFlags);
 }
 
 PVR_ERROR EdemPVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
