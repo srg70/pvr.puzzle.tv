@@ -117,7 +117,7 @@ public:
 
     static bool CheckInternetConnection(long timeout);
     
-    static void DoCurl(const Request &request, const TCoocies &cookie, std::string* response, unsigned long long requestId = 0)
+    static void DoCurl(const Request &request, const TCoocies &cookie, std::string* response, unsigned long long requestId = 0, std::string* effectiveUrl = nullptr)
     {
         char errorMessage[CURL_ERROR_SIZE];
         CURL *curl = curl_easy_init();
@@ -144,6 +144,8 @@ public:
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlWriteData);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, response);
         curl_easy_setopt(curl, CURLOPT_TIMEOUT, c_CurlTimeout);
+        //curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
+
         
         std::string cookieStr;
         auto itCookie = cookie.begin();
@@ -187,6 +189,13 @@ public:
         
         if (httpCode != 200)
             *response = "";
+        
+        if(curlCode == CURLE_OK && nullptr != effectiveUrl){
+            char *url = NULL;
+            CURLcode redirectResult = curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &url);
+            if(url)
+                *effectiveUrl = url;
+        }
         
         curl_easy_cleanup(curl);
         if(curlCode != CURLE_OK){
