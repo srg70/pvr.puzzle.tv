@@ -59,6 +59,7 @@ namespace Buffers{
         
         TSegmentUrls m_segmentUrls;
         std::string  m_playListUrl;
+        mutable std::string  m_effectivePlayListUrl;
         uint64_t m_loadIterator;
         bool m_isVod;
         uint64_t m_indexOffset;

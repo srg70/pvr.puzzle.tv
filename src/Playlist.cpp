@@ -24,6 +24,7 @@
 #define __STDC_FORMAT_MACROS
 #endif
 #include <inttypes.h>
+#include "HttpEngine.hpp"
 #include "Playlist.hpp"
 #include "globals.hpp"
 #include "helpers.h"
@@ -105,7 +106,7 @@ namespace Buffers {
                 std::string url;
                 uint64_t rate = ParseXstreamInfTag(tagBody, url);
                 if(rate > bestRate) {
-                    m_playListUrl = ToAbsoluteUrl(url, playlistUrl);
+                    m_playListUrl = ToAbsoluteUrl(url, m_effectivePlayListUrl);
                     bestRate = rate;
                 }
             }
@@ -203,7 +204,7 @@ namespace Buffers {
                     urlLen = std::string::npos;
                 auto url = body.substr(urlPos, urlLen);
                 trim(url);
-                url = ToAbsoluteUrl(url, m_playListUrl);
+                url = ToAbsoluteUrl(url, m_effectivePlayListUrl);
                 //            LogNotice("IDX: %u Duration: %f. URL: %s", mediaIndex, duration, url.c_str());
                 auto currentIdx = mediaIndex++;
                 m_segmentUrls[currentIdx] = TSegmentUrls::mapped_type(duration, url, currentIdx);
@@ -220,24 +221,33 @@ namespace Buffers {
         }
     }
     
+    
     void Playlist::LoadPlaylist(std::string& data) const
     {
         char buffer[1024];
         
         LogDebug(">>> PlaylistBuffer: (re)loading playlist %s.", m_playListUrl.c_str());
         
-        auto f = XBMC->OpenFile(m_playListUrl.c_str(), XFILE::READ_NO_CACHE | XFILE::READ_CHUNKED | XFILE::READ_TRUNCATED);
-        if (!f)
+        bool succeeded = false;
+        try{
+            m_effectivePlayListUrl.clear();
+            HttpEngine::Request request(m_playListUrl);
+            HttpEngine::DoCurl(request, HttpEngine::TCoocies(), &data, 9999999, &m_effectivePlayListUrl);
+            if(m_effectivePlayListUrl.empty()){
+                m_effectivePlayListUrl = m_playListUrl;
+            }
+            succeeded = true;
+           
+        }catch (std::exception& ex) {
+            LogError("Playlist::LoadPlaylist(): STD exception: %s",  ex.what());
+        }catch (...) {
+            LogError("Playlist::LoadPlaylist(): unknown exception.");
+        }
+
+        if (!succeeded)
             throw PlaylistException("Failed to obtain playlist from server.");
-        bool isEof = false;
-        do{
-            buffer[0]= 0;
-            auto bytesRead = XBMC->ReadFile(f, buffer, sizeof(buffer));
-            isEof = bytesRead <= 0;
-            data.append(&buffer[0], bytesRead);
-        }while(!isEof);
-        XBMC->CloseFile(f);
-        
+
+        LogDebug(">>> PlaylistBuffer: playlist effective URL %s.", m_effectivePlayListUrl.c_str());
         LogDebug(">>> PlaylistBuffer: (re)loading done. Content: \n%s", data.substr(0, 16000).c_str());
         
     }
