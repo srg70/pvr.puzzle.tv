@@ -263,7 +263,8 @@ bool SharaTvPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     string url = delegate->UrlForTimeshift(0);
     if(!IsSeekSupported())
         SAFE_DELETE(delegate);
-    return PVRClientBase::OpenRecordedStream(url, delegate, IsSeekSupported());
+    RecordingStreamFlags flags = (RecordingStreamFlags)(ForcePlaylist | (IsSeekSupported() ? SupportVodSeek : NoRecordingFlags));
+    return PVRClientBase::OpenRecordedStream(url, delegate, flags);
 }
 
 PVR_ERROR SharaTvPVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)

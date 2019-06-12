@@ -129,7 +129,12 @@ namespace PvrClient
         bool IsLiveInRecording() const;
         bool SwitchChannel(ChannelId channelId, const std::string& url);
 
-        bool OpenRecordedStream(const std::string& url, Buffers::IPlaylistBufferDelegate* delegate, bool seekForVod);
+        enum RecordingStreamFlags{
+            NoRecordingFlags = 0x0,
+            SupportVodSeek = 0x0001,
+            ForcePlaylist = 0x0002
+        };
+        bool OpenRecordedStream(const std::string& url, Buffers::IPlaylistBufferDelegate* delegate, RecordingStreamFlags flags);
         bool IsLocalRecording(const PVR_RECORDING &recording) const;
         // Implemented for local recordings. Should be defined by derived class
         virtual bool OpenRecordedStream(const PVR_RECORDING &recording) = 0;

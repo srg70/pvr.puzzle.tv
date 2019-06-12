@@ -865,7 +865,7 @@ int PVRClientBase::GetRecordingsAmount(bool deleted)
     }
 
     if(m_lastRecordingsAmount  != size)
-        PVR->TriggerRecordingUpdate();
+        ;//PVR->TriggerRecordingUpdate();
     LogDebug("PVRClientBase: found %d recordings. Was %d", size, m_lastRecordingsAmount);
     m_lastRecordingsAmount = size;
     return size;
@@ -1047,7 +1047,7 @@ bool PVRClientBase::OpenRecordedStream(const PVR_RECORDING &recording)
     return true;
 }
 
-bool PVRClientBase::OpenRecordedStream(const std::string& url,  Buffers::IPlaylistBufferDelegate* delegate, bool seekForVod)
+bool PVRClientBase::OpenRecordedStream(const std::string& url,  Buffers::IPlaylistBufferDelegate* delegate, RecordingStreamFlags flags)
 {
      if (url.empty())
         return false;
@@ -1056,9 +1056,11 @@ bool PVRClientBase::OpenRecordedStream(const std::string& url,  Buffers::IPlayli
     {
         InputBuffer* buffer = NULL;
         
+        const bool enforcePlaylist = (flags & ForcePlaylist) == ForcePlaylist;
         const std::string m3uExt = ".m3u";
         const std::string m3u8Ext = ".m3u8";
-        const bool isM3u = url.find(m3u8Ext) != std::string::npos || url.find(m3uExt) != std::string::npos;
+        const bool isM3u = enforcePlaylist || url.find(m3u8Ext) != std::string::npos || url.find(m3uExt) != std::string::npos;
+        const bool seekForVod = (flags & SupportVodSeek) == SupportVodSeek;
         Buffers::PlaylistBufferDelegate plistDelegate(delegate);
         if(isM3u)
             buffer = new Buffers::PlaylistBuffer(url, plistDelegate, seekForVod);
