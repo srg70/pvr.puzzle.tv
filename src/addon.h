@@ -32,6 +32,7 @@
 #include "xbmc_addon_types.h"
 #include "xbmc_pvr_types.h"
 
+
 class ITimersEngineDelegate{
 public:
     virtual bool StartRecordingFor(const PVR_TIMER &timer) = 0;
@@ -40,58 +41,97 @@ public:
 protected:
     virtual ~ITimersEngineDelegate() {}
 };
-
-class IPvrIptvDataSource : public ITimersEngineDelegate
+    
+namespace PvrClient
 {
-public:
-    virtual ADDON_STATUS Init(PVR_PROPERTIES* pvrprops) = 0;
-    virtual ADDON_STATUS GetStatus() = 0;
 
-    virtual ADDON_STATUS SetSetting(const char *settingName, const void *settingValue) = 0;
-
-//    virtual const char *GetBackendName(void) = 0;
-    virtual PVR_ERROR GetAddonCapabilities(PVR_ADDON_CAPABILITIES* pCapabilities) = 0;
-    virtual PVR_ERROR SignalStatus(PVR_SIGNAL_STATUS &signalStatus) = 0;
+    class IChannelsSource
+    {
+    public:
+        virtual int GetChannelsAmount(void) = 0;
+        virtual PVR_ERROR GetChannels(ADDON_HANDLE handle, bool bRadio) = 0;
+        
+        virtual int GetChannelGroupsAmount(void) = 0;
+        virtual PVR_ERROR GetChannelGroups(ADDON_HANDLE handle, bool bRadio) = 0;
+        virtual PVR_ERROR GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_CHANNEL_GROUP &group) = 0;
+        
+    protected:
+        virtual ~IChannelsSource() {}
+        
+        
+    };
     
-    virtual PVR_ERROR GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL &channel, time_t iStart, time_t iEnd) = 0;
-    virtual int GetChannelsAmount(void) = 0;
-    virtual PVR_ERROR GetChannels(ADDON_HANDLE handle, bool bRadio) = 0;
-    virtual bool OpenLiveStream(const PVR_CHANNEL &channel) = 0;
-    virtual void CloseLiveStream(void) = 0;
-    virtual bool SwitchChannel(const PVR_CHANNEL &channel) = 0;
-    virtual int GetChannelGroupsAmount(void) = 0;
-    virtual PVR_ERROR GetChannelGroups(ADDON_HANDLE handle, bool bRadio) = 0;
-    virtual PVR_ERROR GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_CHANNEL_GROUP &group) = 0;
-
-    virtual bool CanPauseStream(void) = 0;
-    virtual bool CanSeekStream(void) = 0;
-    virtual bool IsRealTimeStream(void) = 0;
-    virtual PVR_ERROR GetStreamTimes(PVR_STREAM_TIMES *times) = 0;
-    virtual long long SeekLiveStream(long long iPosition, int iWhence) = 0;
-    virtual long long PositionLiveStream(void) = 0;
-    virtual long long LengthLiveStream(void)  = 0;
-    virtual int ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize) = 0;
+    class IEpgSource
+    {
+    public:
+        virtual PVR_ERROR GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL &channel, time_t iStart, time_t iEnd) = 0;
+        virtual PVR_ERROR IsEPGTagRecordable(const EPG_TAG* tag, bool* bIsRecordable) = 0;
+    protected:
+        virtual ~IEpgSource() {}
+    };
     
+    class IRecordingsSource{
+    public:
+        virtual int GetRecordingsAmount(bool deleted) = 0;
+        virtual PVR_ERROR GetRecordings(ADDON_HANDLE handle, bool deleted) = 0;
+        virtual PVR_ERROR DeleteRecording(const PVR_RECORDING &recording) = 0;
+        
+    protected:
+        virtual ~IRecordingsSource() {}
+    };
     
-    virtual int GetRecordingsAmount(bool deleted) = 0;
-    virtual PVR_ERROR GetRecordings(ADDON_HANDLE handle, bool deleted) = 0;
-    virtual PVR_ERROR DeleteRecording(const PVR_RECORDING &recording) = 0;
-    virtual bool OpenRecordedStream(const PVR_RECORDING &recording) = 0;
-    virtual void CloseRecordedStream(void) = 0;
-    virtual PVR_ERROR GetStreamReadChunkSize(int* chunksize) = 0;
-    virtual int ReadRecordedStream(unsigned char *pBuffer, unsigned int iBufferSize) = 0;
-    virtual long long SeekRecordedStream(long long iPosition, int iWhence /* = SEEK_SET */) = 0;
-    virtual long long PositionRecordedStream(void) = 0;
-    virtual long long LengthRecordedStream(void) = 0;
-    virtual PVR_ERROR IsEPGTagRecordable(const EPG_TAG* tag, bool* bIsRecordable) = 0;
-
-    virtual PVR_ERROR CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item) = 0;
+    class ILivePlayer {
+    public:
+        virtual bool OpenLiveStream(const PVR_CHANNEL &channel) = 0;
+        virtual void CloseLiveStream(void) = 0;
+        virtual bool SwitchChannel(const PVR_CHANNEL &channel) = 0;
+        virtual bool CanPauseStream(void) = 0;
+        virtual bool CanSeekStream(void) = 0;
+        virtual bool IsRealTimeStream(void) = 0;
+        virtual PVR_ERROR GetStreamTimes(PVR_STREAM_TIMES *times) = 0;
+        virtual long long SeekLiveStream(long long iPosition, int iWhence) = 0;
+        virtual long long PositionLiveStream(void) = 0;
+        virtual long long LengthLiveStream(void)  = 0;
+        virtual int ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize) = 0;
+        
+        
+    protected:
+        virtual ~ILivePlayer() {}
+    };
     
-    virtual  void OnSystemSleep() = 0;
-    virtual void OnSystemWake() = 0;
+    class IRecordingPlayer {
+    public:
+        virtual bool OpenRecordedStream(const PVR_RECORDING &recording) = 0;
+        virtual void CloseRecordedStream(void) = 0;
+        virtual PVR_ERROR GetStreamReadChunkSize(int* chunksize) = 0;
+        virtual int ReadRecordedStream(unsigned char *pBuffer, unsigned int iBufferSize) = 0;
+        virtual long long SeekRecordedStream(long long iPosition, int iWhence /* = SEEK_SET */) = 0;
+        virtual long long PositionRecordedStream(void) = 0;
+        virtual long long LengthRecordedStream(void) = 0;
+        
+    protected:
+        virtual ~IRecordingPlayer() {}
+    };
     
-    virtual ~IPvrIptvDataSource(){}
-};
+    class IPvrIptvDataSource : public IChannelsSource, public IEpgSource, public IRecordingsSource, public ILivePlayer, public IRecordingPlayer, public ITimersEngineDelegate
+    {
+    public:
+        virtual ADDON_STATUS Init(PVR_PROPERTIES* pvrprops) = 0;
+        virtual ADDON_STATUS GetStatus() = 0;
+        
+        virtual ADDON_STATUS SetSetting(const char *settingName, const void *settingValue) = 0;
+        
+        virtual PVR_ERROR GetAddonCapabilities(PVR_ADDON_CAPABILITIES* pCapabilities) = 0;
+        virtual PVR_ERROR SignalStatus(PVR_SIGNAL_STATUS &signalStatus) = 0;
+        
+        virtual PVR_ERROR CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item) = 0;
+        
+        virtual  void OnSystemSleep() = 0;
+        virtual void OnSystemWake() = 0;
+        
+        virtual ~IPvrIptvDataSource(){}
+    };
+}
 
 class ITimersEngine
 {
