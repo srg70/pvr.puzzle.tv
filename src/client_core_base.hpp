@@ -80,8 +80,9 @@ namespace PvrClient {
         // Channel & group lists
         void AddChannel(const Channel& channel);
         void AddGroup(GroupId groupId, const Group& group);
-        void AddChannelToGroup(GroupId groupId, ChannelId channelId, int indexInGroup = 0);
-        
+        void AddChannelToGroup(GroupId groupId, ChannelId channelId);
+        void AddChannelToGroup(GroupId groupId, ChannelId channelId, int indexInGroup);
+
 
         void ParseJson(const std::string& response, std::function<void(rapidjson::Document&)> parser);
         

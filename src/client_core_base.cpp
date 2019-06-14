@@ -239,6 +239,11 @@ namespace PvrClient{
     {
         m_mutableGroupList[groupId] = group;
     }
+    void ClientCoreBase::AddChannelToGroup(GroupId groupId, ChannelId channelId)
+    {
+        int idx = m_mutableGroupList[groupId].Channels.size();
+        AddChannelToGroup(groupId, channelId, idx);
+    }
     void ClientCoreBase::AddChannelToGroup(GroupId groupId, ChannelId channelId, int indexInGroup)
     {
         m_mutableGroupList[groupId].Channels[indexInGroup] = channelId;
