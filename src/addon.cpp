@@ -43,7 +43,7 @@
 #endif
 
 static ITimersEngine* m_timersEngine = NULL;
-static IPvrIptvDataSource* m_DataSource = NULL;
+static PvrClient::IPvrIptvDataSource* m_DataSource = NULL;
 static int m_clientType = 1;
 
 namespace Globals {
@@ -53,9 +53,9 @@ namespace Globals {
 
 extern "C" {
     
-    static IPvrIptvDataSource* CreateDataSourceWithType(int type)
+    static PvrClient::IPvrIptvDataSource* CreateDataSourceWithType(int type)
     {
-        IPvrIptvDataSource* dataSource = NULL;
+        PvrClient::IPvrIptvDataSource* dataSource = NULL;
         switch (type) {
             case 0:
                 dataSource = new PuzzlePVRClient();
