@@ -199,7 +199,7 @@ public:
         
         curl_easy_cleanup(curl);
         if(curlCode != CURLE_OK){
-            delete response;
+            //delete response;
             throw CurlErrorException(&errorMessage[0]);
         }
     }
