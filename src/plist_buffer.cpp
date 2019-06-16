@@ -114,7 +114,7 @@ namespace Buffers {
     {
         bool isEof = false;
         try {
-            m_cache->ReloadPlaylist();
+            //m_cache->ReloadPlaylist();
             while (/*!isEof && */ !IsStopped()) {
 
                 MutableSegment* segment =  nullptr;
