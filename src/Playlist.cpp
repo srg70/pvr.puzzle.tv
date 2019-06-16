@@ -38,17 +38,36 @@ namespace Buffers {
 
         // If Reliative URL
         if(std::string::npos == url.find(c_HTTP)) {
+            std::string absUrl;
             // Append site prefix...
+            // Find schema.
             auto urlPos = baseUrl.find(c_HTTP);
-            if(std::string::npos == urlPos){
+            if(std::string::npos != urlPos){
+                urlPos += strlen(c_HTTP);
+            } else {
                 urlPos = baseUrl.find(c_HTTPS);
                 if(std::string::npos == urlPos)
                     throw PlaylistException((std::string("Missing http:// or https:// in base URL: ") + baseUrl).c_str());
+                urlPos += strlen(c_HTTPS);
             }
-            urlPos = baseUrl.rfind('/');
-            if(std::string::npos == urlPos)
-                throw PlaylistException((std::string("No '/' in base URL: ") + baseUrl).c_str());
-            return baseUrl.substr(0, urlPos + 1) + url;
+            // Find site
+            urlPos = baseUrl.find('/', urlPos);
+            if(std::string::npos == urlPos) {
+                throw PlaylistException((std::string("Missing site address in base URL: ") + baseUrl).c_str());
+            }
+            absUrl = baseUrl.substr(0, urlPos + 1); // +1 for '/'
+            std::string urlPath = baseUrl.substr(urlPos + 1);
+            // Find path
+            urlPos = urlPath.rfind('/');
+            if(std::string::npos != urlPos) {
+                //throw PlaylistException((std::string("No '/' in base URL: ") + baseUrl).c_str());
+                urlPath = urlPath.substr(0, urlPos + 1); // +1 for '/'
+            }
+            urlPath += url;
+            absUrl += urlPath;//HttpEngine::Escape(urlPath);
+            //trim(absUrl);
+            return absUrl;
+
         }
         return url;
         
@@ -111,7 +130,7 @@ namespace Buffers {
                 }
             }
             //    LogDebug("Best URL (%d): \n %s", bestRate, m_playListUrl.c_str() );
-            
+            data.clear();
             LoadPlaylist(data);
         }
         
@@ -191,23 +210,22 @@ namespace Buffers {
                 if(',' != body[pos++])
                     throw PlaylistException("Invalid playlist format: missing coma after INF tag.");
                 
-                std::string::size_type urlPos = body.find('\n',pos) + 1;
-                pos = body.find(c_INF, urlPos);
+                const std::string::size_type urlPos = body.find('\n',pos) + 1;
+                pos = body.find('\n', urlPos);
                 hasContent = true;
                 // Check whether we have a segment already
-                if(m_segmentUrls.count(mediaIndex) != 0) {
-                    ++mediaIndex;
-                    continue;
+                if(m_segmentUrls.count(mediaIndex) == 0) {
+                    std::string::size_type urlLen = pos - urlPos;
+                    if(std::string::npos == pos)
+                        urlLen = std::string::npos;
+                    auto url = body.substr(urlPos, urlLen);
+                    trim(url);
+                    url = ToAbsoluteUrl(url, m_effectivePlayListUrl);
+                    //            LogNotice("IDX: %u Duration: %f. URL: %s", mediaIndex, duration, url.c_str());
+                    m_segmentUrls[mediaIndex] = TSegmentUrls::mapped_type(duration, url, mediaIndex);
                 }
-                std::string::size_type urlLen = pos - urlPos;
-                if(std::string::npos == pos)
-                    urlLen = std::string::npos;
-                auto url = body.substr(urlPos, urlLen);
-                trim(url);
-                url = ToAbsoluteUrl(url, m_effectivePlayListUrl);
-                //            LogNotice("IDX: %u Duration: %f. URL: %s", mediaIndex, duration, url.c_str());
-                auto currentIdx = mediaIndex++;
-                m_segmentUrls[currentIdx] = TSegmentUrls::mapped_type(duration, url, currentIdx);
+                ++mediaIndex;
+                pos = body.find(c_INF, urlPos);
             }
             LogDebug("m_segmentUrls.size = %d, %s", m_segmentUrls.size(), hasContent ? "Not empty." : "Empty."  );
             return hasContent;
