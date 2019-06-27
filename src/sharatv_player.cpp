@@ -70,19 +70,18 @@ namespace SharaTvEngine
     static string FindVar(const string& data, string::size_type pos, const char* varTag);
 //    static void LoadPlaylist(const string& plistUrl, string& data);
     
-    Core::Core(const std::string &login, const std::string &password, bool enableAdult)
+    Core::Core(const std::string &playlistUrl, bool enableAdult)
     : m_enableAdult(enableAdult)
+    , m_playListUrl(playlistUrl)
     {
-        if(login.empty() || password.empty())
-            throw AuthFailedException();
-        //http://tvfor.pro/g/xxx:yyy/1/playlist.m3u
-        m_playListUrl = string("http://tvfor.pro/g/") +  login + ":" + password + "/1/playlist.m3u";
         string data;
         // NOTE: shara TV does NOT check credentials
         // Just builds a playlist.
         // I.e. GetCachedFileContents alwais succeeded.
-        if(0 == XMLTV::GetCachedFileContents(m_playListUrl, data))
+        if(0 == XMLTV::GetCachedFileContents(m_playListUrl, data)){
+            LogError("SharaTvPlayer: failed to download playlist. URL: %s", playlistUrl.c_str());
             throw ServerErrorException("SharaTvPlayer: failed to download playlist.", -1);
+        }
         m_epgUrl = GetEpgUrlFromPlaylist(data);
     }
     

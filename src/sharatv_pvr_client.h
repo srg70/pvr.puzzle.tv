@@ -52,11 +52,18 @@ protected:
     void DestroyCoreSafe();
 
 private:
+    
+    enum {
+        c_DataSourceType_Login = 0,
+        c_DataSourceType_Playlist = 1
+    }m_dataSourceType;
+    
     void CreateCore(bool clearEpgCache);
 
     SharaTvEngine::Core* m_core;
     std::string m_login;
     std::string m_password;
+    std::string m_playListUrl;
     //std::string m_epgUrl;
     bool m_enableAdult;
 };
