@@ -297,6 +297,18 @@ msgctxt "#70010"
 msgid "Shara TV"
 msgstr "Shara TV"
 
+msgctxt "#70001"
+msgid "Data Source"
+msgstr "Data Source"
+
+msgctxt "#70002"
+msgid "User Account"
+msgstr "User Account"
+
+msgctxt "#70003"
+msgid "Playlist"
+msgstr "Playlist"
+
 #============= Notifications ================
 
 msgctxt "#32000"

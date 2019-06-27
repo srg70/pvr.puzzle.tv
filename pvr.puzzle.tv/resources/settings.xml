@@ -36,9 +36,11 @@
 
   <!-- Shara TV Player -->
   <category label="70010">
-      <setting id="sharatv_login" type="text" label="30000" default="" />
-      <setting id="sharatv_password" type="text" label="30001" option="hidden" default="" />
-      <setting id="sharatv_adult" type="bool" label="30003" default="false"/>
+      <setting id="sharatv_data_source" type="enum" label="70001" lvalues="70002|70003" default="0" />
+      <setting id="sharatv_login" type="text" label="30000" default="" visible="eq(-1,0)" subsetting="true"/>
+      <setting id="sharatv_password" type="text" label="30001" option="hidden" default="" visible="eq(-2,0)" subsetting="true"/>
+      <setting id="sharatv_playlist_path" type="text" label="10002" default="" visible="eq(-3,1)" subsetting="true"/>
+    <setting id="sharatv_adult" type="bool" label="30003" default="false"/>
   </category>
   
 <!-- OTT Player -->
