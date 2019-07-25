@@ -118,9 +118,6 @@ void SovokTV::Cleanup()
         m_httpEngine->CancelAllRequests();
     
     Logout();
-    
-    if(m_httpEngine)
-        SAFE_DELETE(m_httpEngine);
 
     XBMC->Log(LOG_NOTICE, "SovokTV stopped.");
 }

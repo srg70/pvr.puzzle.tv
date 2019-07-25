@@ -68,8 +68,10 @@ namespace TtvEngine
             CoreParams()
             : enableAdult(false)
             , aceServerPort(0)
+            , filterByAlexElec (true)
             {}
             bool enableAdult;
+            bool filterByAlexElec;
             std::string aceServerUri;
             int aceServerPort;
             std::string epgUrl;
@@ -95,20 +97,20 @@ namespace TtvEngine
     private:
         
         typedef int EpgChannelId;
-        struct TTVChanel {
-            EpgChannelId epg_id;
-            std::string fname;
-            std::string update_date;
-            std::string cid;
-            std::string name;
-            std::string category;
-            std::string source;
-            //"tracker": "hls:9.rarbg.me",
-            std::string provider;
-        };
-        
-        typedef std::map<PvrClient::ChannelId, TTVChanel> TTVChannels;
-        TTVChannels m_ttvChannels;
+//        struct TTVChanel {
+//            EpgChannelId epg_id;
+//            std::string fname;
+//            std::string update_date;
+//            std::string cid;
+//            std::string name;
+//            std::string category;
+//            std::string source;
+//            //"tracker": "hls:9.rarbg.me",
+//            std::string provider;
+//        };
+//
+//        typedef std::map<PvrClient::ChannelId, TTVChanel> TTVChannels;
+//        TTVChannels m_ttvChannels;
         
         std::map<EpgChannelId, PvrClient::ChannelId> m_epgIdToChannelId;
         
@@ -127,6 +129,14 @@ namespace TtvEngine
         void BuildChannelAndGroupList_Plist();
         void UpdateEpgForAllChannels_Plist(time_t startTime, time_t endTime);
         void LoadPlaylist(std::function<void(const rapidjson::Document::ValueType&)> onChannel);
+        struct  AlexElecChannel {
+            std::string name;
+            std::string cid;
+            std::string cat;
+        };
+        void LoadPlaylistAlexelec(std::function<void(const AlexElecChannel &)> onChannel);
+        
+
         void Cleanup();
 
         bool m_isAceRunning;

@@ -294,6 +294,10 @@ msgctxt "#60011"
 msgid "Port"
 msgstr "Порт"
 
+msgctxt "#60012"
+msgid "Filter by AlexElec"
+msgstr "Фильтровать согласно AlexElec"
+
 #=============== Shara TV Player Settings ===========
 
 msgctxt "#70010"

@@ -138,12 +138,10 @@ PuzzleTV::~PuzzleTV()
 }
 void PuzzleTV::Cleanup()
 {
-    LogNotice("PuzzleTV stopping...");
-
-    if(m_httpEngine)
-        SAFE_DELETE(m_httpEngine);
-    
-    LogNotice( "PuzzleTV stopped.");
+//    LogNotice("PuzzleTV stopping...");
+//
+//    
+//    LogNotice( "PuzzleTV stopped.");
 }
 
 void PuzzleTV::BuildChannelAndGroupList()

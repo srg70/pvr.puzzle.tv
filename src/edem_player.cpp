@@ -96,13 +96,10 @@ namespace EdemEngine
     }
     void Core::Cleanup()
     {
-        LogNotice("EdemPlayer stopping...");
-        
-        if(m_httpEngine){
-            SAFE_DELETE(m_httpEngine);
-        }
-        
-        LogNotice("EdemPlayer stopped.");
+//        LogNotice("EdemPlayer stopping...");
+//        
+//        
+//        LogNotice("EdemPlayer stopped.");
     }
     
     void Core::BuildChannelAndGroupList()

@@ -53,6 +53,7 @@ static const char* c_epg_setting = "ttv_epg_url";
 static const char* c_ttv_ace_server_uri = "ttv_ace_server_uri";
 static const char* c_ttv_ace_server_port = "ttv_ace_server_port";
 static const char* c_ttv_adult = "ttv_adult";
+static const char* c_ttv_filter_by_alexelec = "ttv_filter_by_alexelec";
 
 ADDON_STATUS TtvPVRClient::Init(PVR_PROPERTIES* pvrprops)
 {
@@ -74,9 +75,12 @@ ADDON_STATUS TtvPVRClient::Init(PVR_PROPERTIES* pvrprops)
     m_aceServerPort = 6878;
     XBMC->GetSetting(c_ttv_ace_server_port, &m_aceServerPort);
 
+    m_filterByAlexElec = true;
+    XBMC->GetSetting(c_ttv_filter_by_alexelec, &m_filterByAlexElec);
+    
     m_currentChannelStreamIdx = -1;
 
-    
+
     retVal = CreateCoreSafe(false);
     
     //    PVR_MENUHOOK hook = {1, 30020, PVR_MENUHOOK_EPG};
@@ -130,6 +134,7 @@ void TtvPVRClient::CreateCore(bool clearEpgCache)
     cp.aceServerUri = m_aceServerUri;
     cp.aceServerPort = m_aceServerPort;
     cp.enableAdult = m_enableAdultContent;
+    cp.filterByAlexElec = m_filterByAlexElec;
     cp.epgUrl = m_epgUrl;
     m_clientCore = m_core = new TtvEngine::Core(cp);
     m_core->IncludeCurrentEpgToArchive(m_addCurrentEpgToArchive);
@@ -148,9 +153,26 @@ ADDON_STATUS TtvPVRClient::SetSetting(const char *settingName, const void *setti
     }
     else if (strcmp(settingName,  c_ttv_adult) == 0) {
         result = ADDON_STATUS_NEED_RESTART;
+        XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32016));
+//      Doesn't work because of modal dialog "NEED RESSTART" ...
+//        m_clientCore->CallRpcAsync("{\"jsonrpc\": \"2.0\", \"method\": \"GUI.ActivateWindow\", \"params\": {\"window\": \"pvrsettings\"},\"id\": 1}",
+//                                   [&] (rapidjson::Document& jsonRoot) {
+//                                       XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32016));
+//                                   },
+//                                   [&](const ActionQueue::ActionResult& s) {});
     }
     else if (strcmp(settingName,  c_ttv_ace_server_port) == 0) {
         result = ADDON_STATUS_NEED_RESTART;
+    }
+    else if (strcmp(settingName,  c_ttv_filter_by_alexelec) == 0) {
+        result = ADDON_STATUS_NEED_RESTART;
+        XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32016));
+//      Doesn't work because of modal dialog "NEED RESSTART" ...
+//        m_clientCore->CallRpcAsync("{\"jsonrpc\": \"2.0\", \"method\": \"GUI.ActivateWindow\", \"params\": {\"window\": \"pvrsettings\"},\"id\": 1}",
+//                                   [&] (rapidjson::Document& jsonRoot) {
+//                                       XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32016));
+//                                   },
+//                                   [&](const ActionQueue::ActionResult& s) {});
     }
     else {
         result = PVRClientBase::SetSetting(settingName, settingValue);
