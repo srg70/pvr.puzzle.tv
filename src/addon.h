@@ -37,11 +37,14 @@ class ITimersEngineDelegate{
 public:
     virtual bool StartRecordingFor(const PVR_TIMER &timer) = 0;
     virtual bool StopRecordingFor(const PVR_TIMER &timer) = 0;
-    virtual bool FindEpgFor(const PVR_TIMER &timer) = 0;
 protected:
     virtual ~ITimersEngineDelegate() {}
 };
-    
+
+namespace Buffers {
+    class IPlaylistBufferDelegate;
+}
+
 namespace PvrClient
 {
 
@@ -113,7 +116,50 @@ namespace PvrClient
         virtual ~IRecordingPlayer() {}
     };
     
-    class IPvrIptvDataSource : public IChannelsSource, public IEpgSource, public IRecordingsSource, public ILivePlayer, public IRecordingPlayer, public ITimersEngineDelegate
+    class IPlayerDelegate {
+    public:
+        // Although Kodi defines unique channel ID as unsigned integer
+        // some Kodi modules require signed int internaly and reject negative values.
+        typedef int KodiChannelId;
+
+        typedef enum {
+            k_TimeshiftBufferNone = -1,
+            k_TimeshiftBufferMemory = 0,
+            k_TimeshiftBufferFile = 1
+        } TimeshiftBufferType;
+
+        typedef enum {
+            NoRecordingFlags = 0x0,
+            SupportVodSeek = 0x0001,
+            ForcePlaylist = 0x0002,
+            LocalRecording = 0x004
+        } RecordingStreamFlags;
+
+        typedef struct _RecordingParams{
+            std::string url;
+            Buffers::IPlaylistBufferDelegate* delegate;
+            RecordingStreamFlags flags;
+        } RecordingParams;
+        virtual std::string GetLiveStreamUrl(const KodiChannelId& channel) = 0;
+        virtual TimeshiftBufferType GetTimeshiftBufferType() const = 0;
+        virtual std::string InitLocalRecordingFor(const PVR_TIMER &timer) = 0;
+        virtual void FinalizeLocalRecordingFor(const PVR_TIMER &timer) = 0;
+        virtual bool GetRecordingParams(const PVR_RECORDING &recording, RecordingParams& params) = 0;
+
+    protected:
+        virtual ~IPlayerDelegate() {}
+    };
+    
+    class IPlayer : public ILivePlayer, public IRecordingPlayer, public ITimersEngineDelegate {
+    public:
+        virtual void SetLiveDelegate(IPlayerDelegate* delegate) = 0;
+    protected:
+        virtual ~IPlayer() {}
+    };
+    
+    
+    
+    class IPvrIptvDataSource : public IChannelsSource, public IEpgSource,  public IRecordingsSource, public IPlayerDelegate
     {
     public:
         virtual ADDON_STATUS Init(PVR_PROPERTIES* pvrprops) = 0;

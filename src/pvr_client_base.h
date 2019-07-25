@@ -26,19 +26,9 @@
 #include <string>
 #include "pvr_client_types.h"
 #include "xbmc_pvr_types.h"
-#include "p8-platform/threads/mutex.h"
 #include "addon.h"
 #include "globals.hpp"
 
-namespace Buffers {
-    class IPlaylistBufferDelegate;
-    class InputBuffer;
-    class TimeshiftBuffer;
-    class ICacheBuffer;
-}
-namespace ActionQueue {
-    class CActionQueue;
-}
 
 namespace PvrClient
 {
@@ -48,10 +38,6 @@ namespace PvrClient
     public:
         
         static const unsigned int s_lastCommonMenuHookId;
-        typedef enum {
-            k_TimeshiftBufferMemory = 0,
-            k_TimeshiftBufferFile = 1
-        }TimeshiftBufferType;
         
         ADDON_STATUS Init(PVR_PROPERTIES* pvrprops);
         virtual ~PVRClientBase();
@@ -60,11 +46,6 @@ namespace PvrClient
         
         PVR_ERROR GetAddonCapabilities(PVR_ADDON_CAPABILITIES* pCapabilities);
         
-        bool CanPauseStream();
-        bool CanSeekStream();
-        bool IsRealTimeStream(void);
-        PVR_ERROR GetStreamTimes(PVR_STREAM_TIMES *times);
-
         int GetChannelsAmount();
         PVR_ERROR GetChannels(ADDON_HANDLE handle, bool bRadio);
 
@@ -75,19 +56,20 @@ namespace PvrClient
         PVR_ERROR GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL& channel, time_t iStart, time_t iEnd);
         ADDON_STATUS GetStatus();
         
-        bool OpenLiveStream(const PVR_CHANNEL& channel);
-        void CloseLiveStream();
-        int ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize);
+        // IPlayerDelegate
+        virtual std::string GetLiveStreamUrl(const KodiChannelId& channelId);
+        virtual IPlayerDelegate::TimeshiftBufferType GetTimeshiftBufferType() const;
+        virtual std::string InitLocalRecordingFor(const PVR_TIMER &timer);
+        virtual void FinalizeLocalRecordingFor(const PVR_TIMER &timer);
+        virtual bool GetRecordingParams(const PVR_RECORDING &recording, RecordingParams& params);
+
         long long SeekLiveStream(long long iPosition, int iWhence);
         long long PositionLiveStream();
         long long LengthLiveStream();
-        bool SwitchChannel(const PVR_CHANNEL& channel);
-
         
         void SetTimeshiftEnabled(bool enable);
         void SetTimeshiftBufferSize(uint64_t size);
         void SetTimeshiftBufferType(TimeshiftBufferType type);
-        bool IsTimeshiftEnabled() { return m_isTimeshiftEnabled; }
         void SetTimeshiftPath(const std::string& path);
         void SetRecordingsPath(const std::string& path);
 
@@ -101,10 +83,6 @@ namespace PvrClient
         long long PositionRecordedStream(void);
         long long LengthRecordedStream(void);
         PVR_ERROR IsEPGTagRecordable(const EPG_TAG* tag, bool* bIsRecordable);
-
-        bool StartRecordingFor(const PVR_TIMER &timer);
-        bool StopRecordingFor(const PVR_TIMER &timer);
-        bool FindEpgFor(const PVR_TIMER &timer);
 
         
         PVR_ERROR CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
@@ -124,20 +102,9 @@ namespace PvrClient
         virtual std::string GetStreamUrl(ChannelId channelId);
         virtual std::string GetNextStreamUrl(ChannelId channelId) {return std::string();}
         virtual void OnOpenStremFailed(PvrClient::ChannelId channelId, const std::string& streamUrl) {}
-        ChannelId GetLiveChannelId() const { return  m_liveChannelId;}
-        std::string GetLiveUrl() const;
-        bool IsLiveInRecording() const;
-        bool SwitchChannel(ChannelId channelId, const std::string& url);
 
-        enum RecordingStreamFlags{
-            NoRecordingFlags = 0x0,
-            SupportVodSeek = 0x0001,
-            ForcePlaylist = 0x0002
-        };
-        bool OpenRecordedStream(const std::string& url, Buffers::IPlaylistBufferDelegate* delegate, RecordingStreamFlags flags);
-        bool IsLocalRecording(const PVR_RECORDING &recording) const;
-        // Implemented for local recordings. Should be defined by derived class
-        virtual bool OpenRecordedStream(const PVR_RECORDING &recording) = 0;
+        std::string GetLiveUrl() const;
+
         const std::string& GetClientPath() const { return m_clientPath;}
         const std::string& GetUserPath() const { return m_userPath;}
         
@@ -151,6 +118,7 @@ namespace PvrClient
         
         bool IsSeekSupported() const { return m_supportSeek; }
         void SetSeekSupported(bool yesNo) { m_supportSeek = yesNo; }
+   
     private:
         typedef std::map<KodiChannelId, ChannelId> TKodiToPluginChannelIdLut;
         typedef std::map<ChannelId, KodiChannelId> TPluginToKodiChannelIdLut;
@@ -162,35 +130,24 @@ namespace PvrClient
         void FillRecording(const EpgEntryList::value_type& epgEntry, PVR_RECORDING& tag, const char* dirPrefix);
         std::string DirectoryForRecording(unsigned int epgId) const;
         std::string PathForRecordingInfo(unsigned int epgId) const;
-        static Buffers::InputBuffer*  BufferForUrl(const std::string& url );
-        bool OpenLiveStream(ChannelId channelId, const std::string& url );
-        Buffers::ICacheBuffer* CreateLiveCache() const;
+        bool IsLocalRecording(const PVR_RECORDING &recording) const;
 
-        ChannelId m_liveChannelId;
-        Buffers::TimeshiftBuffer *m_inputBuffer;
-        struct {
-            Buffers::InputBuffer * buffer;
-            time_t duration;
-        } m_recordBuffer;
-        ChannelId m_localRecordChannelId;
-        Buffers::TimeshiftBuffer *m_localRecordBuffer;
-        bool m_isTimeshiftEnabled;
         uint64_t m_timshiftBufferSize;
         uint64_t m_cacheSizeLimit;
+
+        bool m_isTimeshiftEnabled;
         TimeshiftBufferType m_timeshiftBufferType;
+
         std::string m_cacheDir;
         std::string m_recordingsDir;
         int m_lastRecordingsAmount;
         std::string m_clientPath;
         std::string m_userPath;
         int m_channelReloadTimeout;
-        mutable P8PLATFORM::CMutex m_mutex;
-        int m_lastBytesRead;
         
         int m_rpcPort;
         int m_channelIndexOffset;
         
-        ActionQueue::CActionQueue* m_destroyer;
         TKodiToPluginChannelIdLut m_kodiToPluginLut;
         TPluginToKodiChannelIdLut m_pluginToKodiLut;
         

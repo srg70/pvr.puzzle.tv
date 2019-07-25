@@ -28,6 +28,7 @@
 
 #include "addon.h"
 #include "globals.hpp"
+#include "helpers.h"
 #include "sovok_pvr_client.h"
 #include "puzzle_pvr_client.h"
 #include "ott_pvr_client.h"
@@ -109,7 +110,7 @@ extern "C" {
         
         m_DataSource = CreateDataSourceWithType(m_clientType);
         if (NULL == m_DataSource) {
-            XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32001));
+            XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32001));
             return ADDON_STATUS_NEED_SETTINGS;
         }
         

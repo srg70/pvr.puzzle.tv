@@ -50,7 +50,7 @@ using namespace PvrClient;
 
 #define CATCH_API_CALL(msg) \
     catch (ServerErrorException& ex) { \
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32009), ex.reason.c_str() ); \
+        XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32009), ex.reason.c_str() ); \
     } catch(CurlErrorException& ex) { \
         XBMC->QueueNotification(QUEUE_ERROR, "CURL fatal error: %s", ex.reason.c_str() ); \
     } catch (...) { \
@@ -347,7 +347,7 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
             }
         });
     } catch (ServerErrorException& ex) {
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32009), ex.reason.c_str() );
+        XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32009), ex.reason.c_str() );
     } catch (...) {
         LogError(" >>>>  FAILED receive EPG for N hours<<<<<");
     }
@@ -439,7 +439,7 @@ bool SovokTV::Login(bool wait)
             ApiFunctionData apiParams("login", params);
             CallApiFunction(apiParams, parser);
         } catch (ServerErrorException& ex) {
-            XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32009), ex.reason.c_str() );
+            XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32009), ex.reason.c_str() );
             return false;
         } catch(CurlErrorException& ex) {
             XBMC->QueueNotification(QUEUE_ERROR, "CURL fatal error: %s", ex.reason.c_str() );
@@ -574,7 +574,7 @@ bool SovokTV::LoadStreamers()
             }
         });
     } catch (ServerErrorException& ex) {
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32009), ex.reason.c_str() );
+        XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32009), ex.reason.c_str() );
     } catch(CurlErrorException& ex) {
         XBMC->QueueNotification(QUEUE_ERROR, "CURL fatal error: %s", ex.reason.c_str() );
         return false;

@@ -54,22 +54,14 @@ struct VFSDirEntry_Patch
 
 #include "p8-platform/util/util.h"
 #include "p8-platform/util/timeutils.h"
-#include "p8-platform/threads/mutex.h"
 #include "p8-platform/util/StringUtils.h"
 
 
-#include "timeshift_buffer.h"
-#include "file_cache_buffer.hpp"
-#include "memory_cache_buffer.hpp"
-#include "plist_buffer.h"
-#include "direct_buffer.h"
-#include "simple_cyclic_buffer.hpp"
 #include "helpers.h"
 #include "pvr_client_base.h"
 #include "globals.hpp"
 #include "HttpEngine.hpp"
 #include "client_core_base.hpp"
-#include "ActionQueue.hpp"
 
 
 using namespace std;
@@ -89,7 +81,6 @@ static const char* s_DefaultCacheDir = "special://temp/pvr-puzzle-tv";
 static const char* s_DefaultRecordingsDir = "special://temp/pvr-puzzle-tv/recordings";
 static std::string s_LocalRecPrefix = "Local";
 static std::string s_RemoteRecPrefix = "On Server";
-static const int c_InitialLastByteRead = 1;
 
 
 const unsigned int RELOAD_EPG_MENU_HOOK = 1;
@@ -99,10 +90,6 @@ const unsigned int PVRClientBase::s_lastCommonMenuHookId = RELOAD_RECORDINGS_MEN
 ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
 {
     m_clientCore = NULL;
-    m_inputBuffer = NULL;
-    m_recordBuffer.buffer = NULL;
-    m_recordBuffer.duration = 0;
-    m_localRecordBuffer = NULL;
     m_supportSeek = false;
     
     LogDebug( "User path: %s", pvrprops->strUserPath);
@@ -188,20 +175,11 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     PVR->AddMenuHook(&hook);
 
     // Local recordings path prefix
-    char* localizedString  = XBMC->GetLocalizedString(32014);
-    s_LocalRecPrefix = localizedString;
-    XBMC->FreeString(localizedString);
+    s_LocalRecPrefix = XBMC_Message(32014);
     // Remote recordings path prefix
-    localizedString  = XBMC->GetLocalizedString(32015);
-    s_RemoteRecPrefix = localizedString;
-    XBMC->FreeString(localizedString);
+    s_RemoteRecPrefix = XBMC_Message(32015);
     
-    m_liveChannelId =  m_localRecordChannelId = UnknownChannelId;
-    m_lastBytesRead = c_InitialLastByteRead;
     m_lastRecordingsAmount = 0;
-    
-    m_destroyer = new CActionQueue(100, "Streams Destroyer");
-    m_destroyer->CreateThread();
     
     return ADDON_STATUS_OK;
     
@@ -213,12 +191,9 @@ PVRClientBase::~PVRClientBase()
     if(m_destroyer)
         SAFE_DELETE(m_destroyer);
 }
+
 void PVRClientBase::Cleanup()
 {
-    CloseLiveStream();
-    CloseRecordedStream();
-    if(m_localRecordBuffer)
-        SAFE_DELETE(m_localRecordBuffer);
 }
 
 void PVRClientBase::OnSystemSleep()
@@ -326,68 +301,8 @@ PVR_ERROR PVRClientBase::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabilit
     return PVR_ERROR_NO_ERROR;
 }
 
-bool PVRClientBase::CanPauseStream()
-{
-    return IsTimeshiftEnabled();
-}
-
-bool PVRClientBase::CanSeekStream()
-{
-    return IsTimeshiftEnabled();
-}
-
-bool PVRClientBase::IsRealTimeStream(void)
-{
-    // Archive is not RTS
-    if(m_recordBuffer.buffer)
-        return false;
-    // No timeshift means RTS
-    if(!IsTimeshiftEnabled())
-        return true;
-    // Return true when timeshift buffer position close to end of buffer for < 10 sec
-    // https://github.com/kodi-pvr/pvr.hts/issues/173
-    CLockObject lock(m_mutex);
-    if(nullptr == m_inputBuffer){
-        return true;
-    }
-    double reliativePos = (double)(m_inputBuffer->GetLength() - m_inputBuffer->GetPosition()) / m_inputBuffer->GetLength();
-    time_t timeToEnd = reliativePos * (m_inputBuffer->EndTime() - m_inputBuffer->StartTime());
-    const bool isRTS = timeToEnd < 10;
-    LogDebug("PVRClientBase: is RTS? %s. Reliative pos: %f. Time to end: %d", ((isRTS) ? "YES" : "NO"), reliativePos, timeToEnd );
-    return isRTS;
-}
-
-PVR_ERROR PVRClientBase::GetStreamTimes(PVR_STREAM_TIMES *times)
-{
-
-    if (!times)
-        return PVR_ERROR_INVALID_PARAMETERS;
-//    if(!IsTimeshiftEnabled())
-//        return PVR_ERROR_NOT_IMPLEMENTED;
-    
-    int64_t timeStart = 0;
-    int64_t  timeEnd = 0;
-    if (m_inputBuffer)
-    {
-
-        CLockObject lock(m_mutex);
-        timeStart = m_inputBuffer->StartTime();
-        timeEnd   = m_inputBuffer->EndTime();
-    }
-    else if (m_recordBuffer.buffer){
-        {
-            timeStart = 0;
-            timeEnd   = m_recordBuffer.duration;
-        }
-    }
-    else
-        return PVR_ERROR_NOT_IMPLEMENTED;
-    
-    times->startTime = timeStart;
-    times->ptsStart  = 0;
-    times->ptsBegin  = 0;
-    times->ptsEnd    = (timeEnd - timeStart) * DVD_TIME_BASE;
-    return PVR_ERROR_NO_ERROR;
+IPlayerDelegate::TimeshiftBufferType PVRClientBase::GetTimeshiftBufferType()  const {
+    return m_isTimeshiftEnabled ? m_timeshiftBufferType : k_TimeshiftBufferNone;
 }
 
 ADDON_STATUS PVRClientBase::GetStatus()
@@ -600,17 +515,6 @@ std::string PVRClientBase::GetLiveUrl() const {
     
 }
 
-InputBuffer*  PVRClientBase::BufferForUrl(const std::string& url )
-{
-    InputBuffer* buffer = NULL;
-    const std::string m3uExt = ".m3u";
-    const std::string m3u8Ext = ".m3u8";
-    if( url.find(m3u8Ext) != std::string::npos || url.find(m3uExt) != std::string::npos)
-        buffer = new Buffers::PlaylistBuffer(url, nullptr, false); // No segments cache for live playlist
-    else
-        buffer = new DirectBuffer(url);
-    return buffer;
-}
 
 std::string PVRClientBase::GetStreamUrl(ChannelId channel)
 {
@@ -619,178 +523,16 @@ std::string PVRClientBase::GetStreamUrl(ChannelId channel)
     return  m_clientCore->GetUrl(channel);
 }
 
-bool PVRClientBase::OpenLiveStream(const PVR_CHANNEL& channel)
+std::string PVRClientBase::GetLiveStreamUrl(const KodiChannelId& channelId)
 {
-    if(m_kodiToPluginLut.count(channel.iUniqueId) == 0){
-        LogError("PVRClientBase: open stream request for unknown channel ID %d", channel.iUniqueId);
-        return false;
+    string url;
+    if(m_kodiToPluginLut.count(channelId) == 0){
+        LogError("PVRClientBase: open stream request for unknown channel ID %d", channelId);
+        return url;
     }
     
-    m_lastBytesRead = c_InitialLastByteRead;
-    const ChannelId chId = m_kodiToPluginLut.at(channel.iUniqueId);
-    bool succeeded = OpenLiveStream(chId, GetStreamUrl(chId));
-    bool tryToRecover = !succeeded;
-    while(tryToRecover) {
-        string url = GetNextStreamUrl(chId);
-        if(url.empty()) {// nomore streams
-            LogDebug("No alternative stream found.");
-            XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32026));
-            break;
-        }
-        XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32025));
-        succeeded = OpenLiveStream(chId, url);
-        tryToRecover = !succeeded;
-    }
-    
-    return succeeded;
-
-}
-
-Buffers::ICacheBuffer* PVRClientBase::CreateLiveCache() const {
-    if (m_isTimeshiftEnabled){
-        if(k_TimeshiftBufferFile == m_timeshiftBufferType) {
-            return new Buffers::FileCacheBuffer(m_cacheDir, m_timshiftBufferSize /  Buffers::FileCacheBuffer::CHUNK_FILE_SIZE_LIMIT);
-        } else {
-            return new Buffers::MemoryCacheBuffer(m_timshiftBufferSize /  Buffers::MemoryCacheBuffer::CHUNK_SIZE_LIMIT);
-        }
-    }
-    else
-        return new Buffers::SimpleCyclicBuffer(m_cacheSizeLimit / Buffers::SimpleCyclicBuffer::CHUNK_SIZE_LIMIT);
-
-}
-
-bool PVRClientBase::OpenLiveStream(ChannelId channelId, const std::string& url )
-{
-    
-    if(channelId == m_liveChannelId && IsLiveInRecording())
-        return true; // Do not change url of local recording stream
-
-    if(channelId == m_localRecordChannelId) {
-        CLockObject lock(m_mutex);
-        m_liveChannelId = m_localRecordChannelId;
-        m_inputBuffer = m_localRecordBuffer;
-        return true;
-    }
-
-    m_liveChannelId = UnknownChannelId;
-    if (url.empty())
-        return false;
-    try
-    {
-        InputBuffer* buffer = BufferForUrl(url);
-        CLockObject lock(m_mutex);
-        m_inputBuffer = new Buffers::TimeshiftBuffer(buffer, CreateLiveCache());
-        if(!m_inputBuffer->WaitForInput(m_channelReloadTimeout * 1000)) {
-            throw InputBufferException("no data available diring reload timeout (bad ace link?)");
-        }
-    }
-    catch (InputBufferException &ex)
-    {
-        LogError(  "PVRClientBase: input buffer error in OpenLiveStream: %s", ex.what());
-        CloseLiveStream();
-        OnOpenStremFailed(channelId, url);
-        return false;
-    }
-    m_liveChannelId = channelId;
-    return true;
-}
-
-void PVRClientBase::CloseLiveStream()
-{
-    CLockObject lock(m_mutex);
-    m_liveChannelId = UnknownChannelId;
-    if(m_inputBuffer && !IsLiveInRecording()) {
-        LogNotice("PVRClientBase: closing input stream...");
-        auto oldBuffer = m_inputBuffer;
-        m_destroyer->PerformAsync([oldBuffer] (){
-            LogDebug("PVRClientBase: destroying input stream...");
-            delete oldBuffer;
-            LogDebug("PVRClientBase: input stream been destroyed");
-        }, [] (const ActionResult& result) {
-            if(result.exception){
-                try {
-                    std::rethrow_exception(result.exception);
-                } catch (std::exception ex) {
-                    LogError("PVRClientBase: exception thrown during closing of input stream: %s.", ex.what());
-
-                }
-            } else {
-                LogNotice("PVRClientBase: input stream closed.");
-            }
-        });
-    }
-    
-    m_inputBuffer = nullptr;
-}
-
-int PVRClientBase::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize)
-{
-    CLockObject lock(m_mutex);
-    if(nullptr == m_inputBuffer){
-        return -1;
-    }
-
-    ChannelId chId = GetLiveChannelId();
-    int bytesRead = m_inputBuffer->Read(pBuffer, iBufferSize, m_channelReloadTimeout * 1000);
-    // Assuming stream hanging.
-    // Try to restart current channel only when previous read operation succeeded.
-    if (bytesRead != iBufferSize &&  m_lastBytesRead >= 0 && !IsLiveInRecording()) {
-        LogError("PVRClientBase:: trying to restart current channel.");
-        string  url = m_inputBuffer->GetUrl();
-        if(!url.empty()){
-            XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32000));
-            if(SwitchChannel(chId, url))
-                bytesRead = m_inputBuffer->Read(pBuffer, iBufferSize, m_channelReloadTimeout * 1000);
-            else
-                bytesRead = -1;
-        }
-    }
-    
-    m_lastBytesRead = bytesRead;
-    return bytesRead;
-}
-
-long long PVRClientBase::SeekLiveStream(long long iPosition, int iWhence)
-{
-    CLockObject lock(m_mutex);
-    if(nullptr == m_inputBuffer){
-        return -1;
-    }
-    return m_inputBuffer->Seek(iPosition, iWhence);
-}
-
-long long PVRClientBase::PositionLiveStream()
-{
-    CLockObject lock(m_mutex);
-    if(nullptr == m_inputBuffer){
-        return -1;
-    }
-    return m_inputBuffer->GetPosition();
-}
-
-long long PVRClientBase::LengthLiveStream()
-{
-    CLockObject lock(m_mutex);
-    if(nullptr == m_inputBuffer){
-        return -1;
-    }
-    return m_inputBuffer->GetLength();
-}
-
-bool PVRClientBase::SwitchChannel(const PVR_CHANNEL& channel)
-{
-    const ChannelId chId = m_kodiToPluginLut.at(channel.iUniqueId);
-    return SwitchChannel(chId, GetStreamUrl(chId));
-}
-
-bool PVRClientBase::SwitchChannel(ChannelId channelId, const std::string& url)
-{
-    if(url.empty())
-        return false;
-
-    CLockObject lock(m_mutex);
-    CloseLiveStream();
-    return OpenLiveStream(channelId, url); // Split/join live and recording streams (when nesessry)
+    const ChannelId chId = m_kodiToPluginLut.at(channelId);
+    return GetStreamUrl(chId));
 }
 
 void PVRClientBase::SetTimeshiftEnabled(bool enable)
@@ -1018,30 +760,20 @@ PVR_ERROR PVRClientBase::DeleteRecording(const PVR_RECORDING &recording)
     return PVR_ERROR_NO_ERROR;
 }
 
-bool PVRClientBase::IsLiveInRecording() const
-{
-    return m_inputBuffer == m_localRecordBuffer;
-}
-
 
 bool PVRClientBase::IsLocalRecording(const PVR_RECORDING &recording) const
 {
     return StringUtils::StartsWith(recording.strDirectory, s_LocalRecPrefix.c_str());
 }
 
-bool PVRClientBase::OpenRecordedStream(const PVR_RECORDING &recording)
+bool PVRClientBase::GetRecordingParams(const PVR_RECORDING &recording, RecordingParams& params)
 {
-    if(!IsLocalRecording(recording))
-        return false;
-    try {
-        InputBuffer* buffer = new DirectBuffer(new FileCacheBuffer(DirectoryForRecording(stoul(recording.strRecordingId))));
+    if(IsLocalRecording(recording)) {
         
-        if(m_recordBuffer.buffer)
-            SAFE_DELETE(m_recordBuffer.buffer);
-        m_recordBuffer.buffer = buffer;
-        m_recordBuffer.duration = recording.iDuration;
-    } catch (std::exception ex) {
-        LogError("OpenRecordedStream (local) exception: %s", ex.what());
+        params.delegate = nullptr;
+        params.url = DirectoryForRecording(stoul(recording.strRecordingId));
+        params.flags = IPlayerDelegate::LocalRecording;
+        return true;
     }
     
     return true;
@@ -1122,7 +854,7 @@ PVR_ERROR PVRClientBase::IsEPGTagRecordable(const EPG_TAG*, bool* bIsRecordable)
     return PVR_ERROR_NO_ERROR;
 }
 
-#pragma mark - Timer  delegate
+#pragma mark - Timer engine helpers
 
 std::string PVRClientBase::DirectoryForRecording(unsigned int epgId) const
 {
@@ -1141,79 +873,68 @@ std::string PVRClientBase::PathForRecordingInfo(unsigned int epgId) const
     return infoPath;
 }
 
-bool PVRClientBase::StartRecordingFor(const PVR_TIMER &timer)
+std::string PVRClientBase::InitLocalRecordingFor(const PVR_TIMER &timer)
 {
-    if(NULL == m_clientCore)
-        return false;
-
-    bool hasEpg = false;
-    auto pThis = this;
-    PVR_RECORDING tag = { 0 };
-    IClientCore::EpgEntryAction action = [pThis ,&tag, timer, &hasEpg](const EpgEntryList::value_type& epgEntry)
-    {
-        try {
-            if(epgEntry.first != timer.iEpgUid)
-                return true;
-           
-            pThis->FillRecording(epgEntry, tag, s_LocalRecPrefix.c_str());
-            tag.recordingTime = time(nullptr);
-            tag.iDuration = timer.endTime - tag.recordingTime;
-            hasEpg = true;
+    std::string url;
+    do {
+        if(NULL == m_clientCore)
+            break;
+        
+        bool hasEpg = false;
+        auto pThis = this;
+        PVR_RECORDING tag = { 0 };
+        IClientCore::EpgEntryAction action = [pThis ,&tag, timer, &hasEpg](const EpgEntryList::value_type& epgEntry)
+        {
+            try {
+                if(epgEntry.first != timer.iEpgUid)
+                    return true;
+                
+                pThis->FillRecording(epgEntry, tag, s_LocalRecPrefix.c_str());
+                tag.recordingTime = time(nullptr);
+                tag.iDuration = timer.endTime - tag.recordingTime;
+                hasEpg = true;
+                return false;
+            }
+            catch (...)  {
+                LogError( "%s: failed.", __FUNCTION__);
+                hasEpg = false;
+            }
+            // Should not be here...
             return false;
+        };
+        m_clientCore->ForEachEpg(action);
+        
+        if(!hasEpg) {
+            LogError("StartRecordingFor(): timers without EPG are not supported.");
+            break;
         }
-        catch (...)  {
-            LogError( "%s: failed.", __FUNCTION__);
-            hasEpg = false;
+        
+        std::string recordingDir = DirectoryForRecording(timer.iEpgUid);
+        
+        if(!XBMC->CreateDirectory(recordingDir.c_str())) {
+            LogError("StartRecordingFor(): failed to create recording directory %s ", recordingDir.c_str());
+            break;
         }
-        // Should not be here...
-        return false;
-    };
-    m_clientCore->ForEachEpg(action);
-    
-    if(!hasEpg) {
-        LogError("StartRecordingFor(): timers without EPG are not supported.");
-        return false;
-    }
-    
-    std::string recordingDir = DirectoryForRecording(timer.iEpgUid);
-    
-    if(!XBMC->CreateDirectory(recordingDir.c_str())) {
-        LogError("StartRecordingFor(): failed to create recording directory %s ", recordingDir.c_str());
-        return false;
-    }
-
-    std::string infoPath = PathForRecordingInfo(timer.iEpgUid);
-    void* infoFile = XBMC->OpenFileForWrite(infoPath.c_str() , true);
-    if(nullptr == infoFile){
-        LogError("StartRecordingFor(): failed to create recording info file %s ", infoPath.c_str());
-        return false;
-    }
-    if(XBMC->WriteFile(infoFile, &tag, sizeof(tag))  != sizeof(tag)){
-        LogError("StartRecordingFor(): failed to write recording info file %s ", infoPath.c_str());
+        
+        std::string infoPath = PathForRecordingInfo(timer.iEpgUid);
+        void* infoFile = XBMC->OpenFileForWrite(infoPath.c_str() , true);
+        if(nullptr == infoFile){
+            LogError("StartRecordingFor(): failed to create recording info file %s ", infoPath.c_str());
+            break;
+        }
+        if(XBMC->WriteFile(infoFile, &tag, sizeof(tag))  != sizeof(tag)){
+            LogError("StartRecordingFor(): failed to write recording info file %s ", infoPath.c_str());
+            XBMC->CloseFile(infoFile);
+            break;
+        }
         XBMC->CloseFile(infoFile);
-        return false;
-    }
-    XBMC->CloseFile(infoFile);
+        url = m_clientCore->GetUrl(timer.iClientChannelUid);
+    } while(false);
     
-    std::string url = m_clientCore ->GetUrl(timer.iClientChannelUid);
-    m_localRecordChannelId = timer.iClientChannelUid;
-    // When recording channel is same to live channel
-    // merge live buffer with local recording
-    if(m_liveChannelId == timer.iClientChannelUid){
-//        CLockObject lock(m_mutex);
-//        CloseLiveStream();
-        m_inputBuffer->SwapCache( new Buffers::FileCacheBuffer(recordingDir, 255, false));
-        m_localRecordBuffer = m_inputBuffer;
-        m_liveChannelId = m_localRecordChannelId; // ???
-        return true;
-    }
-    // otherwise just open new recording stream
-    m_localRecordBuffer = new Buffers::TimeshiftBuffer(BufferForUrl(url), new Buffers::FileCacheBuffer(recordingDir, 255, false));
-
-    return true;
+    return url;
 }
 
-bool PVRClientBase::StopRecordingFor(const PVR_TIMER &timer)
+void PVRClientBase::FinalizeLocalRecordingFor(const PVR_TIMER &timer)
 {
     void* infoFile = nullptr;
     // Update recording duration
@@ -1240,31 +961,7 @@ bool PVRClientBase::StopRecordingFor(const PVR_TIMER &timer)
     } while(false);
     if(nullptr != infoFile)
         XBMC->CloseFile(infoFile);
-    
-    // When recording channel is same to live channel
-    // merge live buffer with local recording
-    if(m_liveChannelId == timer.iClientChannelUid){
-        //CLockObject lock(m_mutex);
-        m_inputBuffer->SwapCache(CreateLiveCache());
-        m_localRecordBuffer = nullptr;
-    } else {
-        if(m_localRecordBuffer) {
-            m_localRecordChannelId = UnknownChannelId;
-            SAFE_DELETE(m_localRecordBuffer);
-        }
-    }
-    
-    // trigger Kodi recordings update
-    PVR->TriggerRecordingUpdate();
-    return true;
-    
 }
-bool PVRClientBase::FindEpgFor(const PVR_TIMER &timer)
-{
-    return true;
-}
-
-
 
 #pragma mark - Menus
 

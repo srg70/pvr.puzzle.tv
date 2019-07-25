@@ -266,7 +266,7 @@ namespace Buffers {
             Init(newUrl);
             succeeded = true;
         } catch (const InputBufferException& ex) {
-            XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32004), ex.what());
+            XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32004), ex.what());
             LogError("PlaylistBuffer: Failed to switch streams to %s.\n Error: %s", newUrl.c_str(), ex.what());
         }
         

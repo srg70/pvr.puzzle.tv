@@ -38,9 +38,6 @@ namespace PvrClient {
     
     typedef unsigned int ChannelId;
     const ChannelId UnknownChannelId = (ChannelId) -1;
-    // Although Kodi defines unique channel ID as unsigned integer
-    // some Kodi modules require signed int internaly and reject negative values.
-    typedef int KodiChannelId;
 
     struct Channel
     {
