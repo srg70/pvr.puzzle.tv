@@ -64,6 +64,7 @@
     <setting label="60008" type="lsep"/>
     <setting id="ttv_ace_server_uri" type="text" label="60009" default="127.0.0.1"  />
     <setting id="ttv_ace_server_port" type="number" label="60011" default="6878"  />
+    <setting id="ttv_filter_by_alexelec" type="bool" label="60012" default="true"/>
     <setting id="ttv_adult" type="bool" label="30003" default="false" visible="false" />
 </category>
 

@@ -95,13 +95,10 @@ namespace OttEngine
     }
     void Core::Cleanup()
     {
-        LogNotice("OttPlayer stopping...");
-        
-        if(m_httpEngine){
-            SAFE_DELETE(m_httpEngine);
-        }
-        
-        LogNotice("OttPlayer stopped.");
+//        LogNotice("OttPlayer stopping...");
+//
+//
+//        LogNotice("OttPlayer stopped.");
     }
     
     

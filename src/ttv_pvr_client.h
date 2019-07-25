@@ -64,6 +64,7 @@ private:
     bool m_enableAdultContent;
     std::string m_aceServerUri;
     int m_aceServerPort;
+    bool m_filterByAlexElec;
 };
 
 #endif //__ttv_pvr_client_h__

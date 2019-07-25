@@ -103,13 +103,10 @@ namespace SharaTvEngine
     }
     void Core::Cleanup()
     {
-        LogNotice("SharaTvPlayer stopping...");
-        
-        if(m_httpEngine){
-            SAFE_DELETE(m_httpEngine);
-        }
-        
-        LogNotice("SharaTvPlayer stopped.");
+//        LogNotice("SharaTvPlayer stopping...");
+//        
+//        
+//        LogNotice("SharaTvPlayer stopped.");
     }
     
     void Core::BuildChannelAndGroupList()

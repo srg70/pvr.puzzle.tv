@@ -44,6 +44,7 @@
 #include "XMLTV_loader.hpp"
 #include "globals.hpp"
 #include "guid.hpp"
+#include "base64.h"
 //#include "libtar.h"
 
 #define CATCH_API_CALL() \
@@ -118,13 +119,9 @@ namespace TtvEngine
     
     void Core::Cleanup()
     {
-        LogNotice("TtvPlayer stopping...");
-        
-        if(m_httpEngine){
-            SAFE_DELETE(m_httpEngine);
-        }
-        
-        LogNotice("TtvPlayer stopped.");
+//        LogNotice("TtvPlayer stopping...");
+//
+//        LogNotice("TtvPlayer stopped.");
     }
 
     #pragma mark - Core interface
@@ -163,35 +160,44 @@ namespace TtvEngine
     
     string Core::GetUrl(ChannelId channelId)
     {
-        return m_coreParams.AceServerUrlBase() + c_ACE_ENGINE_HLS_STREAM + "id=" + m_channelList.at(channelId).Urls[0] + "&pid=" + m_deviceId;
+        if(!CheckAceEngineRunning())  {
+            XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32021));
+            return string();
+        }
+        return m_coreParams.AceServerUrlBase() + c_ACE_ENGINE_HLS_STREAM + (m_coreParams.filterByAlexElec ? "infohash=" : "id=") + m_channelList.at(channelId).Urls[0] + "&pid=" + m_deviceId;
     }
 
     bool Core::CheckAceEngineRunning()
     {
-        return m_isAceRunning = true;
+        static time_t last_check = 0;
+        if (m_isAceRunning || difftime(time(NULL), last_check) < 60) {
+            // Checke ace engine one time per minute
+            return m_isAceRunning;
+        }
+        
         //http://127.0.0.1:6878/webui/api/service?method=get_version&format=jsonp
-//        ApiFunctionData apiData(m_coreParams.AceServerUrlBase().c_str(), "/webui/api/service");
-//        apiData.params["method"] = "get_version";
-//        apiData.params["format"] = "jsonp";
-//        apiData.params["callback"] = "mycallback";
-//        bool isRunning = false;
-//        P8PLATFORM::CEvent event;
-//        try{
-//            string strRequest = apiData.BuildRequest();
-//            m_httpEngine->CallApiAsync(strRequest,[&isRunning ] (const std::string& response)
-//                                       {
-//                                           LogDebug("Ace Engine version: %s", response.c_str());
-//                                           isRunning = response.find("version") != string::npos;
-//                                       }, [&isRunning, &event](const ActionQueue::ActionResult& s) {
-//                                           if(s.status != ActionQueue::kActionCompleted)
-//                                               isRunning = false;
-//                                           event.Signal();
-//                                       } , HttpEngine::RequestPriority_Hi);
-//
-//        }
-//        CATCH_API_CALL();
-//        event.Wait();
-//        return m_isAceRunning = isRunning;
+        bool isRunning = false;
+        P8PLATFORM::CEvent event;
+        try{
+            string strRequest = m_coreParams.AceServerUrlBase() + + "/webui/api/service?method=get_version&format=jsonp&callback=mycallback";
+            m_httpEngine->CallApiAsync(strRequest,[&isRunning ] (const std::string& response)
+                                       {
+                                           LogDebug("Ace Engine version: %s", response.c_str());
+                                           isRunning = response.find("version") != string::npos;
+                                       }, [&isRunning, &event](const ActionQueue::ActionResult& s) {
+                                           event.Signal();
+                                       } , HttpEngine::RequestPriority_Hi);
+            
+        }catch (std::exception ex) {
+            LogError("Puzzle TV:  CheckAceEngineRunning() STD exception: %s",  ex.what());
+        }catch (...) {
+            LogError("Puzzle TV:  CheckAceEngineRunning() unknown exception.");
+        }
+        event.Wait();
+        
+        last_check = time(NULL);
+        
+        return m_isAceRunning = isRunning;
     }
     
 //    string Core::GetUrl_Api_Ace(ChannelId channelId)
@@ -263,26 +269,71 @@ namespace TtvEngine
         }
     }
 
+    
+    static const char* GroupMap(const string& orig) {
+        static std::map<const string, const char*, NoCaseComparator> lut = {
+            {"erotic_18_plus", "Эротика"},
+            {"sport", "Спорт"},
+            {"movies", "Фильмы"},
+            {"series", "Фильмы"},
+            {"кино", "Фильмы"},
+            {"informational", "Новости"},
+            {"Новостные", "Новости"},
+            {"music", "Музыка"},
+            {"educational", "Познавательные"},
+            {"documentaries", "Познавательные"},
+            {"kids", "Детские"},
+            {"regional", "Региональные"},
+            {"religion", "Религиозные"},
+            {"entertaining", "Общие"},
+            {"webcam", "Другие"},
+            {"other", "Другие"},
+            {"tv", "Другие"},
+            {"NotSet", "Другие"},
+            {"Allfon", "Другие"}
+        };
+        try {
+            return lut.at(orig);
+        } catch (...) {
+            return orig.c_str();
+        }
+    }
+    
     void Core::BuildChannelAndGroupList_Plist()
     {
         using namespace XMLTV;
         PlaylistContent plistContent;
         unsigned int plistIndex = 1;
-        LoadPlaylist([&plistIndex, &plistContent] (const Document::ValueType& ch)
-        {
-            //TTVChanel ttvChannel;
-            
-            Channel channel;
-            channel.Id = plistIndex;
-            channel.Name = ch["name"].GetString();
-            channel.Number = plistIndex++;
-            channel.Urls.push_back(ch["cid"].GetString());
-            channel.HasArchive = false;
-            channel.IsRadio = false;
-            plistContent[channel.Name] = PlaylistContent::mapped_type(channel,ch["cat"].GetString());
-
-        });
         
+        if(m_coreParams.filterByAlexElec) {
+            LoadPlaylistAlexelec([&plistIndex, &plistContent] (const AlexElecChannel & ch)
+            {
+                Channel channel;
+                channel.Id = plistIndex;
+                channel.Name = ch.name;
+                channel.Number = plistIndex++;
+                channel.Urls.push_back(ch.cid);
+                channel.HasArchive = false;
+                channel.IsRadio = false;
+                plistContent[channel.Name] = PlaylistContent::mapped_type(channel, TtvEngine::GroupMap(ch.cat));
+            });
+        }
+        else {
+            LoadPlaylist([&plistIndex, &plistContent] (const Document::ValueType& ch)
+                         {
+                             //TTVChanel ttvChannel;
+                             
+                             Channel channel;
+                             channel.Id = plistIndex;
+                             channel.Name = ch["name"].GetString();
+                             channel.Number = plistIndex++;
+                             channel.Urls.push_back(ch["cid"].GetString());
+                             channel.HasArchive = false;
+                             channel.IsRadio = false;
+                             plistContent[channel.Name] = PlaylistContent::mapped_type(channel,ch["cat"].GetString());
+                             
+                         });
+        }
         auto pThis = this;
         
         ChannelCallback onNewChannel = [pThis, &plistContent](const EpgChannel& newChannel){
@@ -378,8 +429,12 @@ namespace TtvEngine
             ParseJson(data, [onChannel] (Document& jsonRoot)
             {
                 bool isArray = jsonRoot.IsArray();
-                for(const auto& ch : jsonRoot.GetArray()){
-                    onChannel(ch);
+                if(isArray) {
+                    for(const auto& ch : jsonRoot.GetArray()){
+                        onChannel(ch);
+                    }
+                } else {
+                    LogError("TtvPlayer: bad playlist format. No channel will be loaded");
                 }
             });
             
@@ -390,5 +445,54 @@ namespace TtvEngine
             
         }
     }
+    void Core::LoadPlaylistAlexelec(std::function<void(const AlexElecChannel &)> onChannel)
+    {
+        try {
+            const string baseUrl("http://playlist.alexelec.in.ua");
+            const string url = baseUrl + "/channels/";
+            
+            std::vector<std::string> headers;
+            headers.push_back(string("Referer: ") + baseUrl);
+            
+            string auth("test:test");
+            string encoded = base64_encode(reinterpret_cast<const unsigned char*>(auth.c_str()), auth.length());
+            headers.push_back(string("Authorization: Basic ") + encoded);
+
+            string channels;
+            P8PLATFORM::CEvent event;
+            m_httpEngine->CallApiAsync(
+                HttpEngine::Request(url, string(), headers),
+                [&channels] (const std::string& response) {
+                    channels = response;
+                }, [&event](const ActionQueue::ActionResult& s) {
+                    event.Signal();
+                },
+                HttpEngine::RequestPriority_Hi);
+
+            event.Wait();
+            for(const auto& ch : StringUtils::Tokenize(channels, "\n")) {
+                std::vector<std::string> tokens;
+                StringUtils::Tokenize(ch, tokens, "#");
+                if(tokens.size() != 3) {
+                    LogError("TtvPlayer: bad alexelec channel: %s", ch.c_str());
+                    continue;
+                }
+                AlexElecChannel alCh;
+                alCh.name = StringUtils::Trim(tokens[0]);
+                alCh.cat = StringUtils::Trim(tokens[1]);
+                alCh.cid = StringUtils::Trim(tokens[2]);
+                onChannel(alCh);
+            }
+            XBMC->Log(LOG_DEBUG, "TtvPlayer: parsing of alexelec playlist done.");
+            
+
+        } catch (std::exception& ex) {
+            LogError("TtvPlayer: exception during alexelec playlist loading: %s", ex.what());
+        } catch (...) {
+            LogError("TtvPlayer:  unknown exception during alexelec playlist loading.");
+        }
+
+    }
+
 }
 
