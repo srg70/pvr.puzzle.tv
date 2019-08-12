@@ -85,7 +85,7 @@ namespace Buffers {
     {
         if(m_cacheBuffer) {
             ssize_t result = m_cacheBuffer->Read(buffer, bufferSize);
-            if(0 == result){
+            if(0 == result && timeoutMs > 0){
                 using namespace P8PLATFORM;
                 usleep(timeoutMs * 1000);
                 result = m_cacheBuffer->Read(buffer, bufferSize);

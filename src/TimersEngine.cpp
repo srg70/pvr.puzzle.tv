@@ -63,7 +63,14 @@ namespace Engines
         }
         inline bool StartRecording(ITimersEngineDelegate* delegate)
         {
-            bool started = delegate->StartRecordingFor(m_pvrTimer);
+            bool started = false;
+            try {
+                started = delegate->StartRecordingFor(m_pvrTimer);
+            } catch (std::exception& ex) {
+                LogError("Exception during recording creation: %s", ex.what());
+            } catch (...) {
+                LogError("Exception during recording creation: unknown");
+            }
             m_pvrTimer.state = started ? PVR_TIMER_STATE_RECORDING : PVR_TIMER_STATE_ERROR;
             LogDebug("Timer %s %s", &m_pvrTimer.strTitle[0], started ? "started" : "failed to start" );
             return started;

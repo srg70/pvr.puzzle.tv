@@ -102,6 +102,7 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     m_inputBuffer = NULL;
     m_recordBuffer.buffer = NULL;
     m_recordBuffer.duration = 0;
+    m_recordBuffer.isLocal = false;
     m_localRecordBuffer = NULL;
     m_supportSeek = false;
     
@@ -865,7 +866,7 @@ int PVRClientBase::GetRecordingsAmount(bool deleted)
     }
 
     if(m_lastRecordingsAmount  != size)
-        ;//PVR->TriggerRecordingUpdate();
+        PVR->TriggerRecordingUpdate();
     LogDebug("PVRClientBase: found %d recordings. Was %d", size, m_lastRecordingsAmount);
     m_lastRecordingsAmount = size;
     return size;
@@ -958,7 +959,9 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
                 if(!f.folder)
                     continue;
                 std::string infoPath = f.path;
-                infoPath += PATH_SEPARATOR_CHAR;
+                if(infoPath[infoPath.length() - 1] != PATH_SEPARATOR_CHAR) {
+                    infoPath += PATH_SEPARATOR_CHAR;
+                }
                 infoPath += "recording.inf";
                 void* infoFile = XBMC->OpenFile(infoPath.c_str(), 0);
                 if(nullptr == infoFile)
@@ -1040,6 +1043,7 @@ bool PVRClientBase::OpenRecordedStream(const PVR_RECORDING &recording)
             SAFE_DELETE(m_recordBuffer.buffer);
         m_recordBuffer.buffer = buffer;
         m_recordBuffer.duration = recording.iDuration;
+        m_recordBuffer.isLocal = true;
     } catch (std::exception ex) {
         LogError("OpenRecordedStream (local) exception: %s", ex.what());
     }
@@ -1069,6 +1073,7 @@ bool PVRClientBase::OpenRecordedStream(const std::string& url,  Buffers::IPlayli
 
         m_recordBuffer.buffer = buffer;
         m_recordBuffer.duration = (delegate) ? delegate->Duration() : 0;
+        m_recordBuffer.isLocal = false;
     }
     catch (InputBufferException & ex)
     {
@@ -1098,7 +1103,7 @@ PVR_ERROR PVRClientBase::GetStreamReadChunkSize(int* chunksize) {
 int PVRClientBase::ReadRecordedStream(unsigned char *pBuffer, unsigned int iBufferSize)
 {
     //uint32_t timeoutMs = 5000;
-    return (m_recordBuffer.buffer == NULL) ? -1 : m_recordBuffer.buffer->Read(pBuffer, iBufferSize, m_channelReloadTimeout * 1000);
+    return (m_recordBuffer.buffer == NULL) ? -1 : m_recordBuffer.buffer->Read(pBuffer, iBufferSize, (m_recordBuffer.isLocal)? 0 : m_channelReloadTimeout * 1000);
 }
 
 long long PVRClientBase::SeekRecordedStream(long long iPosition, int iWhence)
@@ -1195,11 +1200,19 @@ bool PVRClientBase::StartRecordingFor(const PVR_TIMER &timer)
     }
     XBMC->CloseFile(infoFile);
     
-    std::string url = m_clientCore ->GetUrl(timer.iClientChannelUid);
-    m_localRecordChannelId = timer.iClientChannelUid;
+    KodiChannelId kodiChannelId = timer.iClientChannelUid;
+    if(m_kodiToPluginLut.count(kodiChannelId) == 0){
+        LogError("StartRecordingFor(): recording request for unknown channel ID %d", kodiChannelId);
+        return false;
+    }
+    
+    ChannelId channelId = m_kodiToPluginLut.at(kodiChannelId);
+    
+    std::string url = m_clientCore ->GetUrl(channelId);
+    m_localRecordChannelId = channelId;
     // When recording channel is same to live channel
     // merge live buffer with local recording
-    if(m_liveChannelId == timer.iClientChannelUid){
+    if(m_liveChannelId == channelId){
 //        CLockObject lock(m_mutex);
 //        CloseLiveStream();
         m_inputBuffer->SwapCache( new Buffers::FileCacheBuffer(recordingDir, 255, false));
@@ -1241,9 +1254,18 @@ bool PVRClientBase::StopRecordingFor(const PVR_TIMER &timer)
     if(nullptr != infoFile)
         XBMC->CloseFile(infoFile);
     
+    KodiChannelId kodiChannelId = timer.iClientChannelUid;
+    ChannelId channelId = UnknownChannelId;
+    if(m_kodiToPluginLut.count(kodiChannelId) != 0){
+       channelId = m_kodiToPluginLut.at(kodiChannelId);
+    } else {
+        LogError("StopRecordingFor(): recording request for unknown channel ID %d", kodiChannelId);
+    }
+    
+
     // When recording channel is same to live channel
     // merge live buffer with local recording
-    if(m_liveChannelId == timer.iClientChannelUid){
+    if(m_liveChannelId == channelId){
         //CLockObject lock(m_mutex);
         m_inputBuffer->SwapCache(CreateLiveCache());
         m_localRecordBuffer = nullptr;
