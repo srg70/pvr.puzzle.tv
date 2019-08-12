@@ -170,6 +170,7 @@ namespace PvrClient
         struct {
             Buffers::InputBuffer * buffer;
             time_t duration;
+            bool isLocal;
         } m_recordBuffer;
         ChannelId m_localRecordChannelId;
         Buffers::TimeshiftBuffer *m_localRecordBuffer;
