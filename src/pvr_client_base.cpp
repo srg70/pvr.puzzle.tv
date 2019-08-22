@@ -441,8 +441,8 @@ PVR_ERROR PVRClientBase::GetChannels(ADDON_HANDLE handle, bool bRadio)
         if (bRadio == channel.IsRadio)
         {
             KodiChannelId uniqueId = XMLTV::ChannelIdForChannelName(channel.Name);
-            m_kodiToPluginLut[uniqueId] = channel.Id;
-            m_pluginToKodiLut[channel.Id] = uniqueId;
+            m_kodiToPluginLut[uniqueId] = channel.UniqueId;
+            m_pluginToKodiLut[channel.UniqueId] = uniqueId;
             
             PVR_CHANNEL pvrChannel = { 0 };
             pvrChannel.iUniqueId = uniqueId;
@@ -535,15 +535,19 @@ PVR_ERROR PVRClientBase::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL
         return PVR_ERROR_NO_ERROR;
     }
     
+    
+    ChannelId chUniqueId = m_kodiToPluginLut.at(channel.iUniqueId);
+    const auto& ch = m_clientCore->GetChannelList().at(chUniqueId);
+
     EpgEntryList epgEntries;
-    m_clientCore->GetEpg(m_kodiToPluginLut.at(channel.iUniqueId), iStart, iEnd, epgEntries);
+    m_clientCore->GetEpg(ch.EpgId, iStart, iEnd, epgEntries);
     EpgEntryList::const_iterator itEpgEntry = epgEntries.begin();
     for (int i = 0; itEpgEntry != epgEntries.end(); ++itEpgEntry, ++i)
     {
         EPG_TAG tag = { 0 };
         tag.iUniqueBroadcastId = itEpgEntry->first;
         itEpgEntry->second.FillEpgTag(tag);
-//        tag.iUniqueChannelId = m_pluginToKodiLut.at(itEpgEntry->second.ChannelId);
+        tag.iUniqueChannelId = channel.iUniqueId;//m_pluginToKodiLut.at(itEpgEntry->second.ChannelId);
         PVR->TransferEpgEntry(handle, &tag);
     }
     return PVR_ERROR_NO_ERROR;
@@ -823,11 +827,19 @@ void PVRClientBase::FillRecording(const EpgEntryList::value_type& epgEntry, PVR_
 {
     const auto& epgTag = epgEntry.second;
     
-    const Channel& ch = m_clientCore->GetChannelList().at(epgTag.ChannelId);
+    string channelName;
+    ChannelId chUniqueId = UnknownChannelId;
+    for(auto& ch : m_clientCore->GetChannelList()){
+        if(ch.second.EpgId == epgTag.ChannelId){
+            channelName = ch.second.Name;
+            chUniqueId = ch.second.UniqueId;
+            break;
+        }
+    }
     sprintf(tag.strRecordingId, "%d",  epgEntry.first);
     strncpy(tag.strTitle, epgTag.Title.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
     strncpy(tag.strPlot, epgTag.Description.c_str(), PVR_ADDON_DESC_STRING_LENGTH - 1);
-    strncpy(tag.strChannelName, ch.Name.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
+    strncpy(tag.strChannelName, channelName.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
     tag.recordingTime = epgTag.StartTime;
     tag.iLifetime = 0; /* not implemented */
     
@@ -841,7 +853,7 @@ void PVRClientBase::FillRecording(const EpgEntryList::value_type& epgEntry, PVR_
     string dirName(dirPrefix);
     dirName += '/';
     if(m_addChannelGroupForArchive) {
-        GroupId groupId = m_clientCore->GroupForChannel(ch.Id);
+        GroupId groupId = m_clientCore->GroupForChannel(chUniqueId);
         dirName += (-1 == groupId) ? "---" : m_clientCore->GetGroupList().at(groupId).Name.c_str();
         dirName += '/';
     }
@@ -852,6 +864,7 @@ void PVRClientBase::FillRecording(const EpgEntryList::value_type& epgEntry, PVR_
     strncpy(tag.strDirectory, dirName.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
 
 }
+
 PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
 {
 

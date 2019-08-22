@@ -112,7 +112,7 @@ namespace EdemEngine
         ChannelCallback onNewChannel = [&plistContent](const EpgChannel& newChannel){
             if(plistContent.count(newChannel.strName) != 0) {
                 auto& plistChannel = plistContent[newChannel.strName].first;
-                plistChannel.Id = newChannel.id;
+                plistChannel.EpgId = newChannel.id;
                 if(!newChannel.strIcon.empty())
                     plistChannel.IconPath = newChannel.strIcon;
             }
@@ -140,7 +140,7 @@ namespace EdemEngine
                 AddGroup(groupList.size(), newGroup);
                 itGroup = --groupList.end();
             }
-            AddChannelToGroup(itGroup->first, channel.Id);
+            AddChannelToGroup(itGroup->first, channel.UniqueId);
         }
     }
     
@@ -341,7 +341,7 @@ namespace EdemEngine
         rtrim(url);
         
         Channel channel;
-        channel.Id = plistIndex;
+        channel.UniqueId = plistIndex;
         channel.Name = name;
         channel.Number = plistIndex;
         channel.Urls.push_back(url);

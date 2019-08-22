@@ -179,7 +179,7 @@ void PuzzleTV::BuildChannelAndGroupList()
             {
                 Channel channel;
                 char* dummy;
-                channel.Id = strtoul((*itChannel)["id"].GetString(), &dummy, 16);
+                channel.UniqueId = channel.EpgId = strtoul((*itChannel)["id"].GetString(), &dummy, 16);
                 if(itChannel->HasMember("num")){
                     channel.Number = (*itChannel)["num"].GetInt();
                 } else {
@@ -225,7 +225,7 @@ void PuzzleTV::BuildChannelAndGroupList()
             ChannelCallback onNewChannel = [&plistContent, pThis](const EpgChannel& newChannel){
                 if(plistContent.count(newChannel.strName) != 0) {
                     auto& plistChannel = plistContent[newChannel.strName].first;
-                    pThis->m_epgToServerLut[newChannel.id] = plistChannel.Id;
+                    pThis->m_epgToServerLut[newChannel.id] = plistChannel.EpgId;
                     if(plistChannel.IconPath.empty())
                         plistChannel.IconPath = newChannel.strIcon;
                 }
@@ -251,7 +251,7 @@ void PuzzleTV::BuildChannelAndGroupList()
                     AddGroup(groupList.size(), newGroup);
                     itGroup = --groupList.end();
                 }
-                AddChannelToGroup(itGroup->first, channel.Id, groupWithIndex.index);
+                AddChannelToGroup(itGroup->first, channel.UniqueId, groupWithIndex.index);
             }
         }
        

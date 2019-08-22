@@ -232,7 +232,7 @@ namespace PvrClient{
     
     void ClientCoreBase::AddChannel(const Channel& channel)
     {
-        m_mutableChannelList[channel.Id] = channel;
+        m_mutableChannelList[channel.UniqueId] = channel;
     }
     
     void ClientCoreBase::AddGroup(GroupId groupId, const Group& group)
@@ -358,8 +358,15 @@ namespace PvrClient{
     
     UniqueBroadcastIdType ClientCoreBase::AddEpgEntry(UniqueBroadcastIdType id, EpgEntry& entry)
     {
+        bool isUnknownChannel = true;
+        for(const auto& ch : m_mutableChannelList){
+            if(ch.second.EpgId == entry.ChannelId){
+                isUnknownChannel = false;
+                break;
+            }
+        }
         // Do not add EPG for unknown channels
-        if(m_mutableChannelList.count(entry.ChannelId) != 1)
+        if(isUnknownChannel)
             return c_UniqueBroadcastIdUnknown;
         
         UpdateHasArchive(entry);

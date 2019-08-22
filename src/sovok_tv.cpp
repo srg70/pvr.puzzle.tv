@@ -170,8 +170,8 @@ void SovokTV::BuildChannelAndGroupList()
                     continue;
                 
                 Channel channel;
-                channel.Id = atoi(ch["id"].GetString());
-                channel.Number = channel.Id;
+                channel.UniqueId = channel.EpgId = atoi(ch["id"].GetString());
+                channel.Number = channel.UniqueId;
                 channel.Name = ch["name"].GetString();
                 channel.IconPath = string("http://sovok.tv" )+ ch["icon"].GetString();
                 channel.IsRadio = ch["is_video"].GetInt() == 0;//channel.Id > 1000;
@@ -185,7 +185,7 @@ void SovokTV::BuildChannelAndGroupList()
                             hideChannel = f.Hidden;
                             if(hideChannel)
                                 break;
-                            AddChannelToGroup(m_countryFilter.Groups[i], channel.Id);
+                            AddChannelToGroup(m_countryFilter.Groups[i], channel.UniqueId);
                         }
                     }
                 }
@@ -203,7 +203,7 @@ void SovokTV::BuildChannelAndGroupList()
                     } else {
                         groups = groups.substr(pos + 1);
                     }
-                    AddChannelToGroup(id, channel.Id);
+                    AddChannelToGroup(id, channel.UniqueId);
                 }
             }
         });

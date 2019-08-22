@@ -210,7 +210,7 @@ namespace OttEngine
         }
         
         Channel channel;
-        channel.Id = stoul(FindVar(vars, 0, c_ID));
+        channel.UniqueId = channel.EpgId = stoul(FindVar(vars, 0, c_ID));
         channel.Name = name;
         channel.Number = plistIndex;
         channel.Urls.push_back(url);
@@ -231,7 +231,7 @@ namespace OttEngine
             AddGroup(groupList.size(), newGroup);
             itGroup = --groupList.end();
         }
-        AddChannelToGroup(itGroup->first, channel.Id);
+        AddChannelToGroup(itGroup->first, channel.UniqueId);
     }
     
     std::string Core::GetArchiveUrl(ChannelId channelId, time_t startTime, int duration)
@@ -255,7 +255,7 @@ namespace OttEngine
             m_epgUpdateInterval.Init(interval*1000);
 
         for (const auto& ch : m_channelList) {
-            GetEpgForChannel(ch.second.Id, startTime, endTime);
+            GetEpgForChannel(ch.second.EpgId, startTime, endTime);
         }
         //SaveEpgCache(c_EpgCacheFile);
     }
