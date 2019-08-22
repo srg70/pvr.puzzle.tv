@@ -46,7 +46,8 @@ namespace PvrClient {
     {
         typedef std::vector<std::string> UrlList;
         
-        ChannelId Id;
+        ChannelId UniqueId;
+        ChannelId EpgId;
         unsigned int Number;
         std::string Name;
         std::string IconPath;
@@ -56,7 +57,7 @@ namespace PvrClient {
        
         bool operator <(const Channel &anotherChannel) const
         {
-            return Id < anotherChannel.Id;
+            return UniqueId < anotherChannel.UniqueId;
         }
     };
     

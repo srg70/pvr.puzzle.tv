@@ -309,7 +309,7 @@ namespace TtvEngine
             LoadPlaylistAlexelec([&plistIndex, &plistContent] (const AlexElecChannel & ch)
             {
                 Channel channel;
-                channel.Id = plistIndex;
+                channel.UniqueId = plistIndex;
                 channel.Name = ch.name;
                 channel.Number = plistIndex++;
                 channel.Urls.push_back(ch.cid);
@@ -324,7 +324,7 @@ namespace TtvEngine
                              //TTVChanel ttvChannel;
                              
                              Channel channel;
-                             channel.Id = plistIndex;
+                             channel.UniqueId = plistIndex;
                              channel.Name = ch["name"].GetString();
                              channel.Number = plistIndex++;
                              channel.Urls.push_back(ch["cid"].GetString());
@@ -339,7 +339,7 @@ namespace TtvEngine
         ChannelCallback onNewChannel = [pThis, &plistContent](const EpgChannel& newChannel){
             if(plistContent.count(newChannel.strName) != 0) {
                 auto& plistChannel = plistContent[newChannel.strName].first;
-                plistChannel.Id = newChannel.id;
+                plistChannel.EpgId = newChannel.id;
                 if(!newChannel.strIcon.empty())
                     plistChannel.IconPath = newChannel.strIcon;
             }
@@ -364,7 +364,7 @@ namespace TtvEngine
                 AddGroup(groupList.size(), newGroup);
                 itGroup = --groupList.end();
             }
-            AddChannelToGroup(itGroup->first, channel.Id);
+            AddChannelToGroup(itGroup->first, channel.UniqueId);
         }
     }
     

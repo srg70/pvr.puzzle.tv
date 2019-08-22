@@ -157,7 +157,7 @@ namespace SharaTvEngine
                 AddGroup(groupList.size(), newGroup);
                 itGroup = --groupList.end();
             }
-            AddChannelToGroup(itGroup->first, channel.Id);
+            AddChannelToGroup(itGroup->first, channel.UniqueId);
         }
         // add rest archives
         m_archiveInfo.insert(archiveInfo.begin(), archiveInfo.end());
@@ -424,7 +424,7 @@ namespace SharaTvEngine
         rtrim(url);
         
         Channel channel;
-        channel.Id = EpgChannelIdToKodi(tvgId);
+        channel.UniqueId = channel.EpgId = EpgChannelIdToKodi(tvgId);
         channel.Name = name;
         channel.Number = plistIndex;
         channel.Urls.push_back(url);
@@ -433,7 +433,7 @@ namespace SharaTvEngine
         channel.IsRadio = false;
         channels[tvgId] = PlaylistContent::mapped_type(channel,groupName);
         if(hasArchive) {
-            archiveInfo.emplace(channel.Id, std::move(ArchiveInfo(archiveDays, archiveUrl)));
+            archiveInfo.emplace(channel.UniqueId, std::move(ArchiveInfo(archiveDays, archiveUrl)));
         }
     }
     
