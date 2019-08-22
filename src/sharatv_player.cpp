@@ -217,9 +217,9 @@ namespace SharaTvEngine
     }
     void Core::UpdateEpgForAllChannels(time_t startTime, time_t endTime)
     {
-        if(m_epgUpdateInterval.IsSet() && m_epgUpdateInterval.TimeLeft() > 0)
-            return;
-        
+//        if(m_epgUpdateInterval.IsSet() && m_epgUpdateInterval.TimeLeft() > 0)
+//            return;
+//        
         m_epgUpdateInterval.Init(24*60*60*1000);
         
         using namespace XMLTV;

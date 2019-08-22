@@ -315,11 +315,14 @@ void PuzzleTV::UpdateEpgForAllChannels(time_t startTime, time_t endTime)
     // Assuming server provides EPG at least fo next 12 hours
     // To reduce amount of API calls, allow next EPG update
     // after either 12 hours or  endTime
-    time_t now = time(nullptr);
-    time_t nextUpdateAt = std::min(now + 12*60*60, endTime);
-    int32_t interval = nextUpdateAt - now;
-    if(interval > 0)
-        m_epgUpdateInterval.Init(interval*1000);
+    //        time_t now = time(nullptr);
+    //        time_t nextUpdateAt = now + 12*60*60;
+    ////        if(difftime(endTime, now) > 0){
+    //            nextUpdateAt = std::min(nextUpdateAt, endTime);
+    //        }
+    //        int32_t interval = nextUpdateAt - now;
+    //        if(interval > 0)
+    m_epgUpdateInterval.Init(12*60*60*1000);
 
     try {
         LoadEpg();
