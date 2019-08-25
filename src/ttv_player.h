@@ -120,8 +120,8 @@ namespace TtvEngine
         // Epg management
         void LoadEpg();
         void ScheduleEpgDetails();
-        PvrClient::UniqueBroadcastIdType AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
-        PvrClient::UniqueBroadcastIdType AddEpgEntry(PvrClient::EpgEntry& epg);
+//        PvrClient::UniqueBroadcastIdType AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
+//        PvrClient::UniqueBroadcastIdType AddEpgEntry(PvrClient::EpgEntry& epg);
 
         bool CheckAceEngineRunning();
 

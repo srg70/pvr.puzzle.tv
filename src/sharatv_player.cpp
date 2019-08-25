@@ -184,28 +184,34 @@ namespace SharaTvEngine
         return  url;
     }
         
-    bool Core::AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry)
-    {
-        unsigned int id = xmlEpgEntry.startTime;
-        
-        EpgEntry epgEntry;
-        epgEntry.ChannelId = xmlEpgEntry.iChannelId;
-        epgEntry.Title = xmlEpgEntry.strTitle;
-        epgEntry.Description = xmlEpgEntry.strPlot;
-        epgEntry.StartTime = xmlEpgEntry.startTime;
-        epgEntry.EndTime = xmlEpgEntry.endTime;
-        epgEntry.IconPath = xmlEpgEntry.iconPath;
-        return ClientCoreBase::AddEpgEntry(id, epgEntry);
-    }
-    
+//    bool Core::AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry)
+//    {
+//        unsigned int id = xmlEpgEntry.startTime;
+//        
+//        EpgEntry epgEntry;
+//        epgEntry.ChannelId = xmlEpgEntry.iChannelId;
+//        epgEntry.Title = xmlEpgEntry.strTitle;
+//        epgEntry.Description = xmlEpgEntry.strPlot;
+//        epgEntry.StartTime = xmlEpgEntry.startTime;
+//        epgEntry.EndTime = xmlEpgEntry.endTime;
+//        epgEntry.IconPath = xmlEpgEntry.iconPath;
+//        return ClientCoreBase::AddEpgEntry(id, epgEntry);
+//    }
+//    
     void Core::UpdateHasArchive(PvrClient::EpgEntry& entry)
     {
         entry.HasArchive = false;
-        if(m_archiveInfo.count(entry.ChannelId) == 0)
+        auto pCahnnel = std::find_if(m_channelList.begin(), m_channelList.end(), [&entry] (const ChannelList::value_type& ch) {
+            return ch.second.UniqueId == entry.UniqueChannelId;
+        });
+        if(pCahnnel == m_channelList.end())
+            return; // Unknown channel
+        ChannelId chId = pCahnnel->second.UniqueId;
+        if(m_archiveInfo.count(chId) == 0)
             return;
         
         time_t now = time(nullptr);
-        const time_t archivePeriod = m_archiveInfo.at(entry.ChannelId).days * 24 * 60 * 60; //archive  days in secs
+        const time_t archivePeriod = m_archiveInfo.at(chId).days * 24 * 60 * 60; //archive  days in secs
         time_t epgTime = m_addCurrentEpgToArchive ? entry.StartTime : entry.EndTime;
         auto when = now - epgTime;
         entry.HasArchive = when > 0 && when < archivePeriod;
@@ -226,18 +232,12 @@ namespace SharaTvEngine
         try {
             auto pThis = this;
  
-            set<ChannelId> channelsToUpdate;
-            EpgEntryCallback onEpgEntry = [&pThis, &channelsToUpdate,  startTime] (const XMLTV::EpgEntry& newEntry) {
-                if(pThis->AddEpgEntry(newEntry) && newEntry.startTime >= startTime)
-                    channelsToUpdate.insert(newEntry.iChannelId);
+            EpgEntryCallback onEpgEntry = [&pThis] (const XMLTV::EpgEntry& newEntry) {
+               pThis->AddEpgEntry(newEntry);
             };
             
             XMLTV::ParseEpg(m_epgUrl, onEpgEntry, EpgChannelIdToKodi);
             
-//            for (auto channel : channelsToUpdate) {
-//                PVR->TriggerEpgUpdate(channel);
-//            }
-
             SaveEpgCache(c_EpgCacheFile, 11);
 //        } catch (ServerErrorException& ex) {
 //            m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32002), ex.reason.c_str() );

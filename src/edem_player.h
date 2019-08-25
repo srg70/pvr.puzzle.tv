@@ -35,10 +35,10 @@
 #include "p8-platform/util/timeutils.h"
 
 
-namespace XMLTV {
-    struct EpgEntry;
-    struct EpgChannel;
-}
+//namespace XMLTV {
+//    struct EpgEntry;
+//    struct EpgChannel;
+//}
 
 namespace EdemEngine
 {
@@ -92,7 +92,7 @@ namespace EdemEngine
 
     private:
         void LoadEpg();
-        PvrClient::UniqueBroadcastIdType AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
+//        PvrClient::UniqueBroadcastIdType AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
 
         void Cleanup();
 

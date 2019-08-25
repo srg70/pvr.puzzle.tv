@@ -486,7 +486,7 @@ return false;             \
                     GetAttributeValue(iconAttribute, "src", entry.iconPath);
                 }
                 
-                entry.iChannelId = idConverter(strId);
+                entry.EpgId = idConverter(strId);
                 entry.startTime = iTmpStart;
                 entry.endTime = iTmpEnd;
                 

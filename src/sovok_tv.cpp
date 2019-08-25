@@ -301,7 +301,7 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
                 {
                     if(!lastEpgForChannel) {
                         lastEpgForChannel = &i.second;
-                    } else if(currentChannelId == i.second.ChannelId  &&
+                    } else if(currentChannelId == i.second.UniqueChannelId  &&
                               lastEpgForChannel->StartTime < i.second.StartTime) {
                         lastEpgForChannel = &i.second;
                     }
@@ -323,7 +323,7 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
                 for (; itJsonEpgEntry2 != jsonChannelEpg.End(); ++itJsonEpgEntry1, ++itJsonEpgEntry2)
                 {
                     EpgEntry epgEntry;
-                    epgEntry.ChannelId = currentChannelId;
+                    epgEntry.UniqueChannelId = currentChannelId;
                     epgEntry.Title = (*itJsonEpgEntry1)["progname"].GetString();
                     epgEntry.Description = (*itJsonEpgEntry1)["description"].GetString();
                     epgEntry.StartTime = stol((*itJsonEpgEntry1)["ut_start"].GetString()) - m_serverTimeShift;
@@ -335,7 +335,7 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
                 // Last EPG entrie  missing end time.
                 // Put end of requested interval
                 EpgEntry epgEntry;
-                epgEntry.ChannelId = currentChannelId;
+                epgEntry.UniqueChannelId = currentChannelId;
                 epgEntry.Title = (*itJsonEpgEntry1)["progname"].GetString();
                 epgEntry.Description = (*itJsonEpgEntry1)["description"].GetString();
                 epgEntry.StartTime = stol((*itJsonEpgEntry1)["ut_start"].GetString()) - m_serverTimeShift;
@@ -355,15 +355,17 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
 
 void SovokTV::UpdateHasArchive(EpgEntry& entry)
 {
-    auto channel = m_channelList.find(entry.ChannelId);
-    entry.HasArchive = channel != m_channelList.end() &&  channel->second.HasArchive;
+    auto pCahnnel = std::find_if(m_channelList.begin(), m_channelList.end(), [&entry] (const ChannelList::value_type& ch) {
+        return ch.second.UniqueId == entry.UniqueChannelId;
+    });
+    entry.HasArchive = pCahnnel != m_channelList.end() &&  pCahnnel->second.HasArchive;
     
     if(!entry.HasArchive)
         return;
     
     time_t now = time(nullptr);
     time_t epgTime = m_addCurrentEpgToArchive ? entry.StartTime : entry.EndTime;
-    time_t from = now - m_archivesInfo.at(entry.ChannelId) * 60 * 60;
+    time_t from = now - m_archivesInfo.at(entry.UniqueChannelId) * 60 * 60;
     entry.HasArchive = epgTime >= from && epgTime < now;
 }
 

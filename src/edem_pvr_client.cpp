@@ -215,7 +215,7 @@ public:
             return;
         }
         
-        _channelId =  epgTag.ChannelId;
+        _channelId =  epgTag.UniqueChannelId;
     }
     virtual int SegmentsAmountToCache() const {
         // 20 segments cache

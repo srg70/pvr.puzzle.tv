@@ -350,7 +350,7 @@ bool SovokPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     if(!m_sovokTV->GetEpgEntry(stoi(recording.strRecordingId), epgTag))
         return false;
     
-    string url = m_sovokTV->GetArchiveUrl(epgTag.ChannelId, recording.recordingTime);
+    string url = m_sovokTV->GetArchiveUrl(epgTag.UniqueChannelId, recording.recordingTime);
     return PVRClientBase::OpenRecordedStream(url, nullptr, IsSeekSupported() ? SupportVodSeek : NoRecordingFlags);
 }
 

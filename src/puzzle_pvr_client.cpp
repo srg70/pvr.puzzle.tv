@@ -413,7 +413,7 @@ bool PuzzlePVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     if(!m_puzzleTV->GetEpgEntry(stoi(recording.strRecordingId), epgTag))
         return false;
     
-    string url = m_puzzleTV->GetArchiveUrl(epgTag.ChannelId, recording.recordingTime);
+    string url = m_puzzleTV->GetArchiveUrl(epgTag.UniqueChannelId, recording.recordingTime);
 
     return PVRClientBase::OpenRecordedStream(url, nullptr, IsSeekSupported() ? SupportVodSeek : NoRecordingFlags);
 }

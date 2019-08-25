@@ -281,7 +281,7 @@ namespace OttEngine
                                  }
                                  *shouldUpdate = true;
                                  EpgEntry epgEntry;
-                                 epgEntry.ChannelId = stoul(m.value["ch_id"].GetString()) ;
+                                 epgEntry.UniqueChannelId = stoul(m.value["ch_id"].GetString()) ;
                                  epgEntry.Title = m.value["name"].GetString();
                                  epgEntry.Description = m.value["descr"].GetString();
                                  epgEntry.StartTime = m.value["time"].GetInt() ;
@@ -312,8 +312,11 @@ namespace OttEngine
     
     void Core::UpdateHasArchive(PvrClient::EpgEntry& entry)
     {
-        auto channel = m_channelList.find(entry.ChannelId);
-        entry.HasArchive = channel != m_channelList.end() &&  channel->second.HasArchive;
+        auto pCahnnel = std::find_if(m_channelList.begin(), m_channelList.end(), [&entry] (const ChannelList::value_type& ch) {
+            return ch.second.UniqueId == entry.UniqueChannelId;
+        });
+
+        entry.HasArchive = pCahnnel != m_channelList.end() &&  pCahnnel->second.HasArchive;
         
         if(!entry.HasArchive)
             return;

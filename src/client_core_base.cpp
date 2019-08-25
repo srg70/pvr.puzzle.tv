@@ -33,6 +33,7 @@
 #include "globals.hpp"
 #include "HttpEngine.hpp"
 #include "helpers.h"
+#include "XMLTV_loader.hpp"
 
 
 namespace PvrClient{
@@ -88,7 +89,7 @@ namespace PvrClient{
             {
                 std::function<void(void)> m_action;
             public:
-                Action(std::function<void(void)> action) : m_action(action){}
+                Action(std::function<void(void)> act) : m_action(act){}
                 void *Process(void) {
                     try {
                         m_action();
@@ -114,6 +115,8 @@ namespace PvrClient{
         void Cleanup() {
             m_isDone = true;
             
+            static P8PLATFORM::CMutex s_CleanupMutex;
+            P8PLATFORM::CLockObject lock(s_CleanupMutex);
             if(m_thread)
                 SAFE_DELETE(m_thread);
             if(m_event) {
@@ -298,7 +301,8 @@ namespace PvrClient{
                 {
                     EpgEntryList::key_type k = (*it)["k"].GetInt64();
                     EpgEntryList::mapped_type e;
-                    e.Deserialize((*it)["v"]);
+                    if(!e.Deserialize((*it)["v"]))
+                        continue;
                     m_lastEpgRequestEndTime = std::max(m_lastEpgRequestEndTime, e.EndTime);
                     AddEpgEntry(k,e);
                 }
@@ -358,13 +362,7 @@ namespace PvrClient{
     
     UniqueBroadcastIdType ClientCoreBase::AddEpgEntry(UniqueBroadcastIdType id, EpgEntry& entry)
     {
-        bool isUnknownChannel = true;
-        for(const auto& ch : m_mutableChannelList){
-            if(ch.second.EpgId == entry.ChannelId){
-                isUnknownChannel = false;
-                break;
-            }
-        }
+        bool isUnknownChannel = m_channelList.count(entry.UniqueChannelId) == 0;
         // Do not add EPG for unknown channels
         if(isUnknownChannel)
             return c_UniqueBroadcastIdUnknown;
@@ -374,7 +372,7 @@ namespace PvrClient{
         P8PLATFORM::CLockObject lock(m_epgAccessMutex);
         while(m_epgEntries.count(id) != 0) {
             // Check duplicates.
-            if(m_epgEntries[id].ChannelId == entry.ChannelId)
+            if(m_epgEntries[id].UniqueChannelId == entry.UniqueChannelId)
                 return id;
             ++id;
         }
@@ -382,6 +380,32 @@ namespace PvrClient{
         return id;
     }
     
+    bool ClientCoreBase::AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry)
+    {
+
+        EpgEntry epgEntry;
+        epgEntry.Title = xmlEpgEntry.strTitle;
+        epgEntry.Description = xmlEpgEntry.strPlot;
+        epgEntry.StartTime = xmlEpgEntry.startTime;
+        epgEntry.EndTime = xmlEpgEntry.endTime;
+        epgEntry.IconPath = xmlEpgEntry.iconPath;
+        
+        bool isAdded = false;
+        UniqueBroadcastIdType id = xmlEpgEntry.startTime;
+        for(const auto& ch : m_channelList) {
+            if(ch.second.EpgId != xmlEpgEntry.EpgId)
+                continue;
+            epgEntry.UniqueChannelId = ch.first;
+            id = AddEpgEntry(id, epgEntry);
+            if(c_UniqueBroadcastIdUnknown == id) {
+                id = xmlEpgEntry.startTime;
+            } else {
+                isAdded = true;
+            }
+        }
+        return isAdded;
+    }
+
 //    void ClientCoreBase::UpdateEpgEntry(UniqueBroadcastIdType id, const EpgEntry& entry)
 //    {
 //        EPG_TAG tag = { 0 };
@@ -424,7 +448,7 @@ namespace PvrClient{
         IClientCore::EpgEntryAction action = [&lastEndTime, &epgEntries, channelId, startTime, endTime] (const EpgEntryList::value_type& i)
         {
             auto entryStartTime = i.second.StartTime;
-            if (i.second.ChannelId == channelId  &&
+            if (i.second.UniqueChannelId == channelId  &&
                 entryStartTime >= startTime &&
                 entryStartTime < endTime)
             {

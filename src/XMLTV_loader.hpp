@@ -44,7 +44,7 @@ namespace XMLTV {
 
     struct EpgEntry
     {
-        PvrClient::ChannelId         iChannelId;
+        PvrClient::ChannelId         EpgId;
         time_t      startTime;
         time_t      endTime;
         std::string strTitle;

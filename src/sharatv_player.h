@@ -96,7 +96,7 @@ namespace SharaTvEngine
     private:
         
         void LoadEpg();
-        bool AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
+//        bool AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
 
         void Cleanup();
 

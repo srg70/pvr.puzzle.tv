@@ -77,13 +77,13 @@ namespace PvrClient {
     struct EpgEntry
     {
         EpgEntry()
-        : ChannelId(-1)
+        : UniqueChannelId(UnknownChannelId)
         , StartTime(0)
         , EndTime(0)
         , HasArchive (false)
         {}
-        const char* ChannelIdName = "ch";
-        PvrClient::ChannelId ChannelId;
+        const char* ChannelIdName = "uch";
+        ChannelId UniqueChannelId;
         
         const char* StartTimeName = "st";
         time_t StartTime;
@@ -115,7 +115,7 @@ namespace PvrClient {
         {
             writer.StartObject();               // Between StartObject()/EndObject(),
             writer.Key(ChannelIdName);
-            writer.Uint(ChannelId);
+            writer.Uint(UniqueChannelId);
             writer.Key(StartTimeName);
             writer.Int64(StartTime);
             writer.Key(EndTimeName);
@@ -146,11 +146,19 @@ namespace PvrClient {
             writer.EndObject();
         }
         template <class T>
-        void Deserialize(T& reader)
+        bool Deserialize(T& reader)
         {
-            ChannelId = reader[ChannelIdName].GetUint();
+            if(!reader.HasMember(ChannelIdName))
+                return false;
+            UniqueChannelId = reader[ChannelIdName].GetUint();
+            if(!reader.HasMember(StartTimeName))
+                return false;
             StartTime = reader[StartTimeName].GetInt64();
+            if(!reader.HasMember(EndTimeName))
+                return false;
             EndTime = reader[EndTimeName].GetInt64();
+            if(!reader.HasMember(TitileName))
+                return false;
             Title = reader[TitileName].GetString();
             if(reader.HasMember(DescriptionName))
                 Description = reader[DescriptionName].GetString();
@@ -162,7 +170,7 @@ namespace PvrClient {
                 ProgramId = reader[ProgramIdName].GetString();
             if(reader.HasMember(CategoryName))
                 Category = reader[CategoryName].GetString();
-            
+            return true;
         }
         void FillEpgTag(EPG_TAG& tag) const;
     };
