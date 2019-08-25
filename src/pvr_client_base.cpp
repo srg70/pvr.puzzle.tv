@@ -96,6 +96,26 @@ const unsigned int RELOAD_EPG_MENU_HOOK = 1;
 const unsigned int RELOAD_RECORDINGS_MENU_HOOK = 2;
 const unsigned int PVRClientBase::s_lastCommonMenuHookId = RELOAD_RECORDINGS_MENU_HOOK;
 
+static void CheckForInetConnection(long waitForInetTimeout)
+{
+    if(waitForInetTimeout > 0){
+        XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32022));
+        
+        P8PLATFORM::CTimeout waitForInet(waitForInetTimeout * 1000);
+        bool connected = false;
+        long timeLeft = 0;
+        do {
+            timeLeft = waitForInet.TimeLeft();
+            connected = HttpEngine::CheckInternetConnection(timeLeft/1000);
+            if(!connected)
+                P8PLATFORM::CEvent::Sleep(1000);
+        }while(!connected && timeLeft > 0);
+        if(!connected) {
+            XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32023));
+        }
+    }
+}
+
 ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
 {
     m_clientCore = NULL;
@@ -153,25 +173,10 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     m_addChannelGroupForArchive = false;
     XBMC->GetSetting("archive_use_channel_groups", &m_addChannelGroupForArchive);
     
-    long waitForInetTimeout = 0;
-    XBMC->GetSetting("wait_for_inet", &waitForInetTimeout);
+    m_waitForInetTimeout = 0;
+    XBMC->GetSetting("wait_for_inet", &m_waitForInetTimeout);
     
-    if(waitForInetTimeout > 0){
-        XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32022));
-        
-        P8PLATFORM::CTimeout waitForInet(waitForInetTimeout * 1000);
-        bool connected = false;
-        long timeLeft = 0;
-        do {
-            timeLeft = waitForInet.TimeLeft();
-            connected = HttpEngine::CheckInternetConnection(timeLeft/1000);
-            if(!connected)
-                P8PLATFORM::CEvent::Sleep(1000);
-        }while(!connected && timeLeft > 0);
-        if(!connected) {
-            XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32023));
-        }
-    }
+    CheckForInetConnection(m_waitForInetTimeout);
     
     CurlUtils::SetCurlTimeout(curlTimout);
     SetChannelReloadTimeout(channelTimeout);
@@ -229,6 +234,7 @@ void PVRClientBase::OnSystemSleep()
 }
 void PVRClientBase::OnSystemWake()
 {
+    CheckForInetConnection(m_waitForInetTimeout);
     CreateCoreSafe(false);
 }
 
