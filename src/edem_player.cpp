@@ -225,9 +225,8 @@ namespace EdemEngine
     void Core::LoadEpg()
     {
         using namespace XMLTV;
-        auto pThis = this;
 
-        EpgEntryCallback onEpgEntry = [pThis] (const XMLTV::EpgEntry& newEntry) {pThis->AddEpgEntry(newEntry);};
+        EpgEntryCallback onEpgEntry = [this] (const XMLTV::EpgEntry& newEntry) {AddEpgEntry(newEntry);};
         
         XMLTV::ParseEpg(m_epgUrl, onEpgEntry);
     }
