@@ -537,10 +537,10 @@ PVR_ERROR PVRClientBase::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL
     
     
     ChannelId chUniqueId = m_kodiToPluginLut.at(channel.iUniqueId);
-    const auto& ch = m_clientCore->GetChannelList().at(chUniqueId);
+//    const auto& ch = m_clientCore->GetChannelList().at(chUniqueId);
 
     EpgEntryList epgEntries;
-    m_clientCore->GetEpg(ch.EpgId, iStart, iEnd, epgEntries);
+    m_clientCore->GetEpg(chUniqueId, iStart, iEnd, epgEntries);
     EpgEntryList::const_iterator itEpgEntry = epgEntries.begin();
     for (int i = 0; itEpgEntry != epgEntries.end(); ++itEpgEntry, ++i)
     {
@@ -827,25 +827,18 @@ void PVRClientBase::FillRecording(const EpgEntryList::value_type& epgEntry, PVR_
 {
     const auto& epgTag = epgEntry.second;
     
-    string channelName;
-    ChannelId chUniqueId = UnknownChannelId;
-    for(auto& ch : m_clientCore->GetChannelList()){
-        if(ch.second.EpgId == epgTag.ChannelId){
-            channelName = ch.second.Name;
-            chUniqueId = ch.second.UniqueId;
-            break;
-        }
-    }
+    const Channel& ch = m_clientCore->GetChannelList().at(epgTag.UniqueChannelId);
+
     sprintf(tag.strRecordingId, "%d",  epgEntry.first);
     strncpy(tag.strTitle, epgTag.Title.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
     strncpy(tag.strPlot, epgTag.Description.c_str(), PVR_ADDON_DESC_STRING_LENGTH - 1);
-    strncpy(tag.strChannelName, channelName.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
+    strncpy(tag.strChannelName, ch.Name.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
     tag.recordingTime = epgTag.StartTime;
     tag.iLifetime = 0; /* not implemented */
     
     tag.iDuration = epgTag.EndTime - epgTag.StartTime;
     tag.iEpgEventId = epgEntry.first;
-    tag.iChannelUid = m_pluginToKodiLut.at(epgTag.ChannelId);
+    tag.iChannelUid = m_pluginToKodiLut.at(ch.UniqueId);
     tag.channelType = PVR_RECORDING_CHANNEL_TYPE_TV;
     if(!epgTag.IconPath.empty())
         strncpy(tag.strIconPath, epgTag.IconPath.c_str(), sizeof(tag.strIconPath) -1);
@@ -853,7 +846,7 @@ void PVRClientBase::FillRecording(const EpgEntryList::value_type& epgEntry, PVR_
     string dirName(dirPrefix);
     dirName += '/';
     if(m_addChannelGroupForArchive) {
-        GroupId groupId = m_clientCore->GroupForChannel(chUniqueId);
+        GroupId groupId = m_clientCore->GroupForChannel(ch.UniqueId);
         dirName += (-1 == groupId) ? "---" : m_clientCore->GetGroupList().at(groupId).Name.c_str();
         dirName += '/';
     }

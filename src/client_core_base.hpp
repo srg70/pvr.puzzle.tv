@@ -31,6 +31,11 @@
 
 class HttpEngine;
 
+namespace XMLTV {
+    struct EpgEntry;
+    struct EpgChannel;
+}
+
 namespace PvrClient {
     
     class ClientPhase;
@@ -75,6 +80,7 @@ namespace PvrClient {
         void LoadEpgCache(const char* cacheFile);
         void SaveEpgCache(const char* cacheFile, unsigned int daysToPreserve = 7);
         UniqueBroadcastIdType AddEpgEntry(UniqueBroadcastIdType id, EpgEntry& entry);
+        bool AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
 //        void UpdateEpgEntry(UniqueBroadcastIdType id, const EpgEntry& entry);
 
         // Channel & group lists

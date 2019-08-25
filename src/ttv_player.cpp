@@ -238,19 +238,19 @@ namespace TtvEngine
 //    }
 
 #pragma mark - Playlist methods
-    UniqueBroadcastIdType Core::AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry)
-    {
-        UniqueBroadcastIdType id = xmlEpgEntry.startTime;
-        
-        EpgEntry epgEntry;
-        epgEntry.ChannelId = xmlEpgEntry.iChannelId;
-        epgEntry.Title = xmlEpgEntry.strTitle;
-        epgEntry.Description = xmlEpgEntry.strPlot;
-        epgEntry.StartTime = xmlEpgEntry.startTime;
-        epgEntry.EndTime = xmlEpgEntry.endTime;
-        epgEntry.IconPath = xmlEpgEntry.iconPath;
-       return ClientCoreBase::AddEpgEntry(id, epgEntry);
-    }
+//    UniqueBroadcastIdType Core::AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry)
+//    {
+//        UniqueBroadcastIdType id = xmlEpgEntry.startTime;
+//        
+//        EpgEntry epgEntry;
+//        epgEntry.ChannelId = xmlEpgEntry.iChannelId;
+//        epgEntry.Title = xmlEpgEntry.strTitle;
+//        epgEntry.Description = xmlEpgEntry.strPlot;
+//        epgEntry.StartTime = xmlEpgEntry.startTime;
+//        epgEntry.EndTime = xmlEpgEntry.endTime;
+//        epgEntry.IconPath = xmlEpgEntry.iconPath;
+//       return ClientCoreBase::AddEpgEntry(id, epgEntry);
+//    }
     
     void Core::UpdateEpgForAllChannels_Plist(time_t startTime, time_t endTime)
     {
@@ -258,10 +258,8 @@ namespace TtvEngine
         try {
             auto pThis = this;
             
-            set<ChannelId> channelsToUpdate;
-            EpgEntryCallback onEpgEntry = [pThis, &channelsToUpdate,  startTime] (const XMLTV::EpgEntry& newEntry) {
-                if(c_UniqueBroadcastIdUnknown != pThis->AddEpgEntry(newEntry) && newEntry.startTime >= startTime)
-                channelsToUpdate.insert(newEntry.iChannelId);
+            EpgEntryCallback onEpgEntry = [pThis] (const XMLTV::EpgEntry& newEntry) {
+                pThis->AddEpgEntry(newEntry);
             };
             
             XMLTV::ParseEpg(m_coreParams.epgUrl, onEpgEntry);

@@ -291,7 +291,7 @@ void PuzzleTV::BuildChannelAndGroupList()
 
 UniqueBroadcastIdType PuzzleTV::AddXmlEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry)
 {
-    if(m_epgToServerLut.count(xmlEpgEntry.iChannelId) == 0) {
+    if(m_epgToServerLut.count(xmlEpgEntry.EpgId) == 0) {
         //LogError("PuzzleTV::AddXmlEpgEntry(): XML EPG entry '%s' for unknown channel %d", xmlEpgEntry.strTitle.c_str(), xmlEpgEntry.iChannelId);
         return c_UniqueBroadcastIdUnknown;
     }
@@ -299,7 +299,7 @@ UniqueBroadcastIdType PuzzleTV::AddXmlEpgEntry(const XMLTV::EpgEntry& xmlEpgEntr
     unsigned int id = (unsigned int)xmlEpgEntry.startTime;
 
     EpgEntry epgEntry;
-    epgEntry.ChannelId = m_epgToServerLut[xmlEpgEntry.iChannelId];
+    epgEntry.UniqueChannelId = m_epgToServerLut[xmlEpgEntry.EpgId];
     epgEntry.Title = xmlEpgEntry.strTitle;
     epgEntry.Description = xmlEpgEntry.strPlot;
     epgEntry.StartTime = xmlEpgEntry.startTime;
@@ -375,7 +375,7 @@ void PuzzleTV::LoadEpg()
                             // Find EPG item
                             if(epgItem.value.IsObject() && epgItem.value.HasMember("plot")  && epgItem.value.HasMember("img")  && epgItem.value.HasMember("title")) {
                                 EpgEntry epgEntry;
-                                epgEntry.ChannelId = channelId;
+                                epgEntry.UniqueChannelId = channelId;
                                 string s = epgItem.name.GetString();
                                 s = s.substr(0, s.find('.'));
                                 unsigned long l = stoul(s.c_str());
@@ -426,9 +426,10 @@ bool PuzzleTV::CheckChannelId(ChannelId channelId)
 #pragma mark - Archive
 void PuzzleTV::UpdateHasArchive(PvrClient::EpgEntry& entry)
 {
-    auto channelNotFound = m_channelList.end();
-    auto channel = m_channelList.find(entry.ChannelId);
-    entry.HasArchive = channel != channelNotFound &&  channel->second.HasArchive;
+    auto pCahnnel = std::find_if(m_channelList.begin(), m_channelList.end(), [&entry] (const ChannelList::value_type& ch) {
+        return ch.second.UniqueId == entry.UniqueChannelId;
+    });
+    entry.HasArchive = pCahnnel != m_channelList.end() &&  pCahnnel->second.HasArchive;
     
     if(!entry.HasArchive)
         return;

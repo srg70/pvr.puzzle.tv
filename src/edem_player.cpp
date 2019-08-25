@@ -167,19 +167,19 @@ namespace EdemEngine
         return  url;
     }
         
-    UniqueBroadcastIdType Core::AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry)
-    {
-        UniqueBroadcastIdType id = xmlEpgEntry.startTime;
-        
-        EpgEntry epgEntry;
-        epgEntry.ChannelId = xmlEpgEntry.iChannelId;
-        epgEntry.Title = xmlEpgEntry.strTitle;
-        epgEntry.Description = xmlEpgEntry.strPlot;
-        epgEntry.StartTime = xmlEpgEntry.startTime;
-        epgEntry.EndTime = xmlEpgEntry.endTime;
-        epgEntry.IconPath = xmlEpgEntry.iconPath;
-       return ClientCoreBase::AddEpgEntry(id, epgEntry);
-    }
+//    UniqueBroadcastIdType Core::AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry)
+//    {
+//        UniqueBroadcastIdType id = xmlEpgEntry.startTime;
+//        
+//        EpgEntry epgEntry;
+//        epgEntry.ChannelId = xmlEpgEntry.iChannelId;
+//        epgEntry.Title = xmlEpgEntry.strTitle;
+//        epgEntry.Description = xmlEpgEntry.strPlot;
+//        epgEntry.StartTime = xmlEpgEntry.startTime;
+//        epgEntry.EndTime = xmlEpgEntry.endTime;
+//        epgEntry.IconPath = xmlEpgEntry.iconPath;
+//       return ClientCoreBase::AddEpgEntry(id, epgEntry);
+//    }
     
     void Core::UpdateHasArchive(PvrClient::EpgEntry& entry)
     {
@@ -208,18 +208,12 @@ namespace EdemEngine
         try {
             auto pThis = this;
  
-            set<ChannelId> channelsToUpdate;
-            EpgEntryCallback onEpgEntry = [pThis, &channelsToUpdate,  startTime] (const XMLTV::EpgEntry& newEntry) {
-                if(c_UniqueBroadcastIdUnknown != pThis->AddEpgEntry(newEntry) && newEntry.startTime >= startTime)
-                    channelsToUpdate.insert(newEntry.iChannelId);
+            EpgEntryCallback onEpgEntry = [pThis] (const XMLTV::EpgEntry& newEntry) {
+                pThis->AddEpgEntry(newEntry);
             };
             
             XMLTV::ParseEpg(m_epgUrl, onEpgEntry);
             
-//            for (auto channel : channelsToUpdate) {
-//                PVR->TriggerEpgUpdate(channel);
-//            }
-
             SaveEpgCache(c_EpgCacheFile);
 //        } catch (ServerErrorException& ex) {
 //            m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32002), ex.reason.c_str() );
