@@ -189,6 +189,7 @@ namespace PvrClient
         
         int m_rpcPort;
         int m_channelIndexOffset;
+        long m_waitForInetTimeout;
         
         ActionQueue::CActionQueue* m_destroyer;
         TKodiToPluginChannelIdLut m_kodiToPluginLut;
