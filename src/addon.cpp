@@ -422,17 +422,8 @@ extern "C" {
     /********************************************************************************/
     /**************************** TIMESHIFT API FUNCTIONS ***************************/
     /********************************************************************************/
-    
-    bool IsTimeshifting(void)
-    {
-        return m_DataSource->CanSeekStream();
-    }
-    
-    bool IsRealTimeStream(void)
-    {
-        return m_DataSource->IsRealTimeStream();        
-    }
-
+    bool IsTimeshifting(void) { return false; }
+    bool IsRealTimeStream(void) { return true; }
     /********************************************************************************/
     /**************************** UNUSED API FUNCTIONS ******************************/
     /********************************************************************************/
