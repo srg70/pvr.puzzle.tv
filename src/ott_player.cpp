@@ -75,6 +75,7 @@ namespace OttEngine
     Core::Core(const std::string &baseUrl, const std::string &key)
     : m_baseUrl(baseUrl)
     , m_key(key)
+    , m_ToPublicChannelId(nullptr)
     {
         m_baseUrl = "http://" + m_baseUrl ;
     }
@@ -294,8 +295,8 @@ namespace OttEngine
                          },
                          [this, shouldUpdate, channelId, epgActivityCounter](const ActionQueue::ActionResult& s)
                          {
-                             if(s.exception == NULL && *shouldUpdate){
-                                 PVR->TriggerEpgUpdate(channelId);
+                             if(s.exception == NULL && *shouldUpdate && m_ToPublicChannelId){
+                                 PVR->TriggerEpgUpdate(m_ToPublicChannelId(channelId));
                              }
                              delete shouldUpdate;
                              if(epgActivityCounter == m_epgActivityCounter){
