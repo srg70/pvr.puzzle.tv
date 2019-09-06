@@ -92,6 +92,8 @@ namespace PvrClient {
 
         void ParseJson(const std::string& response, std::function<void(rapidjson::Document&)> parser);
         
+        // Should be called from destructor of dirived class
+        void PrepareForDestruction();
         
         // Required methods to implement for derived classes
         virtual void Init(bool clearEpgCache) = 0;

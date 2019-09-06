@@ -93,6 +93,7 @@ namespace EdemEngine
     Core::~Core()
     {
         Cleanup();
+        PrepareForDestruction();
     }
     void Core::Cleanup()
     {

@@ -108,6 +108,7 @@ void SovokTV::Init(bool clearEpgCache)
 SovokTV::~SovokTV()
 {
     Cleanup();
+    PrepareForDestruction();
 }
 
 void SovokTV::Cleanup()

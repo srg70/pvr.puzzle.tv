@@ -135,6 +135,7 @@ void PuzzleTV::Init(bool clearEpgCache)
 PuzzleTV::~PuzzleTV()
 {
     Cleanup();
+    PrepareForDestruction();
 }
 void PuzzleTV::Cleanup()
 {

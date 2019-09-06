@@ -179,19 +179,26 @@ namespace PvrClient{
         return nullptr;
     }
     
-    ClientCoreBase::~ClientCoreBase()
-    {
+    // Should be called from destructor of dirived class
+    // During engine destruction vitrual functions may be called...
+    void ClientCoreBase::PrepareForDestruction() {
+        if(NULL == m_httpEngine)
+            return ;
         for (auto& ph : m_phases) {
             if(ph.second) {
                 delete ph.second;
             }
         }
         m_phases.clear();
-        if(m_httpEngine) {
-            SAFE_DELETE(m_httpEngine);
-        }
+        SAFE_DELETE(m_httpEngine);
+
         P8PLATFORM::CLockObject lock(m_epgAccessMutex);
         m_epgEntries.clear();
+    }
+    
+    ClientCoreBase::~ClientCoreBase()
+    {
+        PrepareForDestruction();
     };
     
 #pragma mark - Channels & Groups

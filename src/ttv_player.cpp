@@ -115,6 +115,7 @@ namespace TtvEngine
     Core::~Core()
     {
         Cleanup();
+        PrepareForDestruction();
     }
     
     void Core::Cleanup()

@@ -100,6 +100,7 @@ namespace SharaTvEngine
     Core::~Core()
     {
         Cleanup();
+        PrepareForDestruction();
     }
     void Core::Cleanup()
     {
