@@ -581,7 +581,7 @@ PVR_ERROR PVRClientBase::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL
         EPG_TAG tag = { 0 };
         tag.iUniqueBroadcastId = epgEntry.first;
         epgEntry.second.FillEpgTag(tag);
-        tag.iUniqueChannelId = channel.iUniqueId;//m_pluginToKodiLut.at(itEpgEntry->second.ChannelId);
+        tag.iChannelNumber = channel.iUniqueId;//m_pluginToKodiLut.at(itEpgEntry->second.ChannelId);
         tag.startTime += ch.TvgShift;
         tag.endTime += ch.TvgShift;
         PVR->TransferEpgEntry(handle, &tag);
