@@ -72,12 +72,14 @@ namespace OttEngine
     class Core : public PvrClient::ClientCoreBase
     {
     public:
+        typedef std::function<PvrClient::KodiChannelId(PvrClient::ChannelId)> TToPublicChannelId;
         Core(const std::string &baseUrl, const std::string &key);
         ~Core();
         
        void  UpdateEpgForAllChannels(time_t startTime, time_t endTime);
        std::string GetArchiveUrl(PvrClient::ChannelId channelId, time_t startTime, int duration);
        std::string GetUrl(PvrClient::ChannelId channelId);
+        void SetChannelIdConverter(const TToPublicChannelId& converter) {m_ToPublicChannelId = converter; }
         
     protected:
         virtual void Init(bool clearEpgCache);
@@ -104,6 +106,7 @@ namespace OttEngine
         std::string m_logoUrl;
         std::string m_key;
         unsigned int m_epgActivityCounter;
+        TToPublicChannelId m_ToPublicChannelId;
     };
 }
 #endif //_ott_player_h_

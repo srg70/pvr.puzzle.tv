@@ -115,6 +115,10 @@ void OttPVRClient::CreateCore(bool clearEpgCache)
     m_clientCore = m_core = new OttEngine::Core(m_playlistUrl, m_key);
     m_core->IncludeCurrentEpgToArchive(m_addCurrentEpgToArchive);
     m_core->InitAsync(clearEpgCache);
+    OttEngine::Core::TToPublicChannelId f = [this](ChannelId chId) {
+        return this->BrodcastIdForChannelId(chId);
+    };
+    m_core->SetChannelIdConverter(f);
 
 }
 
