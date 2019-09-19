@@ -266,7 +266,7 @@ public:
             startTime = _recordingTime;
         if(timeshiftAdjusted)
             *timeshiftAdjusted = startTime - _recordingTime;
-        return  _core->GetArchiveUrl(_channelId, startTime);
+        return  _core->GetArchiveUrl(_channelId, startTime, _duration);
     }
     
 private:
