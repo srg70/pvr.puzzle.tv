@@ -84,7 +84,7 @@ namespace SharaTvEngine
         Core(const std::string &playlistUrl, bool enableAdult);
         ~Core();
         
-        std::string GetArchiveUrl(PvrClient::ChannelId channelId, time_t startTime);
+        std::string GetArchiveUrl(PvrClient::ChannelId channelId, time_t startTime, time_t duration);
         void  UpdateEpgForAllChannels(time_t startTime, time_t endTime);
 
         std::string GetUrl(PvrClient::ChannelId channelId);

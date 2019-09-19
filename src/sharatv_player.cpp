@@ -163,7 +163,7 @@ namespace SharaTvEngine
         m_archiveInfo.insert(archiveInfo.begin(), archiveInfo.end());
     }
     
-    std::string Core::GetArchiveUrl(ChannelId channelId, time_t startTime)
+    std::string Core::GetArchiveUrl(ChannelId channelId, time_t startTime, time_t duration)
     {
         if(m_archiveInfo.count(channelId) == 0) {
             return string();
@@ -176,11 +176,13 @@ namespace SharaTvEngine
         if(string::npos == pos)
             return string();
         url.replace(pos, strlen(c_START), n_to_string(startTime));
-//        const char* c_STAMP = "${timestamp}";
-//        pos = url.find(c_STAMP);
-//        if(string::npos == pos)
-//            return string();
-//        url.replace(pos, strlen(c_STAMP), n_to_string(time(nullptr)));
+        // Optional duration part
+        const char* c_DURATION = "${duration}";
+        pos = url.find(c_DURATION);
+        if(string::npos != pos){
+            url.replace(pos, strlen(c_DURATION), n_to_string(duration));
+        }
+
         return  url;
     }
         
@@ -219,7 +221,7 @@ namespace SharaTvEngine
    
     static PvrClient::KodiChannelId EpgChannelIdToKodi(const std::string& strId)
     {
-        return stoi(strId.c_str());
+        return std::hash<std::string>{}(strId);
     }
     void Core::UpdateEpgForAllChannels(time_t startTime, time_t endTime)
     {
@@ -355,10 +357,12 @@ namespace SharaTvEngine
 
     static string FindVar(const string& data, string::size_type pos, const char* varTag)
     {
-        pos = data.find(varTag, pos);
+        string strTag(varTag);
+        strTag += '=';
+        pos = data.find(strTag, pos);
         if(string::npos == pos)
             throw BadPlaylistFormatException((string("Invalid playlist format: missing variable ") + varTag).c_str());
-        pos += strlen(varTag);
+        pos += strTag.size();
         
         //check whether tag is missing = and "
         if(data[pos] == '=') ++pos;
@@ -397,16 +401,22 @@ namespace SharaTvEngine
 
         unsigned int archiveDays;
         string archiveUrl;
-        bool hasArchive = false;
-        try { hasArchive = !FindVar(data, 0, "catchup").empty();} catch (...) {}
+        string archiveType;
+        try {
+            archiveType = FindVar(data, 0, "catchup");
+            StringUtils::ToLower(archiveType);
+        } catch (...) {}
         
-        if(hasArchive) {
-            try {  archiveDays = stoul(FindVar(data, 0, "catchup-days"));} catch (...) { hasArchive = false;}
+        // archive type tag name options: "catchup", "catchup-type"
+        if(archiveType.empty()) {
+            try {
+                archiveType = FindVar(data, 0, "catchup-type");
+                StringUtils::ToLower(archiveType);
+            } catch (...) {}
         }
-        if(hasArchive) {
-            try {  archiveUrl = FindVar(data, 0, "catchup-source");} catch (...) { hasArchive = false;}
-        }
-
+        
+        // Channal URL. Should be before archive!
+        // Flussonic archives depend from channel URL.
         endlLine = 0;
         const char* c_GROUP = "#EXTGRP:";
         pos = tail.find(c_GROUP);
@@ -415,7 +425,7 @@ namespace SharaTvEngine
             pos += strlen(c_GROUP);
             endlLine = tail.find('\n', pos);
             if(std::string::npos == pos)
-            throw BadPlaylistFormatException("Invalid channel block format: missing NEW LINE after #EXTGRP.");
+                throw BadPlaylistFormatException("Invalid channel block format: missing NEW LINE after #EXTGRP.");
             groupName = tail.substr(pos, endlLine - pos);
             rtrim(groupName);
             ++endlLine;
@@ -423,16 +433,31 @@ namespace SharaTvEngine
         string url = tail.substr(endlLine);
         rtrim(url);
         
+        // Has archive support
+        if(!archiveType.empty()) {
+            try {  archiveDays = stoul(FindVar(data, 0, "catchup-days"));} catch (...) { archiveType.clear();}
+            if(archiveType == "default") {
+                try {  archiveUrl = FindVar(data, 0, "catchup-source");} catch (...) { archiveType.clear();}
+            } else if(archiveType == "flussonic" || archiveType == "fs") {
+                auto lastSlash = url.find_last_of('/');
+                auto firstAmp = url.find_first_of('?');
+                if(string::npos == lastSlash)
+                    throw BadPlaylistFormatException((string("Invalid channel URL: ") + url).c_str());
+                archiveUrl = url.substr(0, lastSlash + 1) + "index-${start}-${duration}.m3u8" + url.substr(firstAmp);
+            }
+        }
+
+        
         Channel channel;
         channel.UniqueId = channel.EpgId = EpgChannelIdToKodi(tvgId);
         channel.Name = name;
         channel.Number = plistIndex;
         channel.Urls.push_back(url);
-        channel.HasArchive = hasArchive;
+        channel.HasArchive = !archiveType.empty();
         channel.IconPath = iconPath;
         channel.IsRadio = false;
         channels[tvgId] = PlaylistContent::mapped_type(channel,groupName);
-        if(hasArchive) {
+        if(channel.HasArchive) {
             archiveInfo.emplace(channel.UniqueId, std::move(ArchiveInfo(archiveDays, archiveUrl)));
         }
     }
