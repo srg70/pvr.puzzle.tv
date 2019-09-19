@@ -1,3 +1,27 @@
+0.9.45
+- Fixed EPG for OTT Club
+- Support "flussonic" archives
+
+0.9.41
+- Added new android platform aarch64
+- Spport for "multi-channel" EPG (XMLTV)
+- Check inet connection on wakeup
+- Fixed crash on exit
+
+0.9.38
+- Fixed crash on timer starting
+- Optimized local recordings playback
+- Support for AlexElec service of trash channels validation
+
+0.9.33
+- Shara TV local playlist support
+- Crash and bug fixes
+
+0.9.26
+- Shara TV fixes
+- Archives support for Puzzle Server v3
+- Fixed crash on rapid exit on startup
+
 0.9.22
 - Added Shara TV provider
 - Fixed JSON-RPC call engine (Kodi 18)
