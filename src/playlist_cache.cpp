@@ -136,8 +136,8 @@ namespace Buffers {
     
     MutableSegment* PlaylistCache::SegmentToFill()  {
 
-        if(IsFull())
-            return nullptr;
+//        if(IsFull())
+//            return nullptr;
         if(m_dataToLoad.empty()) {
             return nullptr;
         }

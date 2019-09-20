@@ -116,7 +116,7 @@ namespace Buffers {
         try {
             //m_cache->ReloadPlaylist();
             while (/*!isEof && */ !IsStopped()) {
-
+                
                 MutableSegment* segment =  nullptr;
                 {
                     CLockObject lock(m_syncAccess);
@@ -126,37 +126,61 @@ namespace Buffers {
                         LogDebug("PlaylistBuffer: Start fill segment #%" PRIu64 ".", m_loadingSegmentIndex);
                     }
                 }
-    
-                float sleepTime = 1; //Min sleep time 1 sec
-                if(nullptr != segment) {
-                    // Load segn=ment data
-                    bool segmentReady = FillSegment(segment);
-                    if(segmentReady)
-                        LogDebug("PlaylistBuffer: End fill segment #%" PRIu64 ".", m_loadingSegmentIndex);
-                    else
-                        LogDebug("PlaylistBuffer: FAILED to fill segment. New segmenet to fill #%" PRIu64 ".", m_loadingSegmentIndex);
-
-                    auto duration = segment->Duration();
-//                    LogDebug("PlaylistBuffer: Segment duration: %f", duration);
-                    // Populate loaded segment
-                    if(!IsStopped()){
-                        CLockObject lock(m_syncAccess);
-                        if(segmentReady) {
-                            m_cache->SegmentReady(segment);
-                            m_writeEvent.Signal();
-                       } else {
-                            m_cache->SegmentCanceled(segment);
-                        }
-                    }
-                    sleepTime = 1.0;//std::max(duration / 2.0, 1.0);
-                } else {
-                    ;//isEof = m_cache->IsEof(m_position);
-                }
+                bool isStopped = false;
+                bool chacheIsFull = false;
                 
+                // No reason to download next segment when cache is full
+                do{
+                    {
+                        CLockObject lock(m_syncAccess);
+                        // NOTE: this method frees space in cache
+                        // Must be alvais called
+                        chacheIsFull = !m_cache->HasSpaceForNewSegment();
+                    }
+                    // When we waiting for room in cache (e.g stream is on pause)
+                    // try to ping server to avoid connection lost
+                    if(chacheIsFull && nullptr != segment) {
+                        isStopped = IsStopped(segment->Duration());
+                        struct __stat64 stat;
+                        XBMC->StatFile(segment->info.url.c_str(), &stat);
+                        LogDebug("PlaylistBuffer: stat segment #%" PRIu64 ".", m_loadingSegmentIndex);
+                    }
+                } while(chacheIsFull && !isStopped);
+                
+                if(nullptr != segment){
+                    float sleepTime = 1; //Min sleep time 1 sec
+                    if(!IsStopped()) {
+                        // Load segn=ment data
+                        bool segmentReady = FillSegment(segment);
+                        if(segmentReady)
+                            LogDebug("PlaylistBuffer: End fill segment #%" PRIu64 ".", m_loadingSegmentIndex);
+                        else
+                            LogDebug("PlaylistBuffer: FAILED to fill segment. New segmenet to fill #%" PRIu64 ".", m_loadingSegmentIndex);
+                        
+                        auto duration = segment->Duration();
+                        //                    LogDebug("PlaylistBuffer: Segment duration: %f", duration);
+                        // Populate loaded segment
+                        if(!IsStopped()){
+                            CLockObject lock(m_syncAccess);
+                            if(segmentReady) {
+                                m_cache->SegmentReady(segment);
+                                m_writeEvent.Signal();
+                            } else {
+                                m_cache->SegmentCanceled(segment);
+                            }
+                        }
+                        sleepTime = 1.0;//std::max(duration / 2.0, 1.0);
+                    } else {
+                        ;//isEof = m_cache->IsEof(m_position);
+                    }
+                } else {
+                    IsStopped(1);
+                }
                 // We should update playlist often, disregarding to amount of data to load
                 // Even if we have several segment to load
                 // it can take a time, and playlist will be out of sync.
                 //                if(!playlistBeenReloaded)
+                if(!IsStopped())
                 {
                     CLockObject lock(m_syncAccess);
                     if(!m_cache->ReloadPlaylist()) {
@@ -164,18 +188,12 @@ namespace Buffers {
                         break;
                     }
                 }
-                // No reason to download next segment when cache is full
-                bool chacheIsFull = false;
-                do{
-                    CLockObject lock(m_syncAccess);
-                    chacheIsFull = !m_cache->HasSpaceForNewSegment();
-                } while(chacheIsFull && !IsStopped(1));
                 
-                if(!m_cache->HasSegmentsToFill()){
-                    IsStopped(sleepTime);
-                }
-
- 
+                //                if(!m_cache->HasSegmentsToFill()){
+                //                    IsStopped(sleepTime);
+                //                }
+                
+                
             }
             
         } catch (InputBufferException& ex ) {
