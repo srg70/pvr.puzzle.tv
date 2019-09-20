@@ -443,7 +443,7 @@ namespace SharaTvEngine
                 auto firstAmp = url.find_first_of('?');
                 if(string::npos == lastSlash)
                     throw BadPlaylistFormatException((string("Invalid channel URL: ") + url).c_str());
-                archiveUrl = url.substr(0, lastSlash + 1) + "index-${start}-${duration}.m3u8" + url.substr(firstAmp);
+                archiveUrl = url.substr(0, lastSlash + 1) + "video-${start}-${duration}.m3u8" + url.substr(firstAmp);
             }
         }
 
