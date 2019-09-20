@@ -211,8 +211,9 @@ namespace PvrClient {
         virtual bool GetEpgEntry(UniqueBroadcastIdType i,  EpgEntry& enrty) = 0;
         virtual void ForEachEpg(const EpgEntryAction& action) const = 0;
         virtual std::string GetUrl(PvrClient::ChannelId channelId) = 0;
-        
+
         virtual void ReloadRecordings() = 0;
+        virtual void UpdateArchiveInfo() = 0;
         virtual void CallRpcAsync(const std::string & data, std::function<void(rapidjson::Document&)>  parser,
                                   ActionQueue::TCompletion completion) = 0;
         

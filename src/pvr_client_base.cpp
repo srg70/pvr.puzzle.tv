@@ -794,21 +794,21 @@ int PVRClientBase::GetRecordingsAmount(bool deleted)
     if(deleted)
         return -1;
     
-    if(!m_clientCore->GetPhase(IClientCore::k_EpgLoadingPhase)->IsDone())
+    if(!m_clientCore->GetPhase(IClientCore::k_EpgLoadingPhase)->IsDone()) {
+        LogDebug("PVRClientBase: EPG still loading. No recording repoted.");
         return 0;
+    }
     
     int size = 0;
-    IClientCore::EpgEntryAction action = [&size](const EpgEntryList::value_type& p)
+    m_clientCore->UpdateArchiveInfo();
+
+    IClientCore::EpgEntryAction action = [this, &size](const EpgEntryList::value_type& p)
     {
         if(p.second.HasArchive)
             ++size;
         return true;
     };
     m_clientCore->ForEachEpg(action);
-//    if(size == 0){
-//        m_clientCore->ReloadRecordings();
-//        m_clientCore->ForEachEpg(action);
-//    }
     
     // Add local recordings
     if(XBMC->DirectoryExists(m_recordingsDir.c_str()))
@@ -821,9 +821,11 @@ int PVRClientBase::GetRecordingsAmount(bool deleted)
         }
     }
 
-    if(m_lastRecordingsAmount  != size)
-        PVR->TriggerRecordingUpdate();
     LogDebug("PVRClientBase: found %d recordings. Was %d", size, m_lastRecordingsAmount);
+    if(m_lastRecordingsAmount  != size) {
+        PVR->TriggerRecordingUpdate();
+        LogDebug("PVRClientBase: recorings update requested.");
+    }
     m_lastRecordingsAmount = size;
     return size;
     
@@ -880,16 +882,18 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
     PVR_ERROR result = PVR_ERROR_NO_ERROR;
     auto pThis = this;
     
-    std::list<PVR_RECORDING> recs;
-    IClientCore::EpgEntryAction action = [pThis ,&result, &recs](const EpgEntryList::value_type& epgEntry)
+    LogDebug("PVRClientBase: start recorings transfering...");
+    //std::list<PVR_RECORDING> recs;
+    IClientCore::EpgEntryAction action = [pThis ,&result, &handle](const EpgEntryList::value_type& epgEntry)
     {
         try {
-            if(!epgEntry.second.HasArchive)
+           if(!epgEntry.second.HasArchive)
                 return true;
 
             PVR_RECORDING tag = { 0 };
             pThis->FillRecording(epgEntry, tag, s_RemoteRecPrefix.c_str());
-            recs.push_back(tag);
+            //recs.push_back(tag);
+            PVR->TransferRecordingEntry(handle, &tag);
             return true;
         }
         catch (...)  {
@@ -902,9 +906,9 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
     m_clientCore->ForEachEpg(action);
     
     // Populate server recordings
-    for (auto& r : recs) {
-        PVR->TransferRecordingEntry(handle, &r);
-    }
+//    for (auto& r : recs) {
+//        PVR->TransferRecordingEntry(handle, &r);
+//    }
     // Add local recordings
     if(XBMC->DirectoryExists(m_recordingsDir.c_str()))
     {
@@ -927,6 +931,7 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
             PVR->TransferRecordingEntry(handle, &tag);
         }
     }
+    LogDebug("PVRClientBase: recorings transfering done.");
 
     return result;
 }

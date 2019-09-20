@@ -54,7 +54,8 @@ namespace PvrClient {
         void RebuildChannelAndGroupList();
 
         void ReloadRecordings();
-        
+        void UpdateArchiveInfo();
+
         bool GetEpgEntry(UniqueBroadcastIdType i,  EpgEntry& enrty);
         void ForEachEpg(const EpgEntryAction& action) const;
         void GetEpg(ChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries);

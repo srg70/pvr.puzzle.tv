@@ -545,7 +545,13 @@ namespace PvrClient{
     {
         OnEpgUpdateDone();
     }
-    
+    void ClientCoreBase::UpdateArchiveInfo()
+    {
+        for(auto& i : m_epgEntries) {
+            UpdateHasArchive(i.second);
+        }
+    }
+
 #pragma mark -
     void ClientCoreBase::ParseJson(const std::string& response, std::function<void(Document&)> parser)
     {
