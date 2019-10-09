@@ -168,7 +168,7 @@ namespace TtvEngine
             XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32021));
             return string();
         }
-        return m_coreParams.AceServerUrlBase() + c_ACE_ENGINE_HLS_STREAM + (m_coreParams.filterByAlexElec ? "infohash=" : "id=") + m_channelList.at(channelId).Urls[0] + "&pid=" + m_deviceId;
+        return m_coreParams.AceServerUrlBase() + c_ACE_ENGINE_HLS_STREAM + /*(m_coreParams.filterByAlexElec ? "infohash=" : */"id="/*)*/ + m_channelList.at(channelId).Urls[0] + "&pid=" + m_deviceId;
     }
 
     bool Core::CheckAceEngineRunning()
@@ -307,34 +307,37 @@ namespace TtvEngine
         PlaylistContent plistContent;
         unsigned int plistIndex = 1;
         
+        LoadPlaylist([&plistIndex, &plistContent] (const Document::ValueType& ch)
+                     {
+                         //TTVChanel ttvChannel;
+                         
+                         Channel channel;
+                         channel.UniqueId = plistIndex;
+                         channel.Name = ch["name"].GetString();
+                         channel.Number = plistIndex++;
+                         channel.Urls.push_back(ch["cid"].GetString());
+                         channel.HasArchive = false;
+                         channel.IsRadio = false;
+                         plistContent[channel.Name] = PlaylistContent::mapped_type(channel,ch["cat"].GetString());
+                         
+                     });
         if(m_coreParams.filterByAlexElec) {
-            LoadPlaylistAlexelec([&plistIndex, &plistContent] (const AlexElecChannel & ch)
+            PlaylistContent alexPlistContent;
+            LoadPlaylistAlexelec([&plistIndex, &plistContent, &alexPlistContent] (const AlexElecChannel & ch)
             {
-                Channel channel;
-                channel.UniqueId = plistIndex;
-                channel.Name = ch.name;
-                channel.Number = plistIndex++;
-                channel.Urls.push_back(ch.cid);
-                channel.HasArchive = false;
-                channel.IsRadio = false;
-                plistContent[channel.Name] = PlaylistContent::mapped_type(channel, TtvEngine::GroupMap(ch.cat));
+//                Channel channel;
+//                channel.UniqueId = plistIndex;
+//                channel.Name = ch.name;
+//                channel.Number = plistIndex++;
+//                channel.Urls.push_back(ch.cid);
+//                channel.HasArchive = false;
+//                channel.IsRadio = false;
+//                plistContent[channel.Name] = PlaylistContent::mapped_type(channel, TtvEngine::GroupMap(ch.cat));
+                if(plistContent.count(ch.name) == 1) {
+                    alexPlistContent[ch.name] = plistContent.at(ch.name);
+                }
             });
-        }
-        else {
-            LoadPlaylist([&plistIndex, &plistContent] (const Document::ValueType& ch)
-                         {
-                             //TTVChanel ttvChannel;
-                             
-                             Channel channel;
-                             channel.UniqueId = plistIndex;
-                             channel.Name = ch["name"].GetString();
-                             channel.Number = plistIndex++;
-                             channel.Urls.push_back(ch["cid"].GetString());
-                             channel.HasArchive = false;
-                             channel.IsRadio = false;
-                             plistContent[channel.Name] = PlaylistContent::mapped_type(channel,ch["cat"].GetString());
-                             
-                         });
+            plistContent = alexPlistContent;
         }
         auto pThis = this;
         
@@ -451,7 +454,7 @@ namespace TtvEngine
     {
         try {
             const string baseUrl("http://playlist.alexelec.in.ua");
-            const string url = baseUrl + "/channels/";
+            const string url = baseUrl + "/ChList-Done.html";
             
             std::vector<std::string> headers;
             headers.push_back(string("Referer: ") + baseUrl);
@@ -472,17 +475,30 @@ namespace TtvEngine
                 HttpEngine::RequestPriority_Hi);
 
             event.Wait();
+            // Parse AlexElec response.
+            auto posStart = channels.find("<pre>\n");
+            if(string::npos == posStart) {
+                LogError("TtvPlayer: bad alexelec responce. No <pre> tag found");
+                return;
+            }
+            posStart += strlen("<pre>\n");
+            auto posEnd = channels.find("</pre>", posStart);
+            if(string::npos == posEnd) {
+                LogError("TtvPlayer: bad alexelec responce. No </pre> tag found");
+                return;
+            }
+            channels = channels.substr(posStart, posEnd - posStart);
             for(const auto& ch : StringUtils::Tokenize(channels, "\n")) {
                 std::vector<std::string> tokens;
-                StringUtils::Tokenize(ch, tokens, "#");
-                if(tokens.size() != 3) {
+                StringUtils::Tokenize(ch, tokens, "\t");
+                if(tokens.size() < 2) {
                     LogError("TtvPlayer: bad alexelec channel: %s", ch.c_str());
                     continue;
                 }
                 AlexElecChannel alCh;
-                alCh.name = StringUtils::Trim(tokens[0]);
-                alCh.cat = StringUtils::Trim(tokens[1]);
-                alCh.cid = StringUtils::Trim(tokens[2]);
+                alCh.name = StringUtils::Trim(tokens[1]);
+//                alCh.cat = StringUtils::Trim(tokens[1]);
+//                alCh.cid = StringUtils::Trim(tokens[2]);
                 onChannel(alCh);
             }
             XBMC->Log(LOG_DEBUG, "TtvPlayer: parsing of alexelec playlist done.");
