@@ -114,7 +114,7 @@ namespace Buffers {
         bool PrepareSegmentForPosition(int64_t position, uint64_t* nextSegmentIndex);
         bool HasSegmentsToFill() const;
 //        bool IsEof() const;
-        bool IsFull() const {return CanSeek() ? m_cacheSizeInBytes > m_cacheSizeLimit : m_segments.size() > 2; }
+        bool IsFull() const {return CanSeek() ? m_cacheSizeInBytes > m_cacheSizeLimit : m_segments.size() > 5; }
         int64_t Length() const { return CanSeek() ? m_totalLength : -1; }
         bool ReloadPlaylist();
         bool CanSeek() const {return nullptr != m_delegate || (m_seekForVod && m_playlist.IsVod()); }

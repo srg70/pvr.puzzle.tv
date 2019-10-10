@@ -141,9 +141,11 @@ namespace Buffers {
                     // try to ping server to avoid connection lost
                     if(chacheIsFull && nullptr != segment) {
                         isStopped = IsStopped(segment->Duration());
-                        struct __stat64 stat;
-                        XBMC->StatFile(segment->info.url.c_str(), &stat);
-                        LogDebug("PlaylistBuffer: stat segment #%" PRIu64 ".", m_loadingSegmentIndex);
+                        if(!isStopped) {
+                            struct __stat64 stat;
+                            XBMC->StatFile(segment->info.url.c_str(), &stat);
+                            LogDebug("PlaylistBuffer: waiting for space in cache...Stat segment #%" PRIu64 ".", m_loadingSegmentIndex);
+                        }
                     }
                 } while(chacheIsFull && !isStopped);
                 
