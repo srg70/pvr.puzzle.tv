@@ -137,6 +137,11 @@ namespace PvrClient
         bool IsLocalRecording(const PVR_RECORDING &recording) const;
         // Implemented for local recordings. Should be defined by derived class
         virtual bool OpenRecordedStream(const PVR_RECORDING &recording) = 0;
+        // Recordingd
+        uint32_t GetStartRecordingPadding() {return m_startRecordingPadding;}
+        uint32_t GetEndRecordingPadding() {return m_endRecordingPadding;}
+
+        
         const std::string& GetClientPath() const { return m_clientPath;}
         const std::string& GetUserPath() const { return m_userPath;}
         
@@ -180,7 +185,9 @@ namespace PvrClient
         TimeshiftBufferType m_timeshiftBufferType;
         std::string m_cacheDir;
         std::string m_recordingsDir;
-        int m_lastRecordingsAmount;
+        int m_lastRecordingsAmount;        
+        uint32_t m_startRecordingPadding;
+        uint32_t m_endRecordingPadding;
         std::string m_clientPath;
         std::string m_userPath;
         int m_channelReloadTimeout;

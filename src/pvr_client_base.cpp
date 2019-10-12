@@ -160,6 +160,18 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     m_waitForInetTimeout = 0;
     XBMC->GetSetting("wait_for_inet", &m_waitForInetTimeout);
     
+    m_startRecordingPadding = 0;
+    XBMC->GetSetting("archive_start_padding", &m_startRecordingPadding);
+    if(m_startRecordingPadding < 0)
+        m_startRecordingPadding = 0;
+    m_startRecordingPadding *= 60;
+
+    m_endRecordingPadding = 0;
+    XBMC->GetSetting("archive_end_padding", &m_endRecordingPadding);
+    if(m_endRecordingPadding < 0)
+        m_endRecordingPadding = 0;
+    m_endRecordingPadding *= 60;
+
     CheckForInetConnection(m_waitForInetTimeout);
     
     CurlUtils::SetCurlTimeout(curlTimout);
@@ -297,6 +309,26 @@ ADDON_STATUS PVRClientBase::SetSetting(const char *settingName, const void *sett
             return ADDON_STATUS_NEED_RESTART;
         }
     }
+    else if (strcmp(settingName, "wait_for_inet") == 0)
+    {
+        m_waitForInetTimeout = *(bool *)(settingValue);
+    }
+    else if (strcmp(settingName, "archive_start_padding") == 0)
+    {
+        m_startRecordingPadding = *(int *)(settingValue);
+        if(m_startRecordingPadding < 0)
+            m_startRecordingPadding = 0;
+        m_startRecordingPadding *= 60;
+    }
+    else if (strcmp(settingName, "archive_end_padding") == 0)
+    {
+        m_endRecordingPadding = *(int *)(settingValue);
+        if(m_endRecordingPadding < 0)
+            m_endRecordingPadding = 0;
+        m_endRecordingPadding *= 60;
+        
+    }
+
 
     return ADDON_STATUS_OK;
 }

@@ -135,10 +135,10 @@ void SharaTvPVRClient::CreateCore(bool clearEpgCache)
     string playlistUrl;
     
     if(c_DataSourceType_Login == m_dataSourceType) {
-    if(m_login.empty() || m_password.empty())
-        throw AuthFailedException();
-    //http://tvfor.pro/g/xxx:yyy/1/playlist.m3u
-     playlistUrl = string("http://tvfor.pro/g/") +  m_login + ":" + m_password + "/1/playlist.m3u";
+        if(m_login.empty() || m_password.empty())
+            throw AuthFailedException();
+        //http://tvfor.pro/g/xxx:yyy/1/playlist.m3u
+        playlistUrl = string("http://tvfor.pro/g/") +  m_login + ":" + m_password + "/1/playlist.m3u";
     } else {
         playlistUrl = m_playListUrl;
     }
@@ -177,8 +177,12 @@ ADDON_STATUS SharaTvPVRClient::SetSetting(const char *settingName, const void *s
         
     } else if(strcmp(settingName,  c_data_source_type) == 0) {
         XBMC->GetSetting(c_data_source_type, &m_dataSourceType);
+        result = ADDON_STATUS_NEED_RESTART;
     } else if(strcmp(settingName,  c_playlist_path) == 0) {
-        m_playListUrl = (const char*) settingValue;
+        if(strcmp((const char*) settingValue, m_playListUrl.c_str()) != 0){
+            m_playListUrl = (const char*) settingValue;
+            result = ADDON_STATUS_NEED_RESTART;
+        }
     } else {
         result = PVRClientBase::SetSetting(settingName, settingValue);
     }
@@ -230,9 +234,9 @@ ADDON_STATUS SharaTvPVRClient::OnReloadEpg()
 class SharaTvArchiveDelegate : public Buffers::IPlaylistBufferDelegate
 {
 public:
-    SharaTvArchiveDelegate(SharaTvEngine::Core* core, const PVR_RECORDING &recording)
-    : _duration(recording.iDuration)
-    , _recordingTime(recording.recordingTime)
+    SharaTvArchiveDelegate(SharaTvEngine::Core* core, const PVR_RECORDING &recording, uint32_t startPadding, uint32_t endPadding)
+    : _duration(recording.iDuration + startPadding + endPadding)
+    , _recordingTime(recording.recordingTime - startPadding)
     , _core(core)
     {
         _channelId = 1;
@@ -284,7 +288,7 @@ bool SharaTvPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     if(IsLocalRecording(recording))
         return PVRClientBase::OpenRecordedStream(recording);
     
-    auto delegate = new SharaTvArchiveDelegate(m_core, recording);
+    auto delegate = new SharaTvArchiveDelegate(m_core, recording, GetStartRecordingPadding(), GetEndRecordingPadding());
     string url = delegate->UrlForTimeshift(0);
     if(!IsSeekSupported())
         SAFE_DELETE(delegate);

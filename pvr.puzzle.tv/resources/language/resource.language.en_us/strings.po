@@ -84,6 +84,14 @@ msgctxt "#10016"
 msgid "Arrange archive by channel groups"
 msgstr "Arrange archive by channel groups"
 
+msgctxt "#10017"
+msgid "Archive start padding (min)"
+msgstr "Archive start padding (min)"
+
+msgctxt "#10018"
+msgid "Archive end padding (min)"
+msgstr "Archive end padding (min)"
+
 msgctxt "#10097"
 msgid "Other"
 msgstr "Other"

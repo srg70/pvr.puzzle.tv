@@ -90,7 +90,6 @@ namespace PvrClient {
         void AddChannelToGroup(GroupId groupId, ChannelId channelId);
         void AddChannelToGroup(GroupId groupId, ChannelId channelId, int indexInGroup);
 
-
         void ParseJson(const std::string& response, std::function<void(rapidjson::Document&)> parser);
         
         
@@ -128,7 +127,6 @@ namespace PvrClient {
         P8PLATFORM::CTimeout m_recordingsUpdateDelay;
 
         int m_rpcPort;
-
     };
     
     class ExceptionBase : public std::exception
