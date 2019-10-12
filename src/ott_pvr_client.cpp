@@ -187,9 +187,9 @@ ADDON_STATUS OttPVRClient::OnReloadEpg()
 class OttArchiveDelegate : public Buffers::IPlaylistBufferDelegate
 {
 public:
-    OttArchiveDelegate(OttEngine::Core* core, const PVR_RECORDING &recording)
-    : _duration(recording.iDuration)
-    , _recordingTime(recording.recordingTime)
+    OttArchiveDelegate(OttEngine::Core* core, const PVR_RECORDING &recording, uint32_t startPadding, uint32_t endPadding)
+    : _duration(recording.iDuration + startPadding + endPadding)
+    , _recordingTime(recording.recordingTime - startPadding)
     , _core(core)
     {
         _channelId = 1;
@@ -241,7 +241,7 @@ bool OttPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     if(IsLocalRecording(recording))
         return PVRClientBase::OpenRecordedStream(recording);
     
-    auto delegate = new OttArchiveDelegate(m_core, recording);
+    auto delegate = new OttArchiveDelegate(m_core, recording, GetStartRecordingPadding(), GetEndRecordingPadding());
     string url = delegate->UrlForTimeshift(0);
     if(!IsSeekSupported())
         SAFE_DELETE(delegate);

@@ -17,6 +17,8 @@
     <setting id="recordings_path" type="folder" label="10009" default="" />
     <setting id="archive_for_current_epg_item" type="bool" label="10013" default="true" />
     <setting id="archive_use_channel_groups" type="bool" label="10016" default="false" />
+    <setting id="archive_start_padding" type="number" label="10017" default="0"/>
+    <setting id="archive_end_padding" type="number" label="10018" default="0"/>
     <setting label="10097" type="lsep"/>
     <setting id="rpc_local_port" type="number" label="10012" default="8080"/>
     <setting id="channel_index_offset" type="number" label="10015" default="0"/>

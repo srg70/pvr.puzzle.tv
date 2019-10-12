@@ -199,9 +199,9 @@ ADDON_STATUS EdemPVRClient::OnReloadEpg()
 class EdemArchiveDelegate : public Buffers::IPlaylistBufferDelegate
 {
 public:
-    EdemArchiveDelegate(EdemEngine::Core* core, const PVR_RECORDING &recording)
-    : _duration(recording.iDuration)
-    , _recordingTime(recording.recordingTime)
+    EdemArchiveDelegate(EdemEngine::Core* core, const PVR_RECORDING &recording, uint32_t startPadding, uint32_t endPadding)
+    : _duration(recording.iDuration + startPadding + endPadding)
+    , _recordingTime(recording.recordingTime - startPadding)
     , _core(core)
     {
         _channelId = 1;
@@ -253,7 +253,7 @@ bool EdemPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     if(IsLocalRecording(recording))
         return PVRClientBase::OpenRecordedStream(recording);
     
-    auto delegate = new EdemArchiveDelegate(m_core, recording);
+    auto delegate = new EdemArchiveDelegate(m_core, recording, GetStartRecordingPadding(), GetEndRecordingPadding());
     string url = delegate->UrlForTimeshift(0);
     if(!IsSeekSupported())
         SAFE_DELETE(delegate);

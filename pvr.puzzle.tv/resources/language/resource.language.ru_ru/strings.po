@@ -80,6 +80,14 @@ msgctxt "#10015"
 msgid "Channel index offset"
 msgstr "Смещение нумерации каналов"
 
+msgctxt "#10017"
+msgid "Archive start padding (min)"
+msgstr "Начинать раньше на (мин)"
+
+msgctxt "#10018"
+msgid "Archive end padding (min)"
+msgstr "Заканчивать позже на (мин)"
+
 msgctxt "#10016"
 msgid "Arrange archive by channel groups"
 msgstr "Сортировать архив по группам каналов"
