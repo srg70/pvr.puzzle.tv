@@ -222,7 +222,9 @@ namespace SharaTvEngine
    
     static PvrClient::KodiChannelId EpgChannelIdToKodi(const std::string& strId)
     {
-        return std::hash<std::string>{}(strId);
+        string strToHash(strId);
+        StringUtils::ToLower(strToHash);
+        return std::hash<std::string>{}(strToHash);
     }
     void Core::UpdateEpgForAllChannels(time_t startTime, time_t endTime)
     {
@@ -256,7 +258,7 @@ namespace SharaTvEngine
 
         EpgEntryCallback onEpgEntry = [&pThis] (const XMLTV::EpgEntry& newEntry) {pThis->AddEpgEntry(newEntry);};
         
-        XMLTV::ParseEpg(m_epgUrl, onEpgEntry);
+        XMLTV::ParseEpg(m_epgUrl, onEpgEntry, EpgChannelIdToKodi);
     }
     
     string Core::GetUrl(ChannelId channelId)
@@ -451,6 +453,7 @@ namespace SharaTvEngine
         
         Channel channel;
         channel.UniqueId = channel.EpgId = EpgChannelIdToKodi(tvgId);
+       // LogDebug("Channe: TVG id %s => EPG id %d", tvgId.c_str(), channel.EpgId);
         channel.Name = name;
         channel.Number = plistIndex;
         channel.Urls.push_back(url);

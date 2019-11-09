@@ -117,7 +117,6 @@ namespace PuzzleEngine
         PuzzleTV(ServerVersion serverVersion, const char* serverUrl, uint16_t serverPort);
         ~PuzzleTV();
 
-        const PvrClient::EpgEntryList& GetEpgList() const;
         void  UpdateEpgForAllChannels(time_t startTime, time_t endTime);
 
         std::string GetUrl(PvrClient::ChannelId channelId);

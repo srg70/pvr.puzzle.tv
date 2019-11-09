@@ -618,21 +618,19 @@ PVR_ERROR PVRClientBase::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL
         return PVR_ERROR_NO_ERROR;
     }
     
-    
-    ChannelId chUniqueId = m_kodiToPluginLut.at(channel.iUniqueId);
-//    const auto& ch = m_clientCore->GetChannelList().at(chUniqueId);
-
-    EpgEntryList epgEntries;
-    m_clientCore->GetEpg(chUniqueId, iStart, iEnd, epgEntries);
-    EpgEntryList::const_iterator itEpgEntry = epgEntries.begin();
-    for (int i = 0; itEpgEntry != epgEntries.end(); ++itEpgEntry, ++i)
+    IClientCore::EpgEntryAction onEpgEntry = [&channel, &handle](const EpgEntryList::value_type& epgEntry)
     {
         EPG_TAG tag = { 0 };
-        tag.iUniqueBroadcastId = itEpgEntry->first;
-        itEpgEntry->second.FillEpgTag(tag);
+        tag.iUniqueBroadcastId = epgEntry.first;
+        epgEntry.second.FillEpgTag(tag);
         tag.iUniqueChannelId = channel.iUniqueId;//m_pluginToKodiLut.at(itEpgEntry->second.ChannelId);
         PVR->TransferEpgEntry(handle, &tag);
-    }
+        return true;// always continue enumeration...
+    };
+    
+    ChannelId chUniqueId = m_kodiToPluginLut.at(channel.iUniqueId);
+    m_clientCore->GetEpg(chUniqueId, iStart, iEnd, onEpgEntry);
+    
     return PVR_ERROR_NO_ERROR;
 }
 

@@ -34,7 +34,9 @@
 #include "rapidxml/rapidxml.hpp"
 #include <ctime>
 #include <functional>
+#include <limits>
 #include "globals.hpp"
+#include "helpers.h"
 
 using namespace std;
 using namespace XMLTV;
@@ -197,7 +199,7 @@ namespace XMLTV {
         return std::string();
     }
     
-    static int ParseDateTime(std::string& strDate, bool iDateFormat = true)
+    static time_t ParseDateTime(std::string& strDate, bool iDateFormat = true)
     {
         static  long offset = LocalTimeOffset();
 
@@ -462,7 +464,8 @@ return false;             \
             XBMC->Log(LOG_ERROR, "Invalid EPG XML: no <tv> tag found");
             return false;
         }
-        
+        time_t fileStartAt = std::numeric_limits<time_t>::max();
+        time_t fileEndAt = 0;
         xml_node<> *pChannelNode = NULL;
         for(pChannelNode = pRootElement->first_node("programme"); pChannelNode; pChannelNode = pChannelNode->next_sibling("programme"))
         {
@@ -476,8 +479,13 @@ return false;             \
                     || !GetAttributeValue(pChannelNode, "stop", strStop))
                     continue;
                 
-                int iTmpStart = ParseDateTime(strStart);
-                int iTmpEnd = ParseDateTime(strStop);
+                time_t iTmpStart = ParseDateTime(strStart);
+                if(fileStartAt > iTmpStart)
+                    fileStartAt = iTmpStart;
+                time_t iTmpEnd = ParseDateTime(strStop);
+                if(fileEndAt < iTmpEnd)
+                    fileEndAt = iTmpEnd;
+
                 
                 EpgEntry entry;
                 xml_node<> * iconAttribute = pChannelNode->first_node("icon");
@@ -487,6 +495,7 @@ return false;             \
                 }
                 
                 entry.EpgId = idConverter(strId);
+               // LogDebug("Program: TVG id %s => EPG id %d", strId.c_str(), entry.EpgId);
                 entry.startTime = iTmpStart;
                 entry.endTime = iTmpEnd;
                 
@@ -502,7 +511,8 @@ return false;             \
         
         xmlDoc.doc.clear();
         
-        XBMC->Log(LOG_NOTICE, "XMLTV: EPG loaded.");
+        XBMC->Log(LOG_NOTICE, "XMLTV: EPG loaded from %s to  %s", time_t_to_string(fileStartAt).c_str(), time_t_to_string(fileEndAt).c_str());
+
         
         return true;
     }
