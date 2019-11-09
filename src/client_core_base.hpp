@@ -58,7 +58,7 @@ namespace PvrClient {
 
         bool GetEpgEntry(UniqueBroadcastIdType i,  EpgEntry& enrty);
         void ForEachEpg(const EpgEntryAction& action) const;
-        void GetEpg(ChannelId channelId, time_t startTime, time_t endTime, EpgEntryList& epgEntries);
+        void GetEpg(ChannelId channelId, time_t startTime, time_t endTime, EpgEntryAction& onEpgEntry);
         
         void SetRpcPort(int port) {m_rpcPort = port;}
         void CallRpcAsync(const std::string & data, std::function<void(rapidjson::Document&)>  parser,

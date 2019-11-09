@@ -61,7 +61,7 @@ std:: string time_t_to_string(const time_t& time)
 {
     char mbstr[100];
     
-    if (std::strftime(mbstr, sizeof(mbstr), "%d/%m %H:%M", std::localtime(&time))) {
+    if (std::strftime(mbstr, sizeof(mbstr), "%d/%m/%y %H:%M", std::localtime(&time))) {
         return mbstr;
     }
     return std::string("Wrong time format");
