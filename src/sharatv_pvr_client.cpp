@@ -54,6 +54,7 @@ static const char* c_password_setting = "sharatv_password";
 static const char* c_adult_setting = "sharatv_adult";
 static const char* c_data_source_type = "sharatv_data_source";
 static const char* c_playlist_path = "sharatv_playlist_path";
+static const char* c_epg_path = "sharatv_epg_path";
 //static const char* c_seek_archives = "ttv_seek_archives";
 
 
@@ -77,7 +78,9 @@ ADDON_STATUS SharaTvPVRClient::Init(PVR_PROPERTIES* pvrprops)
     if (XBMC->GetSetting(c_playlist_path, &buffer))
         m_playListUrl = buffer;
 
-    
+    if (XBMC->GetSetting(c_epg_path, &buffer))
+        m_epgUrl = buffer;
+
     SetSeekSupported(true);
 //    XBMC->GetSetting(c_seek_archives, &m_supportSeek);
     
@@ -132,7 +135,7 @@ void SharaTvPVRClient::CreateCore(bool clearEpgCache)
 {
     DestroyCoreSafe();
     
-    string playlistUrl;
+    string playlistUrl, epgUrl;
     
     if(c_DataSourceType_Login == m_dataSourceType) {
         if(m_login.empty() || m_password.empty())
@@ -141,9 +144,10 @@ void SharaTvPVRClient::CreateCore(bool clearEpgCache)
         playlistUrl = string("http://tvfor.pro/g/") +  m_login + ":" + m_password + "/1/playlist.m3u";
     } else {
         playlistUrl = m_playListUrl;
+        epgUrl = m_epgUrl;
     }
     
-    m_clientCore = m_core = new SharaTvEngine::Core(playlistUrl, m_enableAdult);
+    m_clientCore = m_core = new SharaTvEngine::Core(playlistUrl, epgUrl, m_enableAdult);
     m_core->IncludeCurrentEpgToArchive(m_addCurrentEpgToArchive);
     m_core->InitAsync(clearEpgCache);
 }
@@ -183,7 +187,12 @@ ADDON_STATUS SharaTvPVRClient::SetSetting(const char *settingName, const void *s
             m_playListUrl = (const char*) settingValue;
             result = ADDON_STATUS_NEED_RESTART;
         }
-    } else {
+    }  else if(strcmp(settingName,  c_epg_path) == 0) {
+        if(strcmp((const char*) settingValue, m_epgUrl.c_str()) != 0){
+            m_epgUrl = (const char*) settingValue;
+            result = ADDON_STATUS_NEED_RESTART;
+        }
+    }else {
         result = PVRClientBase::SetSetting(settingName, settingValue);
     }
     return result;

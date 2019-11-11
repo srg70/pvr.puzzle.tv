@@ -64,7 +64,7 @@ private:
     std::string m_login;
     std::string m_password;
     std::string m_playListUrl;
-    //std::string m_epgUrl;
+    std::string m_epgUrl;
     bool m_enableAdult;
 };
 
