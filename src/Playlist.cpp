@@ -28,6 +28,7 @@
 #include "Playlist.hpp"
 #include "globals.hpp"
 #include "helpers.h"
+#include "p8-platform/util/StringUtils.h"
 
 namespace Buffers {
     using namespace Globals;
@@ -115,13 +116,14 @@ namespace Buffers {
             while(std::string::npos != pos)
             {
                 pos += strlen(c_XINF);
-                auto endTag = data.find(c_XINF,pos);
+                auto endTag = data.find("#",pos);
                 std::string::size_type tagLen = endTag - pos;
                 if(std::string::npos == endTag)
                     tagLen = std::string::npos;
                 
                 std::string tagBody = data.substr(pos, tagLen);
-                pos = endTag;
+                pos = data.find(c_XINF,pos);
+                
                 std::string url;
                 uint64_t rate = ParseXstreamInfTag(tagBody, url);
                 if(rate > bestRate) {
@@ -249,10 +251,28 @@ namespace Buffers {
         bool succeeded = false;
         try{
             m_effectivePlayListUrl.clear();
-            HttpEngine::Request request(m_playListUrl);
+            std::string mutablePlaylistUrl(m_playListUrl);
+            // Find HTTP tags in URL
+            std::vector<std::string> headers;
+            auto pos = mutablePlaylistUrl.find("|");
+            if(pos != std::string::npos) {
+                auto headerStrings = StringUtils::Split(mutablePlaylistUrl.substr(pos + 1 /*strlen("|')*/ ), "=");
+                mutablePlaylistUrl = mutablePlaylistUrl.substr(0, pos);
+                auto headerStringsSize = headerStrings.size();
+                int i = 0;
+                while(i < headerStringsSize) {
+                    const auto& headerName = headerStrings[i++];
+                    if(i >= headerStringsSize)
+                        continue;
+                    const auto& headerValue = headerStrings[i++];
+                    headers.push_back(headerName + ": " + headerValue);
+                }
+            }
+
+            HttpEngine::Request request(mutablePlaylistUrl, "", headers);
             HttpEngine::DoCurl(request, HttpEngine::TCoocies(), &data, 9999999, &m_effectivePlayListUrl);
             if(m_effectivePlayListUrl.empty()){
-                m_effectivePlayListUrl = m_playListUrl;
+                m_effectivePlayListUrl = mutablePlaylistUrl;
             }
             succeeded = true;
            
