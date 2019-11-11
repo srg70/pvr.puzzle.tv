@@ -77,7 +77,7 @@ public:
     struct Request {
         Request(const std::string& url) : Url(url){}
         Request(const std::string& url, const std::string& postData) : Url(url), PostData(postData){}
-        Request(const std::string& url, const std::string& postData, const std::vector<std::string> headers) : Url(url), PostData(postData), Headers(headers){}
+        Request(const std::string& url, const std::string& postData, const std::vector<std::string>& headers) : Url(url), PostData(postData), Headers(headers){}
         bool IsPost() const {return !PostData.empty();}
         const std::string Url;
         const std::string PostData;
