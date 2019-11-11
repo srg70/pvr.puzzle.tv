@@ -70,9 +70,10 @@ namespace SharaTvEngine
     static string FindVar(const string& data, string::size_type pos, const char* varTag);
 //    static void LoadPlaylist(const string& plistUrl, string& data);
     
-    Core::Core(const std::string &playlistUrl, bool enableAdult)
+    Core::Core(const std::string &playlistUrl,  const std::string &epgUrl, bool enableAdult)
     : m_enableAdult(enableAdult)
     , m_playListUrl(playlistUrl)
+    , m_epgUrl(epgUrl)
     {
         string data;
         // NOTE: shara TV does NOT check credentials
@@ -82,7 +83,10 @@ namespace SharaTvEngine
             LogError("SharaTvPlayer: failed to download playlist. URL: %s", playlistUrl.c_str());
             throw ServerErrorException("SharaTvPlayer: failed to download playlist.", -1);
         }
-        m_epgUrl = GetEpgUrlFromPlaylist(data);
+        if(m_epgUrl.empty()){
+            LogInfo("SharaTvPlayer: no external EPG link provided. Will use playlist url-tvg tag (if available.)");
+            m_epgUrl = GetEpgUrlFromPlaylist(data);
+        }
     }
     
     void Core::Init(bool clearEpgCache)
