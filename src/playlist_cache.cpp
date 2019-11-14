@@ -48,7 +48,7 @@ namespace Buffers {
     , m_currentSegmentPositionFactor(0.0)
     , m_seekForVod(seekForVod)
     {
-        if(!ReloadPlaylist()){
+        if(!ProcessPlaylist()){
             LogError("PlaylistCache: playlist initialization failed.");
             throw PlaylistException("PlaylistCache: playlist initialization failed.");
         }
@@ -58,30 +58,30 @@ namespace Buffers {
             : 0; // ~6 MByte/chunck (usualy 6 sec)
     }
     
-    PlaylistCache::~PlaylistCache()  {
+    PlaylistCache::~PlaylistCache() {
     }
     
-    bool PlaylistCache::ReloadPlaylist(){
-        
- 
-        if(m_playlist.Reload())
-        {
-            SegmentInfo info;
-            bool hasMore = true;
-            while(m_playlist.NextSegment(info, hasMore)) {
-                m_dataToLoad.push_back(info);
-                if(!hasMore)
-                    break;
-            }
-        } else {
+    bool PlaylistCache::ReloadPlaylist() {
+         
+        if(!m_playlist.Reload()) {
             LogError("PlaylistCache: playlist is empty or missing.");
             return false;
         }
-        
+        return ProcessPlaylist();
+    }
+
+    bool PlaylistCache::ProcessPlaylist() {
+        SegmentInfo info;
+        bool hasMore = true;
+        while(m_playlist.NextSegment(info, hasMore)) {
+            m_dataToLoad.push_back(info);
+            if(!hasMore)
+                break;
+        }
         
         // For VOD we can fill data offset for segments already.
         // Do it only first time, i.e. when m_bitrate == 0
-        bool shouldCalculateOffset = CanSeek() && m_bitrate == 0;
+        const bool shouldCalculateOffset = CanSeek() && m_bitrate == 0;
         if (shouldCalculateOffset) {
             MutableSegment::TimeOffset timeOffaset = 0.0;
             MutableSegment::DataOffset dataOfset = 0;
@@ -102,7 +102,7 @@ namespace Buffers {
                 m_segments[it->index] = std::unique_ptr<MutableSegment>(segment);
                 timeOffaset += segment->Duration();
                 m_totalLength += segment->_length;
-
+                
                 ++it;
             }
             
@@ -126,11 +126,10 @@ namespace Buffers {
             } else {
                 m_totalLength = m_delegate->Duration() * Bitrate();
             }
-
-         }
-        if(shouldCalculateOffset){
+            
             LogError("PlaylistCache: playlist reloaded. Total length %" PRId64 "(%f B/sec).", m_totalLength, Bitrate());
         }
+        
         return true;
     }
     

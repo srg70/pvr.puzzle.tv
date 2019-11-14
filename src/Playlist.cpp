@@ -91,21 +91,37 @@ namespace Buffers {
         return bandwidth;
     }
     
-    Playlist::Playlist(const std::string &url, uint64_t indexOffset)
+    static bool IsPlaylistContent(const std::string& content) {
+        const char* c_M3U = "#EXTM3U";
+        return  content.find(c_M3U) != std::string::npos;
+    }
+
+    Playlist::Playlist(const std::string &urlOrContent, uint64_t indexOffset)
     : m_indexOffset(indexOffset)
     , m_targetDuration(0)
     {
-        SetBestPlaylist(url);
+        if(IsPlaylistContent(urlOrContent)) {
+            SetBestPlaylist(urlOrContent);
+        } else {
+            m_playListUrl = urlOrContent;
+            
+            // Kodi's HTTP headers schema.
+            auto headersPos = m_playListUrl.find("|");
+            if(headersPos != std::string::npos){
+                m_httplHeaders = m_playListUrl.substr(headersPos);
+                m_playListUrl = m_playListUrl.substr(0,headersPos);
+            }
+            
+            std::string data;
+            LoadPlaylist(data);
+            SetBestPlaylist(data);
+        }
     }
     
-    void Playlist::SetBestPlaylist(const std::string& playlistUrl)
+    void Playlist::SetBestPlaylist(const std::string& data)
     {
         const char* c_XINF = "#EXT-X-STREAM-INF:";
-        
         m_loadIterator = 0;
-        m_playListUrl = playlistUrl;
-        std::string data;
-        LoadPlaylist(data);
         auto pos = data.find(c_XINF);
         // Do we have bitstream info to choose best strea?
         if(std::string::npos != pos) {
@@ -132,11 +148,13 @@ namespace Buffers {
                 }
             }
             //    LogDebug("Best URL (%d): \n %s", bestRate, m_playListUrl.c_str() );
-            data.clear();
-            LoadPlaylist(data);
+            std::string newData;
+            LoadPlaylist(newData);
+            ParsePlaylist(newData);
+        } else {
+            ParsePlaylist(data);
         }
         
-        ParsePlaylist(data);
         // Init load iterator with media index of first segment
         const auto first = m_segmentUrls.begin();
         if( first != m_segmentUrls.end()){
@@ -152,7 +170,8 @@ namespace Buffers {
         const char* c_TYPE = "#EXT-X-PLAYLIST-TYPE:";
         const char* c_TARGET = "#EXT-X-TARGETDURATION:";
         const char* c_CACHE = "#EXT-X-ALLOW-CACHE:"; // removed in v7 but in use by TTV :(
-
+        const char* c_END = "#EXT-X-ENDLIST";
+        
         try {
             auto pos = data.find(c_M3U);
             if(std::string::npos == pos)
@@ -161,7 +180,6 @@ namespace Buffers {
             
             // Fill target duration value (mandatory tag)
             pos = data.find(c_TARGET);
-            // If we have media-sequence tag - use it
             if(std::string::npos == pos)
                 throw PlaylistException("Invalid playlist format: missing #EXT-X-TARGETDURATION tag.");
 
@@ -178,31 +196,34 @@ namespace Buffers {
                 pos += strlen(c_SEQ);
                  body = data.substr(pos);
                 mediaIndex += std::stoull(body, &pos);
-                m_isVod = false;
+//                m_isVod = false;
             }
             // Check for cache tag (obsolete)
-            pos = data.find(c_CACHE);
-            if(std::string::npos != pos) {
-                pos += strlen(c_CACHE);
-                body = data.substr(pos);
-                std::string yes("YES");
-                m_isVod =  body.substr(0,yes.size()) == yes;
-                body=body.substr(0, body.find("#EXT-X-ENDLIST"));
-            }
-       
-            // Check plist type. VOD list may ommit sequence ID
-            pos = data.find(c_TYPE);
-            if(std::string::npos != pos){
-                //                throw PlaylistException("Invalid playlist format: missing #EXT-X-MEDIA-SEQUENCE and #EXT-X-PLAYLIST-TYPE tag.");
-                pos+= strlen(c_TYPE);
-                body = data.substr(pos);
-                std::string vod("VOD");
-                if(body.substr(0,vod.size()) != vod)
-                    throw PlaylistException("Invalid playlist format: VOD playlist expected.");
-                m_isVod = true;
-                body=body.substr(0, body.find("#EXT-X-ENDLIST"));
-            }
-            
+//            pos = data.find(c_CACHE);
+//            if(std::string::npos != pos) {
+//                pos += strlen(c_CACHE);
+//                body = data.substr(pos);
+//                std::string yes("YES");
+//                m_isVod =  body.substr(0,yes.size()) == yes;
+//                body=body.substr(0, body.find(c_END));
+//            }
+//
+//            // Check plist type. VOD list may ommit sequence ID
+//            pos = data.find(c_TYPE);
+//            if(std::string::npos != pos){
+//                //                throw PlaylistException("Invalid playlist format: missing #EXT-X-MEDIA-SEQUENCE and #EXT-X-PLAYLIST-TYPE tag.");
+//                pos+= strlen(c_TYPE);
+//                body = data.substr(pos);
+//                std::string vod("VOD");
+//                if(body.substr(0,vod.size()) != vod)
+//                    throw PlaylistException("Invalid playlist format: VOD playlist expected.");
+//                m_isVod = true;
+//                body=body.substr(0, body.find(c_END));
+//            }
+            pos = data.find(c_END);
+            m_isVod = pos != std::string::npos;
+            body=data.substr(0, pos);
+
             pos = body.find(c_INF);
             bool hasContent = false;
             while(std::string::npos != pos) {
@@ -222,7 +243,7 @@ namespace Buffers {
                         urlLen = std::string::npos;
                     auto url = body.substr(urlPos, urlLen);
                     trim(url);
-                    url = ToAbsoluteUrl(url, m_effectivePlayListUrl);
+                    url = ToAbsoluteUrl(url, m_effectivePlayListUrl) + m_httplHeaders;
                     //            LogNotice("IDX: %u Duration: %f. URL: %s", mediaIndex, duration, url.c_str());
                     m_segmentUrls[mediaIndex] = TSegmentUrls::mapped_type(duration, url, mediaIndex);
                 }
@@ -246,18 +267,15 @@ namespace Buffers {
     {
         char buffer[1024];
         
-        LogDebug(">>> PlaylistBuffer: (re)loading playlist %s.", m_playListUrl.c_str());
+        LogDebug(">>> PlaylistBuffer: (re)loading playlist %s", m_playListUrl.c_str());
         
         bool succeeded = false;
         try{
             m_effectivePlayListUrl.clear();
-            std::string mutablePlaylistUrl(m_playListUrl);
-            // Find HTTP tags in URL
+           
             std::vector<std::string> headers;
-            auto pos = mutablePlaylistUrl.find("|");
-            if(pos != std::string::npos) {
-                auto headerStrings = StringUtils::Split(mutablePlaylistUrl.substr(pos + 1 /*strlen("|')*/ ), "=");
-                mutablePlaylistUrl = mutablePlaylistUrl.substr(0, pos);
+            if(!m_httplHeaders.empty()) {
+                auto headerStrings = StringUtils::Split(m_httplHeaders.substr(1), "=");
                 auto headerStringsSize = headerStrings.size();
                 int i = 0;
                 while(i < headerStringsSize) {
@@ -269,11 +287,8 @@ namespace Buffers {
                 }
             }
 
-            HttpEngine::Request request(mutablePlaylistUrl, "", headers);
+            HttpEngine::Request request(m_playListUrl, "", headers);
             HttpEngine::DoCurl(request, HttpEngine::TCoocies(), &data, 9999999, &m_effectivePlayListUrl);
-            if(m_effectivePlayListUrl.empty()){
-                m_effectivePlayListUrl = mutablePlaylistUrl;
-            }
             succeeded = true;
            
         }catch (std::exception& ex) {
@@ -285,7 +300,7 @@ namespace Buffers {
         if (!succeeded)
             throw PlaylistException("Failed to obtain playlist from server.");
 
-        LogDebug(">>> PlaylistBuffer: playlist effective URL %s.", m_effectivePlayListUrl.c_str());
+        LogDebug(">>> PlaylistBuffer: playlist effective URL %s", m_effectivePlayListUrl.c_str());
         LogDebug(">>> PlaylistBuffer: (re)loading done. Content: \n%s", data.substr(0, 16000).c_str());
         
     }

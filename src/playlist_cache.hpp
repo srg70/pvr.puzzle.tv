@@ -130,7 +130,8 @@ namespace Buffers {
             return (bitrate == 0.0) ? 0.0 : position/bitrate;
         }
         float Bitrate() const { return m_bitrate;}
-
+        bool ProcessPlaylist();
+        
         Playlist m_playlist;
         PlaylistBufferDelegate m_delegate;
         MutableSegment::TimeOffset m_playlistTimeOffset;

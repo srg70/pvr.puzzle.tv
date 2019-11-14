@@ -79,23 +79,62 @@ namespace Buffers {
         CreateThread();
     }
         
+    bool PlaylistBuffer::FillSegmentFromPlaylist(MutableSegment* segment, const std::string& content)
+    {
+        Playlist plist(content);
+        uint64_t segmentIndex = segment->info.index;
+
+        bool hasMoreSegments = false;
+        SegmentInfo info;
+        while(plist.NextSegment(info, hasMoreSegments)) {
+            void* f = XBMC->OpenFile(info.url.c_str(), XFILE::READ_NO_CACHE | XFILE::READ_CHUNKED); //XFILE::READ_AUDIO_VIDEO);
+            if(!f)
+                throw PlistBufferException("Failed to open media segment of sub-playlist.");
+
+            unsigned char buffer[8196];
+            ssize_t  bytesRead;
+            do {
+                bytesRead = XBMC->ReadFile(f, buffer, sizeof(buffer));
+                segment->Push(buffer, bytesRead);
+            }while (bytesRead > 0 && !IsStopped() && m_loadingSegmentIndex == segmentIndex);
+            
+            XBMC->CloseFile(f);
+            if(!hasMoreSegments)
+                break;
+        }
+        return m_loadingSegmentIndex == segmentIndex && segment->BytesReady() > 0;
+    }
+
     bool PlaylistBuffer::FillSegment(MutableSegment* segment)
     {
         void* f = XBMC->OpenFile(segment->info.url.c_str(), XFILE::READ_NO_CACHE | XFILE::READ_CHUNKED); //XFILE::READ_AUDIO_VIDEO);
         if(!f)
             throw PlistBufferException("Failed to download playlist media segment.");
-        
+
+        // Some content type should be treated as playlist
+        // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.1
+        char* contentType = XBMC->GetFilePropertyValue(f, XFILE::FILE_PROPERTY_CONTENT_TYPE, "");
+        const bool contentIsPlaylist =  NULL != contentType && ( 0 == strcmp("application/vnd.apple.mpegurl", contentType)  || 0 == strcmp("audio/mpegurl", contentType));
+        std::string contentForPlaylist;
+        XBMC->FreeString(contentType);
+
         unsigned char buffer[8196];
         ssize_t  bytesRead;
         uint64_t segmentIndex = segment->info.index;
         do {
             bytesRead = XBMC->ReadFile(f, buffer, sizeof(buffer));
-            segment->Push(buffer, bytesRead);
+            if(contentIsPlaylist) {
+                 contentForPlaylist.append ((char *) buffer, bytesRead);
+            } else{
+                segment->Push(buffer, bytesRead);
+            }
             //        LogDebug(">>> Write: %d", bytesRead);
         }while (bytesRead > 0 && !IsStopped() && m_loadingSegmentIndex == segmentIndex);
         
         XBMC->CloseFile(f);
-
+        
+        if(contentIsPlaylist)
+            return FillSegmentFromPlaylist(segment, contentForPlaylist);
         return m_loadingSegmentIndex == segmentIndex && segment->BytesReady() > 0;
     }
     
@@ -181,7 +220,6 @@ namespace Buffers {
                 // We should update playlist often, disregarding to amount of data to load
                 // Even if we have several segment to load
                 // it can take a time, and playlist will be out of sync.
-                //                if(!playlistBeenReloaded)
                 if(!IsStopped())
                 {
                     CLockObject lock(m_syncAccess);

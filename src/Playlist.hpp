@@ -64,6 +64,7 @@ namespace Buffers{
         bool m_isVod;
         uint64_t m_indexOffset;
         int m_targetDuration;
+        std::string m_httplHeaders;
 
     };
     
