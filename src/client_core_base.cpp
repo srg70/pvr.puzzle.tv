@@ -80,7 +80,7 @@ public:
         // avoid to call Cleanup() since it deletes m_thread (deadlock)
         //Cleanup();
     }
-    void RunAndSignalAsync(std::function<void(void)> action)
+    void RunAndSignalAsync(std::function<void(std::function<bool(void)>)> action)
     {
         if(m_isDone)
             return;
@@ -106,7 +106,7 @@ public:
             if(m_isDone)
                 return;
             if(action)
-                action();
+                action([this]{ return m_thread->IsStopped();});
             Broadcast();
         });
         m_thread->CreateThread();
@@ -117,8 +117,13 @@ private:
         
         static P8PLATFORM::CMutex s_CleanupMutex;
         P8PLATFORM::CLockObject lock(s_CleanupMutex);
-        if(m_thread)
+        if(m_thread){
+            // Use HUGE timeout (2 minutes) for phase thread
+            // because it can perform some "heavy" operation, like EPG loading...
+            if(!m_thread->StopThread(120*1000))
+                LogError("ClientPhase::Cleanup(): FAILED to stop phase thread in 2 minutes!");
             SAFE_DELETE(m_thread);
+        }
         if(m_event) {
             m_event->Broadcast();
             SAFE_DELETE(m_event);
@@ -150,8 +155,12 @@ ClientCoreBase::ClientCoreBase(const IClientCore::RecordingsDelegate& didRecordi
 
 void ClientCoreBase::InitAsync(bool clearEpgCache)
 {
-    m_phases[k_InitPhase]->RunAndSignalAsync([this, clearEpgCache] {
+    m_phases[k_InitPhase]->RunAndSignalAsync([this, clearEpgCache] (std::function<bool(void)> isAborted){
+        if(isAborted())
+            return;
         Init(clearEpgCache);
+        if(isAborted())
+            return;
         std::time_t now = std::time(nullptr);
         now = std::mktime(std::gmtime(&now));
         //            // Request EPG for all channels from max archive info to +1 days
@@ -165,7 +174,11 @@ void ClientCoreBase::InitAsync(bool clearEpgCache)
             startTime = m_lastEpgRequestEndTime;
         }
         time_t endTime = now + 7 * 24 * 60 * 60;
+        if(isAborted())
+            return;
         _UpdateEpgForAllChannels(startTime, endTime);
+        if(isAborted())
+            return;
         m_recordingsUpdateDelay.Init(5 * 1000);
         ScheduleRecordingsUpdate();
     });
