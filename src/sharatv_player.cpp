@@ -52,6 +52,12 @@ namespace SharaTvEngine
     using namespace PvrClient;
 
     
+    // Tags for archive template
+    static const char* const c_START = "${start}";
+    static const char* const c_DURATION = "${duration}";
+    static const char* const c_OFFSET = "${offset}";
+
+
     static const char* c_EpgCacheFile = "sharatv_epg_cache.txt";
 
 //    struct NoCaseComparator : binary_function<string, string, bool>
@@ -64,9 +70,9 @@ namespace SharaTvEngine
 
     typedef map<string, pair<Channel, string>/*, NoCaseComparator*/> PlaylistContent;
     
-    static void ParseChannelAndGroup(const std::string& data, unsigned int plistIndex, PlaylistContent& channels, ArchiveInfos& archiveInfo);
-    static void ParsePlaylist(const string& data, PlaylistContent& channels, ArchiveInfos& archiveInfo);
-    static string GetEpgUrlFromPlaylist(const string& data);
+    static void ParseChannelAndGroup(const std::string& data, const GloabalTags& globalTags, unsigned int plistIndex, PlaylistContent& channels, ArchiveInfos& archiveInfo);
+    static void ParsePlaylist(const string& data, const GloabalTags& globalTags, PlaylistContent& channels, ArchiveInfos& archiveInfo);
+    static void GetGlobalTagsFromPlaylist(const string& data, GloabalTags& globalTags);
     static string FindVar(const string& data, string::size_type pos, const char* varTag);
 //    static void LoadPlaylist(const string& plistUrl, string& data);
     
@@ -83,9 +89,12 @@ namespace SharaTvEngine
             LogError("SharaTvPlayer: failed to download playlist. URL: %s", playlistUrl.c_str());
             throw ServerErrorException("SharaTvPlayer: failed to download playlist.", -1);
         }
-        if(m_epgUrl.empty()){
-            LogInfo("SharaTvPlayer: no external EPG link provided. Will use playlist url-tvg tag (if available.)");
-            m_epgUrl = GetEpgUrlFromPlaylist(data);
+        
+        GetGlobalTagsFromPlaylist(data, m_globalTags);
+        
+        if(m_epgUrl.empty() && !m_globalTags.m_epgUrl.empty()){
+            m_epgUrl = m_globalTags.m_epgUrl;
+            LogInfo("SharaTvPlayer: no external EPG link provided. Will use playlist's url-tvg tag %s", m_epgUrl.c_str());
         }
     }
     
@@ -122,7 +131,7 @@ namespace SharaTvEngine
 
         ArchiveInfos archiveInfo;
         PlaylistContent plistContent;
-        ParsePlaylist(data, plistContent, archiveInfo);
+        ParsePlaylist(data, m_globalTags, plistContent, archiveInfo);
         
 //        auto pThis = this;
 //
@@ -175,18 +184,25 @@ namespace SharaTvEngine
         string url = m_archiveInfo.at(channelId).urlTemplate;
         if(url.empty())
             return url;
-        const char* c_START = "${start}";
+  
+        // Optinal start tag
         size_t pos = url.find(c_START);
-        if(string::npos == pos)
-            return string();
-        url.replace(pos, strlen(c_START), n_to_string(startTime));
-        // Optional duration part
-        const char* c_DURATION = "${duration}";
+        if(string::npos != pos){
+            url.replace(pos, strlen(c_START), n_to_string(startTime));
+        }
+        
+        // Optional duration tag
         pos = url.find(c_DURATION);
         if(string::npos != pos){
             url.replace(pos, strlen(c_DURATION), n_to_string(duration));
         }
 
+        // Optional offset tag
+        pos = url.find(c_OFFSET);
+        if(string::npos != pos){
+            auto offset = time(NULL) - startTime;
+            url.replace(pos, strlen(c_OFFSET), n_to_string(offset));
+        }
         return  url;
     }
         
@@ -303,7 +319,7 @@ namespace SharaTvEngine
 //        }
 //    }
     
-    static string GetEpgUrlFromPlaylist(const string& data)
+    static void GetGlobalTagsFromPlaylist(const string& data, GloabalTags& globalTags)
     {
         string epgUrl;
 
@@ -320,12 +336,22 @@ namespace SharaTvEngine
         if(string::npos != range) {
             range -= pos;
         }
-        try { epgUrl = FindVar(data.substr(pos, range), 0, "url-tvg");} catch (...) {}
-        
-        return epgUrl;
+        string header = data.substr(pos, range);
+        try { globalTags.m_epgUrl = FindVar(header, 0, "url-tvg");} catch (...) {}
+        try { globalTags.m_catchupDays = FindVar(header, 0, "catchup-days");} catch (...) {}
+        try {
+            globalTags.m_catchupType = FindVar(header, 0, "catchup");
+            LogDebug("SharaTvPlayer: gloabal catchup type: %s", globalTags.m_catchupType.c_str());
+        } catch (...) {}
+        try {
+            globalTags.m_catchupSource = FindVar(header, 0, "catchup-source");
+            LogDebug("SharaTvPlayer: gloabal catchup-source: %s", globalTags.m_catchupSource.c_str());
+        } catch (...) {}
 
     }
-    static void ParsePlaylist(const string& data, PlaylistContent& channels, ArchiveInfos& archiveInfo)
+
+    
+    static void ParsePlaylist(const string& data, const GloabalTags& globalTags,  PlaylistContent& channels, ArchiveInfos& archiveInfo)
     {
         
         try {
@@ -351,7 +377,7 @@ namespace SharaTvEngine
                 auto pos_end = data.find(c_INF, pos);
                 string::size_type tagLen = (std::string::npos == pos_end) ? std::string::npos : pos_end - pos;
                 string tag = data.substr(pos, tagLen);
-                ParseChannelAndGroup(tag, plistIndex++, channels, archiveInfo);
+                ParseChannelAndGroup(tag, globalTags, plistIndex++, channels, archiveInfo);
                 pos = pos_end;
             }
             XBMC->Log(LOG_DEBUG, "SharaTvPlayer: added %d channels from playlist." , channels.size());
@@ -381,7 +407,7 @@ namespace SharaTvEngine
         
     }
     
-    static void ParseChannelAndGroup(const string& data, unsigned int plistIndex, PlaylistContent& channels, ArchiveInfos& archiveInfo)
+    static void ParseChannelAndGroup(const string& data, const GloabalTags& globalTags, unsigned int plistIndex, PlaylistContent& channels, ArchiveInfos& archiveInfo)
     {
         //#EXTINF:0 audio-track="ru" tvg-id="1147" tvg-name="Первый канал" tvg-logo="https://shara-tv.org/img/images/Chanels/perviy_k.png" group-title="Базовые" catchup="default" catchup-days="3" catchup-source="http://oa5iy59taouocss24ctr.mine.nu:8099/Perviykanal/index-${start}-3600.m3u8?token=oa123456+12345678", Первый канал
         //#EXTGRP:Базовые
@@ -449,10 +475,17 @@ namespace SharaTvEngine
                 auto firstAmp = url.find_first_of('?');
                 if(string::npos == lastSlash)
                     throw BadPlaylistFormatException((string("Invalid channel URL: ") + url).c_str());
-                archiveUrl = url.substr(0, lastSlash + 1) + "video-${start}-${duration}.m3u8" + url.substr(firstAmp);
+                archiveUrl = url.substr(0, lastSlash + 1) + "timeshift_abs_video-" + c_START + ".m3u8" + url.substr(firstAmp);
+//                archiveUrl = url.substr(0, lastSlash + 1) + "video-" + c_START + "-" + c_DURATION + ".m3u8" + url.substr(firstAmp);
             }
         }
-
+        // probably we have global archive tag
+        else if(globalTags.m_catchupType == "append"){
+            archiveUrl = url + globalTags.m_catchupSource;
+            archiveDays = stoul(globalTags.m_catchupDays);
+        }
+        if(!archiveUrl.empty())
+            LogDebug("SharaTvPlayer: %s channe's archive url %s", name.c_str(), archiveUrl.c_str());
         
         Channel channel;
         channel.UniqueId = channel.EpgId = EpgChannelIdToKodi(tvgId);

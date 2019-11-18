@@ -78,6 +78,15 @@ namespace SharaTvEngine
     };
     typedef std::map<PvrClient::ChannelId, ArchiveInfo> ArchiveInfos;
     
+    struct GloabalTags
+    {
+        std::string m_epgUrl;
+        std::string m_catchupType;
+        std::string m_catchupSource;
+        std::string m_catchupDays;
+
+    };
+
     class Core : public PvrClient::ClientCoreBase
     {
     public:
@@ -102,6 +111,7 @@ namespace SharaTvEngine
 
         std::string m_playListUrl;
         std::string m_epgUrl;
+        GloabalTags m_globalTags;
         //P8PLATFORM::CTimeout m_epgUpdateInterval;
         ArchiveInfos m_archiveInfo;
         bool m_enableAdult;
