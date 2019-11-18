@@ -99,23 +99,27 @@ namespace Buffers {
     Playlist::Playlist(const std::string &urlOrContent, uint64_t indexOffset)
     : m_indexOffset(indexOffset)
     , m_targetDuration(0)
+    , m_initialInternalIndex(-1)
     {
-        if(IsPlaylistContent(urlOrContent)) {
-            SetBestPlaylist(urlOrContent);
-        } else {
+        const std::string* pData (&urlOrContent);
+        std::string data;
+        if(!IsPlaylistContent(urlOrContent)){
             m_playListUrl = urlOrContent;
             
             // Kodi's HTTP headers schema.
+            LogDebug("Playlist::Playlist(): original URL %s", m_playListUrl.c_str());
             auto headersPos = m_playListUrl.find("|");
             if(headersPos != std::string::npos){
                 m_httplHeaders = m_playListUrl.substr(headersPos);
                 m_playListUrl = m_playListUrl.substr(0,headersPos);
+                LogDebug("Playlist::Playlist(): HTTP headers %s", m_httplHeaders.c_str());
             }
             
-            std::string data;
             LoadPlaylist(data);
-            SetBestPlaylist(data);
+            pData = &data;
         }
+        SetBestPlaylist(*pData);
+
     }
     
     void Playlist::SetBestPlaylist(const std::string& data)
@@ -186,46 +190,32 @@ namespace Buffers {
             pos += strlen(c_TARGET);
             m_targetDuration = std::stoi(data.substr(pos), &pos);
             
-            // Playlist may be sub-sequence of some bigger strea (e.g. archive at Edem)
+            // Playlist may be sub-sequence of some bigger stream (e.g. archive at Edem)
             // Initial index offset helps to right possitionig of segments range
             int64_t mediaIndex = m_indexOffset;
+            // use playlist indexing
             std::string  body;
             pos = data.find(c_SEQ);
             // If we have media-sequence tag - use it
             if(std::string::npos != pos) {
                 pos += strlen(c_SEQ);
-                 body = data.substr(pos);
-                mediaIndex += std::stoull(body, &pos);
-//                m_isVod = false;
+                body = data.substr(pos);
+                auto internaIndex = std::stoull(body, &pos);
+                // Initialize internal index of playlist on first loading
+                if(-1 == m_initialInternalIndex) {
+                    m_initialInternalIndex = internaIndex;
+                }
+                mediaIndex +=  internaIndex - m_initialInternalIndex;
             }
-            // Check for cache tag (obsolete)
-//            pos = data.find(c_CACHE);
-//            if(std::string::npos != pos) {
-//                pos += strlen(c_CACHE);
-//                body = data.substr(pos);
-//                std::string yes("YES");
-//                m_isVod =  body.substr(0,yes.size()) == yes;
-//                body=body.substr(0, body.find(c_END));
-//            }
-//
-//            // Check plist type. VOD list may ommit sequence ID
-//            pos = data.find(c_TYPE);
-//            if(std::string::npos != pos){
-//                //                throw PlaylistException("Invalid playlist format: missing #EXT-X-MEDIA-SEQUENCE and #EXT-X-PLAYLIST-TYPE tag.");
-//                pos+= strlen(c_TYPE);
-//                body = data.substr(pos);
-//                std::string vod("VOD");
-//                if(body.substr(0,vod.size()) != vod)
-//                    throw PlaylistException("Invalid playlist format: VOD playlist expected.");
-//                m_isVod = true;
-//                body=body.substr(0, body.find(c_END));
-//            }
+            
+            // VOD should contain END tag
             pos = data.find(c_END);
             m_isVod = pos != std::string::npos;
             body=data.substr(0, pos);
 
             pos = body.find(c_INF);
             bool hasContent = false;
+            // Load playlist segments
             while(std::string::npos != pos) {
                 pos += strlen(c_INF);
                 body = body.substr(pos);
@@ -244,7 +234,7 @@ namespace Buffers {
                     auto url = body.substr(urlPos, urlLen);
                     trim(url);
                     url = ToAbsoluteUrl(url, m_effectivePlayListUrl) + m_httplHeaders;
-                    //            LogNotice("IDX: %u Duration: %f. URL: %s", mediaIndex, duration, url.c_str());
+                    LogDebug("Plist::ParsePlist(): new segment IDX: %u Duration: %f. URL: %s", mediaIndex, duration, url.c_str());
                     m_segmentUrls[mediaIndex] = TSegmentUrls::mapped_type(duration, url, mediaIndex);
                 }
                 ++mediaIndex;
