@@ -306,23 +306,31 @@ namespace EdemEngine
     
     static void ParseChannelAndGroup(const string& data, unsigned int plistIndex, PlaylistContent& channels)
     {
-        //0,РБК-ТВ
-        //#EXTGRP:новости
-        //http://882406a1.iptvspy.me/iptv/xxx/106/index.m3u8
-        
+        // 0,РБК-ТВ
+        // #EXTGRP:новости
+        // http://882406a1.iptvspy.me/iptv/xxx/106/index.m3u8
+        //
+        // or
+        //
+        // #EXTINF:-1 catchup group-title="Познавательные" tvg-id="738589577doktor",Доктор
+        // http://192.168.1.69:9094/InternationalID=386
+
         auto pos = data.find(',');
         if(string::npos == pos)
             throw BadPlaylistFormatException("Invalid channel block format: missing ','  delinmeter.");
+        
         pos += 1;
         auto endlLine = data.find('\n');
         string name = data.substr(pos, endlLine - pos);
         rtrim(name);
         
+        string groupName("Без группы");
+        try { groupName = FindVar(data, 0, "group-title");} catch (...) {}
+
         string tail = data.substr(endlLine + 1);
         const char* c_GROUP = "#EXTGRP:";
         pos = tail.find(c_GROUP);
         // Optional channel group
-        string groupName = "Без группы";
         endlLine = 0;
         if(string::npos != pos) {
             //  throw BadPlaylistFormatException("Invalid channel block format: missing '#EXTGRP:'  tag.");
