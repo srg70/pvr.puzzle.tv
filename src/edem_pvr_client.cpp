@@ -225,7 +225,7 @@ public:
     virtual time_t Duration() const
     {
         time_t fromNow = time(nullptr) - _recordingTime;
-        return std::min(_duration, fromNow) ;
+        return (difftime(_duration, fromNow) < 0 ? _duration : fromNow) ;
     }
     virtual std::string UrlForTimeshift(time_t timeshiftReqested, time_t* timeshiftAdjusted = nullptr) const
     {

@@ -269,17 +269,17 @@ public:
     virtual time_t Duration() const
     {
         time_t fromNow = time(nullptr) - _recordingTime;
-        return std::min(_duration, fromNow) ;
+        return (difftime(_duration, fromNow) < 0 ? _duration : fromNow);
     }
     virtual std::string UrlForTimeshift(time_t timeshiftReqested, time_t* timeshiftAdjusted = nullptr) const
     {
         //auto startTime = std::min(_recordingTime + timeshiftReqested, _recordingTime + Duration());
-        auto startTime = _recordingTime + timeshiftReqested;
+        time_t startTime = _recordingTime + timeshiftReqested;
         if(startTime < _recordingTime)
             startTime = _recordingTime;
         if(timeshiftAdjusted)
             *timeshiftAdjusted = startTime - _recordingTime;
-        return  _core->GetArchiveUrl(_channelId, startTime, _duration);
+        return  _core->GetArchiveUrl(_channelId, startTime, Duration());
     }
     
 private:

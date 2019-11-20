@@ -243,10 +243,10 @@ namespace Buffers {
             float segmentTimeOffset = m_currentSegmentIndex * m_playlist.TargetDuration();
             if(segmentTimeOffset >= m_delegate->Duration()) {
                 status = k_SegmentStatus_EOF;
-                LogDebug("PlaylistCache: wrong current segment index #%" PRIu64 ". Requested time offset %f. Stream duration %f.", m_currentSegmentIndex, segmentTimeOffset, m_delegate->Duration());
+                LogDebug("PlaylistCache: wrong current segment index #%" PRIu64 ". Requested time offset %f. Stream duration %d.", m_currentSegmentIndex, segmentTimeOffset, m_delegate->Duration());
             } else {
                 status = k_SegmentStatus_Loading;
-                LogDebug("PlaylistCache: segment with index #%" PRIu64 " should start loading shortly. Requested time offset %f. Stream duration %f.", m_currentSegmentIndex, segmentTimeOffset, m_delegate->Duration());
+                LogDebug("PlaylistCache: segment with index #%" PRIu64 " should start loading shortly. Requested time offset %f. Stream duration %d.", m_currentSegmentIndex, segmentTimeOffset, m_delegate->Duration());
             }
         }else {
             // Live stream
@@ -334,56 +334,59 @@ namespace Buffers {
         // Can't seek without delegate
         if(!CanSeek())
             return false;
-
+        
         m_dataToLoad = TSegmentInfos();
         MutableSegment::TimeOffset timeOffset = TimeOffsetFromProsition(position);
         MutableSegment::TimeOffset segmentTime = 0.0;
         float segmentDuration = 0.0;
-        // VOD plailist contains all segments already
-        // So just move loading iterator to position
-        if(m_playlist.IsVod()) {
-            bool found = false;
-            for (const auto& pSeg : m_segments) {
-                segmentTime = pSeg.second->timeOffset;
-                segmentDuration = pSeg.second->Duration();
-                if( segmentTime <= timeOffset && timeOffset < segmentTime + segmentDuration) {
-                    found = true;
-                    *nextSegmentIndex = m_currentSegmentIndex = pSeg.first;
-                    m_playlist.SetNextSegmentIndex(m_currentSegmentIndex);
-                    // Calculate position inside segment
-                    // as rational part of time offset
-                    m_currentSegmentPositionFactor = (timeOffset - segmentTime) / segmentDuration;
-                    break;
-                }
+        // Plailist may contain required segments already
+        // If so, just move loading iterator to position
+        bool found = false;
+        for (const auto& pSeg : m_segments) {
+            segmentTime = pSeg.second->timeOffset;
+            segmentDuration = pSeg.second->Duration();
+            if( segmentTime <= timeOffset && timeOffset < segmentTime + segmentDuration) {
+                found = true;
+                *nextSegmentIndex = m_currentSegmentIndex = pSeg.first;
+                m_playlist.SetNextSegmentIndex(m_currentSegmentIndex);
+                // Calculate position inside segment
+                // as rational part of time offset
+                m_currentSegmentPositionFactor = (timeOffset - segmentTime) / segmentDuration;
+                break;
             }
-            if(!found){
+        }
+        if(!found) {
+            // For VOD: if the segment was not found, return an EOF immediately.
+            if(m_playlist.IsVod()) {
                 LogError("PlaylistCache: position %" PRId64 " can't be seek. Time offset %f. Total duration %f."  , position, timeOffset, (nullptr != m_delegate ? m_delegate->Duration() : -1.0));
                 // Can't be
                 return false;
-            }
-        } else {
-            if(timeOffset > m_delegate->Duration()) {
-                LogError("PlaylistCache: requested time offset %f exits stream duration %f.", timeOffset, (nullptr != m_delegate ? m_delegate->Duration() : -1.0));
-                // Can't be
-                return false;
-            }
-            segmentTime = timeOffset;
-            segmentDuration = m_playlist.TargetDuration();
-            
-            time_t adjustedTimeOffset = timeOffset;
-            auto url = m_delegate->UrlForTimeshift(timeOffset, &adjustedTimeOffset);
-            uint64_t indexOffset = timeOffset / m_playlist.TargetDuration();
-            m_playlist = Playlist(url, indexOffset);
-            if(!ReloadPlaylist()){
-                LogError("PlaylistCache: playlist update failed.");
-                return false;
-            }
+            } else {
+                if(timeOffset > m_delegate->Duration()) {
+                    LogError("PlaylistCache: requested time offset %f exits stream duration %d.", timeOffset, (nullptr != m_delegate ? m_delegate->Duration() : -1.0));
+                    // Can't be
+                    return false;
+                }
+                segmentTime = timeOffset;
+                segmentDuration = m_playlist.TargetDuration();
                 
-            m_playlistTimeOffset = indexOffset * m_playlist.TargetDuration();
-            m_currentSegmentIndex = indexOffset;
-            m_currentSegmentPositionFactor = (timeOffset - m_playlistTimeOffset) / m_playlist.TargetDuration();
+                time_t adjustedTimeOffset = timeOffset;
+                auto url = m_delegate->UrlForTimeshift(timeOffset, &adjustedTimeOffset);
+                uint64_t indexOffset = timeOffset / m_playlist.TargetDuration();
+                try {
+                    m_playlist = Playlist(url, indexOffset);
+                    if(!ReloadPlaylist())
+                        throw PlaylistCacheException("ReloadPlaylist() failed.");
+                } catch (std::exception& ex) {
+                    LogError( "PlaylistCache: %s", ex.what());
+                    return false;
+                }
+                
+                m_playlistTimeOffset = indexOffset * m_playlist.TargetDuration();
+                *nextSegmentIndex = m_currentSegmentIndex = indexOffset;
+                m_currentSegmentPositionFactor = (timeOffset - m_playlistTimeOffset) / m_playlist.TargetDuration();
+            }
         }
-        
         if(m_currentSegmentPositionFactor > 1.0) {
             LogError("PlaylistCache: segment position factor can't be > 1.0. Requested offset %f, segment timestamp %f, duration %f", timeOffset, segmentTime, segmentDuration);
         } else {

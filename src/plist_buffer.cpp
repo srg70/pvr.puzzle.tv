@@ -70,7 +70,7 @@ namespace Buffers {
                 m_cache = new PlaylistCache(playlistUrl, m_delegate, m_seekForVod);
             } catch (PlaylistException ex) {
                 XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32024));
-                throw InputBufferException((std::string("Playlist exception: ") + ex.what()).c_str());
+                throw PlistBufferException((std::string("Playlist exception: ") + ex.what()).c_str());
             }
             m_position = 0;
             m_currentSegment = nullptr;
@@ -196,7 +196,7 @@ namespace Buffers {
                         if(segmentReady)
                             LogDebug("PlaylistBuffer: End fill segment #%" PRIu64 ".", m_loadingSegmentIndex);
                         else
-                            LogDebug("PlaylistBuffer: FAILED to fill segment. New segmenet to fill #%" PRIu64 ".", m_loadingSegmentIndex);
+                            LogDebug("PlaylistBuffer: FAILED to fill segment (or canceled). New segmenet to fill #%" PRIu64 ".", m_loadingSegmentIndex);
                         
                         auto duration = segment->Duration();
                         //                    LogDebug("PlaylistBuffer: Segment duration: %f", duration);
@@ -374,8 +374,7 @@ namespace Buffers {
         iWhence = SEEK_SET;
         LogDebug("PlaylistBuffer: Seek calculated pos %" PRId64 "", iPosition);
 
-        int64_t seekDelta =  iPosition - m_position;
-        if(seekDelta == 0)
+        if(iPosition == m_position)
             return m_position;
         // If cahce failed to prepare for seek operation
         // return failed code

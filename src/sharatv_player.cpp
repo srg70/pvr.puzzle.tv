@@ -195,7 +195,12 @@ namespace SharaTvEngine
         // Optional duration tag
         pos = url.find(c_DURATION);
         if(string::npos != pos){
-            url.replace(pos, strlen(c_DURATION), n_to_string(duration));
+            time_t endTime = startTime + duration;
+            // If recording ends less then 5 seconds before NOW
+            // assume current broadcast, i.e. use "now" keyword
+            std::string strDuration = difftime(time(NULL), endTime) < 5 ? "now" : n_to_string(duration);
+                
+            url.replace(pos, strlen(c_DURATION), strDuration);
         }
 
         // Optional offset tag
@@ -476,8 +481,8 @@ namespace SharaTvEngine
                 auto firstAmp = url.find_first_of('?');
                 if(string::npos == lastSlash)
                     throw BadPlaylistFormatException((string("Invalid channel URL: ") + url).c_str());
-                archiveUrl = url.substr(0, lastSlash + 1) + "timeshift_abs_video-" + c_START + ".m3u8" + url.substr(firstAmp);
-//                archiveUrl = url.substr(0, lastSlash + 1) + "video-" + c_START + "-" + c_DURATION + ".m3u8" + url.substr(firstAmp);
+                //archiveUrl = url.substr(0, lastSlash + 1) + "timeshift_abs_video-" + c_START + ".m3u8" + url.substr(firstAmp);
+                archiveUrl = url.substr(0, lastSlash + 1) + "video-" + c_START + "-" + c_DURATION + ".m3u8" + url.substr(firstAmp);
             }
         }
         // probably we have global archive tag
@@ -489,7 +494,8 @@ namespace SharaTvEngine
             LogDebug("SharaTvPlayer: %s channe's archive url %s", name.c_str(), archiveUrl.c_str());
         
         Channel channel;
-        channel.UniqueId = channel.EpgId = EpgChannelIdToKodi(tvgId);
+        channel.UniqueId = XMLTV::ChannelIdForChannelName(name);
+        channel.EpgId = EpgChannelIdToKodi(tvgId);
        // LogDebug("Channe: TVG id %s => EPG id %d", tvgId.c_str(), channel.EpgId);
         channel.Name = name;
         channel.Number = plistIndex;
@@ -497,7 +503,7 @@ namespace SharaTvEngine
         channel.HasArchive = !archiveType.empty();
         channel.IconPath = iconPath;
         channel.IsRadio = false;
-        channels[tvgId] = PlaylistContent::mapped_type(channel,groupName);
+        channels[name] = PlaylistContent::mapped_type(channel,groupName);
         if(channel.HasArchive) {
             archiveInfo.emplace(channel.UniqueId, std::move(ArchiveInfo(archiveDays, archiveUrl)));
         }
