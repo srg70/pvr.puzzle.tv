@@ -234,7 +234,7 @@ namespace Buffers {
                     auto url = body.substr(urlPos, urlLen);
                     trim(url);
                     url = ToAbsoluteUrl(url, m_effectivePlayListUrl) + m_httplHeaders;
-                    LogDebug("Plist::ParsePlist(): new segment IDX: %u Duration: %f. URL: %s", mediaIndex, duration, url.c_str());
+                    LogDebug("Plist::ParsePlist(): new segment URL IDX: %u Duration: %f. URL: %s", mediaIndex, duration, url.c_str());
                     m_segmentUrls[mediaIndex] = TSegmentUrls::mapped_type(duration, url, mediaIndex);
                 }
                 ++mediaIndex;

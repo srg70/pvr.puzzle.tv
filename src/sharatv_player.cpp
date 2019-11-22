@@ -185,10 +185,13 @@ namespace SharaTvEngine
         if(url.empty())
             return url;
   
+        std::string debugTimes = "SharaTvPlayer: requested archive";
+        
         // Optinal start tag
         size_t pos = url.find(c_START);
         if(string::npos != pos){
             url.replace(pos, strlen(c_START), n_to_string(startTime));
+            debugTimes += " from " + time_t_to_string(startTime);
         }
         
         // Optional duration tag
@@ -197,9 +200,16 @@ namespace SharaTvEngine
             time_t endTime = startTime + duration;
             // If recording ends less then 5 seconds before NOW
             // assume current broadcast, i.e. use "now" keyword
-            std::string strDuration = difftime(time(NULL), endTime) < 5 ? "now" : n_to_string(duration);
-                
+            std::string strDuration;
+            if(difftime(time(NULL), endTime) < 5) {
+                strDuration =  "now";
+                debugTimes += " to now";
+            } else {
+                strDuration =  n_to_string(duration);
+                debugTimes += " to " + time_t_to_string(duration);
+            }
             url.replace(pos, strlen(c_DURATION), strDuration);
+            
         }
 
         // Optional offset tag
@@ -207,7 +217,9 @@ namespace SharaTvEngine
         if(string::npos != pos){
             auto offset = time(NULL) - startTime;
             url.replace(pos, strlen(c_OFFSET), n_to_string(offset));
+            debugTimes += " with offset " + time_t_to_string(offset);
         }
+        LogDebug(debugTimes.c_str());
         return  url;
     }
         
