@@ -173,7 +173,7 @@ namespace Buffers {
                     {
                         CLockObject lock(m_syncAccess);
                         // NOTE: this method frees space in cache
-                        // Must be alvais called
+                        // Must be called in any case
                         chacheIsFull = !m_cache->HasSpaceForNewSegment();
                     }
                     // When we waiting for room in cache (e.g stream is on pause)
