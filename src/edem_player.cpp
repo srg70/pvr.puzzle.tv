@@ -146,16 +146,22 @@ namespace EdemEngine
     
     static string FindVar(const string& data, string::size_type pos, const char* varTag)
     {
-        pos = data.find(varTag, pos);
+        string strTag(varTag);
+        strTag += '=';
+        pos = data.find(strTag, pos);
         if(string::npos == pos)
             throw BadPlaylistFormatException((string("Invalid playlist format: missing variable ") + varTag).c_str());
-        pos += strlen(varTag);
+        pos += strTag.size();
         
+        //check whether tag is missing = and "
+        if(data[pos] == '=') ++pos;
+        if(data[pos] == '"') ++pos;
+
         auto pos_end = data.find("\"", pos);
         if(string::npos == pos)
             throw BadPlaylistFormatException((string("Invalid playlist format: missing end of variable ") + varTag).c_str());
         return data.substr(pos, pos_end - pos);
-
+        
     }
    
     std::string Core::GetArchiveUrl(ChannelId channelId, time_t startTime)
