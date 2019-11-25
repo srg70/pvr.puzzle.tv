@@ -234,7 +234,7 @@ namespace Buffers {
                     auto url = body.substr(urlPos, urlLen);
                     trim(url);
                     url = ToAbsoluteUrl(url, m_effectivePlayListUrl) + m_httplHeaders;
-                    LogDebug("Plist::ParsePlist(): new segment URL IDX: %u Duration: %f. URL: %s", mediaIndex, duration, url.c_str());
+                    LogDebug("Plist::ParsePlist(): new segment URL IDX: #%" PRIu64 " Duration: %f. URL: %s", mediaIndex, duration, url.c_str());
                     m_segmentUrls[mediaIndex] = TSegmentUrls::mapped_type(duration, url, mediaIndex);
                 }
                 ++mediaIndex;
@@ -244,7 +244,7 @@ namespace Buffers {
             return hasContent;
         } catch (std::exception& ex) {
             LogError("Bad M3U : parser error %s", ex.what() );
-            LogError("M3U data : \n %s", data.c_str() );
+            LogError("M3U data : \n %s", data.c_str() );	
             throw;
         } catch (...) {
             LogError("Bad M3U : \n %s", data.c_str() );

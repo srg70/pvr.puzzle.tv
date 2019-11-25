@@ -213,7 +213,7 @@ namespace PvrClient {
         virtual std::string GetUrl(PvrClient::ChannelId channelId) = 0;
 
         virtual void ReloadRecordings() = 0;
-        virtual void UpdateArchiveInfo() = 0;
+        virtual int UpdateArchiveInfoAndCount() = 0;
         virtual void CallRpcAsync(const std::string & data, std::function<void(rapidjson::Document&)>  parser,
                                   ActionQueue::TCompletion completion) = 0;
         

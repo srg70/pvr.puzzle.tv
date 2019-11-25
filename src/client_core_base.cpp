@@ -568,11 +568,17 @@ void ClientCoreBase::ReloadRecordings()
 {
     OnEpgUpdateDone();
 }
-void ClientCoreBase::UpdateArchiveInfo()
+
+int ClientCoreBase::UpdateArchiveInfoAndCount()
 {
+    int size = 0;
+    P8PLATFORM::CLockObject lock(m_epgAccessMutex);
     for(auto& i : m_epgEntries) {
         UpdateHasArchive(i.second);
+        if(i.second.HasArchive)
+            ++size;
     }
+    return size;
 }
 
 #pragma mark -

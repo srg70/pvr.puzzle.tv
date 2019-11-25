@@ -387,7 +387,7 @@ bool PVRClientBase::IsRealTimeStream(void)
     double reliativePos = (double)(m_inputBuffer->GetLength() - m_inputBuffer->GetPosition()) / m_inputBuffer->GetLength();
     time_t timeToEnd = reliativePos * (m_inputBuffer->EndTime() - m_inputBuffer->StartTime());
     const bool isRTS = timeToEnd < 10;
-    LogDebug("PVRClientBase: is RTS? %s. Reliative pos: %f. Time to end: %d", ((isRTS) ? "YES" : "NO"), reliativePos, timeToEnd );
+    //LogDebug("PVRClientBase: is RTS? %s. Reliative pos: %f. Time to end: %d", ((isRTS) ? "YES" : "NO"), reliativePos, timeToEnd );
     return isRTS;
 }
 
@@ -829,17 +829,8 @@ int PVRClientBase::GetRecordingsAmount(bool deleted)
         return 0;
     }
     
-    int size = 0;
-    m_clientCore->UpdateArchiveInfo();
+    int size = m_clientCore->UpdateArchiveInfoAndCount();
 
-    IClientCore::EpgEntryAction action = [this, &size](const EpgEntryList::value_type& p)
-    {
-        if(p.second.HasArchive)
-            ++size;
-        return true;
-    };
-    m_clientCore->ForEachEpg(action);
-    
     // Add local recordings
     if(XBMC->DirectoryExists(m_recordingsDir.c_str()))
     {
@@ -912,9 +903,11 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
     PVR_ERROR result = PVR_ERROR_NO_ERROR;
     auto pThis = this;
     
+    int size = 0;
     LogDebug("PVRClientBase: start recorings transfering...");
-    //std::list<PVR_RECORDING> recs;
-    IClientCore::EpgEntryAction action = [pThis ,&result, &handle](const EpgEntryList::value_type& epgEntry)
+
+    // Populate server recordings
+    IClientCore::EpgEntryAction action = [pThis ,&result, &handle, &size](const EpgEntryList::value_type& epgEntry)
     {
         try {
            if(!epgEntry.second.HasArchive)
@@ -924,6 +917,7 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
             pThis->FillRecording(epgEntry, tag, s_RemoteRecPrefix.c_str());
             //recs.push_back(tag);
             PVR->TransferRecordingEntry(handle, &tag);
+            ++size;
             return true;
         }
         catch (...)  {
@@ -935,10 +929,6 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
     };
     m_clientCore->ForEachEpg(action);
     
-    // Populate server recordings
-//    for (auto& r : recs) {
-//        PVR->TransferRecordingEntry(handle, &r);
-//    }
     // Add local recordings
     if(XBMC->DirectoryExists(m_recordingsDir.c_str()))
     {
@@ -959,9 +949,11 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
                 continue;
 
             PVR->TransferRecordingEntry(handle, &tag);
+            ++size;
         }
     }
-    LogDebug("PVRClientBase: recorings transfering done.");
+    LogDebug("PVRClientBase: done transfering of %d recorings.", size);
+    m_lastRecordingsAmount = size;
 
     return result;
 }
