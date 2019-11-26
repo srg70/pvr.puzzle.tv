@@ -355,7 +355,7 @@ namespace SharaTvEngine
         }
         string header = data.substr(pos, range);
         try { globalTags.m_epgUrl = FindVar(header, 0, "url-tvg");} catch (...) {}
-        try { globalTags.m_catchupDays = FindVar(header, 0, "catchup-days");} catch (...) {}
+        try { globalTags.m_catchupDays = stoul(FindVar(header, 0, "catchup-days"));} catch (...) {}
         try {
             globalTags.m_catchupType = FindVar(header, 0, "catchup");
             LogDebug("SharaTvPlayer: gloabal catchup type: %s", globalTags.m_catchupType.c_str());
@@ -498,8 +498,20 @@ namespace SharaTvEngine
         }
         // probably we have global archive tag
         else if(globalTags.m_catchupType == "append"){
-            archiveUrl = url + globalTags.m_catchupSource;
-            archiveDays = stoul(globalTags.m_catchupDays);
+            archiveUrl = url;
+            if(archiveUrl.find("?") == string::npos) {
+                // Just add catchup tag a parameters block
+                archiveUrl += globalTags.m_catchupSource;
+            } else {
+                // Add catchup tag to parameters block
+                StringUtils::Replace(archiveUrl, "?", globalTags.m_catchupSource + "&");
+            }
+            if(globalTags.m_catchupDays > 0) {
+                archiveDays = globalTags.m_catchupDays;
+            } else {
+                // catchup-days is mandatory tag.
+                try {  archiveDays = stoul(FindVar(data, 0, "catchup-days"));} catch (...) { archiveUrl.clear();}
+            }
         }
         if(!archiveUrl.empty())
             LogDebug("SharaTvPlayer: %s channe's archive url %s", name.c_str(), archiveUrl.c_str());
@@ -511,7 +523,7 @@ namespace SharaTvEngine
         channel.Name = name;
         channel.Number = plistIndex;
         channel.Urls.push_back(url);
-        channel.HasArchive = !archiveType.empty();
+        channel.HasArchive = !archiveUrl.empty();
         channel.IconPath = iconPath;
         channel.IsRadio = false;
         channels[name] = PlaylistContent::mapped_type(channel,groupName);
