@@ -80,10 +80,11 @@ namespace SharaTvEngine
     
     struct GloabalTags
     {
+        GloabalTags() : m_catchupDays(0) {}
         std::string m_epgUrl;
         std::string m_catchupType;
         std::string m_catchupSource;
-        std::string m_catchupDays;
+        unsigned long m_catchupDays;
 
     };
 

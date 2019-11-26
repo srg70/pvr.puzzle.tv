@@ -29,57 +29,63 @@
 #include <exception>
 
 namespace Buffers{
-    
-    struct SegmentInfo {
-        SegmentInfo () : duration(0.0) , index (-1){}
-        SegmentInfo(float d, std::string u, uint64_t i) : url(u), duration(d), index(i){}
-        SegmentInfo(const SegmentInfo& info) : SegmentInfo(info.duration, info.url, info.index) {}
-        SegmentInfo&  operator=(const SegmentInfo&& s) { return *new (this)SegmentInfo(s.duration, s.url, s.index);}
-        SegmentInfo&  operator=(const SegmentInfo& s) { return *new (this)SegmentInfo(s.duration, s.url, s.index);}
-        const std::string url;
-        const float duration;
-        uint64_t index;
-    };
-    
-    class Playlist {
-    public:
-        Playlist(const std::string &url, uint64_t indexOffset = 0);
-        bool NextSegment(SegmentInfo& info, bool& hasMoreSegments);
-        bool SetNextSegmentIndex(uint64_t offset);
-        bool Reload();
-        bool IsVod() const {return m_isVod;}
-        int TargetDuration() const {return m_targetDuration;}
-    private:
-        typedef std::map<uint64_t, SegmentInfo> TSegmentUrls;
 
-        bool ParsePlaylist(const std::string& data);
-        void SetBestPlaylist(const std::string& playlistUrl);
-        void LoadPlaylist(std::string& data) const;
+typedef  float TimeOffset;
 
-        
-        TSegmentUrls m_segmentUrls;
-        std::string  m_playListUrl;
-        mutable std::string  m_effectivePlayListUrl;
-        uint64_t m_loadIterator;
-        bool m_isVod;
-        uint64_t m_indexOffset;
-        uint64_t m_initialInternalIndex;
-        int m_targetDuration;
-        std::string m_httplHeaders;
+struct SegmentInfo {
+    SegmentInfo () : startTime(0.0), duration(0.0) , index (-1){}
+    SegmentInfo(float t, float d, std::string u, uint64_t i) : startTime(t), url(u), duration(d), index(i){}
+    SegmentInfo(const SegmentInfo& info) : SegmentInfo(info.startTime, info.duration, info.url, info.index) {}
+    SegmentInfo&  operator=(const SegmentInfo&& s) { return *new (this)SegmentInfo(s.startTime, s.duration, s.url, s.index);}
+    SegmentInfo&  operator=(const SegmentInfo& s) { return *new (this)SegmentInfo(s.startTime, s.duration, s.url, s.index);}
+    const std::string url;
+    // Calculated from playlist's index offset
+    const TimeOffset startTime;
+    const float duration;
+    uint64_t index;
+};
 
-    };
+class Playlist {
+public:
+    Playlist(const std::string &url, uint64_t indexOffset = 0);
+    Playlist(const Playlist& playlist);
+    bool NextSegment(SegmentInfo& info, bool& hasMoreSegments);
+    bool SetNextSegmentIndex(uint64_t offset);
+    bool Reload();
+    bool IsVod() const {return m_isVod;}
+    int TargetDuration() const {return m_targetDuration;}
+    TimeOffset GetTimeOffset() const {return m_targetDuration * m_indexOffset;}
+private:
+    typedef std::map<uint64_t, SegmentInfo> TSegmentUrls;
     
-    class PlaylistException :  public std::exception
-    {
-    public:
-        PlaylistException(const char* reason = "")
-        : m_reason(reason)
-        {}
-        virtual const char* what() const noexcept {return m_reason.c_str();}
-        
-    private:
-        std::string m_reason;
-    };
+    bool ParsePlaylist(const std::string& data);
+    void SetBestPlaylist(const std::string& playlistUrl);
+    void LoadPlaylist(std::string& data) const;
+    
+    
+    TSegmentUrls m_segmentUrls;
+    std::string  m_playListUrl;
+    mutable std::string  m_effectivePlayListUrl;
+    uint64_t m_loadIterator;
+    bool m_isVod;
+    const uint64_t m_indexOffset;
+    uint64_t m_initialInternalIndex;
+    int m_targetDuration;
+    std::string m_httplHeaders;
+    
+};
+
+class PlaylistException :  public std::exception
+{
+public:
+    PlaylistException(const char* reason = "")
+    : m_reason(reason)
+    {}
+    virtual const char* what() const noexcept {return m_reason.c_str();}
+    
+private:
+    std::string m_reason;
+};
 
 }
 

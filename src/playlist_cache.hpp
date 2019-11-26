@@ -57,7 +57,6 @@ namespace Buffers {
     
     class MutableSegment : public Segment {
     public:
-        typedef  float TimeOffset;
         typedef int64_t DataOffset;
 
         const TimeOffset timeOffset;
@@ -125,16 +124,17 @@ namespace Buffers {
         typedef std::map<uint64_t, std::unique_ptr<MutableSegment>>  TSegments;
         typedef std::deque<SegmentInfo> TSegmentInfos;
         
-        MutableSegment::TimeOffset TimeOffsetFromProsition(int64_t position) const {
+        TimeOffset TimeOffsetFromProsition(int64_t position) const {
             float bitrate = Bitrate();
             return (bitrate == 0.0) ? 0.0 : position/bitrate;
         }
         float Bitrate() const { return m_bitrate;}
         bool ProcessPlaylist();
+        void QueueAllSegmentsForLoading();
         
         Playlist m_playlist;
         PlaylistBufferDelegate m_delegate;
-        MutableSegment::TimeOffset m_playlistTimeOffset;
+        TimeOffset m_playlistTimeOffset;
         TSegmentInfos m_dataToLoad;
         TSegments m_segments;
         int64_t m_totalLength;

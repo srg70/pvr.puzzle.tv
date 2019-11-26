@@ -178,12 +178,19 @@ namespace Buffers {
                     }
                     // When we waiting for room in cache (e.g stream is on pause)
                     // try to ping server to avoid connection lost
-                    if(chacheIsFull && nullptr != segment) {
-                        isStopped = IsStopped(segment->Duration());
+                    if(chacheIsFull) {
+                        if(nullptr != segment) {
+                            isStopped = IsStopped(segment->Duration());
+                        } else  {
+                            isStopped = IsStopped(1);
+                        }
                         if(!isStopped) {
-                            struct __stat64 stat;
-                            XBMC->StatFile(segment->info.url.c_str(), &stat);
-                            LogDebug("PlaylistBuffer: waiting for space in cache...Stat segment #%" PRIu64 ".", m_loadingSegmentIndex);
+                            LogDebug("PlaylistBuffer: waiting for space in cache...");
+                            if(nullptr != segment) {
+                                struct __stat64 stat;
+                                XBMC->StatFile(segment->info.url.c_str(), &stat);
+                                LogDebug("Stat segment #%" PRIu64 ".", m_loadingSegmentIndex);
+                            }
                         }
                     }
                 } while(chacheIsFull && !isStopped);
@@ -196,8 +203,9 @@ namespace Buffers {
                         if(segmentReady)
                             LogDebug("PlaylistBuffer: End fill segment #%" PRIu64 ".", m_loadingSegmentIndex);
                         else
-                            LogDebug("PlaylistBuffer: FAILED to fill segment (or canceled). New segmenet to fill #%" PRIu64 ".", m_loadingSegmentIndex);
+                            LogDebug("PlaylistBuffer: FAILED (or canceled) to fill segment  #%" PRIu64 ". New segmenet to fill #%" PRIu64 ".", segment->info.index, m_loadingSegmentIndex);
                         
+
                         auto duration = segment->Duration();
                         //                    LogDebug("PlaylistBuffer: Segment duration: %f", duration);
                         // Populate loaded segment
