@@ -448,7 +448,10 @@ namespace SharaTvEngine
 
         string iconPath;
         try { iconPath = FindVar(data, 0, "tvg-logo");} catch (...) {}
-
+        
+        int tvgShift = 0;
+        try { tvgShift = static_cast<int>(std::atof(FindVar(data, 0, "tvg-shift").c_str()) * 3600);} catch (...) {}
+        
         unsigned int archiveDays;
         string archiveUrl;
         string archiveType;
@@ -527,6 +530,7 @@ namespace SharaTvEngine
         channel.HasArchive = !archiveUrl.empty();
         channel.IconPath = iconPath;
         channel.IsRadio = false;
+        channel.TvgShift = tvgShift;
         channels[name] = PlaylistContent::mapped_type(channel,groupName);
         if(channel.HasArchive) {
             archiveInfo.emplace(channel.UniqueId, std::move(ArchiveInfo(archiveDays, archiveUrl)));

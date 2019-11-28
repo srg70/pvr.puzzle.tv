@@ -54,11 +54,16 @@ namespace PvrClient {
         UrlList Urls;
         bool HasArchive;
         bool IsRadio;
+        int TvgShift;
        
         bool operator <(const Channel &anotherChannel) const
         {
             return UniqueId < anotherChannel.UniqueId;
         }
+        Channel()
+        : UniqueId(UnknownChannelId), EpgId (UnknownChannelId)
+        , Number(0), TvgShift(0), HasArchive(false), IsRadio(false)
+        {}
     };
     
     
