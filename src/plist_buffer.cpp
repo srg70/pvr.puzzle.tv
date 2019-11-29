@@ -113,10 +113,10 @@ namespace Buffers {
 
         // Some content type should be treated as playlist
         // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.1
-        char* contentType = XBMC->GetFilePropertyValue(f, XFILE::FILE_PROPERTY_CONTENT_TYPE, "");
-        const bool contentIsPlaylist =  NULL != contentType && ( 0 == strcmp("application/vnd.apple.mpegurl", contentType)  || 0 == strcmp("audio/mpegurl", contentType));
+        //char* contentType = XBMC->GetFilePropertyValue(f, XFILE::FILE_PROPERTY_CONTENT_TYPE, "");
+        const bool contentIsPlaylist =  false;//NULL != contentType && ( 0 == strcmp("application/vnd.apple.mpegurl", contentType)  || 0 == strcmp("audio/mpegurl", contentType));
         std::string contentForPlaylist;
-        XBMC->FreeString(contentType);
+        //XBMC->FreeString(contentType);
 
         unsigned char buffer[8196];
         ssize_t  bytesRead;
