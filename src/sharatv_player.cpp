@@ -129,27 +129,10 @@ namespace SharaTvEngine
         string data;
         XMLTV::GetCachedFileContents(m_playListUrl, data);
 
-        ArchiveInfos archiveInfo;
+        m_archiveInfo.Reset();
         PlaylistContent plistContent;
-        ParsePlaylist(data, m_globalTags, plistContent, archiveInfo);
+        ParsePlaylist(data, m_globalTags, plistContent, m_archiveInfo);
         
-//        auto pThis = this;
-//
-//        ChannelCallback onNewChannel = [&pThis, &plistContent, &archiveInfo](const EpgChannel& newChannel){
-//            if(plistContent.count(newChannel.strName) != 0) {
-//                auto& plistChannel = plistContent[newChannel.strName].first;
-//                if(plistChannel.HasArchive) {
-//                    pThis->m_archiveInfo.emplace(newChannel.id, archiveInfo.at(plistChannel.Id));
-//                    archiveInfo.erase(plistChannel.Id);
-//                }
-//                plistChannel.Id = newChannel.id;
-//                if(!newChannel.strIcon.empty())
-//                    plistChannel.IconPath = newChannel.strIcon;
-//            }
-//        };
-//
-//        XMLTV::ParseChannels(m_epgUrl, onNewChannel);
-
         for(const auto& channelWithGroup : plistContent)
         {
             const auto& channel = channelWithGroup.second.first;
@@ -173,15 +156,15 @@ namespace SharaTvEngine
             AddChannelToGroup(itGroup->first, channel.UniqueId);
         }
         // add rest archives
-        m_archiveInfo.insert(archiveInfo.begin(), archiveInfo.end());
+//        m_archiveInfo.info.insert(archiveInfo.begin(), archiveInfo.end());
     }
     
     std::string Core::GetArchiveUrl(ChannelId channelId, time_t startTime, time_t duration)
     {
-        if(m_archiveInfo.count(channelId) == 0) {
+        if(m_archiveInfo.info.count(channelId) == 0) {
             return string();
         }
-        string url = m_archiveInfo.at(channelId).urlTemplate;
+        string url = m_archiveInfo.info.at(channelId).urlTemplate;
         if(url.empty())
             return url;
   
@@ -246,11 +229,11 @@ namespace SharaTvEngine
         if(pCahnnel == m_channelList.end())
             return; // Unknown channel
         ChannelId chId = pCahnnel->second.UniqueId;
-        if(m_archiveInfo.count(chId) == 0)
+        if(m_archiveInfo.info.count(chId) == 0)
             return;
         
         time_t now = time(nullptr);
-        const time_t archivePeriod = m_archiveInfo.at(chId).days * 24 * 60 * 60; //archive  days in secs
+        const time_t archivePeriod = m_archiveInfo.info.at(chId).days * 24 * 60 * 60; //archive  days in secs
         time_t epgTime = m_addCurrentEpgToArchive ? entry.StartTime : entry.EndTime;
         auto when = now - epgTime;
         entry.HasArchive = when > 0 && when < archivePeriod;
@@ -279,7 +262,7 @@ namespace SharaTvEngine
             
             XMLTV::ParseEpg(m_epgUrl, onEpgEntry, EpgChannelIdToKodi);
             
-            SaveEpgCache(c_EpgCacheFile, 11);
+            SaveEpgCache(c_EpgCacheFile, m_archiveInfo.archiveDays);
 //        } catch (ServerErrorException& ex) {
 //            m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32002), ex.reason.c_str() );
         } catch (...) {
@@ -532,7 +515,9 @@ namespace SharaTvEngine
         channel.TvgShift = tvgShift;
         channels[name] = PlaylistContent::mapped_type(channel,groupName);
         if(channel.HasArchive) {
-            archiveInfo.emplace(channel.UniqueId, std::move(ArchiveInfo(archiveDays, archiveUrl)));
+            archiveInfo.info.emplace(channel.UniqueId, std::move(ArchiveInfo(archiveDays, archiveUrl)));
+            if(archiveInfo.archiveDays < archiveDays)
+                archiveInfo.archiveDays = archiveDays;
         }
     }
     
