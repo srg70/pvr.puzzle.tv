@@ -265,7 +265,7 @@ namespace TtvEngine
             
             XMLTV::ParseEpg(m_coreParams.epgUrl, onEpgEntry);
             
-            SaveEpgCache(c_EpgCacheFile, 11);
+            SaveEpgCache(c_EpgCacheFile);
         } catch (...) {
             LogError(" >>>>  FAILED receive EPG <<<<<");
         }

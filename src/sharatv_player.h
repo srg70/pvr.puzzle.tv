@@ -76,7 +76,16 @@ namespace SharaTvEngine
         const unsigned int days;
         const std::string urlTemplate;
     };
-    typedef std::map<PvrClient::ChannelId, ArchiveInfo> ArchiveInfos;
+
+    struct ArchiveInfos {
+        ArchiveInfos() : archiveDays(3) {}
+        void Reset() {
+            archiveDays = 3;
+            info.clear();
+        }
+        std::map<PvrClient::ChannelId, ArchiveInfo> info;
+        unsigned int archiveDays;
+    };
     
     struct GloabalTags
     {
