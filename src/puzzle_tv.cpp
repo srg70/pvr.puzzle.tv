@@ -472,9 +472,22 @@ void PuzzleTV::UpdateArhivesAsync()
     ApiFunctionData data("/archive/json/list", m_serverPort);
     CallApiAsync(data ,
                  [localArchiveInfo, pThis] (Document& jsonRoot) {
+                     if(!jsonRoot.IsArray()) {
+                         LogError("PuzzleTV::UpdateArhivesAsync(): bad Puzzle Ser ver response (not array).");
+                         return;
+                     }
                      LogDebug("PuzzleTV::UpdateArhivesAsync(): recivrd %d channels with archive.", jsonRoot.GetArray().Size());
                      for (const auto& ch : jsonRoot.GetArray()) {
+                         if(!ch.IsObject() || !ch.HasMember("name")){
+                             LogError("PuzzleTV::UpdateArhivesAsync(): channnel not an object or unnamed.");
+                             continue;
+                         }
                          const auto& chName = ch["name"].GetString();
+
+                          if(!ch.HasMember("id") || !ch.HasMember("cid")) {
+                             LogError("PuzzleTV::UpdateArhivesAsync(): channnel %s does not have ID or archive ID.", chName);
+                             continue;
+                         }
                          const auto& archiveChId = ch["id"].GetString();
                          const auto& chId = ch["cid"].GetString();
 

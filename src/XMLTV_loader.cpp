@@ -464,7 +464,7 @@ return false;             \
             XBMC->Log(LOG_ERROR, "Invalid EPG XML: no <tv> tag found");
             return false;
         }
-        time_t fileStartAt = std::numeric_limits<time_t>::max();
+        time_t fileStartAt = time(NULL) + 60*60*24*7; // A week after now
         time_t fileEndAt = 0;
         xml_node<> *pChannelNode = NULL;
         for(pChannelNode = pRootElement->first_node("programme"); pChannelNode; pChannelNode = pChannelNode->next_sibling("programme"))
@@ -511,8 +511,12 @@ return false;             \
         
         xmlDoc.doc.clear();
         
+        if(fileEndAt > 0) {
         XBMC->Log(LOG_NOTICE, "XMLTV: EPG loaded from %s to  %s", time_t_to_string(fileStartAt).c_str(), time_t_to_string(fileEndAt).c_str());
 
+        } else {
+            XBMC->Log(LOG_NOTICE, "XMLTV: EPG is empty.");
+        }
         
         return true;
     }
