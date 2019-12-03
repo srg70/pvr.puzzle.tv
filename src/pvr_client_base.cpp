@@ -527,8 +527,10 @@ PVR_ERROR PVRClientBase::GetChannelGroups(ADDON_HANDLE handle, bool bRadio)
         pvrGroup.bIsRadio = false;
         for (auto& itGroup : m_clientCore->GetGroupList())
         {
+            pvrGroup.iPosition = itGroup.first;
             strncpy(pvrGroup.strGroupName, itGroup.second.Name.c_str(), sizeof(pvrGroup.strGroupName));
             PVR->TransferChannelGroup(handle, &pvrGroup);
+            LogDebug("Group %d: %s", pvrGroup.iPosition, pvrGroup.strGroupName);
         }
     }
     
