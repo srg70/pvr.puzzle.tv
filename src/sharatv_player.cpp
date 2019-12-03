@@ -43,38 +43,44 @@
 #include "XMLTV_loader.hpp"
 #include "globals.hpp"
 
-namespace SharaTvEngine
-{
+namespace SharaTvEngine {
+
     using namespace Globals;
     using namespace std;
     using namespace ADDON;
     using namespace rapidjson;
     using namespace PvrClient;
-
+    
     
     // Tags for archive template
     static const char* const c_START = "${start}";
     static const char* const c_DURATION = "${duration}";
     static const char* const c_OFFSET = "${offset}";
-
-
-    static const char* c_EpgCacheFile = "sharatv_epg_cache.txt";
-
-//    struct NoCaseComparator : binary_function<string, string, bool>
-//    {
-//        inline bool operator()(const string& x, const string& y) const
-//        {
-//            return StringUtils::CompareNoCase(x, y) < 0;
-//        }
-//    };
-
-    typedef map<string, pair<Channel, string>/*, NoCaseComparator*/> PlaylistContent;
     
-    static void ParseChannelAndGroup(const std::string& data, const GloabalTags& globalTags, unsigned int plistIndex, PlaylistContent& channels, ArchiveInfos& archiveInfo);
-    static void ParsePlaylist(const string& data, const GloabalTags& globalTags, PlaylistContent& channels, ArchiveInfos& archiveInfo);
+    
+    static const char* c_EpgCacheFile = "sharatv_epg_cache.txt";
+    
+    //    struct NoCaseComparator : binary_function<string, string, bool>
+    //    {
+    //        inline bool operator()(const string& x, const string& y) const
+    //        {
+    //            return StringUtils::CompareNoCase(x, y) < 0;
+    //        }
+    //    };
+    
+    typedef struct {
+        // Cahnnels with group IDs, sorted by name.
+        typedef map<string, pair<Channel, GroupId>/*, NoCaseComparator*/> TChannels;
+        TChannels channels;
+        // Group name to group Id LUT
+        map<string, GroupId> groups;
+    }PlaylistContent;
+    
+    static void ParseChannelAndGroup(const std::string& data, const GloabalTags& globalTags, unsigned int plistIndex, PlaylistContent& content, ArchiveInfos& archiveInfo);
+    static void ParsePlaylist(const string& data, const GloabalTags& globalTags, PlaylistContent& content, ArchiveInfos& archiveInfo);
     static void GetGlobalTagsFromPlaylist(const string& data, GloabalTags& globalTags);
     static string FindVar(const string& data, string::size_type pos, const char* varTag);
-//    static void LoadPlaylist(const string& plistUrl, string& data);
+    //    static void LoadPlaylist(const string& plistUrl, string& data);
     
     Core::Core(const std::string &playlistUrl,  const std::string &epgUrl, bool enableAdult)
     : m_enableAdult(enableAdult)
@@ -117,10 +123,10 @@ namespace SharaTvEngine
     }
     void Core::Cleanup()
     {
-//        LogNotice("SharaTvPlayer stopping...");
-//        
-//        
-//        LogNotice("SharaTvPlayer stopped.");
+        //        LogNotice("SharaTvPlayer stopping...");
+        //
+        //
+        //        LogNotice("SharaTvPlayer stopped.");
     }
     
     void Core::BuildChannelAndGroupList()
@@ -129,36 +135,33 @@ namespace SharaTvEngine
         
         string data;
         XMLTV::GetCachedFileContents(m_playListUrl, data);
-
+        
         m_archiveInfo.Reset();
         PlaylistContent plistContent;
         ParsePlaylist(data, m_globalTags, plistContent, m_archiveInfo);
         
-        for(const auto& channelWithGroup : plistContent)
+        // Add groups
+        GroupId adultChannelsGroupId = -1;
+        for(const auto& group :  plistContent.groups) {
+            Group newGroup;
+            newGroup.Name = group.first;
+            AddGroup(group.second, newGroup);
+            if(-1 == adultChannelsGroupId &&  newGroup.Name == "Взрослые")
+                adultChannelsGroupId = group.second;
+        }
+        // Add channels
+        for(const auto& channelWithGroup : plistContent.channels)
         {
             const auto& channel = channelWithGroup.second.first;
-            const auto& groupName = channelWithGroup.second.second;
+            const auto& groupId = channelWithGroup.second.second;
             
-            if(!m_enableAdult && groupName == "Взрослые")
+            if(!m_enableAdult && adultChannelsGroupId == groupId)
                 continue;
-
-            AddChannel(channel);
             
-            const auto& groupList = m_groupList;
-            auto itGroup =  std::find_if(groupList.begin(), groupList.end(), [&](const GroupList::value_type& v ){
-                return groupName ==  v.second.Name;
-            });
-            if (itGroup == groupList.end()) {
-                Group newGroup;
-                newGroup.Name = groupName;
-                AddGroup(groupList.size(), newGroup);
-                itGroup = --groupList.end();
-            }
-            AddChannelToGroup(itGroup->first, channel.UniqueId);
+            AddChannel(channel);
+            AddChannelToGroup(groupId, channel.UniqueId);
         }
-        // add rest archives
-//        m_archiveInfo.info.insert(archiveInfo.begin(), archiveInfo.end());
-    }
+     }
     
     std::string Core::GetArchiveUrl(ChannelId channelId, time_t startTime, time_t duration)
     {
@@ -168,7 +171,7 @@ namespace SharaTvEngine
         string url = m_archiveInfo.info.at(channelId).urlTemplate;
         if(url.empty())
             return url;
-  
+        
         std::string debugTimes = "SharaTvPlayer: requested archive";
         
         // Optinal start tag
@@ -195,7 +198,7 @@ namespace SharaTvEngine
             url.replace(pos, strlen(c_DURATION), strDuration);
             
         }
-
+        
         // Optional offset tag
         pos = url.find(c_OFFSET);
         if(string::npos != pos){
@@ -206,21 +209,21 @@ namespace SharaTvEngine
         LogDebug(debugTimes.c_str());
         return  url;
     }
-        
-//    bool Core::AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry)
-//    {
-//        unsigned int id = xmlEpgEntry.startTime;
-//        
-//        EpgEntry epgEntry;
-//        epgEntry.ChannelId = xmlEpgEntry.iChannelId;
-//        epgEntry.Title = xmlEpgEntry.strTitle;
-//        epgEntry.Description = xmlEpgEntry.strPlot;
-//        epgEntry.StartTime = xmlEpgEntry.startTime;
-//        epgEntry.EndTime = xmlEpgEntry.endTime;
-//        epgEntry.IconPath = xmlEpgEntry.iconPath;
-//        return ClientCoreBase::AddEpgEntry(id, epgEntry);
-//    }
-//    
+    
+    //    bool Core::AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry)
+    //    {
+    //        unsigned int id = xmlEpgEntry.startTime;
+    //
+    //        EpgEntry epgEntry;
+    //        epgEntry.ChannelId = xmlEpgEntry.iChannelId;
+    //        epgEntry.Title = xmlEpgEntry.strTitle;
+    //        epgEntry.Description = xmlEpgEntry.strPlot;
+    //        epgEntry.StartTime = xmlEpgEntry.startTime;
+    //        epgEntry.EndTime = xmlEpgEntry.endTime;
+    //        epgEntry.IconPath = xmlEpgEntry.iconPath;
+    //        return ClientCoreBase::AddEpgEntry(id, epgEntry);
+    //    }
+    //
     void Core::UpdateHasArchive(PvrClient::EpgEntry& entry)
     {
         entry.HasArchive = false;
@@ -239,7 +242,7 @@ namespace SharaTvEngine
         auto when = now - epgTime;
         entry.HasArchive = when > 0 && when < archivePeriod;
     }
-   
+    
     static PvrClient::KodiChannelId EpgChannelIdToKodi(const std::string& strId)
     {
         string strToHash(strId);
@@ -248,26 +251,18 @@ namespace SharaTvEngine
     }
     void Core::UpdateEpgForAllChannels(time_t startTime, time_t endTime)
     {
-//        if(m_epgUpdateInterval.IsSet() && m_epgUpdateInterval.TimeLeft() > 0)
-//            return;
-//        
-        m_epgUpdateInterval.Init(24*60*60*1000);
+        //        if(m_epgUpdateInterval.IsSet() && m_epgUpdateInterval.TimeLeft() > 0)
+        //            return;
+        //
         
         using namespace XMLTV;
         try {
-            auto pThis = this;
- 
-            EpgEntryCallback onEpgEntry = [&pThis] (const XMLTV::EpgEntry& newEntry) {
-               pThis->AddEpgEntry(newEntry);
-            };
-            
-            XMLTV::ParseEpg(m_epgUrl, onEpgEntry, EpgChannelIdToKodi);
-            
+            LoadEpg();
             SaveEpgCache(c_EpgCacheFile, m_archiveInfo.archiveDays);
-//        } catch (ServerErrorException& ex) {
-//            m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32002), ex.reason.c_str() );
+            //        } catch (ServerErrorException& ex) {
+            //            m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32002), ex.reason.c_str() );
         } catch (...) {
-            LogError(" >>>>  FAILED receive EPG <<<<<");
+            LogError("SharaTvPlayer:: failed to update EPG.");
         }
     }
     
@@ -275,6 +270,8 @@ namespace SharaTvEngine
     {
         using namespace XMLTV;
         auto pThis = this;
+        
+        m_epgUpdateInterval.Init(24*60*60*1000);
 
         EpgEntryCallback onEpgEntry = [&pThis] (const XMLTV::EpgEntry& newEntry) {pThis->AddEpgEntry(newEntry);};
         
@@ -287,43 +284,43 @@ namespace SharaTvEngine
         return url;
     }
     
-//    static void LoadPlaylist(const string& plistUrl, string& data)
-//    {
-//        void* f = NULL;
-//
-//        try {
-//            char buffer[1024];
-//
-//            // Download playlist
-//            XBMC->Log(LOG_DEBUG, "SharaTvPlayer: loading playlist: %s", plistUrl.c_str());
-//
-//            auto f = XBMC->OpenFile(plistUrl.c_str(), 0);
-//            if (!f)
-//                throw BadPlaylistFormatException("Failed to obtain playlist from server.");
-//                bool isEof = false;
-//                do{
-//                    auto bytesRead = XBMC->ReadFile(f, buffer, sizeof(buffer));
-//                    isEof = bytesRead <= 0;
-//                    if(!isEof)
-//                        data.append(&buffer[0], bytesRead);
-//                        }while(!isEof);
-//            XBMC->CloseFile(f);
-//            f = NULL;
-//
-//         } catch (std::exception& ex) {
-//            XBMC->Log(LOG_ERROR, "SharaTvPlayer: exception during playlist loading: %s", ex.what());
-//            if(NULL != f) {
-//                XBMC->CloseFile(f);
-//                f = NULL;
-//            }
-//
-//        }
-//    }
+    //    static void LoadPlaylist(const string& plistUrl, string& data)
+    //    {
+    //        void* f = NULL;
+    //
+    //        try {
+    //            char buffer[1024];
+    //
+    //            // Download playlist
+    //            XBMC->Log(LOG_DEBUG, "SharaTvPlayer: loading playlist: %s", plistUrl.c_str());
+    //
+    //            auto f = XBMC->OpenFile(plistUrl.c_str(), 0);
+    //            if (!f)
+    //                throw BadPlaylistFormatException("Failed to obtain playlist from server.");
+    //                bool isEof = false;
+    //                do{
+    //                    auto bytesRead = XBMC->ReadFile(f, buffer, sizeof(buffer));
+    //                    isEof = bytesRead <= 0;
+    //                    if(!isEof)
+    //                        data.append(&buffer[0], bytesRead);
+    //                        }while(!isEof);
+    //            XBMC->CloseFile(f);
+    //            f = NULL;
+    //
+    //         } catch (std::exception& ex) {
+    //            XBMC->Log(LOG_ERROR, "SharaTvPlayer: exception during playlist loading: %s", ex.what());
+    //            if(NULL != f) {
+    //                XBMC->CloseFile(f);
+    //                f = NULL;
+    //            }
+    //
+    //        }
+    //    }
     
     static void GetGlobalTagsFromPlaylist(const string& data, GloabalTags& globalTags)
     {
         string epgUrl;
-
+        
         const char* c_M3U = "#EXTM3U";
         
         auto pos = data.find(c_M3U);
@@ -348,11 +345,11 @@ namespace SharaTvEngine
             globalTags.m_catchupSource = FindVar(header, 0, "catchup-source");
             LogDebug("SharaTvPlayer: gloabal catchup-source: %s", globalTags.m_catchupSource.c_str());
         } catch (...) {}
-
+        
     }
-
     
-    static void ParsePlaylist(const string& data, const GloabalTags& globalTags,  PlaylistContent& channels, ArchiveInfos& archiveInfo)
+    
+    static void ParsePlaylist(const string& data, const GloabalTags& globalTags,  PlaylistContent& content, ArchiveInfos& archiveInfo)
     {
         
         try {
@@ -378,16 +375,16 @@ namespace SharaTvEngine
                 auto pos_end = data.find(c_INF, pos);
                 string::size_type tagLen = (std::string::npos == pos_end) ? std::string::npos : pos_end - pos;
                 string tag = data.substr(pos, tagLen);
-                ParseChannelAndGroup(tag, globalTags, plistIndex++, channels, archiveInfo);
+                ParseChannelAndGroup(tag, globalTags, plistIndex++, content, archiveInfo);
                 pos = pos_end;
             }
-            XBMC->Log(LOG_DEBUG, "SharaTvPlayer: added %d channels from playlist." , channels.size());
-
+            XBMC->Log(LOG_DEBUG, "SharaTvPlayer: added %d channels from playlist." , content.channels.size());
+            
         } catch (std::exception& ex) {
-            XBMC->Log(LOG_ERROR, "SharaTvPlayer: exception during playlist loading: %s", ex.what());           
+            XBMC->Log(LOG_ERROR, "SharaTvPlayer: exception during playlist loading: %s", ex.what());
         }
     }
-
+    
     static string FindVar(const string& data, string::size_type pos, const char* varTag)
     {
         string strTag(varTag);
@@ -400,7 +397,7 @@ namespace SharaTvEngine
         //check whether tag is missing = and "
         if(data[pos] == '=') ++pos;
         if(data[pos] == '"') ++pos;
-
+        
         auto pos_end = data.find("\"", pos);
         if(string::npos == pos)
             throw BadPlaylistFormatException((string("Invalid playlist format: missing end of variable ") + varTag).c_str());
@@ -408,12 +405,12 @@ namespace SharaTvEngine
         
     }
     
-    static void ParseChannelAndGroup(const string& data, const GloabalTags& globalTags, unsigned int plistIndex, PlaylistContent& channels, ArchiveInfos& archiveInfo)
+    static void ParseChannelAndGroup(const string& data, const GloabalTags& globalTags, unsigned int plistIndex, PlaylistContent& content, ArchiveInfos& archiveInfo)
     {
         //#EXTINF:0 audio-track="ru" tvg-id="1147" tvg-name="Первый канал" tvg-logo="https://shara-tv.org/img/images/Chanels/perviy_k.png" group-title="Базовые" catchup="default" catchup-days="3" catchup-source="http://oa5iy59taouocss24ctr.mine.nu:8099/Perviykanal/index-${start}-3600.m3u8?token=oa123456+12345678", Первый канал
         //#EXTGRP:Базовые
         //http://oa5iy59taouocss24ctr.mine.nu:8000/Perviykanal?auth=oa123456+12345678
-
+        
         auto pos = data.find(',');
         if(string::npos == pos)
             throw BadPlaylistFormatException("Invalid channel block format: missing ','  delinmeter.");
@@ -428,7 +425,7 @@ namespace SharaTvEngine
         
         string groupName;
         try { groupName = FindVar(data, 0, "group-title");} catch (...) {}
-
+        
         string iconPath;
         try { iconPath = FindVar(data, 0, "tvg-logo");} catch (...) {}
         
@@ -451,7 +448,7 @@ namespace SharaTvEngine
             } catch (...) {}
         }
         
-        // Channal URL. Should be before archive!
+        // Channel URL. Should be before archive!
         // Flussonic archives depend from channel URL.
         endlLine = 0;
         const char* c_GROUP = "#EXTGRP:";
@@ -503,10 +500,11 @@ namespace SharaTvEngine
         if(!archiveUrl.empty())
             LogDebug("SharaTvPlayer: %s channe's archive url %s", name.c_str(), archiveUrl.c_str());
         
+        
         Channel channel;
         channel.UniqueId = XMLTV::ChannelIdForChannelName(name);
         channel.EpgId = EpgChannelIdToKodi(tvgId);
-       // LogDebug("Channe: TVG id %s => EPG id %d", tvgId.c_str(), channel.EpgId);
+        // LogDebug("Channe: TVG id %s => EPG id %d", tvgId.c_str(), channel.EpgId);
         channel.Name = name;
         channel.Number = plistIndex;
         channel.Urls.push_back(url);
@@ -514,7 +512,15 @@ namespace SharaTvEngine
         channel.IconPath = iconPath;
         channel.IsRadio = false;
         channel.TvgShift = tvgShift;
-        channels[name] = PlaylistContent::mapped_type(channel,groupName);
+        
+        // Get group ID for channel by group name.
+        // Add new group if missing.
+        if(content.groups.count(groupName) == 0) {
+            GroupId newGroupId = content.groups.size() + 1;
+            content.groups[groupName] = newGroupId;
+        }
+
+        content.channels[name] = PlaylistContent::TChannels::mapped_type(channel, content.groups[groupName]);
         if(channel.HasArchive) {
             archiveInfo.info.emplace(channel.UniqueId, std::move(ArchiveInfo(archiveDays, archiveUrl)));
             if(archiveInfo.archiveDays < archiveDays)
@@ -523,5 +529,5 @@ namespace SharaTvEngine
     }
     
     
-}
+    }
 
