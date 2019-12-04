@@ -153,9 +153,9 @@ ClientCoreBase::ClientCoreBase(const IClientCore::RecordingsDelegate& didRecordi
     
 }
 
-void ClientCoreBase::InitAsync(bool clearEpgCache)
+void ClientCoreBase::InitAsync(bool clearEpgCache, bool updateRecordings)
 {
-    m_phases[k_InitPhase]->RunAndSignalAsync([this, clearEpgCache] (std::function<bool(void)> isAborted){
+    m_phases[k_InitPhase]->RunAndSignalAsync([this, clearEpgCache, updateRecordings] (std::function<bool(void)> isAborted){
         if(isAborted())
             return;
         Init(clearEpgCache);
@@ -180,6 +180,10 @@ void ClientCoreBase::InitAsync(bool clearEpgCache)
         if(isAborted())
             return;
         m_recordingsUpdateDelay.Init(5 * 1000);
+        
+        if(!updateRecordings || isAborted())
+            return;
+        
         ScheduleRecordingsUpdate();
     });
     

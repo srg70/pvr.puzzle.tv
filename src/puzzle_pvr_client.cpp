@@ -154,7 +154,7 @@ void PuzzlePVRClient::CreateCore(bool clearEpgCache)
     m_puzzleTV->SetMaxServerRetries(m_maxServerRetries);
     m_puzzleTV->SetEpgParams(EpgType(m_epgType), m_epgUrl, m_epgPort);
     m_puzzleTV->IncludeCurrentEpgToArchive(m_addCurrentEpgToArchive);
-    m_puzzleTV->InitAsync(clearEpgCache);
+    m_puzzleTV->InitAsync(clearEpgCache, IsArchiveSupported());
 }
 
 ADDON_STATUS PuzzlePVRClient::SetSetting(const char *settingName, const void *settingValue)
@@ -202,7 +202,7 @@ PVR_ERROR PuzzlePVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabil
     pCapabilities->bSupportsRadio = true;
     pCapabilities->bSupportsChannelGroups = true;
     pCapabilities->bHandlesInputStream = true;
-    pCapabilities->bSupportsRecordings = true;
+//    pCapabilities->bSupportsRecordings = true;
 
     pCapabilities->bSupportsTimers = false;
     pCapabilities->bSupportsChannelScan = false;

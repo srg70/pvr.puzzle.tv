@@ -75,7 +75,6 @@ ADDON_STATUS SovokPVRClient::Init(PVR_PROPERTIES* pvrprops)
     if(m_enableAdult && XBMC->GetSetting("pin_code", &buffer))
         m_pinCode = buffer;
 
-    XBMC->GetSetting("archive_support", &m_supportArchive);
     std::string streamer;
     if (XBMC->GetSetting("streamer", &buffer))
         m_strimmer = buffer;
@@ -141,7 +140,7 @@ void SovokPVRClient::CreateCore(bool clearEpgCache)
         m_sovokTV->SetPinCode(m_pinCode);
     SetCountryFilter();
     m_sovokTV->IncludeCurrentEpgToArchive(m_addCurrentEpgToArchive);
-    m_sovokTV->InitAsync(clearEpgCache);
+    m_sovokTV->InitAsync(clearEpgCache, IsArchiveSupported());
 
     
     auto streamersList = m_sovokTV->GetStreamersList();
@@ -250,12 +249,6 @@ ADDON_STATUS SovokPVRClient::SetSetting(const char *settingName, const void *set
             result = ADDON_STATUS_OK;
         }
     }
-    else if (strcmp(settingName, "archive_support") == 0)
-    {
-        bool newValue = *(bool*)settingValue;
-        result = (m_supportArchive != newValue) ? ADDON_STATUS_NEED_RESTART : ADDON_STATUS_OK;
-        
-    }
     else if (strcmp(settingName, "filter_by_country") == 0)
     {
         bool newValue = *(bool*)settingValue;
@@ -315,7 +308,7 @@ PVR_ERROR SovokPVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabili
     pCapabilities->bSupportsRadio = true;
     pCapabilities->bSupportsChannelGroups = true;
     pCapabilities->bHandlesInputStream = true;
-    pCapabilities->bSupportsRecordings = m_supportArchive;
+//    pCapabilities->bSupportsRecordings = true;
     
     pCapabilities->bSupportsTimers = false;
     pCapabilities->bSupportsChannelScan = false;

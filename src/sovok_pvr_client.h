@@ -65,7 +65,6 @@ private:
     std::string m_strimmer;
     std::string m_pinCode;
     bool m_enableAdult;
-    bool m_supportArchive;
 };
 
 #endif //__sovok_pvr_client_h__

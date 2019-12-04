@@ -42,7 +42,7 @@ namespace PvrClient {
     class ClientCoreBase :  public IClientCore
     {
     public:
-        void InitAsync(bool clearEpgCache);
+        void InitAsync(bool clearEpgCache, bool updateRecordings);
         
         virtual IPhase* GetPhase(Phase phase);
         

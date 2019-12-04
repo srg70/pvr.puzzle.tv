@@ -171,6 +171,9 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     if(m_endRecordingPadding < 0)
         m_endRecordingPadding = 0;
     m_endRecordingPadding *= 60;
+    
+    m_supportArchive = false;
+    XBMC->GetSetting("archive_support", &m_supportArchive);
 
     CheckForInetConnection(m_waitForInetTimeout);
     
@@ -328,7 +331,12 @@ ADDON_STATUS PVRClientBase::SetSetting(const char *settingName, const void *sett
         m_endRecordingPadding *= 60;
         
     }
-
+    else if (strcmp(settingName, "archive_support") == 0)
+    {
+        bool newValue = *(bool*)settingValue;
+        return (m_supportArchive != newValue) ? ADDON_STATUS_NEED_RESTART : ADDON_STATUS_OK;
+        
+    }
 
     return ADDON_STATUS_OK;
 }
@@ -348,8 +356,8 @@ PVR_ERROR PVRClientBase::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabilit
     //pCapabilities->bSupportsRadio = true;
     //pCapabilities->bSupportsChannelGroups = true;
     //pCapabilities->bHandlesInputStream = true;
-    //pCapabilities->bSupportsRecordings = true;
-    
+    pCapabilities->bSupportsRecordings = true; //For local recordings
+
     pCapabilities->bSupportsTimers = true;
 //    pCapabilities->bSupportsChannelScan = false;
 //    pCapabilities->bHandlesDemuxing = false;
@@ -830,13 +838,16 @@ int PVRClientBase::GetRecordingsAmount(bool deleted)
     if(deleted)
         return -1;
     
-    if(!m_clientCore->GetPhase(IClientCore::k_EpgLoadingPhase)->IsDone()) {
-        LogDebug("PVRClientBase: EPG still loading. No recording repoted.");
-        return 0;
+    int size = 0;
+    // Add remote archive (if enabled)
+    if(m_supportArchive) {
+        if(!m_clientCore->GetPhase(IClientCore::k_EpgLoadingPhase)->IsDone()) {
+            LogDebug("PVRClientBase: EPG still loading. No recording repoted.");
+            return 0;
+        }
+        
+        size = m_clientCore->UpdateArchiveInfoAndCount();
     }
-    
-    int size = m_clientCore->UpdateArchiveInfoAndCount();
-
     // Add local recordings
     if(XBMC->DirectoryExists(m_recordingsDir.c_str()))
     {
@@ -902,39 +913,42 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
     if(deleted)
         return PVR_ERROR_NOT_IMPLEMENTED;
     
-    if(!m_clientCore->GetPhase(IClientCore::k_EpgLoadingPhase)->IsDone())
-        return PVR_ERROR_NO_ERROR;
-
-    
     PVR_ERROR result = PVR_ERROR_NO_ERROR;
-    auto pThis = this;
-    
     int size = 0;
+
     LogDebug("PVRClientBase: start recorings transfering...");
+    // Add remote archive (if enabled)
+    if(m_supportArchive) {
+        if(!m_clientCore->GetPhase(IClientCore::k_EpgLoadingPhase)->IsDone())
+            return PVR_ERROR_NO_ERROR;
+        
+        
+        auto pThis = this;
+        
 
-    // Populate server recordings
-    IClientCore::EpgEntryAction action = [pThis ,&result, &handle, &size](const EpgEntryList::value_type& epgEntry)
-    {
-        try {
-           if(!epgEntry.second.HasArchive)
+        // Populate server recordings
+        IClientCore::EpgEntryAction action = [pThis ,&result, &handle, &size](const EpgEntryList::value_type& epgEntry)
+        {
+            try {
+                if(!epgEntry.second.HasArchive)
+                    return true;
+                
+                PVR_RECORDING tag = { 0 };
+                pThis->FillRecording(epgEntry, tag, s_RemoteRecPrefix.c_str());
+                //recs.push_back(tag);
+                PVR->TransferRecordingEntry(handle, &tag);
+                ++size;
                 return true;
-
-            PVR_RECORDING tag = { 0 };
-            pThis->FillRecording(epgEntry, tag, s_RemoteRecPrefix.c_str());
-            //recs.push_back(tag);
-            PVR->TransferRecordingEntry(handle, &tag);
-            ++size;
-            return true;
-        }
-        catch (...)  {
-            LogError( "%s: failed.", __FUNCTION__);
-            result = PVR_ERROR_FAILED;
-        }
-        // Should not be here..
-        return false;
-    };
-    m_clientCore->ForEachEpg(action);
-    
+            }
+            catch (...)  {
+                LogError( "%s: failed.", __FUNCTION__);
+                result = PVR_ERROR_FAILED;
+            }
+            // Should not be here..
+            return false;
+        };
+        m_clientCore->ForEachEpg(action);
+    }
     // Add local recordings
     if(XBMC->DirectoryExists(m_recordingsDir.c_str()))
     {
@@ -966,6 +980,7 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
 
 PVR_ERROR PVRClientBase::DeleteRecording(const PVR_RECORDING &recording)
 {
+    
     PVR_ERROR result = PVR_ERROR_NO_ERROR;
     // Is recording local?
     if(!IsLocalRecording(recording))
