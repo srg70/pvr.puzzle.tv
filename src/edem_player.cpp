@@ -209,29 +209,23 @@ namespace EdemEngine
         //        }
         //        int32_t interval = nextUpdateAt - now;
         //        if(interval > 0)
-        m_epgUpdateInterval.Init(12*60*60*1000);
 
         using namespace XMLTV;
         try {
-            auto pThis = this;
- 
-            EpgEntryCallback onEpgEntry = [pThis] (const XMLTV::EpgEntry& newEntry) {
-                pThis->AddEpgEntry(newEntry);
-            };
-            
-            XMLTV::ParseEpg(m_epgUrl, onEpgEntry);
-            
+            LoadEpg();
             SaveEpgCache(c_EpgCacheFile);
 //        } catch (ServerErrorException& ex) {
 //            m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32002), ex.reason.c_str() );
         } catch (...) {
-            LogError(" >>>>  FAILED receive EPG <<<<<");
+            LogError("EdemPlayer: failed to update EPG");
         }
     }
     
     void Core::LoadEpg()
     {
         using namespace XMLTV;
+
+        m_epgUpdateInterval.Init(12*60*60*1000);
 
         EpgEntryCallback onEpgEntry = [this] (const XMLTV::EpgEntry& newEntry) {AddEpgEntry(newEntry);};
         
