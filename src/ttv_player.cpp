@@ -143,7 +143,6 @@ namespace TtvEngine
 //        }
 //        int32_t interval = nextUpdateAt - now;
 //        if(interval > 0)
-        m_epgUpdateInterval.Init(12*60*60*1000);
         
         UpdateEpgForAllChannels_Plist(startTime, endTime);
     }
@@ -257,17 +256,10 @@ namespace TtvEngine
     {
         using namespace XMLTV;
         try {
-            auto pThis = this;
-            
-            EpgEntryCallback onEpgEntry = [pThis] (const XMLTV::EpgEntry& newEntry) {
-                pThis->AddEpgEntry(newEntry);
-            };
-            
-            XMLTV::ParseEpg(m_coreParams.epgUrl, onEpgEntry);
-            
+            LoadEpg();           
             SaveEpgCache(c_EpgCacheFile);
         } catch (...) {
-            LogError(" >>>>  FAILED receive EPG <<<<<");
+            LogError("TtvPlayer: failed to update EPG. ");
         }
     }
 
@@ -378,6 +370,8 @@ namespace TtvEngine
         using namespace XMLTV;
         auto pThis = this;
         
+        m_epgUpdateInterval.Init(12*60*60*1000);
+
         EpgEntryCallback onEpgEntry = [pThis] (const XMLTV::EpgEntry& newEntry) {pThis->AddEpgEntry(newEntry);};
         
         XMLTV::ParseEpg(m_coreParams.epgUrl, onEpgEntry);

@@ -128,7 +128,8 @@ void PuzzleTV::Init(bool clearEpgCache)
         ClearEpgCache(c_EpgCacheFile);
     else
         LoadEpgCache(c_EpgCacheFile);
-    LoadEpg();
+    
+     ;
     UpdateArhivesAsync();   
 }
 
@@ -321,7 +322,6 @@ void PuzzleTV::UpdateEpgForAllChannels(time_t startTime, time_t endTime)
     //        }
     //        int32_t interval = nextUpdateAt - now;
     //        if(interval > 0)
-    m_epgUpdateInterval.Init(12*60*60*1000);
 
     try {
         LoadEpg();
@@ -342,7 +342,8 @@ void PuzzleTV::LoadEpg()
 {
     //    using namespace XMLTV;
     auto pThis = this;
-    
+    m_epgUpdateInterval.Init(12*60*60*1000);
+
     if(m_epgType == c_EpgType_File) {
         
         XMLTV::EpgEntryCallback onEpgEntry = [pThis] (const XMLTV::EpgEntry& newEntry) {pThis->AddXmlEpgEntry(newEntry);};
