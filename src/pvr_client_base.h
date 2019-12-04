@@ -58,7 +58,7 @@ namespace PvrClient
         
         ADDON_STATUS SetSetting(const char *settingName, const void *settingValue);
         
-        PVR_ERROR GetAddonCapabilities(PVR_ADDON_CAPABILITIES* pCapabilities);
+        PVR_ERROR GetAddonCapabilities(PVR_ADDON_CAPABILITIES* pCapabilities) = 0;
         
         bool CanPauseStream();
         bool CanSeekStream();
@@ -156,6 +156,9 @@ namespace PvrClient
         
         bool IsSeekSupported() const { return m_supportSeek; }
         void SetSeekSupported(bool yesNo) { m_supportSeek = yesNo; }
+        
+        bool IsArchiveSupported() const { return m_supportArchive; }
+
     private:
         typedef std::map<KodiChannelId, ChannelId> TKodiToPluginChannelIdLut;
         typedef std::map<ChannelId, KodiChannelId> TPluginToKodiChannelIdLut;
@@ -204,6 +207,7 @@ namespace PvrClient
         TPluginToKodiChannelIdLut m_pluginToKodiLut;
         
         bool m_supportSeek;
+        bool m_supportArchive;
 
     };
 }

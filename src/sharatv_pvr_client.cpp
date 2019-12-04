@@ -149,7 +149,7 @@ void SharaTvPVRClient::CreateCore(bool clearEpgCache)
     
     m_clientCore = m_core = new SharaTvEngine::Core(playlistUrl, epgUrl, m_enableAdult);
     m_core->IncludeCurrentEpgToArchive(m_addCurrentEpgToArchive);
-    m_core->InitAsync(clearEpgCache);
+    m_core->InitAsync(clearEpgCache, IsArchiveSupported());
 }
 
 
@@ -205,7 +205,7 @@ PVR_ERROR SharaTvPVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabi
     pCapabilities->bSupportsRadio = false;
     pCapabilities->bSupportsChannelGroups = true;
     pCapabilities->bHandlesInputStream = true;
-    pCapabilities->bSupportsRecordings = true;
+//    pCapabilities->bSupportsRecordings = true;
     
     pCapabilities->bSupportsTimers = false;
     pCapabilities->bSupportsChannelScan = false;

@@ -125,7 +125,7 @@ void EdemPVRClient::CreateCore(bool clearEpgCache)
     if(PVRClientBase::CheckPlaylistUrl(m_playlistUrl)) {
         m_clientCore = m_core = new EdemEngine::Core(m_playlistUrl, m_epgUrl, m_enableAdult);
         m_core->IncludeCurrentEpgToArchive(m_addCurrentEpgToArchive);
-        m_core->InitAsync(clearEpgCache);
+        m_core->InitAsync(clearEpgCache, IsArchiveSupported());
     }
 }
 
@@ -173,7 +173,7 @@ PVR_ERROR EdemPVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabilit
     pCapabilities->bSupportsRadio = false;
     pCapabilities->bSupportsChannelGroups = true;
     pCapabilities->bHandlesInputStream = true;
-    pCapabilities->bSupportsRecordings = true;
+//    pCapabilities->bSupportsRecordings = true;
     
     pCapabilities->bSupportsTimers = false;
     pCapabilities->bSupportsChannelScan = false;
