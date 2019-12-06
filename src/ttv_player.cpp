@@ -334,12 +334,14 @@ namespace TtvEngine
         auto pThis = this;
         
         ChannelCallback onNewChannel = [pThis, &plistContent](const EpgChannel& newChannel){
-            if(plistContent.count(newChannel.strName) != 0) {
-                auto& plistChannel = plistContent[newChannel.strName].first;
-                plistChannel.EpgId = newChannel.id;
-                if(!newChannel.strIcon.empty())
-                    plistChannel.IconPath = newChannel.strIcon;
-            }
+            for(const auto& epgChannelName : newChannel.strNames) {
+                 if(plistContent.count(epgChannelName) != 0) {
+                     auto& plistChannel = plistContent[epgChannelName].first;
+                     plistChannel.EpgId = newChannel.id;
+                     if(plistChannel.IconPath.empty())
+                         plistChannel.IconPath = newChannel.strIcon;
+                 }
+             }
         };
         
         XMLTV::ParseChannels(m_coreParams.epgUrl, onNewChannel);
