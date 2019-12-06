@@ -30,6 +30,7 @@
 #define XMLTV_loader_hpp
 
 #include <string>
+#include <list>
 #include <functional>
 #include "pvr_client_types.h"
 
@@ -38,7 +39,7 @@ namespace XMLTV {
     struct EpgChannel
     {
         PvrClient::ChannelId     id;
-        std::string         strName;
+        std::list<std::string>   strNames;
         std::string         strIcon;
     };
 

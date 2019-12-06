@@ -153,7 +153,8 @@ MutableSegment* PlaylistCache::SegmentToFill()  {
         info = m_dataToLoad.front();
         m_dataToLoad.pop_front();
         if(m_segments.count(info.index) > 0) {
-            found = !m_segments[info.index]->IsValid();
+            const auto& seg = m_segments[info.index];
+            found = !seg->IsValid() && !seg->IsLoading();
         } else {
             found = true;
         }
@@ -356,7 +357,7 @@ bool PlaylistCache::PrepareSegmentForPosition(int64_t position, uint64_t* nextSe
         if( segmentTime <= timePosition && timePosition < segmentTime + segmentDuration) {
             *nextSegmentIndex = m_currentSegmentIndex = pSeg.first;
             LogDebug("PlaylistCache: trying to set next index of playlist (m_segments)...");
-            if(found = m_playlist.SetNextSegmentIndex(m_currentSegmentIndex)) {
+            if((found = m_playlist.SetNextSegmentIndex(m_currentSegmentIndex))) {
                 QueueAllSegmentsForLoading();
                 // Calculate position inside segment
                 // as rational part of time offset
@@ -373,7 +374,7 @@ bool PlaylistCache::PrepareSegmentForPosition(int64_t position, uint64_t* nextSe
             if( segmentTime <= timePosition && timePosition < segmentTime + segmentDuration) {
                 *nextSegmentIndex = m_currentSegmentIndex = pData.index;
                 LogDebug("PlaylistCache: trying to set next index of playlist (m_dataToLoad)...");
-                if(found = m_playlist.SetNextSegmentIndex(m_currentSegmentIndex)) {
+                if((found = m_playlist.SetNextSegmentIndex(m_currentSegmentIndex))) {
                     QueueAllSegmentsForLoading();
                     // Calculate position inside segment
                     // as rational part of time offset

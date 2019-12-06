@@ -70,8 +70,8 @@ namespace Buffers
         
         void *Process();
         void Init(const std::string &playlistUrl);
-        bool FillSegment(MutableSegment* segment);
-        bool FillSegmentFromPlaylist(MutableSegment* segment, const std::string& content);
+//        bool FillSegment(MutableSegment* segment);
+//        bool FillSegmentFromPlaylist(MutableSegment* segment, const std::string& content);
         bool IsStopped(uint32_t timeoutInSec = 0);
     };
     

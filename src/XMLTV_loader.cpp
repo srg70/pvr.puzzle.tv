@@ -72,6 +72,22 @@ namespace XMLTV {
     }
     
     template<class Ch>
+    inline bool GetAllNodesValue(const xml_node<Ch> * pRootNode, const char* strTag, list<string>& strStringValues)
+    {
+        xml_node<Ch> *pChildNode = pRootNode->first_node(strTag);
+        if (pChildNode == NULL)
+        {
+            return false;
+        }
+        do{
+            strStringValues.push_back(pChildNode->value());
+            pChildNode = pChildNode->next_sibling(strTag);
+        } while(pChildNode);
+        
+        return true;
+    }
+
+    template<class Ch>
     inline bool GetAttributeValue(const xml_node<Ch> * pNode, const char* strAttributeName, string& strStringValue)
     {
         xml_attribute<Ch> *pAttribute = pNode->first_attribute(strAttributeName);
@@ -425,7 +441,7 @@ return false;             \
             
             channel.id = ChannelIdForChannelName(strId);
             
-            if(!GetNodeValue(pChannelNode, "display-name", channel.strName)){
+            if(!GetAllNodesValue(pChannelNode, "display-name", channel.strNames)){
                 XBMC->Log(LOG_DEBUG, "XMLTV Loader: no channel display name found.");
                 continue;
             }
