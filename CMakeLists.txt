@@ -115,6 +115,7 @@ src/httplib.h
 src/base64.h
 src/sharatv_player.h
 src/sharatv_pvr_client.h
+src/ThreadPool.h
 )
 
 addon_version(pvr.puzzle.tv IPTV)
