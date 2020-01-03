@@ -137,9 +137,12 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     int curlTimout = 15;
     XBMC->GetSetting("curl_timeout", &curlTimout);
     int channelTimeout = 5;
-     XBMC->GetSetting("channel_reload_timeout", &channelTimeout);
+    XBMC->GetSetting("channel_reload_timeout", &channelTimeout);
    
-    
+    int hlsTreads = 1;
+    XBMC->GetSetting("num_of_hls_threads", &hlsTreads);
+    Buffers::PlaylistBuffer::SetNumberOfHlsTreads(hlsTreads);
+
     bool isTimeshiftEnabled;
     XBMC->GetSetting("enable_timeshift", &isTimeshiftEnabled);
     string timeshiftPath;
@@ -291,6 +294,10 @@ ADDON_STATUS PVRClientBase::SetSetting(const char *settingName, const void *sett
     else if (strcmp(settingName, "curl_timeout") == 0)
     {
         CurlUtils::SetCurlTimeout(*(int *)(settingValue));
+    }
+    else if (strcmp(settingName, "num_of_hls_threads") == 0)
+    {
+        Buffers::PlaylistBuffer::SetNumberOfHlsTreads(*(int *)(settingValue));
     }
     else if (strcmp(settingName, "rpc_local_port") == 0)
     {

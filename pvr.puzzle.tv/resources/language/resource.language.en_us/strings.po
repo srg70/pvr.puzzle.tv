@@ -92,6 +92,10 @@ msgctxt "#10018"
 msgid "Archive end padding (min)"
 msgstr "Archive end padding (min)"
 
+msgctxt "#10019"
+msgid "Number of HSL threads"
+msgstr "Number of HSL threads"
+
 msgctxt "#10097"
 msgid "Other"
 msgstr "Other"

@@ -253,6 +253,7 @@
 		4CC18CE2212B2046005E64B8 /* simple_cyclic_buffer.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = simple_cyclic_buffer.hpp; sourceTree = "<group>"; };
 		4CC578D921D378A200871747 /* playlist_cache.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = playlist_cache.cpp; sourceTree = "<group>"; };
 		4CC578DA21D378A200871747 /* playlist_cache.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = playlist_cache.hpp; sourceTree = "<group>"; };
+		4CC6207423BF3D240053B627 /* ThreadPool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ThreadPool.h; sourceTree = "<group>"; };
 		4CD09EFB228318CF003C9467 /* base64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = base64.h; sourceTree = "<group>"; };
 		4CD09EFC228318CF003C9467 /* base64.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = base64.cpp; sourceTree = "<group>"; };
 		4CD394B41F2258610073E2DF /* plist_buffer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = plist_buffer.cpp; sourceTree = "<group>"; };
@@ -421,6 +422,7 @@
 		4C08C78B1D818381004CAAE3 /* src */ = {
 			isa = PBXGroup;
 			children = (
+				4CC6207423BF3D240053B627 /* ThreadPool.h */,
 				4CFEAA8D1E4DA81A002C2BA4 /* ActionQueue.cpp */,
 				4CFEAA8E1E4DA81A002C2BA4 /* ActionQueue.hpp */,
 				4CAC99B92180F102005D8902 /* ActionQueueTypes.hpp */,

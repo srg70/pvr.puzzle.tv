@@ -181,7 +181,7 @@ MutableSegment* PlaylistCache::SegmentToFill()  {
         retVal = new MutableSegment(info, timeOffaset);
         m_segments[info.index] = std::unique_ptr<MutableSegment>(retVal);
     }
-    LogDebug("PlaylistCache: start LOADING segment #%" PRIu64 ".", info.index);
+    LogDebug("PlaylistCache: set _isLOADING true for segment #%" PRIu64 ".", info.index);
     
     retVal->_isLoading = true;
     return retVal;
@@ -271,7 +271,7 @@ Segment* PlaylistCache::NextSegment(SegmentStatus& status) {
 
 bool PlaylistCache::HasSpaceForNewSegment() {
     // Current segment for read is m_currentSegmentIndex - 1
-    uint64_t currentSegment = m_currentSegmentIndex -1;
+    uint64_t currentSegment = m_currentSegmentIndex > 0 ? m_currentSegmentIndex -1 : 0;
     // Free older segments when cache is full
     // or we are on live stream (no caching requered)
     if(IsFull()) {
@@ -294,17 +294,21 @@ bool PlaylistCache::HasSpaceForNewSegment() {
         // If we don't have a segment to free BEFORE current position,
         // and we are NOT live stream,
         // search for farest segment AFTER range of valid segments
-        // from current position.
+        // from current position, but ONLY when some segments are missing
+        // in the range from current position.
         // We'll need to reload it later,
         // but we have to free some memory now, for new data,
         // that probably waiting for memory
+        // Otherwise - report NO ROOM.
         if(-1 == idx && CanSeek()) {
-            // Search for first invalid continues segment after current
+            // Search for first invalid (or missing) and NOT loading continues segment after current
             while(m_segments.count(++currentSegment) != 0) {
-                if(!m_segments[currentSegment]->IsValid()){
+                const auto& seg = m_segments.at(currentSegment);
+                if(!seg->IsValid() && !seg->IsLoading()){
                     break;
                 }
             }
+//            LogDebug("PlaylistCache: !! currentSegment = #%" PRIu64 ". ", currentSegment);
             auto rrunner = m_segments.rbegin();
             const auto rend = m_segments.rend();
             ++rrunner; // Skip last segment, preserve in cache
@@ -315,13 +319,14 @@ bool PlaylistCache::HasSpaceForNewSegment() {
                 }
                 ++rrunner;
             }
+//            LogDebug("PlaylistCache: !! idx = #%" PRIu64 ". ", idx);
         }
         // Remove or free memory of segment
         if( idx != -1) {
-            m_cacheSizeInBytes -= m_segments[idx]->Size();
+            m_cacheSizeInBytes -= m_segments.at(idx)->Size();
             if(CanSeek()) {
                 // Preserve stream length info for VOD segment
-                m_segments[idx]->Free();
+                m_segments.at(idx)->Free();
             } else {
                 m_segments.erase(idx);
             }

@@ -31,6 +31,7 @@
 
 #include <inttypes.h>
 #include <chrono>
+#include "ThreadPool.h"
 #include "helpers.h"
 #include "plist_buffer.h"
 #include "libXBMC_addon.h"
@@ -43,7 +44,17 @@ using namespace ADDON;
 using namespace Globals;
 
 namespace Buffers {
+    int PlaylistBuffer::s_numberOfHlsThreads = 1;
     
+    int PlaylistBuffer::SetNumberOfHlsTreads(int numOfTreads) {
+        const auto numOfCpu = std::thread::hardware_concurrency();
+        if(numOfTreads < 0)
+            numOfTreads = 1;
+        else if(numOfTreads > numOfCpu)
+            numOfTreads = numOfCpu;
+        return s_numberOfHlsThreads = numOfTreads;
+    }
+
     PlaylistBuffer::PlaylistBuffer(const std::string &playListUrl,  PlaylistBufferDelegate delegate, bool seekForVod)
     : m_delegate(delegate)
     , m_cache(nullptr)
@@ -75,16 +86,17 @@ namespace Buffers {
             }
             m_position = 0;
             m_currentSegment = nullptr;
-            m_loadingSegmentIndex = 0;
+            m_segmentIndexAfterSeek = 0;
         }
         CreateThread();
     }
         
-    static bool FillSegmentFromPlaylist(MutableSegment* segment, const std::string& content, std::function<bool()> IsCanceled)
+    static bool FillSegmentFromPlaylist(MutableSegment* segment, const std::string& content, std::function<bool(const MutableSegment&)> IsCanceled)
     {
         Playlist plist(content);
 
         bool hasMoreSegments = false;
+        bool isCanceled = false;
         SegmentInfo info;
         while(plist.NextSegment(info, hasMoreSegments)) {
             void* f = XBMC->OpenFile(info.url.c_str(), XFILE::READ_NO_CACHE | XFILE::READ_CHUNKED); //XFILE::READ_AUDIO_VIDEO);
@@ -96,17 +108,32 @@ namespace Buffers {
             do {
                 bytesRead = XBMC->ReadFile(f, buffer, sizeof(buffer));
                 segment->Push(buffer, bytesRead);
-            }while (bytesRead > 0 && !IsCanceled());
+                isCanceled = IsCanceled(*segment);
+            }while (bytesRead > 0 && !isCanceled);
             
             XBMC->CloseFile(f);
-            if(!hasMoreSegments)
+            if(!hasMoreSegments || isCanceled)
                 break;
         }
-        return !IsCanceled() && segment->BytesReady() > 0;
+        
+        if(isCanceled){
+             LogDebug("PlaylistBuffer: segment #%" PRIu64 " CANCELED.", segment->info.index);
+             return false;
+         } else if(segment->BytesReady() == 0) {
+             LogDebug("PlaylistBuffer: segment #%" PRIu64 " FAILED.", segment->info.index);
+             return false;
+         }
+
+         LogDebug("PlaylistBuffer: segment #%" PRIu64 " FINISHED.", segment->info.index);
+         return true;
+
     }
 
-    static bool FillSegment(MutableSegment* segment, std::function<bool()> IsCanceled)
+    static bool FillSegment(MutableSegment* segment, std::function<bool(const MutableSegment&)> IsCanceled, std::function<void(bool,MutableSegment*)> segmentDone)
     {
+        std::hash<std::thread::id> hasher;
+        LogDebug("PlaylistBuffer: segment #%" PRIu64 " STARTED. (thread 0x%X).", segment->info.index, hasher(std::this_thread::get_id()));
+
         void* f = XBMC->OpenFile(segment->info.url.c_str(), XFILE::READ_NO_CACHE | XFILE::READ_CHUNKED); //XFILE::READ_AUDIO_VIDEO);
         if(!f)
             throw PlistBufferException("Failed to download playlist media segment.");
@@ -120,6 +147,7 @@ namespace Buffers {
         unsigned char buffer[8196];
         std::string contentForPlaylist;
         ssize_t  bytesRead;
+        bool isCanceled = false;
         do {
             bytesRead = XBMC->ReadFile(f, buffer, sizeof(buffer));
             if(contentIsPlaylist) {
@@ -127,14 +155,32 @@ namespace Buffers {
             } else{
                 segment->Push(buffer, bytesRead);
             }
+            isCanceled = IsCanceled(*segment);
             //        LogDebug(">>> Write: %d", bytesRead);
-        }while (bytesRead > 0 && !IsCanceled());
+        }while (bytesRead > 0 && !isCanceled);
         
         XBMC->CloseFile(f);
         
-        if(contentIsPlaylist)
-            return FillSegmentFromPlaylist(segment, contentForPlaylist, IsCanceled);
-        return !IsCanceled() && segment->BytesReady() > 0;
+        bool result = true;
+        if(contentIsPlaylist && !isCanceled) {
+            result = FillSegmentFromPlaylist(segment, contentForPlaylist, [&isCanceled, &IsCanceled](const MutableSegment& seg){
+                return isCanceled = IsCanceled(seg);
+            });
+        }
+
+ 
+        if(isCanceled){
+            LogDebug("PlaylistBuffer: segment #%" PRIu64 " CANCELED.", segment->info.index);
+            result = false;
+        } else if(segment->BytesReady() == 0) {
+            LogDebug("PlaylistBuffer: segment #%" PRIu64 " FAILED.", segment->info.index);
+            result = false;
+        } else {
+            LogDebug("PlaylistBuffer: segment #%" PRIu64 " FINISHED.", segment->info.index);
+        }
+        segmentDone(result, segment);
+
+        return result;
     }
     
     bool PlaylistBuffer::IsStopped(uint32_t timeoutInSec) {
@@ -150,9 +196,14 @@ namespace Buffers {
     
     void *PlaylistBuffer::Process()
     {
+        using namespace progschj;
+
         bool isEof = false;
+        ThreadPool pool(s_numberOfHlsThreads);
+        pool.set_queue_size_limit(s_numberOfHlsThreads);
+
         try {
-            //m_cache->ReloadPlaylist();
+            int current_loader = 0;
             while (/*!isEof && */ !IsStopped()) {
                 
                 bool cacheIsFull = false;
@@ -161,14 +212,19 @@ namespace Buffers {
                     CLockObject lock(m_syncAccess);
                     segment = m_cache->SegmentToFill();
                     if(nullptr != segment) {
-                        m_loadingSegmentIndex = segment->info.index;
-                        LogDebug("PlaylistBuffer: Start fill segment #%" PRIu64 ".", m_loadingSegmentIndex);
+//                        m_loadingSegmentIndex = segment->info.index;
+                        std::hash<std::thread::id> hasher;
+                        LogDebug("PlaylistBuffer: segment #%" PRIu64 " INITIALIZED.", segment->info.index);
                     }
                     // to avoid double lock in following while() loop
                     cacheIsFull = !m_cache->HasSpaceForNewSegment();
                 }
                 bool isStopped = IsStopped();
 
+                const uint64_t segmentIndexAfterSeek = m_segmentIndexAfterSeek;
+                std::function<bool(const MutableSegment&)> isSegmentCanceled = [this, segmentIndexAfterSeek](const MutableSegment& seg) {
+                    return IsStopped() || (m_segmentIndexAfterSeek != segmentIndexAfterSeek && seg.info.index != m_segmentIndexAfterSeek);
+                };
                 // No reason to download next segment when cache is full
                 while(cacheIsFull && !isStopped){
                     {
@@ -181,52 +237,44 @@ namespace Buffers {
                     // try to ping server to avoid connection lost
                     if(cacheIsFull) {
                         if(nullptr != segment) {
-                            isStopped = IsStopped(segment->Duration());
-                        } else  {
-                            isStopped = IsStopped(1);
+                            if(isSegmentCanceled(*segment))
+                                break;
                         }
+                        isStopped = IsStopped(1);
                         if(!isStopped) {
                             LogDebug("PlaylistBuffer: waiting for space in cache...");
                             if(nullptr != segment) {
                                 struct __stat64 stat;
                                 XBMC->StatFile(segment->info.url.c_str(), &stat);
-                                LogDebug("Stat segment #%" PRIu64 ".", m_loadingSegmentIndex);
+                                LogDebug("Stat segment #%" PRIu64 ".", segment->info.index);
                             }
                         }
                     }
                 };
                 
-                auto startLoadingAt = std::chrono::system_clock::now();
                 if(nullptr != segment){
-                    float sleepTime = 1; //Min sleep time 1 sec
-                    if(!IsStopped()) {
+                    if(!IsStopped() && !isSegmentCanceled(*segment)) {
                         // Load segment data
-                        const uint64_t loadingSegmentIndex = segment->info.index;
-                        const bool segmentReady = FillSegment(segment, [this, loadingSegmentIndex]() {
-                            return IsStopped() || m_loadingSegmentIndex != loadingSegmentIndex;
-                        });
-                        if(segmentReady)
-                            LogDebug("PlaylistBuffer: End fill segment #%" PRIu64 ".", m_loadingSegmentIndex);
-                        else
-                            LogDebug("PlaylistBuffer: FAILED (or canceled) to fill segment  #%" PRIu64 ". New segmenet to fill #%" PRIu64 ".", segment->info.index, m_loadingSegmentIndex);
                         
-
-                        // Populate loaded segment
-                        if(!IsStopped()){
-                            CLockObject lock(m_syncAccess);
-                            if(segmentReady) {
-                                m_cache->SegmentReady(segment);
-                                m_writeEvent.Signal();
-                                auto endLoadingAt = std::chrono::system_clock::now();
-                                std::chrono::duration<float> loatTime = endLoadingAt-startLoadingAt;
-                                LogDebug("PlaylistBuffer: segment loaded in %0.2f sec. Duration %0.2f",loatTime.count(), segment->Duration());
-                            } else {
-                                m_cache->SegmentCanceled(segment);
+                        auto startLoadingAt = std::chrono::system_clock::now();
+                        std::function<void(bool,MutableSegment*)> segmentDone = [this, startLoadingAt](bool segmentReady, MutableSegment* seg) {
+                            // Populate loaded segment
+                            if(!IsStopped()){
+                                CLockObject lock(m_syncAccess);
+                                if(segmentReady) {
+                                    m_cache->SegmentReady(seg);
+                                    m_writeEvent.Signal();
+                                    auto endLoadingAt = std::chrono::system_clock::now();
+                                    std::chrono::duration<float> loatTime = endLoadingAt-startLoadingAt;
+                                    LogDebug("PlaylistBuffer: segment #%" PRIu64 " loaded in %0.2f sec. Duration %0.2f", seg->info.index, loatTime.count(), seg->Duration());
+                                } else {
+                                    m_cache->SegmentCanceled(seg);
+                                }
                             }
-                        }
-                        sleepTime = 1.0;//std::max(duration / 2.0, 1.0);
-                    } else {
-                        ;//isEof = m_cache->IsEof(m_position);
+                        };
+
+                        pool.enqueue(FillSegment, segment, isSegmentCanceled, segmentDone);
+                        
                     }
                 } else {
                     IsStopped(1);
@@ -253,7 +301,11 @@ namespace Buffers {
         } catch (InputBufferException& ex ) {
             LogError("PlaylistBuffer: download thread failed with error: %s", ex.what());
         }
-        
+
+        LogDebug("PlaylistBuffer: finilizing loaders pool...");
+        pool.wait_until_empty();
+        pool.wait_until_nothing_in_flight ();
+
         LogDebug("PlaylistBuffer: write thread is done.");
 
         return NULL;
@@ -272,7 +324,6 @@ namespace Buffers {
         //    int32_t timeout = c_commonTimeoutMs;
         while (totalBytesRead < bufferSize)
         {
-            int waitingCounter = 0;
             while(nullptr == m_currentSegment)
             {
                 {
@@ -287,14 +338,22 @@ namespace Buffers {
                     if(PlaylistCache::k_SegmentStatus_Loading == segmentStatus ||
                        PlaylistCache::k_SegmentStatus_CacheEmpty == segmentStatus)
                     {
-                        if(waitingCounter++ == 0 && IsRunning()){
-                            LogNotice("PlaylistBuffer: waiting for segment loading (max %d ms)...", timeoutMs);
-                            // NOTE: timeout is set by Timeshift buffer
-                            // Do not change it! May cause long waiting on stopping/exit.
-                            //timeoutMs = 5*1000;
-                            m_writeEvent.Wait(timeoutMs);
-                        } else {
-                            LogError("PlaylistBuffer: segment loading  timeout! %d sec.", timeoutMs * (waitingCounter -1) / 1000);
+                        if(!IsRunning()){
+                            LogError("PlaylistBuffer: not running (aka stopping) ...");
+                            break;
+                        }
+                        LogNotice("PlaylistBuffer: waiting for segment loading (max %d ms)...", timeoutMs);
+                        // NOTE: timeout is set by Timeshift buffer
+                        // Do not change it! May cause long waiting on stopping/exit.
+                        bool hasNewSegment = false;
+                        do {
+                            hasNewSegment = m_writeEvent.Wait(1000);
+                            timeoutMs -= 1000;
+                            
+                        } while (IsRunning() && !hasNewSegment && timeoutMs > 1000);
+                        if(timeoutMs < 1000)
+                        {
+                            LogError("PlaylistBuffer: segment loading  timeout!");
                             break;
                         }
                     } else {
@@ -399,7 +458,7 @@ namespace Buffers {
                 LogDebug("PlaylistBuffer: cache failed to prepare for seek to pos %" PRId64 "", iPosition);
                 return -1;
             }
-            m_loadingSegmentIndex = nextSegmentIndex;
+            m_segmentIndexAfterSeek = nextSegmentIndex;
         }
         
         m_currentSegment = nullptr;
