@@ -37,10 +37,10 @@ static std::string ToAbsoluteUrl(const std::string& url, const std::string& base
     const char* c_HTTP = "http://";
     const char* c_HTTPS = "https://";
     
-    // If Reliative URL
+    // If url is reliative URL
     if(std::string::npos == url.find(c_HTTP)) {
         std::string absUrl;
-        // Append site prefix...
+        // Append site prefix... (from baseUrl)
         // Find schema.
         auto urlPos = baseUrl.find(c_HTTP);
         if(std::string::npos != urlPos){
@@ -148,6 +148,7 @@ void Playlist::SetBestPlaylist(const std::string& data)
             uint64_t rate = ParseXstreamInfTag(tagBody, url);
             if(rate > bestRate) {
                 m_playListUrl = ToAbsoluteUrl(url, m_effectivePlayListUrl);
+                m_effectivePlayListUrl.clear();
                 bestRate = rate;
             }
         }
@@ -263,11 +264,13 @@ void Playlist::LoadPlaylist(std::string& data) const
 {
     char buffer[1024];
     
-    LogDebug(">>> PlaylistBuffer: (re)loading playlist %s", m_playListUrl.c_str());
+    const std::string& requestUrl = (m_effectivePlayListUrl.empty()) ? m_playListUrl : m_effectivePlayListUrl;
+    
+    LogDebug(">>> PlaylistBuffer: (re)loading playlist %s", requestUrl.c_str());
     
     bool succeeded = false;
     try{
-        m_effectivePlayListUrl.clear();
+        //m_effectivePlayListUrl.clear();
         
         std::vector<std::string> headers;
         if(!m_httplHeaders.empty()) {
@@ -283,7 +286,7 @@ void Playlist::LoadPlaylist(std::string& data) const
             }
         }
         
-        HttpEngine::Request request(m_playListUrl, "", headers);
+        HttpEngine::Request request(requestUrl, "", headers);
         HttpEngine::DoCurl(request, HttpEngine::TCoocies(), &data, 9999999, &m_effectivePlayListUrl);
         succeeded = true;
         
