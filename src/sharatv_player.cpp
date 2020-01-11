@@ -56,7 +56,8 @@ namespace SharaTvEngine {
     static const char* const c_START = "${start}";
     static const char* const c_DURATION = "${duration}";
     static const char* const c_OFFSET = "${offset}";
-    
+    static const char* const c_LUTC = "${lutc}";
+
     
     static const char* c_EpgCacheFile = "sharatv_epg_cache.txt";
     
@@ -206,7 +207,17 @@ namespace SharaTvEngine {
             url.replace(pos, strlen(c_OFFSET), n_to_string(offset));
             debugTimes += " with offset " + time_t_to_string(offset);
         }
+        
+        // Optional UTC and LUTC params
+        pos = url.find(c_LUTC);
+        if(string::npos != pos) {
+            auto lutc = time(NULL) - startTime;
+            url.replace(pos, strlen(c_LUTC), n_to_string(lutc));
+            debugTimes += " local UTC " + time_t_to_string(lutc);
+        }
+                            
         LogDebug(debugTimes.c_str());
+        
         return  url;
     }
     
@@ -478,6 +489,8 @@ namespace SharaTvEngine {
                     throw BadPlaylistFormatException((string("Invalid channel URL: ") + url).c_str());
                 //archiveUrl = url.substr(0, lastSlash + 1) + "timeshift_abs_video-" + c_START + ".m3u8" + url.substr(firstAmp);
                 archiveUrl = url.substr(0, lastSlash + 1) + "video-" + c_START + "-" + c_DURATION + ".m3u8" + url.substr(firstAmp);
+            } else if(archiveType == "shift"){
+                archiveUrl = url + "?utc=" + c_START +"&lutc=" + c_LUTC;
             }
         }
         // probably we have global archive tag
