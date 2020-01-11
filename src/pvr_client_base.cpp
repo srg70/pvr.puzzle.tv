@@ -867,11 +867,14 @@ int PVRClientBase::GetRecordingsAmount(bool deleted)
     }
 
     LogDebug("PVRClientBase: found %d recordings. Was %d", size, m_lastRecordingsAmount);
-    if(m_lastRecordingsAmount  != size) {
+    static P8PLATFORM::CTimeout s_recordingUpdateTimeout;
+    const uint32_t c_recordingUpdateTimeoutMs = 3 * 60 * 1000; // 3 min
+    if(m_lastRecordingsAmount  != size && s_recordingUpdateTimeout.TimeLeft() == 0) {
+        m_lastRecordingsAmount = size;
         PVR->TriggerRecordingUpdate();
-        LogDebug("PVRClientBase: recorings update requested.");
+        s_recordingUpdateTimeout.Init(c_recordingUpdateTimeoutMs);
+        LogDebug("PVRClientBase: recorings update requested. Next apdate after %d sec.", c_recordingUpdateTimeoutMs / 1000);
     }
-    m_lastRecordingsAmount = size;
     return size;
     
 }
