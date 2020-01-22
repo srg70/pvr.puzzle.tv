@@ -7,6 +7,20 @@ OPTION(USE_KODI_FOR_CURL "Use CURL library from Kodi, or use external/system ins
 enable_language(CXX)
 list(INSERT CMAKE_MODULE_PATH 0 "${PROJECT_SOURCE_DIR}/cmake")
 
+OPTION(USE_KODI_FOR_CURL "Use CURL library from Kodi, or use external/system instance otherwise" ON) # Enabled by default
+
+file(STRINGS "${PROJECT_SOURCE_DIR}/proj-options-config.txt" ConfigContents)
+foreach(NameAndValue ${ConfigContents})
+  # Strip leading spaces
+  string(REGEX REPLACE "^[ ]+" "" NameAndValue ${NameAndValue})
+  # Find variable name
+  string(REGEX MATCH "^[^=]+" Name ${NameAndValue})
+  # Find the value
+  string(REPLACE "${Name}=" "" Value ${NameAndValue})
+  # Set the variable
+  set(${Name} "${Value}")
+endforeach()
+
 message(CMAKE_MODULE_PATH = ${CMAKE_MODULE_PATH})
 message(CMAKE_FIND_ROOT_PATH =${CMAKE_FIND_ROOT_PATH})
 message(USE_KODI_FOR_CURL =${USE_KODI_FOR_CURL})
