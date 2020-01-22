@@ -2,17 +2,26 @@ project(pvr.puzzle.tv)
 
 cmake_minimum_required(VERSION 2.6)
 
+OPTION(USE_KODI_FOR_CURL "Use CURL library from Kodi, or use external/system instance otherwise" ON) # Enabled by default
+
 enable_language(CXX)
 list(INSERT CMAKE_MODULE_PATH 0 "${PROJECT_SOURCE_DIR}/cmake")
 
 message(CMAKE_MODULE_PATH = ${CMAKE_MODULE_PATH})
 message(CMAKE_FIND_ROOT_PATH =${CMAKE_FIND_ROOT_PATH})
+message(USE_KODI_FOR_CURL =${USE_KODI_FOR_CURL})
 
 find_package(Kodi REQUIRED)
 find_package(kodiplatform REQUIRED)
 find_package(p8-platform REQUIRED)
 find_package(ZLIB REQUIRED)
-find_package(CURL REQUIRED)
+if(USE_KODI_FOR_CURL)
+    set(CURL_INCLUDE_DIRS "")
+    set(CURL_LIBRARIES "")
+    set(CURL_SSL_LIBRARIES "")
+else(USE_KODI_FOR_CURL)
+    find_package(CURL REQUIRED)
+endif(USE_KODI_FOR_CURL)
 
 include_directories(${kodiplatform_INCLUDE_DIRS}
                     ${p8-platform_INCLUDE_DIRS}

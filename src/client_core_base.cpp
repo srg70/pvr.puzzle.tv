@@ -642,9 +642,9 @@ void ClientCoreBase::CallRpcAsync(const std::string & data,
     };
     
     std::vector<std::string> headers;
-    headers.push_back("Content-Type: application/json");
-    //            headers = curl_slist_append(headers, "Accept: application/json");
-    //headers = curl_slist_append(headers, "charsets: utf-8");
+    headers.push_back("Content-Type:application/json");
+    //            headers = curl_slist_append(headers, "Accept:application/json");
+    //headers = curl_slist_append(headers, "charsets:utf-8");
     
     m_httpEngine->CallApiAsync(HttpEngine::Request(strRequest, data, headers), parserWrapper,  [=](const ActionQueue::ActionResult& ss){completion(ss);});
 }

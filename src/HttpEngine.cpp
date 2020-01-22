@@ -49,38 +49,226 @@ HttpEngine::HttpEngine()
 }
 
 
-bool HttpEngine::CheckInternetConnection(long timeout)
-{
-    char errorMessage[CURL_ERROR_SIZE];
-    std::string* response = new std::string();
-    CURL *curl = curl_easy_init();
-    if (nullptr == curl || nullptr == response) {
-        Globals::LogError("CheckInternetConnection() failed. Can't instansiate CURL.");
-        return false;
-    }
-    std::string url("https://www.google.com");
-    Globals::LogInfo("Sending request: %s", url.c_str());
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
-    curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errorMessage);
-    
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlWriteData);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, response);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout);
-    CURLcode curlCode  = curl_easy_perform(curl);
-    delete response;
-    if (curlCode != CURLE_OK)
+#ifdef  ADDON_GLOBAL_VERSION_MAIN // I.e. Kodi 18.* and later
+    //Use Kodi's CURL library
+    bool HttpEngine::CheckInternetConnection(long timeout)
     {
-        Globals::LogError("CURL error %d. Message: %s.", curlCode, errorMessage);
-        return false;
-    }
-    
-    long httpCode = 0;
-    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
-    Globals::LogInfo("Got HTTP response (%d)", httpCode);
-    return httpCode == 200;
-}
+        using namespace Globals;
+        const std::string url("https://www.google.com");
+        
+        std::string* response = new std::string();
+        
+        void *curl = XBMC->CURLCreate(url.c_str());
+        if (nullptr == curl || nullptr == response) {
+            Globals::LogError("CheckInternetConnection() failed. Can't instansiate CURL.");
+            return false;
+        }
+        Globals::LogInfo("Sending request: %s", url.c_str());
+        if(!XBMC->CURLOpen(curl, XFILE::READ_NO_CACHE | XFILE::READ_TRUNCATED | XFILE::READ_CHUNKED)){
+            Globals::LogError("Failed to open URL = %s.", url.c_str());
+            return false;
+        }
+        
+        ssize_t bytesRead = 0;
+        do {
+            char buffer[256];
+            bytesRead = XBMC->ReadFile(curl, &buffer[0], sizeof(buffer));
+        } while(bytesRead > 0);
+        XBMC->CloseFile(curl);
 
+        return bytesRead == 0;
+    }
+
+
+    void HttpEngine::DoCurl(const Request &request, const TCoocies &cookie, std::string* response, unsigned long long requestId, std::string* effectiveUrl)
+    {
+        using namespace Globals;
+
+        void *curl = XBMC->CURLCreate(request.Url.c_str());
+        if (nullptr == curl)
+            throw CurlErrorException("CURL initialisation failed.");
+        
+        // Post data
+        if(request.IsPost()) {
+            XBMC->CURLAddOption(curl, XFILE::CURL_OPTION_HEADER, "postdata", request.PostData.c_str());
+        }
+        // Custom headers
+        if(!request.Headers.empty()) {
+            for (const auto& header : request.Headers) {
+                auto pos =  header.find(':');
+                if(std::string::npos == pos)
+                    continue;
+                XBMC->CURLAddOption(curl, XFILE::CURL_OPTION_HEADER, header.substr(pos).c_str(), &header.c_str()[pos + 1]);
+            }
+        }
+        // Custom cookies
+        std::string cookieStr;
+        auto itCookie = cookie.begin();
+        for(; itCookie != cookie.end(); ++itCookie)
+        {
+            if (itCookie != cookie.begin())
+                cookieStr += "; ";
+            cookieStr += itCookie->first + "=" + itCookie->second;
+        }
+        XBMC->CURLAddOption(curl, XFILE::CURL_OPTION_HEADER, "cookie", cookieStr.c_str());
+        
+        auto start = P8PLATFORM::GetTimeMs();
+        Globals::LogInfo("Sending request: %s. ID=%llu", request.Url.c_str(), requestId);
+        
+        if(!XBMC->CURLOpen(curl, XFILE::READ_NO_CACHE | XFILE::READ_TRUNCATED | XFILE::READ_CHUNKED)){
+                        throw CurlErrorException(std::string("Failed to open URL = " + request.Url).c_str());
+        }
+
+        ssize_t bytesRead = 0;
+        do {
+            char buffer[32*1024]; //32K buffer
+            bytesRead = XBMC->ReadFile(curl, &buffer[0], sizeof(buffer));
+            response->append(&buffer[0], bytesRead);
+        } while(bytesRead > 0);
+
+        if (bytesRead < 0)
+            *response = "";
+        
+        else if(nullptr != effectiveUrl){
+            char* url = XBMC->GetFilePropertyValue(curl, XFILE::FILE_PROPERTY_EFFECTIVE_URL, "");
+            if(url) {
+                *effectiveUrl = url;
+                XBMC->FreeString(url);
+            }
+        }
+        XBMC->CloseFile(curl);
+
+        if(bytesRead < 0){
+            //delete response;
+            throw CurlErrorException(std::string("CURL (by Kodi) failed to read from " + request.Url + ". See log for details.").c_str());
+        }
+    }
+#else
+    // Use external CURL library
+    #include <curl/curl.h>
+    bool HttpEngine::CheckInternetConnection(long timeout)
+    {
+         char errorMessage[CURL_ERROR_SIZE];
+         std::string* response = new std::string();
+         
+         CURL *curl = curl_easy_init();
+         if (nullptr == curl || nullptr == response) {
+             Globals::LogError("CheckInternetConnection() failed. Can't instansiate CURL.");
+             return false;
+         }
+         std::string url("https://www.google.com");
+         Globals::LogInfo("Sending request: %s", url.c_str());
+         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+         curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errorMessage);
+         
+         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlWriteData);
+         curl_easy_setopt(curl, CURLOPT_WRITEDATA, response);
+         curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout);
+         CURLcode curlCode  = curl_easy_perform(curl);
+         delete response;
+         if (curlCode != CURLE_OK)
+         {
+             Globals::LogError("CURL error %d. Message: %s.", curlCode, errorMessage);
+             return false;
+         }
+         
+         long httpCode = 0;
+         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
+         Globals::LogInfo("Got HTTP response (%d)", httpCode);
+         return httpCode == 200;
+    }
+
+
+    void HttpEngine::DoCurl(const Request &request, const TCoocies &cookie, std::string* response, unsigned long long requestId, std::string* effectiveUrl)
+    {
+        char errorMessage[CURL_ERROR_SIZE];
+        CURL *curl = curl_easy_init();
+        if (nullptr == curl)
+            throw CurlErrorException("CURL initialisation failed.");
+        
+        auto start = P8PLATFORM::GetTimeMs();
+        Globals::LogInfo("Sending request: %s. ID=%llu", request.Url.c_str(), requestId);
+        curl_easy_setopt(curl, CURLOPT_URL, request.Url.c_str());
+        if(request.IsPost()) {
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request.PostData.c_str());
+        }
+        if(!request.Headers.empty()) {
+            struct curl_slist *headers = NULL;
+            for (const auto& header : request.Headers) {
+                headers = curl_slist_append(headers, header.c_str());
+            }
+            curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+            curl_slist_free_all(headers);
+        }
+        
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+        curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errorMessage);
+        
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlWriteData);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, response);
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, c_CurlTimeout);
+        //curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
+        
+        
+        std::string cookieStr;
+        auto itCookie = cookie.begin();
+        for(; itCookie != cookie.end(); ++itCookie)
+        {
+            if (itCookie != cookie.begin())
+                cookieStr += "; ";
+            cookieStr += itCookie->first + "=" + itCookie->second;
+        }
+        curl_easy_setopt(curl, CURLOPT_COOKIE, cookieStr.c_str());
+        
+        long httpCode = 0;
+        int retries = 5;
+        CURLcode curlCode;
+        
+        while (retries-- > 0)
+        {
+            curlCode = curl_easy_perform(curl);
+            
+            if (curlCode == CURLE_OPERATION_TIMEDOUT)
+            {
+                Globals::LogError("CURL operation timeout! (%d sec). ID=%llu", c_CurlTimeout, requestId);
+                break;
+            }
+            else if (curlCode != CURLE_OK)
+            {
+                Globals::LogError("CURL error %d. Message: %s. ID=%llu", curlCode, errorMessage, requestId);
+                break;
+            }
+            
+            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
+            
+            if (httpCode != 503) // temporarily unavailable
+                break;
+            
+            Globals::LogInfo("%s: %s. ID=%llu", __FUNCTION__, "HTTP error 503 (temporarily unavailable)", requestId);
+            
+            P8PLATFORM::CEvent::Sleep(1000);
+        }
+        Globals::LogInfo("Got HTTP response (%d) in %d ms. ID=%llu", httpCode,  P8PLATFORM::GetTimeMs() - start, requestId);
+        
+        if (httpCode != 200)
+            *response = "";
+        
+        if(curlCode == CURLE_OK && nullptr != effectiveUrl){
+            char *url = NULL;
+            CURLcode redirectResult = curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &url);
+            if(url)
+                *effectiveUrl = url;
+        }
+        
+        curl_easy_cleanup(curl);
+        if(curlCode != CURLE_OK){
+            //delete response;
+            throw CurlErrorException(&errorMessage[0]);
+        }
+    }
+
+#endif
 void HttpEngine::CancelAllRequests()
 {
     Globals::LogInfo("Cancelling API requests...");
@@ -128,18 +316,18 @@ void HttpEngine::SetCurlTimeout(long timeout)
     HttpEngine::c_CurlTimeout = timeout;
 }
 
-std::string HttpEngine::Escape(const std::string& str)
-{
-    std::string result;
-    CURL *curl = curl_easy_init();
-    if(curl) {
-        char *output = curl_easy_escape(curl, str.c_str(), str.size());
-        if(output) {
-            result = output;
-            curl_free(output);
-        }
-        curl_easy_cleanup(curl);
-    }
-    return result;
-}
+//std::string HttpEngine::Escape(const std::string& str)
+//{
+//    std::string result;
+//    CURL *curl = curl_easy_init();
+//    if(curl) {
+//        char *output = curl_easy_escape(curl, str.c_str(), str.size());
+//        if(output) {
+//            result = output;
+//            curl_free(output);
+//        }
+//        curl_easy_cleanup(curl);
+//    }
+//    return result;
+//}
 

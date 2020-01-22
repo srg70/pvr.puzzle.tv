@@ -457,7 +457,7 @@ namespace TtvEngine
             
             string auth("test:test");
             string encoded = base64_encode(reinterpret_cast<const unsigned char*>(auth.c_str()), auth.length());
-            headers.push_back(string("Authorization: Basic ") + encoded);
+            headers.push_back(string("Authorization:Basic ") + encoded);
 
             string channels;
             P8PLATFORM::CEvent event;

@@ -59,14 +59,6 @@
 		4CDC11E520BDC48100EA9E2B /* globals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CDC11E320BDC48100EA9E2B /* globals.cpp */; };
 		4CDC11E620BDC48100EA9E2B /* globals.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4CDC11E420BDC48100EA9E2B /* globals.hpp */; };
 		4CE40890220DAACE00CC92CC /* playlist_cache.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CC578D921D378A200871747 /* playlist_cache.cpp */; };
-		4CEE3EA22239395000AB8F2C /* mprintf.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3E9A2239394F00AB8F2C /* mprintf.h */; };
-		4CEE3EA32239395000AB8F2C /* system.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3E9B2239394F00AB8F2C /* system.h */; };
-		4CEE3EA42239395000AB8F2C /* typecheck-gcc.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3E9C2239394F00AB8F2C /* typecheck-gcc.h */; };
-		4CEE3EA52239395000AB8F2C /* easy.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3E9D2239394F00AB8F2C /* easy.h */; };
-		4CEE3EA62239395000AB8F2C /* stdcheaders.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3E9E2239394F00AB8F2C /* stdcheaders.h */; };
-		4CEE3EA72239395000AB8F2C /* curlver.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3E9F2239394F00AB8F2C /* curlver.h */; };
-		4CEE3EA82239395000AB8F2C /* curl.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EA02239394F00AB8F2C /* curl.h */; };
-		4CEE3EA92239395000AB8F2C /* multi.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EA12239394F00AB8F2C /* multi.h */; };
 		4CEE3EC52239397900AB8F2C /* DemuxPacket.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EAB2239397800AB8F2C /* DemuxPacket.h */; };
 		4CEE3EC62239397900AB8F2C /* DemuxCrypto.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EAC2239397800AB8F2C /* DemuxCrypto.h */; };
 		4CEE3EC72239397900AB8F2C /* kodi_game_types.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CEE3EAD2239397800AB8F2C /* kodi_game_types.h */; };
@@ -262,14 +254,6 @@
 		4CDC11DF20B4531900EA9E2B /* client_core_base.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = client_core_base.hpp; sourceTree = "<group>"; };
 		4CDC11E320BDC48100EA9E2B /* globals.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = globals.cpp; sourceTree = "<group>"; };
 		4CDC11E420BDC48100EA9E2B /* globals.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = globals.hpp; sourceTree = "<group>"; };
-		4CEE3E9A2239394F00AB8F2C /* mprintf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = mprintf.h; path = build/build/depends/include/curl/mprintf.h; sourceTree = SOURCE_ROOT; };
-		4CEE3E9B2239394F00AB8F2C /* system.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = system.h; path = build/build/depends/include/curl/system.h; sourceTree = SOURCE_ROOT; };
-		4CEE3E9C2239394F00AB8F2C /* typecheck-gcc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "typecheck-gcc.h"; path = "build/build/depends/include/curl/typecheck-gcc.h"; sourceTree = SOURCE_ROOT; };
-		4CEE3E9D2239394F00AB8F2C /* easy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = easy.h; path = build/build/depends/include/curl/easy.h; sourceTree = SOURCE_ROOT; };
-		4CEE3E9E2239394F00AB8F2C /* stdcheaders.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = stdcheaders.h; path = build/build/depends/include/curl/stdcheaders.h; sourceTree = SOURCE_ROOT; };
-		4CEE3E9F2239394F00AB8F2C /* curlver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = curlver.h; path = build/build/depends/include/curl/curlver.h; sourceTree = SOURCE_ROOT; };
-		4CEE3EA02239394F00AB8F2C /* curl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = curl.h; path = build/build/depends/include/curl/curl.h; sourceTree = SOURCE_ROOT; };
-		4CEE3EA12239394F00AB8F2C /* multi.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = multi.h; path = build/build/depends/include/curl/multi.h; sourceTree = SOURCE_ROOT; };
 		4CEE3EAB2239397800AB8F2C /* DemuxPacket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DemuxPacket.h; path = build/build/depends/include/kodi/DemuxPacket.h; sourceTree = "<group>"; };
 		4CEE3EAC2239397800AB8F2C /* DemuxCrypto.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DemuxCrypto.h; path = build/build/depends/include/kodi/DemuxCrypto.h; sourceTree = "<group>"; };
 		4CEE3EAD2239397800AB8F2C /* kodi_game_types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = kodi_game_types.h; path = build/build/depends/include/kodi/kodi_game_types.h; sourceTree = "<group>"; };
@@ -631,7 +615,6 @@
 		4CEE3E97223938F300AB8F2C /* include */ = {
 			isa = PBXGroup;
 			children = (
-				4CEE3E992239393F00AB8F2C /* curl */,
 				4CEE3EAA2239396000AB8F2C /* kodi */,
 				4CFB1316226734A000372DB3 /* libtar_listhash.h */,
 				4CFB1315226734A000372DB3 /* libtar.h */,
@@ -643,21 +626,6 @@
 				4CEE3F4422393A9900AB8F2C /* zlib.h */,
 			);
 			name = include;
-			sourceTree = "<group>";
-		};
-		4CEE3E992239393F00AB8F2C /* curl */ = {
-			isa = PBXGroup;
-			children = (
-				4CEE3EA02239394F00AB8F2C /* curl.h */,
-				4CEE3E9F2239394F00AB8F2C /* curlver.h */,
-				4CEE3E9D2239394F00AB8F2C /* easy.h */,
-				4CEE3E9A2239394F00AB8F2C /* mprintf.h */,
-				4CEE3EA12239394F00AB8F2C /* multi.h */,
-				4CEE3E9E2239394F00AB8F2C /* stdcheaders.h */,
-				4CEE3E9B2239394F00AB8F2C /* system.h */,
-				4CEE3E9C2239394F00AB8F2C /* typecheck-gcc.h */,
-			);
-			path = curl;
 			sourceTree = "<group>";
 		};
 		4CEE3EAA2239396000AB8F2C /* kodi */ = {
@@ -961,7 +929,6 @@
 				4CEE3EF9223939A100AB8F2C /* Button.h in Headers */,
 				4CEE3F8922393AE300AB8F2C /* strtod.h in Headers */,
 				4CEE3ED02239397900AB8F2C /* TimingConstants.h in Headers */,
-				4CEE3EA62239395000AB8F2C /* stdcheaders.h in Headers */,
 				4CEE3F6922393AB300AB8F2C /* rapidjson.h in Headers */,
 				4CEE3F0F223939BA00AB8F2C /* FileBrowser.h in Headers */,
 				4CEE3EFC223939A100AB8F2C /* TextBox.h in Headers */,
@@ -973,7 +940,6 @@
 				4CEE3FA3223958B100AB8F2C /* Screensaver.h in Headers */,
 				4CEE3F6F22393AB300AB8F2C /* filereadstream.h in Headers */,
 				4CEE3F4022393A7F00AB8F2C /* atomic.h in Headers */,
-				4CEE3EA52239395000AB8F2C /* easy.h in Headers */,
 				4CEE3F3122393A6F00AB8F2C /* threads.h in Headers */,
 				4CEE3F6222393AB300AB8F2C /* memorystream.h in Headers */,
 				4CEE3F9222393AEA00AB8F2C /* en.h in Headers */,
@@ -984,7 +950,6 @@
 				4C534CC41F347CD50038539D /* file_cache_buffer.hpp in Headers */,
 				4CAAE7272006438600A866C9 /* edem_player.h in Headers */,
 				4CEE3F6722393AB300AB8F2C /* ostreamwrapper.h in Headers */,
-				4CEE3EA42239395000AB8F2C /* typecheck-gcc.h in Headers */,
 				4CEE3EDD2239397900AB8F2C /* AddonBase.h in Headers */,
 				4CEE3F8422393AE300AB8F2C /* swap.h in Headers */,
 				4CEE3EE52239398F00AB8F2C /* definitions.h in Headers */,
@@ -1002,10 +967,8 @@
 				4CEE3F6822393AB300AB8F2C /* istreamwrapper.h in Headers */,
 				4CEE3EFA223939A100AB8F2C /* Rendering.h in Headers */,
 				4CEE3EC92239397900AB8F2C /* libKODI_guilib.h in Headers */,
-				4CEE3EA92239395000AB8F2C /* multi.h in Headers */,
 				4CEE3F8522393AE300AB8F2C /* ieee754.h in Headers */,
 				4CEE3F9E223958B100AB8F2C /* AudioEncoder.h in Headers */,
-				4CEE3EA32239395000AB8F2C /* system.h in Headers */,
 				4CEE3FA2223958B100AB8F2C /* Visualization.h in Headers */,
 				4C5D1C5D21B83E6A004286DA /* ttv_pvr_client.h in Headers */,
 				4CEE3F9122393AEA00AB8F2C /* error.h in Headers */,
@@ -1018,8 +981,6 @@
 				4CEE3EE62239398F00AB8F2C /* ListItem.h in Headers */,
 				4CEE3F5D22393AB300AB8F2C /* stringbuffer.h in Headers */,
 				4CAAE7292006438600A866C9 /* edem_pvr_client.h in Headers */,
-				4CEE3EA82239395000AB8F2C /* curl.h in Headers */,
-				4CEE3EA72239395000AB8F2C /* curlver.h in Headers */,
 				4CEE3F4622393A9900AB8F2C /* tinystr.h in Headers */,
 				4CEE3EF5223939A100AB8F2C /* Label.h in Headers */,
 				4CEE3F2322393A4500AB8F2C /* os-socket.h in Headers */,
@@ -1046,7 +1007,6 @@
 				4CEE3ECF2239397900AB8F2C /* libKODI_game.h in Headers */,
 				4C8506E91F0E25DF00213131 /* HttpEngine.hpp in Headers */,
 				4CEE3EC52239397900AB8F2C /* DemuxPacket.h in Headers */,
-				4CEE3EA22239395000AB8F2C /* mprintf.h in Headers */,
 				4CEE3ECD2239397900AB8F2C /* Filesystem.h in Headers */,
 				4C9F589F22A7ADF300CEF856 /* sharatv_player.h in Headers */,
 				4CEE3EDB2239397900AB8F2C /* General.h in Headers */,

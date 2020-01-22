@@ -282,7 +282,7 @@ void Playlist::LoadPlaylist(std::string& data) const
                 if(i >= headerStringsSize)
                     continue;
                 const auto& headerValue = headerStrings[i++];
-                headers.push_back(headerName + ": " + headerValue);
+                headers.push_back(headerName + ":" + headerValue);
             }
         }
         
