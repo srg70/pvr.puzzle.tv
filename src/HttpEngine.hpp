@@ -33,8 +33,6 @@
 #endif
 #endif
 
-#include <curl/curl.h>
-
 #include <map>
 #include <string>
 #include <exception>
@@ -111,98 +109,13 @@ public:
     }
     void CancelAllRequests();
     static void SetCurlTimeout(long timeout);
-    static std::string Escape(const std::string& str);
+//    static std::string Escape(const std::string& str);
     
     TCoocies m_sessionCookie;
 
     static bool CheckInternetConnection(long timeout);
     
-    static void DoCurl(const Request &request, const TCoocies &cookie, std::string* response, unsigned long long requestId = 0, std::string* effectiveUrl = nullptr)
-    {
-        char errorMessage[CURL_ERROR_SIZE];
-        CURL *curl = curl_easy_init();
-        if (nullptr == curl)
-            throw CurlErrorException("CURL initialisation failed.");
-        
-        auto start = P8PLATFORM::GetTimeMs();
-        Globals::LogInfo("Sending request: %s. ID=%llu", request.Url.c_str(), requestId);
-        curl_easy_setopt(curl, CURLOPT_URL, request.Url.c_str());
-        if(request.IsPost()) {
-            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request.PostData.c_str());
-        }
-        if(!request.Headers.empty()) {
-            struct curl_slist *headers = NULL;
-            for (const auto& header : request.Headers) {
-                headers = curl_slist_append(headers, header.c_str());
-             }
-            curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-        }
-
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
-        curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errorMessage);
-        
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlWriteData);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, response);
-        curl_easy_setopt(curl, CURLOPT_TIMEOUT, c_CurlTimeout);
-        //curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
-
-        
-        std::string cookieStr;
-        auto itCookie = cookie.begin();
-        for(; itCookie != cookie.end(); ++itCookie)
-        {
-            if (itCookie != cookie.begin())
-                cookieStr += "; ";
-            cookieStr += itCookie->first + "=" + itCookie->second;
-        }
-        curl_easy_setopt(curl, CURLOPT_COOKIE, cookieStr.c_str());
-        
-        long httpCode = 0;
-        int retries = 5;
-        CURLcode curlCode;
-        
-        while (retries-- > 0)
-        {
-            curlCode = curl_easy_perform(curl);
-            
-            if (curlCode == CURLE_OPERATION_TIMEDOUT)
-            {
-                Globals::LogError("CURL operation timeout! (%d sec). ID=%llu", c_CurlTimeout, requestId);
-                break;
-            }
-            else if (curlCode != CURLE_OK)
-            {
-                Globals::LogError("CURL error %d. Message: %s. ID=%llu", curlCode, errorMessage, requestId);
-                break;
-            }
-            
-            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
-            
-            if (httpCode != 503) // temporarily unavailable
-                break;
-            
-            Globals::LogInfo("%s: %s. ID=%llu", __FUNCTION__, "HTTP error 503 (temporarily unavailable)", requestId);
-            
-            P8PLATFORM::CEvent::Sleep(1000);
-        }
-        Globals::LogInfo("Got HTTP response (%d) in %d ms. ID=%llu", httpCode,  P8PLATFORM::GetTimeMs() - start, requestId);
-        
-        if (httpCode != 200)
-            *response = "";
-        
-        if(curlCode == CURLE_OK && nullptr != effectiveUrl){
-            char *url = NULL;
-            CURLcode redirectResult = curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &url);
-            if(url)
-                *effectiveUrl = url;
-        }
-        
-        curl_easy_cleanup(curl);
-        if(curlCode != CURLE_OK){
-            //delete response;
-            throw CurlErrorException(&errorMessage[0]);
-        }
-    }
+    static void DoCurl(const Request &request, const TCoocies &cookie, std::string* response, unsigned long long requestId = 0, std::string* effectiveUrl = nullptr);
     
 private:
     static size_t CurlWriteData(void *buffer, size_t size, size_t nmemb, void *userp);
