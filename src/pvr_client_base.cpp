@@ -231,19 +231,44 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
         if(nullptr != phase) {
             phase->Broadcast();
         }
-    }, [](const ActionResult&){
-        
+    }, [this](const ActionResult& res){
+        if(ActionQueue::kActionCompleted != res.status) {
+            LogError("PVRClientBase: async creating of LUTs failed! Critical error.");
+        } else {
+            auto phase =  m_clientCore->GetPhase(IClientCore::k_EpgLoadingPhase);
+            phase->Wait();
+            ScheduleRecordingsUpdate();
+        }
     });
-    
+        
     return ADDON_STATUS_OK;
     
 }
 
+void PVRClientBase::ScheduleRecordingsUpdate() {
+     m_destroyer->PerformAsync([this]() {
+         if(!m_destroyerEvent.Wait(3 * 60 * 1000) && nullptr != m_clientCore) {
+            m_clientCore->ReloadRecordings();
+         }
+     }, [this](const ActionResult& res) {
+         if(ActionQueue::kActionFailed == res.status) {
+             LogError("PVRClientBase: async recordings update failed!");
+         } else if(ActionQueue::kActionCompleted == res.status) {
+             ScheduleRecordingsUpdate();
+         }else {
+             LogDebug("PVRClientBase: sheduling of recording update canceled.");
+         }
+     });
+}
+
+
 PVRClientBase::~PVRClientBase()
 {
     Cleanup();
-    if(m_destroyer)
+    if(m_destroyer) {
+        m_destroyerEvent.Signal();
         SAFE_DELETE(m_destroyer);
+    }
 }
 void PVRClientBase::Cleanup()
 {
@@ -759,6 +784,7 @@ void PVRClientBase::CloseLiveStream()
                 LogNotice("PVRClientBase: input stream closed.");
             }
         });
+        m_destroyerEvent.Signal();
     }
     
     m_inputBuffer = nullptr;
@@ -877,12 +903,6 @@ int PVRClientBase::GetRecordingsAmount(bool deleted)
             return 0;
         }
         phase->Wait();
-
-//        if(!m_clientCore->GetPhase(IClientCore::k_EpgLoadingPhase)->IsDone()) {
-//            LogDebug("PVRClientBase: EPG still loading. No recording repoted.");
-//            return 0;
-//        }
-        
         size = m_clientCore->UpdateArchiveInfoAndCount();
     }
     // Add local recordings
@@ -897,14 +917,7 @@ int PVRClientBase::GetRecordingsAmount(bool deleted)
     }
 
     LogDebug("PVRClientBase: found %d recordings. Was %d", size, m_lastRecordingsAmount);
-//    static P8PLATFORM::CTimeout s_recordingUpdateTimeout;
-//    const uint32_t c_recordingUpdateTimeoutMs = 3 * 60 * 1000; // 3 min
-//    if(m_lastRecordingsAmount  != size && s_recordingUpdateTimeout.TimeLeft() == 0) {
-//        m_lastRecordingsAmount = size;
-//        PVR->TriggerRecordingUpdate();
-//        s_recordingUpdateTimeout.Init(c_recordingUpdateTimeoutMs);
-//        LogDebug("PVRClientBase: recorings update requested. Next apdate after %d sec.", c_recordingUpdateTimeoutMs / 1000);
-//    }
+
     return size;
     
 }
@@ -960,8 +973,7 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
     LogDebug("PVRClientBase: start recorings transfering...");
     // Add remote archive (if enabled)
     if(m_supportArchive) {
-        //        if(!m_clientCore->GetPhase(IClientCore::k_EpgLoadingPhase)->IsDone())
-        //            return PVR_ERROR_NO_ERROR;
+
         phase =  m_clientCore->GetPhase(IClientCore::k_EpgCacheLoadingPhase);
         if(!phase) {
             return PVR_ERROR_NO_ERROR;

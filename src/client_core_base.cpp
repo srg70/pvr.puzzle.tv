@@ -223,8 +223,6 @@ void ClientCoreBase::InitAsync(bool clearEpgCache, bool updateRecordings)
         
         if(!updateRecordings || isAborted())
             return;
-        
-        ScheduleRecordingsUpdate();
     });
     
 }
@@ -599,19 +597,6 @@ void ClientCoreBase::_UpdateEpgForAllChannels(time_t startTime, time_t endTime)
 }
 
 #pragma  mark - Recordings
-void ClientCoreBase::ScheduleRecordingsUpdate()
-{
-    if(nullptr == m_httpEngine)
-        return;
-//    m_httpEngine->RunOnCompletionQueueAsync([this] {
-//        if(m_recordingsUpdateDelay.TimeLeft()) {
-//            ScheduleRecordingsUpdate();
-//        } else {
-                 ReloadRecordings();
-//            }
-//        }
-//    }, [] (ActionQueue::ActionResult ){});
-}
 
 void ClientCoreBase::OnEpgUpdateDone()
 {
