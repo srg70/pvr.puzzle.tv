@@ -128,9 +128,7 @@ void PuzzleTV::Init(bool clearEpgCache)
         ClearEpgCache(c_EpgCacheFile);
     else
         LoadEpgCache(c_EpgCacheFile);
-    
-     ;
-    UpdateArhivesAsync();   
+    UpdateArhivesAsync();
 }
 
 PuzzleTV::~PuzzleTV()

@@ -308,7 +308,7 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
                     }
                     return true;
                 };
-                ForEachEpg(action);
+                ForEachEpgLocked(action);
                 
                 
                 const Value& jsonChannelEpg = channel["epg"];

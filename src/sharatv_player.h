@@ -122,7 +122,6 @@ namespace SharaTvEngine
         std::string m_playListUrl;
         std::string m_epgUrl;
         GloabalTags m_globalTags;
-        //P8PLATFORM::CTimeout m_epgUpdateInterval;
         ArchiveInfos m_archiveInfo;
         bool m_enableAdult;
     };

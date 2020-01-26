@@ -109,7 +109,6 @@ namespace TtvEngine
         } else {
             LoadEpgCache(c_EpgCacheFile);
         }
-        LoadEpg();
     }
     
     Core::~Core()

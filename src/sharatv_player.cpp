@@ -113,7 +113,6 @@ namespace SharaTvEngine {
         } else {
             LoadEpgCache(c_EpgCacheFile);
         }
-        LoadEpg();
     }
     
     
@@ -238,12 +237,7 @@ namespace SharaTvEngine {
     void Core::UpdateHasArchive(PvrClient::EpgEntry& entry)
     {
         entry.HasArchive = false;
-        auto pCahnnel = std::find_if(m_channelList.begin(), m_channelList.end(), [&entry] (const ChannelList::value_type& ch) {
-            return ch.second.UniqueId == entry.UniqueChannelId;
-        });
-        if(pCahnnel == m_channelList.end())
-            return; // Unknown channel
-        ChannelId chId = pCahnnel->second.UniqueId;
+        const ChannelId& chId = entry.UniqueChannelId; // pCahnnel->second.UniqueId;
         if(m_archiveInfo.info.count(chId) == 0)
             return;
         
@@ -260,18 +254,13 @@ namespace SharaTvEngine {
         StringUtils::ToLower(strToHash);
         return std::hash<std::string>{}(strToHash);
     }
+    
     void Core::UpdateEpgForAllChannels(time_t startTime, time_t endTime)
     {
-        //        if(m_epgUpdateInterval.IsSet() && m_epgUpdateInterval.TimeLeft() > 0)
-        //            return;
-        //
-        
         using namespace XMLTV;
         try {
             LoadEpg();
             SaveEpgCache(c_EpgCacheFile, m_archiveInfo.archiveDays);
-            //        } catch (ServerErrorException& ex) {
-            //            m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32002), ex.reason.c_str() );
         } catch (...) {
             LogError("SharaTvPlayer:: failed to update EPG.");
         }
@@ -294,39 +283,6 @@ namespace SharaTvEngine {
         string url = m_channelList.at(channelId).Urls[0];
         return url;
     }
-    
-    //    static void LoadPlaylist(const string& plistUrl, string& data)
-    //    {
-    //        void* f = NULL;
-    //
-    //        try {
-    //            char buffer[1024];
-    //
-    //            // Download playlist
-    //            XBMC->Log(LOG_DEBUG, "SharaTvPlayer: loading playlist: %s", plistUrl.c_str());
-    //
-    //            auto f = XBMC->OpenFile(plistUrl.c_str(), 0);
-    //            if (!f)
-    //                throw BadPlaylistFormatException("Failed to obtain playlist from server.");
-    //                bool isEof = false;
-    //                do{
-    //                    auto bytesRead = XBMC->ReadFile(f, buffer, sizeof(buffer));
-    //                    isEof = bytesRead <= 0;
-    //                    if(!isEof)
-    //                        data.append(&buffer[0], bytesRead);
-    //                        }while(!isEof);
-    //            XBMC->CloseFile(f);
-    //            f = NULL;
-    //
-    //         } catch (std::exception& ex) {
-    //            XBMC->Log(LOG_ERROR, "SharaTvPlayer: exception during playlist loading: %s", ex.what());
-    //            if(NULL != f) {
-    //                XBMC->CloseFile(f);
-    //                f = NULL;
-    //            }
-    //
-    //        }
-    //    }
     
     static void GetGlobalTagsFromPlaylist(const string& data, GloabalTags& globalTags)
     {

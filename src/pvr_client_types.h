@@ -195,13 +195,17 @@ namespace PvrClient {
     public:
         enum Phase{
             k_ChannelsLoadingPhase,
+            k_ChannelsIdCreatingPhase,
+            k_EpgCacheLoadingPhase,
+            k_RecordingsInitialLoadingPhase,
             k_InitPhase,
             k_EpgLoadingPhase
         };
         class IPhase {
         public:
-            virtual void Wait() = 0;
+            virtual bool Wait(uint32_t iTimeout = 0) = 0;
             virtual bool IsDone() = 0;
+            virtual void Broadcast() = 0;
         };
 
         typedef std::function<void(void)> RecordingsDelegate;
@@ -214,7 +218,8 @@ namespace PvrClient {
         virtual PvrClient::GroupId GroupForChannel(PvrClient::ChannelId chId) = 0;
         virtual void GetEpg(ChannelId  channelId, time_t startTime, time_t endTime, EpgEntryAction& onEpgEntry) = 0;
         virtual bool GetEpgEntry(UniqueBroadcastIdType i,  EpgEntry& enrty) = 0;
-        virtual void ForEachEpg(const EpgEntryAction& action) const = 0;
+        virtual void ForEachEpgLocked(const EpgEntryAction& action) const = 0;
+        virtual void ForEachEpgUnlocked(const EpgEntryAction& predicate, const EpgEntryAction& action) const = 0;
         virtual std::string GetUrl(PvrClient::ChannelId channelId) = 0;
 
         virtual void ReloadRecordings() = 0;

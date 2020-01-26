@@ -84,7 +84,7 @@ msgctxt "#10016"
 msgid "Arrange archive by channel groups"
 msgstr "Сортировать архив по группам каналов"
 
-mmsgctxt "#10017"
+msgctxt "#10017"
 msgid "Archive start padding (min)"
 msgstr "Начинать раньше на (мин)"
 
