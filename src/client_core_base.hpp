@@ -112,7 +112,6 @@ namespace PvrClient {
         
         // Recordings
         void OnEpgUpdateDone();
-        void ScheduleRecordingsUpdate();
         void _UpdateEpgForAllChannels(time_t startTime, time_t endTime);
 
 

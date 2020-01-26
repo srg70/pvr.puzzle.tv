@@ -175,6 +175,8 @@ namespace PvrClient
         bool OpenLiveStream(ChannelId channelId, const std::string& url );
         Buffers::ICacheBuffer* CreateLiveCache() const;
 
+        void ScheduleRecordingsUpdate();
+        
         ChannelId m_liveChannelId;
         Buffers::TimeshiftBuffer *m_inputBuffer;
         struct {
@@ -204,6 +206,7 @@ namespace PvrClient
         long m_waitForInetTimeout;
         
         ActionQueue::CActionQueue* m_destroyer;
+        P8PLATFORM::CEvent m_destroyerEvent;
         TKodiToPluginChannelIdLut m_kodiToPluginLut;
         TPluginToKodiChannelIdLut m_pluginToKodiLut;
         
