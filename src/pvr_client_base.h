@@ -162,6 +162,7 @@ namespace PvrClient
         typedef std::map<KodiChannelId, ChannelId> TKodiToPluginChannelIdLut;
         typedef std::map<ChannelId, KodiChannelId> TPluginToKodiChannelIdLut;
 
+        const ChannelList& GetChannelListWhenLutsReady();
         void Cleanup();
         void SetCacheLimit(uint64_t size);
         void SetChannelReloadTimeout(int timeout);

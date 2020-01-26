@@ -33,6 +33,7 @@
 
 #include <stdio.h>
 #include <algorithm>
+#include <chrono>
 #include <list>
 #include "p8-platform/util/util.h"
 #include "p8-platform/util/timeutils.h"
@@ -210,6 +211,29 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     
     m_destroyer = new CActionQueue(100, "Streams Destroyer");
     m_destroyer->CreateThread();
+    
+    m_destroyer->PerformAsync([this](){
+        while(m_clientCore == nullptr) {
+            P8PLATFORM::CEvent::Sleep(100);
+        }
+        
+         auto phase =  m_clientCore->GetPhase(IClientCore::k_ChannelsLoadingPhase);
+         phase->Wait();
+
+        m_kodiToPluginLut.clear();
+        m_pluginToKodiLut.clear();
+        for (const auto& channel : m_clientCore->GetChannelList()) {
+            KodiChannelId uniqueId = XMLTV::ChannelIdForChannelName(channel.second.Name);
+            m_kodiToPluginLut[uniqueId] = channel.second.UniqueId;
+            m_pluginToKodiLut[channel.second.UniqueId] = uniqueId;
+        }
+        phase =  m_clientCore->GetPhase(IClientCore::k_ChannelsIdCreatingPhase);
+        if(nullptr != phase) {
+            phase->Broadcast();
+        }
+    }, [](const ActionResult&){
+        
+    });
     
     return ADDON_STATUS_OK;
     
@@ -478,27 +502,27 @@ ADDON_STATUS PVRClientBase::OnReloadRecordings()
 
 #pragma mark - Channels
 
+const ChannelList& PVRClientBase::GetChannelListWhenLutsReady()
+{
+    auto phase =  m_clientCore->GetPhase(IClientCore::k_ChannelsIdCreatingPhase);
+    if(phase) {
+        phase->Wait();
+    }
+    return m_clientCore->GetChannelList();
+}
+
 PVR_ERROR PVRClientBase::GetChannels(ADDON_HANDLE handle, bool bRadio)
 {
     if(NULL == m_clientCore)
         return PVR_ERROR_SERVER_ERROR;
-    
-    if(!bRadio) {
-        m_kodiToPluginLut.clear();
-        m_pluginToKodiLut.clear();
-    }
-    
-    for(auto& itChannel : m_clientCore->GetChannelList())
+        
+    for(auto& itChannel : GetChannelListWhenLutsReady())
     {
         auto & channel = itChannel.second;
         if (bRadio == channel.IsRadio)
         {
-            KodiChannelId uniqueId = XMLTV::ChannelIdForChannelName(channel.Name);
-            m_kodiToPluginLut[uniqueId] = channel.UniqueId;
-            m_pluginToKodiLut[channel.UniqueId] = uniqueId;
-            
             PVR_CHANNEL pvrChannel = { 0 };
-            pvrChannel.iUniqueId = uniqueId;
+            pvrChannel.iUniqueId = m_pluginToKodiLut.at(channel.UniqueId) ;
             pvrChannel.iChannelNumber = channel.Number + m_channelIndexOffset;
             pvrChannel.bIsRadio = channel.IsRadio;
             strncpy(pvrChannel.strChannelName, channel.Name.c_str(), sizeof(pvrChannel.strChannelName));
@@ -518,7 +542,7 @@ int PVRClientBase::GetChannelsAmount()
     if(NULL == m_clientCore)
         return -1;
     
-    return m_clientCore->GetChannelList().size();
+    return GetChannelListWhenLutsReady().size();
 }
 #pragma mark - Groups
 
@@ -583,7 +607,7 @@ PVR_ERROR PVRClientBase::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL
     if(NULL == m_clientCore)
         return PVR_ERROR_SERVER_ERROR;
     
-    m_clientCore->GetPhase(IClientCore::k_InitPhase)->Wait();
+    m_clientCore->GetPhase(IClientCore::k_EpgCacheLoadingPhase)->Wait();
    
     if(m_kodiToPluginLut.count(channel.iUniqueId) == 0){
         LogError("PVRClientBase: EPG request for unknown channel ID %d", channel.iUniqueId);
@@ -591,7 +615,7 @@ PVR_ERROR PVRClientBase::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL
     }
     
     ChannelId chUniqueId = m_kodiToPluginLut.at(channel.iUniqueId);
-    const auto& ch = m_clientCore->GetChannelList().at(chUniqueId);
+    const auto& ch = GetChannelListWhenLutsReady().at(chUniqueId);
     
     IClientCore::EpgEntryAction onEpgEntry = [&channel, &handle, ch](const EpgEntryList::value_type& epgEntry)
     {
@@ -848,10 +872,16 @@ int PVRClientBase::GetRecordingsAmount(bool deleted)
     int size = 0;
     // Add remote archive (if enabled)
     if(m_supportArchive) {
-        if(!m_clientCore->GetPhase(IClientCore::k_EpgLoadingPhase)->IsDone()) {
-            LogDebug("PVRClientBase: EPG still loading. No recording repoted.");
+        auto phase =  m_clientCore->GetPhase(IClientCore::k_EpgCacheLoadingPhase);
+        if(!phase) {
             return 0;
         }
+        phase->Wait();
+
+//        if(!m_clientCore->GetPhase(IClientCore::k_EpgLoadingPhase)->IsDone()) {
+//            LogDebug("PVRClientBase: EPG still loading. No recording repoted.");
+//            return 0;
+//        }
         
         size = m_clientCore->UpdateArchiveInfoAndCount();
     }
@@ -867,14 +897,14 @@ int PVRClientBase::GetRecordingsAmount(bool deleted)
     }
 
     LogDebug("PVRClientBase: found %d recordings. Was %d", size, m_lastRecordingsAmount);
-    static P8PLATFORM::CTimeout s_recordingUpdateTimeout;
-    const uint32_t c_recordingUpdateTimeoutMs = 3 * 60 * 1000; // 3 min
-    if(m_lastRecordingsAmount  != size && s_recordingUpdateTimeout.TimeLeft() == 0) {
-        m_lastRecordingsAmount = size;
-        PVR->TriggerRecordingUpdate();
-        s_recordingUpdateTimeout.Init(c_recordingUpdateTimeoutMs);
-        LogDebug("PVRClientBase: recorings update requested. Next apdate after %d sec.", c_recordingUpdateTimeoutMs / 1000);
-    }
+//    static P8PLATFORM::CTimeout s_recordingUpdateTimeout;
+//    const uint32_t c_recordingUpdateTimeoutMs = 3 * 60 * 1000; // 3 min
+//    if(m_lastRecordingsAmount  != size && s_recordingUpdateTimeout.TimeLeft() == 0) {
+//        m_lastRecordingsAmount = size;
+//        PVR->TriggerRecordingUpdate();
+//        s_recordingUpdateTimeout.Init(c_recordingUpdateTimeoutMs);
+//        LogDebug("PVRClientBase: recorings update requested. Next apdate after %d sec.", c_recordingUpdateTimeoutMs / 1000);
+//    }
     return size;
     
 }
@@ -883,7 +913,7 @@ void PVRClientBase::FillRecording(const EpgEntryList::value_type& epgEntry, PVR_
 {
     const auto& epgTag = epgEntry.second;
     
-    const Channel& ch = m_clientCore->GetChannelList().at(epgTag.UniqueChannelId);
+    const Channel& ch = GetChannelListWhenLutsReady().at(epgTag.UniqueChannelId);
 
     sprintf(tag.strRecordingId, "%d",  epgEntry.first);
     strncpy(tag.strTitle, epgTag.Title.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
@@ -926,38 +956,78 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
     PVR_ERROR result = PVR_ERROR_NO_ERROR;
     int size = 0;
 
+    IClientCore::IPhase* phase = nullptr;
     LogDebug("PVRClientBase: start recorings transfering...");
     // Add remote archive (if enabled)
     if(m_supportArchive) {
-        if(!m_clientCore->GetPhase(IClientCore::k_EpgLoadingPhase)->IsDone())
+        //        if(!m_clientCore->GetPhase(IClientCore::k_EpgLoadingPhase)->IsDone())
+        //            return PVR_ERROR_NO_ERROR;
+        phase =  m_clientCore->GetPhase(IClientCore::k_EpgCacheLoadingPhase);
+        if(!phase) {
             return PVR_ERROR_NO_ERROR;
+        }
+        phase->Wait();
         
-        
-        auto pThis = this;
-        
+        phase =  m_clientCore->GetPhase(IClientCore::k_EpgLoadingPhase);
+        const bool  isFastEpgLoopAvailable = !phase->IsDone();
 
         // Populate server recordings
-        IClientCore::EpgEntryAction action = [pThis ,&result, &handle, &size](const EpgEntryList::value_type& epgEntry)
-        {
+        IClientCore::EpgEntryAction predicate = [] (const EpgEntryList::value_type& epgEntry) {
+            return epgEntry.second.HasArchive;
+        };
+        std::chrono::duration<float> fillTotal(0.0f);
+        std::chrono::duration<float> transferTotal(0.0f);
+        auto pThis = this;
+        IClientCore::EpgEntryAction action = [pThis ,&result, &handle, &size, &predicate, isFastEpgLoopAvailable, &fillTotal, &transferTotal]
+        (const EpgEntryList::value_type& epgEntry) {
             try {
-                if(!epgEntry.second.HasArchive)
-                    return true;
+                // Optimisation: for first time we'll call ForEachEpgLocked()
+                //  Check predicate in this case
+                if(isFastEpgLoopAvailable) {
+                    if(!predicate(epgEntry))
+                        return true;
+                }
                 
                 PVR_RECORDING tag = { 0 };
+                
+//                auto startAt = std::chrono::system_clock::now();
+                
                 pThis->FillRecording(epgEntry, tag, s_RemoteRecPrefix.c_str());
-                //recs.push_back(tag);
+                
+//                auto endAt = std::chrono::system_clock::now();
+//                fillTotal += endAt-startAt;
+//                startAt = endAt;
+
                 PVR->TransferRecordingEntry(handle, &tag);
+
+//                endAt = std::chrono::system_clock::now();
+//                transferTotal += endAt-startAt;
+
                 ++size;
                 return true;
             }
-            catch (...)  {
-                LogError( "%s: failed.", __FUNCTION__);
-                result = PVR_ERROR_FAILED;
+            catch (std::exception& ex)  {
+                LogError( "GetRecordings::action() failed. Exception: %s.", ex.what());
+                //result = PVR_ERROR_FAILED;
             }
-            // Should not be here..
-            return false;
+            catch (...)  {
+                LogError( "GetRecordings::action() failed. Unknown exception.");
+                //result = PVR_ERROR_FAILED;
+            }
+            // Looks like we can lost problematic recored
+            // and continue EPG enumeration.
+            return true;
         };
-        m_clientCore->ForEachEpg(action);
+        if(isFastEpgLoopAvailable){
+            m_clientCore->ForEachEpgLocked(action);
+        } else {
+            m_clientCore->ForEachEpgUnlocked(predicate, action);
+        }
+//        float preRec = 1000*fillTotal.count()/size;
+//        LogDebug("PVRClientBase: FillRecording = %0.4f (%0.6f per kRec)", fillTotal.count(), preRec);
+//        preRec = 1000*transferTotal.count()/size;
+//        LogDebug("PVRClientBase: TransferRecordingEntry = %0.4f (%0.6f per kRec)", transferTotal.count(), preRec );
+//        LogDebug("PVRClientBase: All Recording = %0.4f", transferTotal.count() + fillTotal.count() );
     }
     // Add local recordings
     if(XBMC->DirectoryExists(m_recordingsDir.c_str()))
@@ -984,6 +1054,14 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
     }
     LogDebug("PVRClientBase: done transfering of %d recorings.", size);
     m_lastRecordingsAmount = size;
+    
+    phase = m_clientCore->GetPhase(IClientCore::k_RecordingsInitialLoadingPhase);
+    if(nullptr == phase) {
+        return PVR_ERROR_FAILED;
+    }
+    if(!phase->IsDone()) {
+        phase->Broadcast();
+    }
 
     return result;
 }
@@ -1151,7 +1229,7 @@ bool PVRClientBase::StartRecordingFor(const PVR_TIMER &timer)
         // Should not be here...
         return false;
     };
-    m_clientCore->ForEachEpg(action);
+    m_clientCore->ForEachEpgLocked(action);
     
     if(!hasEpg) {
         LogError("StartRecordingFor(): timers without EPG are not supported.");

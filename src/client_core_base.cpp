@@ -64,11 +64,15 @@ public:
     ~ClientPhase() {
         Cleanup();
     }
-    void Wait() {
+    // timeout 0 == INFINITE
+    bool Wait(uint32_t iTimeout = 0) {
         if(m_isDone)
-            return;
-        m_event->Wait();
-        Cleanup();
+            return true;
+        bool res = m_event->Wait(iTimeout);
+        if(res) {
+            Cleanup();
+        }
+        return res;
     }
     bool IsDone() { return m_isDone;}
     void Broadcast() {
@@ -148,6 +152,9 @@ ClientCoreBase::ClientCoreBase(const IClientCore::RecordingsDelegate& didRecordi
     }
     m_httpEngine = new HttpEngine();
     m_phases[k_ChannelsLoadingPhase] =  new ClientPhase();
+    m_phases[k_ChannelsIdCreatingPhase] =  new ClientPhase();
+    m_phases[k_EpgCacheLoadingPhase] =  new ClientPhase();
+    m_phases[k_RecordingsInitialLoadingPhase] =  new ClientPhase();
     m_phases[k_InitPhase] =  new ClientPhase();
     m_phases[k_EpgLoadingPhase] =  new ClientPhase();
     
@@ -158,9 +165,23 @@ void ClientCoreBase::InitAsync(bool clearEpgCache, bool updateRecordings)
     m_phases[k_InitPhase]->RunAndSignalAsync([this, clearEpgCache, updateRecordings] (std::function<bool(void)> isAborted){
         if(isAborted())
             return;
+        
         Init(clearEpgCache);
+        // Broadcast EPG cache loaded
+        auto phase =  GetPhase(k_EpgCacheLoadingPhase);
+        if(phase) {
+            phase->Broadcast();
+        }
         if(isAborted())
             return;
+        
+        if(!updateRecordings){
+            phase =  GetPhase(k_RecordingsInitialLoadingPhase);
+            if(phase) {
+                phase->Broadcast();
+            }
+        }
+        
         std::time_t now = std::time(nullptr);
         now = std::mktime(std::gmtime(&now));
         //            // Request EPG for all channels from max archive info to +1 days
@@ -176,10 +197,29 @@ void ClientCoreBase::InitAsync(bool clearEpgCache, bool updateRecordings)
         time_t endTime = now + 7 * 24 * 60 * 60;
         if(isAborted())
             return;
+        
+        // Wait for recodings transfering to Kodi.
+        phase =  GetPhase(k_RecordingsInitialLoadingPhase);
+        if(phase) {
+            bool wait = true;
+            do {
+                wait = !isAborted() && !phase->Wait(100);
+            } while(wait);
+        }
+        
+        if(isAborted())
+            return;
         _UpdateEpgForAllChannels(startTime, endTime);
         if(isAborted())
             return;
-        m_recordingsUpdateDelay.Init(5 * 1000);
+        // Broadcast EPG loaded
+        phase =  GetPhase(k_EpgLoadingPhase);
+        if(nullptr == phase) {
+            return;
+        }
+        if(!phase->IsDone()) {
+            phase->Broadcast();
+        }
         
         if(!updateRecordings || isAborted())
             return;
@@ -220,10 +260,13 @@ ClientCoreBase::~ClientCoreBase()
 };
 
 #pragma mark - Channels & Groups
-
 const ChannelList& ClientCoreBase::GetChannelList()
 {
-    auto phase =  GetPhase(k_ChannelsLoadingPhase);
+    // NOTE: do NOT change phase name on this function
+    // It is in-use by client_pvr_base. Other phase may cause to deadlock.
+    // The pahse should be k_ChannelsIdCreatingPhase
+    // but for technical reasons it is done by client_pvr_base (see usage)
+    auto phase =  GetPhase(k_ChannelsLoadingPhase);   
     if(phase) {
         phase->Wait();
     }
@@ -232,7 +275,7 @@ const ChannelList& ClientCoreBase::GetChannelList()
 
 const GroupList &ClientCoreBase::GetGroupList()
 {
-    auto phase =  GetPhase(k_ChannelsLoadingPhase);
+    auto phase =  GetPhase(k_ChannelsIdCreatingPhase);
     if(phase) {
         phase->Wait();
     }
@@ -252,7 +295,7 @@ void ClientCoreBase::RebuildChannelAndGroupList()
     m_mutableGroupList.clear();
     m_channelToGroupLut.clear();
     BuildChannelAndGroupList();
-    auto phase =  static_cast<ClientPhase*> (GetPhase(k_ChannelsLoadingPhase));
+    auto phase =  GetPhase(k_ChannelsLoadingPhase);
     if(phase) {
         phase->Broadcast();
     }
@@ -433,23 +476,6 @@ bool ClientCoreBase::AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry)
     return isAdded;
 }
 
-//    void ClientCoreBase::UpdateEpgEntry(UniqueBroadcastIdType id, const EpgEntry& entry)
-//    {
-//        EPG_TAG tag = { 0 };
-//        {
-//            P8PLATFORM::CLockObject lock(m_epgAccessMutex);
-//            auto & oldEntry = m_epgEntries[id];
-//            bool hasArchive = oldEntry.HasArchive;
-//            oldEntry =  entry;
-//            oldEntry.HasArchive = hasArchive;
-//
-//            // Update EPG tag
-//            tag.iUniqueBroadcastId = id;
-//            entry.FillEpgTag(tag);
-//        }
-//        PVR->EpgEventStateChange(&tag, EPG_EVENT_UPDATED);
-//
-//    }
 
 bool ClientCoreBase::GetEpgEntry(UniqueBroadcastIdType i,  EpgEntry& entry)
 {
@@ -460,7 +486,7 @@ bool ClientCoreBase::GetEpgEntry(UniqueBroadcastIdType i,  EpgEntry& entry)
     return result;
 }
 
-void ClientCoreBase::ForEachEpg(const EpgEntryAction& action) const
+void ClientCoreBase::ForEachEpgLocked(const EpgEntryAction& action) const
 {
     P8PLATFORM::CLockObject lock(m_epgAccessMutex);
     for(const auto& i : m_epgEntries) {
@@ -469,47 +495,91 @@ void ClientCoreBase::ForEachEpg(const EpgEntryAction& action) const
     }
 }
 
+void ClientCoreBase::ForEachEpgUnlocked(const EpgEntryAction& predicate, const EpgEntryAction& action) const
+{
+    P8PLATFORM::CLockObject lock(m_epgAccessMutex);
+    
+    EpgEntryList::const_iterator it = m_epgEntries.begin();
+    const EpgEntryList::const_iterator end = m_epgEntries.end();
+    
+
+    while(it != end){
+        // Find relevat EPG item
+        while (!predicate(*it)) {
+            ++it;
+            if(it == end)
+                return;
+        }
+        EpgEntryList::key_type key = it->first;
+        lock.Unlock();
+        // Perform action while EPG is unlocked
+        // to avoid possible deadlock (Kodi access EPG during i.g. recording transfer)
+        if(!action(*it))
+            return;
+        // Lock EPG for future search
+        // and renew iterator after potential EPG changes
+        lock.Lock();
+        it = m_epgEntries.find(key);
+        if(it == end)
+            return;
+        ++it;
+    }
+}
+
 void ClientCoreBase::GetEpg(ChannelId channelId, time_t startTime, time_t endTime, EpgEntryAction& onEpgEntry)
 {
     time_t lastEndTime = startTime;
-    IClientCore::EpgEntryAction action = [&lastEndTime, &onEpgEntry, channelId, startTime, endTime] (const EpgEntryList::value_type& i)
-    {
+    
+    auto phase =  GetPhase(IClientCore::k_EpgLoadingPhase);
+    const bool  isFastEpgLoopAvailable = !phase->IsDone();
+
+
+    IClientCore::EpgEntryAction predicate = [channelId, startTime, endTime] (const EpgEntryList::value_type& i) {
         auto entryStartTime = i.second.StartTime;
-        if (i.second.UniqueChannelId == channelId  &&
-            entryStartTime >= startTime &&
-            entryStartTime < endTime)
-        {
-            lastEndTime = i.second.EndTime;
-            //epgEntries.insert(i);
-            onEpgEntry(i);
+        return  i.second.UniqueChannelId == channelId  &&
+                entryStartTime >= startTime && entryStartTime < endTime;
+
+    };
+    IClientCore::EpgEntryAction action = [&lastEndTime, &onEpgEntry, isFastEpgLoopAvailable, &predicate] (const EpgEntryList::value_type& i)
+    {
+        // Optimisation: for first time we'll call ForEachEpgLocked()
+        //  Check predicate in this case
+        if(isFastEpgLoopAvailable) {
+            if(!predicate(i)) {
+                return true;
+            }
         }
+        lastEndTime = i.second.EndTime;
+        onEpgEntry(i);
         return true;
     };
-    ForEachEpg(action);
-    
-    if(lastEndTime < endTime) {
-        string channelName;
-        if(m_channelList.count(channelId)) {
-            channelName = m_channelList.at(channelId).Name;
-        } else {
-            channelName = to_string(channelId);
-        }
-        
-        if(lastEndTime == startTime) {
-            LogDebug("GetEPG(%s): channel has NO loaded EPG for interval [%s -- %s].",
-                     channelName.c_str(), time_t_to_string(lastEndTime).c_str(), time_t_to_string(endTime).c_str());
-            
-        } else {
-            LogDebug("GetEPG(%s): last for channel %s -> requested by Kodi %s",
-                     channelName.c_str(), time_t_to_string(lastEndTime).c_str(), time_t_to_string(endTime).c_str());
-        }
-        // First EPG loading may be long. Delay recordings update for 90 sec
-        m_recordingsUpdateDelay.Init(90 * 1000);
-        _UpdateEpgForAllChannels(/*epgRequestStart*/lastEndTime, endTime);
-        
+    if(isFastEpgLoopAvailable){
+        ForEachEpgLocked(action);
+    } else {
+        ForEachEpgUnlocked(predicate, action);
     }
-    m_recordingsUpdateDelay.Init(5 * 1000);
-    //ScheduleRecordingsUpdate();
+    
+    // Do NOT request EPG from server until it become loaded in background.
+    if(lastEndTime >= endTime || isFastEpgLoopAvailable) {
+        return;
+    }
+    string channelName;
+    if(m_channelList.count(channelId)) {
+        channelName = m_channelList.at(channelId).Name;
+    } else {
+        channelName = to_string(channelId);
+    }
+    
+    if(lastEndTime == startTime) {
+        LogDebug("GetEPG(%s): channel has NO loaded EPG for interval [%s -- %s].",
+                 channelName.c_str(), time_t_to_string(lastEndTime).c_str(), time_t_to_string(endTime).c_str());
+        
+    } else {
+        LogDebug("GetEPG(%s): last for channel %s -> requested by Kodi %s",
+                 channelName.c_str(), time_t_to_string(lastEndTime).c_str(), time_t_to_string(endTime).c_str());
+    }
+    _UpdateEpgForAllChannels(/*epgRequestStart*/lastEndTime, endTime);
+        
 }
 void ClientCoreBase::_UpdateEpgForAllChannels(time_t startTime, time_t endTime)
 {
@@ -533,20 +603,14 @@ void ClientCoreBase::ScheduleRecordingsUpdate()
 {
     if(nullptr == m_httpEngine)
         return;
-    m_httpEngine->RunOnCompletionQueueAsync([this] {
-        if(m_recordingsUpdateDelay.TimeLeft()) {
-            ScheduleRecordingsUpdate();
-        } else {
-            auto phase =  static_cast<ClientPhase*> (GetPhase(k_EpgLoadingPhase));
-            if(nullptr == phase) {
-                return;
-            }
-            if(!phase->IsDone()) {
-                phase->Broadcast();
-                ReloadRecordings();
-            }
-        }
-    }, [] (ActionQueue::ActionResult ){});
+//    m_httpEngine->RunOnCompletionQueueAsync([this] {
+//        if(m_recordingsUpdateDelay.TimeLeft()) {
+//            ScheduleRecordingsUpdate();
+//        } else {
+                 ReloadRecordings();
+//            }
+//        }
+//    }, [] (ActionQueue::ActionResult ){});
 }
 
 void ClientCoreBase::OnEpgUpdateDone()

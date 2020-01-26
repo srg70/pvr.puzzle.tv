@@ -57,7 +57,8 @@ namespace PvrClient {
         int UpdateArchiveInfoAndCount();
 
         bool GetEpgEntry(UniqueBroadcastIdType i,  EpgEntry& enrty);
-        void ForEachEpg(const EpgEntryAction& action) const;
+        void ForEachEpgLocked(const EpgEntryAction& action) const;
+        void ForEachEpgUnlocked(const EpgEntryAction& predicate, const EpgEntryAction& action) const;
         void GetEpg(ChannelId channelId, time_t startTime, time_t endTime, EpgEntryAction& onEpgEntry);
         
         void SetRpcPort(int port) {m_rpcPort = port;}
@@ -126,7 +127,6 @@ namespace PvrClient {
         RecordingsDelegate m_didRecordingsUpadate;
         std::map<IClientCore::Phase, ClientPhase*> m_phases;
         time_t m_lastEpgRequestEndTime;
-        P8PLATFORM::CTimeout m_recordingsUpdateDelay;
 
         int m_rpcPort;
     };

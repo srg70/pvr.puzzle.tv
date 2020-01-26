@@ -86,7 +86,7 @@ namespace EdemEngine
         } else {
             LoadEpgCache(c_EpgCacheFile);
         }
-        LoadEpg();
+        //LoadEpg();
     }
     
     
