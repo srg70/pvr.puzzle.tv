@@ -60,6 +60,7 @@ namespace Buffers {
     , m_cache(nullptr)
     , m_url(playListUrl)
     , m_seekForVod(seekForVod)
+    , m_isWaitingForRead(false)
     {
         Init(playListUrl);
     }
@@ -318,6 +319,8 @@ namespace Buffers {
             LogError("PlaylistBuffer: write thread is not running.");
             return -1;
         }
+        m_isWaitingForRead = true;
+        
         size_t totalBytesRead = 0;
         bool isEof = false;
         PlaylistCache::SegmentStatus segmentStatus;
@@ -342,7 +345,7 @@ namespace Buffers {
                             LogError("PlaylistBuffer: not running (aka stopping) ...");
                             break;
                         }
-                        LogNotice("PlaylistBuffer: waiting for segment loading (max %d ms)...", timeoutMs);
+                        LogDebug("PlaylistBuffer: waiting for segment loading (max %d ms)...", timeoutMs);
                         // NOTE: timeout is set by Timeshift buffer
                         // Do not change it! May cause long waiting on stopping/exit.
                         bool hasNewSegment = false;
@@ -386,10 +389,19 @@ namespace Buffers {
             
 
         }
-
+        m_isWaitingForRead = false;
         return !isEof && IsRunning() ?  totalBytesRead : -1;
     }
     
+    void PlaylistBuffer::AbortRead(){
+        StopThread();
+        while(m_isWaitingForRead) {
+            LogDebug("PlaylistBuffer: waiting for readidng abort 100 ms...");
+            P8PLATFORM::CEvent::Sleep(100);
+            m_writeEvent.Signal();
+        }
+    }
+
     bool PlaylistBuffer::SwitchStream(const std::string &newUrl)
     {
         bool succeeded = false;

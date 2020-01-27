@@ -46,13 +46,18 @@ namespace Buffers {
         int64_t Seek(int64_t iPosition, int iWhence);
         ssize_t Read(unsigned char *buffer, size_t bufferSize, uint32_t timeoutMs);
         bool SwitchStream(const std::string &newUrl);
+        void AbortRead();
         
     protected:
         void *m_streamHandle;
     private:
+        DirectBuffer();
         static void* Open(const std::string &path);
+        
         ICacheBuffer* m_cacheBuffer;
         std::string m_url;
+        bool m_isWaitingForRead;
+        bool m_abortRead;
     };
     
     class ArchiveBuffer : public DirectBuffer
