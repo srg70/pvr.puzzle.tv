@@ -48,7 +48,7 @@ struct SegmentInfo {
 class Playlist {
 public:
     Playlist(const std::string &url, uint64_t indexOffset = 0);
-    Playlist(const Playlist& playlist);
+//    Playlist(const Playlist& playlist);
     bool NextSegment(SegmentInfo& info, bool& hasMoreSegments);
     bool SetNextSegmentIndex(uint64_t offset);
     bool Reload();

@@ -40,7 +40,7 @@ namespace Buffers {
 PlaylistCache::PlaylistCache(const std::string &playlistUrl, PlaylistBufferDelegate delegate, bool seekForVod)
 : m_totalLength(0)
 , m_bitrate(0.0)
-, m_playlist(playlistUrl)
+, m_playlist(new Playlist(playlistUrl))
 , m_playlistTimeOffset(0.0)
 , m_delegate(delegate)
 , m_cacheSizeInBytes(0)
@@ -59,11 +59,14 @@ PlaylistCache::PlaylistCache(const std::string &playlistUrl, PlaylistBufferDeleg
 }
 
 PlaylistCache::~PlaylistCache() {
+    if(m_playlist){
+        delete m_playlist;
+    }
 }
 
 bool PlaylistCache::ReloadPlaylist() {
     
-    if(!m_playlist.Reload()) {
+    if(!m_playlist->Reload()) {
         LogError("PlaylistCache: playlist is empty or missing.");
         return false;
     }
@@ -74,7 +77,7 @@ void PlaylistCache::QueueAllSegmentsForLoading() {
     
     SegmentInfo info;
     bool hasMore = true;
-    while(m_playlist.NextSegment(info, hasMore)) {
+    while(m_playlist->NextSegment(info, hasMore)) {
         m_dataToLoad.push_back(info);
         if(!hasMore)
             break;
@@ -114,7 +117,7 @@ bool PlaylistCache::ProcessPlaylist() {
         // Define "virtual" bitrate.
         m_bitrate =  m_totalLength/timeOffaset;
         
-        if(m_playlist.IsVod()) {
+        if(m_playlist->IsVod()) {
             while(it!=last) {
                 MutableSegment* segment = new MutableSegment(*it, timeOffaset);
                 segment->_length = m_bitrate * it->duration;
@@ -167,7 +170,7 @@ MutableSegment* PlaylistCache::SegmentToFill()  {
     MutableSegment* retVal = nullptr;
     // VOD contains static segments.
     // No new segment needed, just return old "empty" segment
-    if(m_playlist.IsVod() && m_segments.count(info.index) > 0) {
+    if(m_playlist->IsVod() && m_segments.count(info.index) > 0) {
         retVal = m_segments[info.index].get();
     } else {
         // Calculate time and data offsets
@@ -234,7 +237,7 @@ Segment* PlaylistCache::NextSegment(SegmentStatus& status) {
             retVal = nullptr;
         }
     }
-    else if(m_playlist.IsVod()){
+    else if(m_playlist->IsVod()){
         // With VOD all segments are knowon
         // So we are probably out of stream range, i.e. EOF
         int64_t lastIndex = -1;
@@ -246,7 +249,7 @@ Segment* PlaylistCache::NextSegment(SegmentStatus& status) {
         // Dynamic seekable stream (e.g. Edem)
         // Currnt segment may be unknown for now
         // Check duration and report EOF if needed
-        float segmentTimeOffset = m_currentSegmentIndex * m_playlist.TargetDuration();
+        float segmentTimeOffset = m_currentSegmentIndex * m_playlist->TargetDuration();
         if(segmentTimeOffset >= m_delegate->Duration()) {
             status = k_SegmentStatus_EOF;
             LogDebug("PlaylistCache: wrong current segment index #%" PRIu64 ". Requested time offset %f. Stream duration %d.", m_currentSegmentIndex, segmentTimeOffset, m_delegate->Duration());
@@ -362,7 +365,7 @@ bool PlaylistCache::PrepareSegmentForPosition(int64_t position, uint64_t* nextSe
         if( segmentTime <= timePosition && timePosition < segmentTime + segmentDuration) {
             *nextSegmentIndex = m_currentSegmentIndex = pSeg.first;
             LogDebug("PlaylistCache: trying to set next index of playlist (m_segments)...");
-            if((found = m_playlist.SetNextSegmentIndex(m_currentSegmentIndex))) {
+            if((found = m_playlist->SetNextSegmentIndex(m_currentSegmentIndex))) {
                 QueueAllSegmentsForLoading();
                 // Calculate position inside segment
                 // as rational part of time offset
@@ -379,7 +382,7 @@ bool PlaylistCache::PrepareSegmentForPosition(int64_t position, uint64_t* nextSe
             if( segmentTime <= timePosition && timePosition < segmentTime + segmentDuration) {
                 *nextSegmentIndex = m_currentSegmentIndex = pData.index;
                 LogDebug("PlaylistCache: trying to set next index of playlist (m_dataToLoad)...");
-                if((found = m_playlist.SetNextSegmentIndex(m_currentSegmentIndex))) {
+                if((found = m_playlist->SetNextSegmentIndex(m_currentSegmentIndex))) {
                     QueueAllSegmentsForLoading();
                     // Calculate position inside segment
                     // as rational part of time offset
@@ -392,7 +395,7 @@ bool PlaylistCache::PrepareSegmentForPosition(int64_t position, uint64_t* nextSe
 
     if(!found) {
         // For VOD: if the segment was not found, return an EOF immediately.
-        if(m_playlist.IsVod()) {
+        if(m_playlist->IsVod()) {
             LogError("PlaylistCache: position %" PRId64 " can't be seek. Time offset %f. Total duration %f."  , position, timePosition, (nullptr != m_delegate ? m_delegate->Duration() : -1.0));
             // Can't be
             return false;
@@ -403,15 +406,18 @@ bool PlaylistCache::PrepareSegmentForPosition(int64_t position, uint64_t* nextSe
                 return false;
             }
             segmentTime = timePosition;
-            segmentDuration = m_playlist.TargetDuration();
+            segmentDuration = m_playlist->TargetDuration();
             
             time_t adjustedTimeOffset = timePosition;
             auto url = m_delegate->UrlForTimeshift(timePosition, &adjustedTimeOffset);
-            uint64_t indexOffset = timePosition / m_playlist.TargetDuration();
+            uint64_t indexOffset = timePosition / m_playlist->TargetDuration();
             try {
                 LogDebug("PlaylistCache: re-create playlist. Index offset %" PRIu64 ". Time offset %f", indexOffset, timePosition);
-                m_playlist.~Playlist();
-                new (&m_playlist) Playlist(url, indexOffset);
+                // First try to create a new list
+                // If it'll faile the old list should be valid
+                auto newPLaylist = new Playlist(url, indexOffset);
+                delete m_playlist;
+                m_playlist = newPLaylist;
                 if(!ReloadPlaylist())
                     throw PlaylistCacheException("ReloadPlaylist() failed.");
             } catch (std::exception& ex) {
@@ -419,9 +425,9 @@ bool PlaylistCache::PrepareSegmentForPosition(int64_t position, uint64_t* nextSe
                 return false;
             }
             
-            m_playlistTimeOffset = indexOffset * m_playlist.TargetDuration();
+            m_playlistTimeOffset = indexOffset * m_playlist->TargetDuration();
             *nextSegmentIndex = m_currentSegmentIndex = indexOffset;
-            m_currentSegmentPositionFactor = (timePosition - m_playlistTimeOffset) / m_playlist.TargetDuration();
+            m_currentSegmentPositionFactor = (timePosition - m_playlistTimeOffset) / m_playlist->TargetDuration();
         }
     }
     if(m_currentSegmentPositionFactor > 1.0) {
@@ -437,7 +443,7 @@ bool PlaylistCache::HasSegmentsToFill() const {
 }
 
 //    bool PlaylistCache::IsEof() const {
-//        return m_playlist.IsVod() && m_segments.count(m_currentSegmentIndex) == 0;
+//        return m_playlist->IsVod() && m_segments.count(m_currentSegmentIndex) == 0;
 //    }
 
 #pragma mark - Segment
