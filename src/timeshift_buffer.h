@@ -48,7 +48,8 @@ namespace Buffers {
         ssize_t Read(unsigned char *buffer, size_t bufferSize, uint32_t timeoutMs);
         int64_t Seek(int64_t iPosition, int iWhence);
         bool SwitchStream(const std::string &newUrl);
-        
+        void AbortRead();
+
         void SwapCache(ICacheBuffer* cache){
             m_cacheToSwap = cache;
 //            m_cacheSwapEvent.Wait();
@@ -87,7 +88,7 @@ namespace Buffers {
         ICacheBuffer* m_cache;
         ICacheBuffer* m_cacheToSwap;
         bool m_isInputBufferValid;
-        
+        bool m_isWaitingForRead;        
     };
 }
 

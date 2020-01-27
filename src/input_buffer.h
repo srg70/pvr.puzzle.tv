@@ -55,6 +55,7 @@ namespace Buffers {
         virtual ssize_t Read(unsigned char *buffer, size_t bufferSize, uint32_t timeoutMs) = 0;
         virtual int64_t Seek(int64_t iPosition, int iWhence) = 0;
         virtual bool SwitchStream(const std::string &newUrl) = 0;
+        virtual void AbortRead() = 0;
     protected:
         const int c_commonTimeoutMs = 10000; // 10 sec
     };

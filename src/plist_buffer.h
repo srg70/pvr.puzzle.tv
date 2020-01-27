@@ -50,6 +50,7 @@ namespace Buffers
         int64_t Seek(int64_t iPosition, int iWhence);
         ssize_t Read(unsigned char *buffer, size_t bufferSize, uint32_t timeoutMs);
         bool SwitchStream(const std::string &newUrl);
+        void AbortRead();
         static int SetNumberOfHlsTreads(int numOfTreads);
         /*!
          * @brief Stop the thread
@@ -68,7 +69,8 @@ namespace Buffers
         std::string m_url;
         const bool m_seekForVod;
         static int s_numberOfHlsThreads;
-        
+        bool m_isWaitingForRead;
+
         void *Process();
         void Init(const std::string &playlistUrl);
 //        bool FillSegment(MutableSegment* segment);

@@ -50,6 +50,7 @@ namespace Buffers {
     : m_inputBuffer(inputBuffer)
     , m_cache(cache)
     , m_cacheToSwap(nullptr)
+    , m_isWaitingForRead(false)
     {
         if (!m_inputBuffer)
             throw InputBufferException("TimesiftBuffer: source stream buffer is NULL.");
@@ -59,7 +60,7 @@ namespace Buffers {
     }
     
     void TimeshiftBuffer::Init(const std::string& newUrl) {
-        StopThread();
+        AbortRead();
         
         if(!newUrl.empty())
             m_inputBuffer->SwitchStream(newUrl);
@@ -74,7 +75,7 @@ namespace Buffers {
     
     TimeshiftBuffer::~TimeshiftBuffer()
     {
-        StopThread();
+        AbortRead();
         
         if(m_inputBuffer)
             delete m_inputBuffer;
@@ -86,6 +87,7 @@ namespace Buffers {
     {
         int stopCounter = 1;
         bool retVal = false;
+        
         while(!(retVal = this->CThread::StopThread(iWaitMs))){
             if(stopCounter++ > 3)
                 break;
@@ -153,8 +155,9 @@ namespace Buffers {
                     Sleep(1000);
                 }
                 ssize_t bytesRead = 0;
-                while (!isError && bytesRead < bufferLenght && !IsStopped()){
-                    ssize_t loacalBytesRad = m_inputBuffer->Read(buffer + bytesRead, bufferLenght - bytesRead, 1000);
+                while (!isError && (bytesRead < bufferLenght) && !IsStopped() && m_inputBuffer != NULL){
+                    // Use some "common" timeout (30 sec) since it is background process
+                    ssize_t loacalBytesRad = m_inputBuffer->Read(buffer + bytesRead, bufferLenght - bytesRead, 30*1000);
                     bytesRead += loacalBytesRad;
                     isError = loacalBytesRad < 0;
                 }
@@ -163,16 +166,6 @@ namespace Buffers {
                     m_isInputBufferValid = true;
                     m_writeEvent.Signal();
                 }
-//                if(bytesRead > 0) {
-//                    // Write to local chunk
-//                    ssize_t bytesWritten = m_cache->Write(buffer, bytesRead);
-//                    // Allow write errors. Cache may be full.
-//                    //isError |= bytesWritten != bytesRead;
-//                    if(bytesWritten != bytesRead) {
-//                        LogError("TimeshiftBuffer: write cache error written (%d) != read (%d)", bytesWritten,bytesRead);
-//                    }
-//                    m_writeEvent.Signal();
-//                }
             }
             
         } catch (std::exception& ex ) {
@@ -186,8 +179,9 @@ namespace Buffers {
     {
         size_t totalBytesRead = 0;
 
+        m_isWaitingForRead = true;
         CheckAndSwap();
-        
+
         while (totalBytesRead < bufferSize && IsRunning()) {
             ssize_t bytesRead = 0;
             size_t bytesToRead = bufferSize - totalBytesRead;
@@ -204,6 +198,7 @@ namespace Buffers {
                 break;
             }
         }
+        m_isWaitingForRead = false;
         return (IsStopped() || !IsRunning()) ? -1 :totalBytesRead;
     }
     
@@ -236,6 +231,18 @@ namespace Buffers {
         return succeeded;
     }
     
-    
+    void TimeshiftBuffer::AbortRead()
+    {
+        StopThread(0);
+        if(m_inputBuffer) {
+            m_inputBuffer->AbortRead();
+        }
+        while(m_isWaitingForRead) {
+             LogDebug("TimeshiftBuffer: waiting for readidng abort 100 ms...");
+             P8PLATFORM::CEvent::Sleep(100);
+             m_writeEvent.Signal();
+         }
+        
+    }
 }
 

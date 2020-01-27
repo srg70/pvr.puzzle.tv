@@ -49,19 +49,28 @@ namespace Buffers {
                               XFILE::READ_NO_CACHE); // XFILE::READ_AFTER_WRITE);
     }
 
+    DirectBuffer::DirectBuffer()
+    : m_isWaitingForRead(false)
+    , m_abortRead(false)
+    {}
     
     DirectBuffer::DirectBuffer(const std::string &streamUrl)
-    : m_streamHandle(Open(streamUrl))
-    , m_cacheBuffer(nullptr)
-    , m_url(streamUrl)
+    : DirectBuffer()
     {
+        m_streamHandle = Open(streamUrl);
+        m_cacheBuffer = nullptr;
+        m_url = streamUrl;
+
         if (!m_streamHandle)
             throw InputBufferException();
     }
     DirectBuffer::DirectBuffer(ICacheBuffer* cacheBuffer)
-    : m_streamHandle(nullptr)
-    , m_cacheBuffer(cacheBuffer)
+    : DirectBuffer()
+
     {
+        m_streamHandle = nullptr;
+        m_cacheBuffer = cacheBuffer;
+        
         if (!m_cacheBuffer)
             throw InputBufferException();
     }
@@ -69,6 +78,8 @@ namespace Buffers {
     
     DirectBuffer::~DirectBuffer()
     {
+        AbortRead();
+        
         if(m_streamHandle)
             XBMC->CloseFile(m_streamHandle);
         if(m_cacheBuffer)
@@ -88,12 +99,15 @@ namespace Buffers {
     ssize_t DirectBuffer::Read(unsigned char *buffer, size_t bufferSize, uint32_t timeoutMs)
     {
         if(m_cacheBuffer) {
+            m_isWaitingForRead = true;
             ssize_t result = m_cacheBuffer->Read(buffer, bufferSize);
-            if(0 == result && timeoutMs > 0){
+            while(0 == result && timeoutMs > 1000 && !m_abortRead){
                 using namespace P8PLATFORM;
-                usleep(timeoutMs * 1000);
+                usleep(1000 * 1000);
+                timeoutMs -= 1000;
                 result = m_cacheBuffer->Read(buffer, bufferSize);
             }
+            m_isWaitingForRead = false;
             return result;
         }
 
@@ -115,6 +129,16 @@ namespace Buffers {
         return m_streamHandle != NULL;
     }
     
+    void DirectBuffer::AbortRead()
+    {
+        m_abortRead = true;
+        while(m_isWaitingForRead){
+            LogDebug("DirectBuffer: waiting for readidng abort 100 ms...");
+            using namespace P8PLATFORM;
+            usleep(100* 1000);
+        }
+
+    }
     
     ArchiveBuffer::ArchiveBuffer(const std::string &streamUrl)
     :DirectBuffer(streamUrl)
