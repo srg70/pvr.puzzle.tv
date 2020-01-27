@@ -97,6 +97,11 @@ msgctxt "#10019"
 msgid "Number of HSL threads"
 msgstr "Number of HSL threads"
 
+msgctxt "#10020"
+msgid "Archive refresh interval (min)"
+msgstr "Archive refresh interval (min)"
+
+
 msgctxt "#10097"
 msgid "Other"
 msgstr "Other"

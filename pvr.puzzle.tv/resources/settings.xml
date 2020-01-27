@@ -21,6 +21,7 @@
     <setting id="archive_use_channel_groups" type="bool" label="10016" default="false"  visible="eq(-2,true)" subsetting="true"/>
     <setting id="archive_start_padding" type="number" label="10017" default="0"  visible="eq(-3,true)" subsetting="true"/>
     <setting id="archive_end_padding" type="number" label="10018" default="0"  visible="eq(-4,true)" subsetting="true"/>
+    <setting id="archive_refresh_interval" type="slider" label="10020" default="3" range="1,1,30" option="int" visible="eq(-5,true)" subsetting="true"/>
     <setting label="10097" type="lsep"/>
     <setting id="rpc_local_port" type="number" label="10012" default="8080"/>
     <setting id="channel_index_offset" type="number" label="10015" default="0"/>

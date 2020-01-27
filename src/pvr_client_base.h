@@ -199,6 +199,7 @@ namespace PvrClient
         int m_channelReloadTimeout;
         mutable P8PLATFORM::CMutex m_mutex;
         int m_lastBytesRead;
+        int m_archiveRefreshInterval;
         
         int m_rpcPort;
         int m_channelIndexOffset;

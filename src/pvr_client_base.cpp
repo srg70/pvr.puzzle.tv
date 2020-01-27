@@ -179,6 +179,11 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     m_supportArchive = false;
     XBMC->GetSetting("archive_support", &m_supportArchive);
 
+    m_archiveRefreshInterval = 3;
+    XBMC->GetSetting("archive_refresh_interval", &m_archiveRefreshInterval);
+    if(m_archiveRefreshInterval < 0)
+        m_archiveRefreshInterval = 3;
+    
     CheckForInetConnection(m_waitForInetTimeout);
     
     CurlUtils::SetCurlTimeout(curlTimout);
@@ -247,7 +252,7 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
 
 void PVRClientBase::ScheduleRecordingsUpdate() {
      m_destroyer->PerformAsync([this]() {
-         if(!m_destroyerEvent.Wait(3 * 60 * 1000) && nullptr != m_clientCore) {
+         if(!m_destroyerEvent.Wait(m_archiveRefreshInterval * 60 * 1000) && nullptr != m_clientCore) {
             m_clientCore->ReloadRecordings();
          }
      }, [this](const ActionResult& res) {
@@ -392,6 +397,14 @@ ADDON_STATUS PVRClientBase::SetSetting(const char *settingName, const void *sett
         bool newValue = *(bool*)settingValue;
         return (m_supportArchive != newValue) ? ADDON_STATUS_NEED_RESTART : ADDON_STATUS_OK;
         
+    }
+    else if (strcmp(settingName, "archive_refresh_interval") == 0)
+    {
+        m_archiveRefreshInterval = 3;
+        XBMC->GetSetting("archive_refresh_interval", &m_archiveRefreshInterval);
+        m_archiveRefreshInterval = *(int *)settingValue;
+        if(m_archiveRefreshInterval < 0)
+            m_archiveRefreshInterval = 3;
     }
 
     return ADDON_STATUS_OK;
