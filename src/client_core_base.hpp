@@ -44,7 +44,7 @@ namespace PvrClient {
     public:
         void InitAsync(bool clearEpgCache, bool updateRecordings);
         
-        virtual IPhase* GetPhase(Phase phase);
+        virtual std::shared_ptr<IPhase> GetPhase(Phase phase);
         
         virtual ~ClientCoreBase();
         
@@ -124,7 +124,7 @@ namespace PvrClient {
         mutable P8PLATFORM::CMutex m_epgAccessMutex;
         
         RecordingsDelegate m_didRecordingsUpadate;
-        std::map<IClientCore::Phase, ClientPhase*> m_phases;
+        std::map<IClientCore::Phase, std::shared_ptr<ClientPhase> > m_phases;
         time_t m_lastEpgRequestEndTime;
 
         int m_rpcPort;

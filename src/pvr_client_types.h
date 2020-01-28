@@ -27,7 +27,7 @@
 #include <map>
 #include <set>
 #include <vector>
-#include <vector>
+#include <memory>
 #include <functional>
 #include "ActionQueueTypes.hpp"
 #include <rapidjson/document.h>
@@ -211,7 +211,7 @@ namespace PvrClient {
         typedef std::function<void(void)> RecordingsDelegate;
         typedef std::function<bool(const EpgEntryList::value_type&)> EpgEntryAction;
         
-        virtual IPhase* GetPhase(Phase phase) = 0;
+        virtual std::shared_ptr<IPhase> GetPhase(Phase phase) = 0;
 
         virtual const ChannelList& GetChannelList() = 0;
         virtual const GroupList &GetGroupList() = 0;
