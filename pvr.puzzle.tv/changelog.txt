@@ -1,3 +1,48 @@
+0.9.64
+- Fixed crash after bad attempt of seeking of event playlist.
+- Setting for archive refresh interval
+- Prioritise recording loading from cache. More deterministic initialisation.
+- Use Kodi's CURL interface instead of prebuilt one.
+
+0.9.63
+- Reload playlist from effective URL.
+- Limit recordings update to one per 3 minutes.
+- Support shift (Edem like) archives in Shara TV slot
+
+0.9.61
+- Feature: multi-threaded HLS downloading.
+- Support multi-name channels in XML TV
+
+0.9.60
+- Common setting to disable archive support.
+- Fixed double loading of EPG on startup
+- Preserve groups order like in playlist (SharaTV only)
+
+0.9.59
+- Support tvg-shift tag (Shara TV)
+- Shrink EPG cache to archive depth.
+
+0.9.58
+- Support group tag for Edem playlists.
+- Improved flussonic current program playback.
+- Support global catchup "append" tag value (ZABAVA archives)
+- Improvements with playlist pipeline.
+
+0.9.55
+- Support global catchup tags.
+- Fixed support of "multi-channel" EPG (Shara TV)
+
+0.9.52
+- Recording padding (Shara TV, OTT, Edem).
+- Use low case channel IDs for XMLTV EPG
+- SHARA-TV: Option to override EPG URL in playlist with local file.
+- Support HTTP headers setup from URL (with "|" char)
+
+0.9.47
+- Fixed disconnect when recording been paused for a while.
+- Support multi-audio Flussonic archives.
+- Automated recording list update.
+
 0.9.45
 - Fixed EPG for OTT Club
 - Support "flussonic" archives
