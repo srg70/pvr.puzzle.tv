@@ -60,10 +60,11 @@ namespace Buffers {
     }
     
     void TimeshiftBuffer::Init(const std::string& newUrl) {
-        AbortRead();
         
-        if(!newUrl.empty())
-            m_inputBuffer->SwitchStream(newUrl);
+        if(!newUrl.empty()) {
+            AbortRead();
+            m_inputBuffer->SwitchStream(newUrl);            
+        }
         
         m_writerWaitingForCacheSwap  = false;
         m_writeEvent.Reset();
