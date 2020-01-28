@@ -151,12 +151,12 @@ ClientCoreBase::ClientCoreBase(const IClientCore::RecordingsDelegate& didRecordi
         m_didRecordingsUpadate = [pvr](){ pvr->TriggerRecordingUpdate();};
     }
     m_httpEngine = new HttpEngine();
-    m_phases[k_ChannelsLoadingPhase] =  new ClientPhase();
-    m_phases[k_ChannelsIdCreatingPhase] =  new ClientPhase();
-    m_phases[k_EpgCacheLoadingPhase] =  new ClientPhase();
-    m_phases[k_RecordingsInitialLoadingPhase] =  new ClientPhase();
-    m_phases[k_InitPhase] =  new ClientPhase();
-    m_phases[k_EpgLoadingPhase] =  new ClientPhase();
+    m_phases.emplace(k_ChannelsLoadingPhase, new ClientPhase());
+    m_phases.emplace(k_ChannelsIdCreatingPhase, new ClientPhase());
+    m_phases.emplace(k_EpgCacheLoadingPhase, new ClientPhase());
+    m_phases.emplace(k_RecordingsInitialLoadingPhase, new ClientPhase());
+    m_phases.emplace(k_InitPhase, new ClientPhase());
+    m_phases.emplace(k_EpgLoadingPhase, new ClientPhase());
     
 }
 
@@ -227,7 +227,7 @@ void ClientCoreBase::InitAsync(bool clearEpgCache, bool updateRecordings)
     
 }
 
-IClientCore::IPhase* ClientCoreBase::GetPhase(Phase phase)
+std::shared_ptr<IClientCore::IPhase> ClientCoreBase::GetPhase(Phase phase)
 {
     if(m_phases.count(phase) > 0) {
         return m_phases[phase];
@@ -240,11 +240,11 @@ IClientCore::IPhase* ClientCoreBase::GetPhase(Phase phase)
 void ClientCoreBase::PrepareForDestruction() {
     if(NULL == m_httpEngine)
         return ;
-    for (auto& ph : m_phases) {
-        if(ph.second) {
-            delete ph.second;
-        }
-    }
+//    for (auto& ph : m_phases) {
+//        if(ph.second) {
+//            delete ph.second;
+//        }
+//    }
     m_phases.clear();
     SAFE_DELETE(m_httpEngine);
     

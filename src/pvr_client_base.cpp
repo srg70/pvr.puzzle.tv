@@ -271,7 +271,10 @@ PVRClientBase::~PVRClientBase()
 {
     Cleanup();
     if(m_destroyer) {
-        m_destroyerEvent.Signal();
+        m_destroyer->StopThread(0);
+        while(m_destroyer->IsRunning()) {
+            m_destroyerEvent.Signal();
+        }
         SAFE_DELETE(m_destroyer);
     }
 }
@@ -982,7 +985,7 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
     PVR_ERROR result = PVR_ERROR_NO_ERROR;
     int size = 0;
 
-    IClientCore::IPhase* phase = nullptr;
+    std::shared_ptr<IClientCore::IPhase> phase = nullptr;
     LogDebug("PVRClientBase: start recorings transfering...");
     // Add remote archive (if enabled)
     if(m_supportArchive) {

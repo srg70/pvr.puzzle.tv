@@ -23,6 +23,7 @@
 #include "HttpEngine.hpp"
 #include "p8-platform/util/util.h"
 #include "p8-platform/threads/mutex.h"
+#include "base64.h"
 
 namespace CurlUtils
 {
@@ -90,7 +91,8 @@ HttpEngine::HttpEngine()
         
         // Post data
         if(request.IsPost()) {
-            XBMC->CURLAddOption(curl, XFILE::CURL_OPTION_HEADER, "postdata", request.PostData.c_str());
+            XBMC->CURLAddOption(curl, XFILE::CURL_OPTION_HEADER, "postdata",
+                                base64_encode(reinterpret_cast<const unsigned char*>(request.PostData.c_str()), request.PostData.size()).c_str());
         }
         // Custom headers
         if(!request.Headers.empty()) {
@@ -98,7 +100,7 @@ HttpEngine::HttpEngine()
                 auto pos =  header.find(':');
                 if(std::string::npos == pos)
                     continue;
-                XBMC->CURLAddOption(curl, XFILE::CURL_OPTION_HEADER, header.substr(pos).c_str(), &header.c_str()[pos + 1]);
+                XBMC->CURLAddOption(curl, XFILE::CURL_OPTION_HEADER, header.substr(0, pos).c_str(), &header.c_str()[pos + 1]);
             }
         }
         // Custom cookies
