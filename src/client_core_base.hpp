@@ -124,7 +124,8 @@ namespace PvrClient {
         mutable P8PLATFORM::CMutex m_epgAccessMutex;
         
         RecordingsDelegate m_didRecordingsUpadate;
-        std::map<IClientCore::Phase, std::shared_ptr<ClientPhase> > m_phases;
+        typedef std::map<IClientCore::Phase, std::shared_ptr<ClientPhase> > TPhases;
+        TPhases m_phases;
         time_t m_lastEpgRequestEndTime;
 
         int m_rpcPort;

@@ -152,12 +152,12 @@ ClientCoreBase::ClientCoreBase(const IClientCore::RecordingsDelegate& didRecordi
         m_didRecordingsUpadate = [pvr](){ pvr->TriggerRecordingUpdate();};
     }
     m_httpEngine = new HttpEngine();
-    m_phases.emplace(k_ChannelsLoadingPhase, new ClientPhase());
-    m_phases.emplace(k_ChannelsIdCreatingPhase, new ClientPhase());
-    m_phases.emplace(k_EpgCacheLoadingPhase, new ClientPhase());
-    m_phases.emplace(k_RecordingsInitialLoadingPhase, new ClientPhase());
-    m_phases.emplace(k_InitPhase, new ClientPhase());
-    m_phases.emplace(k_EpgLoadingPhase, new ClientPhase());
+    m_phases.emplace(k_ChannelsLoadingPhase, std::move(TPhases::mapped_type(new ClientPhase())));
+    m_phases.emplace(k_ChannelsIdCreatingPhase, std::move(TPhases::mapped_type(new ClientPhase())));
+    m_phases.emplace(k_EpgCacheLoadingPhase, std::move(TPhases::mapped_type(new ClientPhase())));
+    m_phases.emplace(k_RecordingsInitialLoadingPhase, std::move(TPhases::mapped_type(new ClientPhase())));
+    m_phases.emplace(k_InitPhase, std::move(TPhases::mapped_type(new ClientPhase())));
+    m_phases.emplace(k_EpgLoadingPhase, std::move(TPhases::mapped_type(new ClientPhase())));
     
 }
 
