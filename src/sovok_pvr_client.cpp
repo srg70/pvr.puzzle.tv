@@ -103,6 +103,7 @@ ADDON_STATUS SovokPVRClient::CreateCoreSafe(bool clearEpgCache)
     try
     {
         CreateCore(clearEpgCache);
+        OnCoreCreated();
     }
     catch (AuthFailedException &) {
         XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32007), "Sovok TV");

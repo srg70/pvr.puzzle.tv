@@ -100,6 +100,10 @@ msgctxt "#10020"
 msgid "Archive refresh interval (min)"
 msgstr "Archive refresh interval (min)"
 
+msgctxt "#10021"
+msgid "PVR startup delay (sec)"
+msgstr "PVR startup delay (sec)"
+
 msgctxt "#10097"
 msgid "Other"
 msgstr "Other"
@@ -441,6 +445,10 @@ msgstr "Opening next stream..."
 msgctxt "#32026"
 msgid "No streams available."
 msgstr "No streams available."
+
+msgctxt "#32027"
+msgid "Delay startup for %d sec."
+msgstr "Delay startup for %d sec."
 
 #============= Menus ================
 

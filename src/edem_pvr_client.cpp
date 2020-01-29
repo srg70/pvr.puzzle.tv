@@ -97,6 +97,7 @@ ADDON_STATUS EdemPVRClient::CreateCoreSafe(bool clearEpgCache)
     try
     {
         CreateCore(clearEpgCache);
+        OnCoreCreated();
     }
     catch (AuthFailedException &)
     {

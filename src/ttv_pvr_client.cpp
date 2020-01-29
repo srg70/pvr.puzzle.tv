@@ -104,6 +104,7 @@ ADDON_STATUS TtvPVRClient::CreateCoreSafe(bool clearEpgCache)
     try
     {
         CreateCore(clearEpgCache);
+        OnCoreCreated();
     }
     catch (exception & ex)
     {

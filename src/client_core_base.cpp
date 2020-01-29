@@ -163,66 +163,55 @@ ClientCoreBase::ClientCoreBase(const IClientCore::RecordingsDelegate& didRecordi
 void ClientCoreBase::InitAsync(bool clearEpgCache, bool updateRecordings)
 {
     m_phases[k_InitPhase]->RunAndSignalAsync([this, clearEpgCache, updateRecordings] (std::function<bool(void)> isAborted){
-        if(isAborted())
-            return;
-        
-        Init(clearEpgCache);
-        // Broadcast EPG cache loaded
-        auto phase =  GetPhase(k_EpgCacheLoadingPhase);
-        if(phase) {
-            phase->Broadcast();
-        }
-        if(isAborted())
-            return;
-        
-        if(!updateRecordings){
-            phase =  GetPhase(k_RecordingsInitialLoadingPhase);
-            if(phase) {
-                phase->Broadcast();
+        do {
+            if(isAborted())
+                break;
+            // Load channels, groups and EPG cache
+            Init(clearEpgCache);
+            // Broadcast EPG cache loaded
+            GetPhase(k_EpgCacheLoadingPhase)->Broadcast();
+
+            if(isAborted())
+                break;
+            
+            if(!updateRecordings){
+                GetPhase(k_RecordingsInitialLoadingPhase)->Broadcast();
             }
-        }
-        
-        std::time_t now = std::time(nullptr);
-        now = std::mktime(std::gmtime(&now));
-        //            // Request EPG for all channels from max archive info to +1 days
-        //            int max_archive = 0;
-        //            for (const auto& ai  : m_archivesInfo) {
-        //                max_archive = std::max(ai.second, max_archive);
-        //            }
-        //            startTime -= max_archive *  60 * 60; // archive info in hours
-        time_t startTime = now - 7 *24 *  60 * 60;
-        if(difftime(m_lastEpgRequestEndTime, startTime) > 0 ) { // i.e.  m_lastEpgRequestEndTime > startTime
-            startTime = m_lastEpgRequestEndTime;
-        }
-        time_t endTime = now + 7 * 24 * 60 * 60;
-        if(isAborted())
-            return;
-        
-        // Wait for recodings transfering to Kodi.
-        phase =  GetPhase(k_RecordingsInitialLoadingPhase);
-        if(phase) {
-            bool wait = true;
-            do {
-                wait = !isAborted() && !phase->Wait(100);
-            } while(wait);
-        }
-        
-        if(isAborted())
-            return;
-        _UpdateEpgForAllChannels(startTime, endTime);
-        if(isAborted())
-            return;
-        // Broadcast EPG loaded
-        phase =  GetPhase(k_EpgLoadingPhase);
-        if(nullptr == phase) {
-            return;
-        }
-        if(!phase->IsDone()) {
-            phase->Broadcast();
-        }
-        
-        if(!updateRecordings || isAborted())
-            return;
+            
+            std::time_t now = std::time(nullptr);
+            now = std::mktime(std::gmtime(&now));
+            //            // Request EPG for all channels from max archive info to +1 days
+            //            int max_archive = 0;
+            //            for (const auto& ai  : m_archivesInfo) {
+            //                max_archive = std::max(ai.second, max_archive);
+            //            }
+            //            startTime -= max_archive *  60 * 60; // archive info in hours
+            time_t startTime = now - 7 *24 *  60 * 60;
+            if(difftime(m_lastEpgRequestEndTime, startTime) > 0 ) { // i.e.  m_lastEpgRequestEndTime > startTime
+                startTime = m_lastEpgRequestEndTime;
+            }
+            time_t endTime = now + 7 * 24 * 60 * 60;
+            if(isAborted())
+                break;
+            
+            // Wait for recodings transfering to Kodi.
+            auto phase =  GetPhase(k_RecordingsInitialLoadingPhase);
+            if(phase) {
+                bool wait = true;
+                do {
+                    wait = !isAborted() && !phase->Wait(100);
+                } while(wait);
+            }
+            
+            if(isAborted())
+                break;
+            
+            _UpdateEpgForAllChannels(startTime, endTime);
+ 
+            
+        } while(false);
+        // Broadcast EPG loaded in any case (to avoid deadlocks)
+        GetPhase(k_EpgLoadingPhase)->Broadcast();
     });
     
 }

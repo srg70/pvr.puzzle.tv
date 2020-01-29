@@ -88,6 +88,7 @@ ADDON_STATUS OttPVRClient::CreateCoreSafe(bool clearEpgCache)
     try
     {
         CreateCore(clearEpgCache);
+        OnCoreCreated();
     }
     catch (OttEngine::AuthFailedException &)
     {
