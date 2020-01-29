@@ -97,8 +97,18 @@ const unsigned int RELOAD_EPG_MENU_HOOK = 1;
 const unsigned int RELOAD_RECORDINGS_MENU_HOOK = 2;
 const unsigned int PVRClientBase::s_lastCommonMenuHookId = RELOAD_RECORDINGS_MENU_HOOK;
 
-static void CheckForInetConnection(long waitForInetTimeout)
+static void DelayStartup(int delayInSec) {
+    if(delayInSec <= 0){
+        return;
+    }
+    XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32027), delayInSec);
+    P8PLATFORM::CEvent::Sleep(delayInSec * 1000);
+}
+
+
+static int CheckForInetConnection(int waitForInetTimeout)
 {
+    int waitingTimeInSec = 0;
     if(waitForInetTimeout > 0){
         XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32022));
         
@@ -114,7 +124,9 @@ static void CheckForInetConnection(long waitForInetTimeout)
         if(!connected) {
             XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32023));
         }
+        waitingTimeInSec = waitForInetTimeout - waitForInet.TimeLeft()/1000;
     }
+    return waitingTimeInSec;
 }
 
 ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
@@ -180,6 +192,9 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     m_waitForInetTimeout = 0;
     XBMC->GetSetting("wait_for_inet", &m_waitForInetTimeout);
     
+    m_startupDelay = 0;
+    XBMC->GetSetting("startup_delay", &m_startupDelay);
+   
     m_startRecordingPadding = 0;
     XBMC->GetSetting("archive_start_padding", &m_startRecordingPadding);
     if(m_startRecordingPadding < 0)
@@ -200,7 +215,7 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     if(m_archiveRefreshInterval < 0)
         m_archiveRefreshInterval = 3;
     
-    CheckForInetConnection(m_waitForInetTimeout);
+    DelayStartup(m_startupDelay - CheckForInetConnection(m_waitForInetTimeout));
     
     CurlUtils::SetCurlTimeout(curlTimout);
     SetChannelReloadTimeout(channelTimeout);
@@ -233,12 +248,17 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     m_destroyer = new CActionQueue(100, "Streams Destroyer");
     m_destroyer->CreateThread();
     
+    return ADDON_STATUS_OK;
+    
+}
+
+void PVRClientBase::OnCoreCreated() {
     m_destroyer->PerformAsync([this](){
         while(m_clientCore == nullptr) {
             P8PLATFORM::CEvent::Sleep(100);
         }
         
-         auto phase =  m_clientCore->GetPhase(IClientCore::k_ChannelsLoadingPhase);
+        auto phase =  m_clientCore->GetPhase(IClientCore::k_ChannelsLoadingPhase);
          phase->Wait();
 
         m_kodiToPluginLut.clear();
@@ -261,10 +281,8 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
             ScheduleRecordingsUpdate();
         }
     });
-        
-    return ADDON_STATUS_OK;
-    
 }
+
 
 void PVRClientBase::ScheduleRecordingsUpdate() {
      m_destroyer->PerformAsync([this]() {
@@ -287,7 +305,7 @@ PVRClientBase::~PVRClientBase()
 {
     Cleanup();
     if(m_destroyer) {
-        m_destroyer->StopThread(0);
+        m_destroyer->StopThread(1);
         while(m_destroyer->IsRunning()) {
             m_destroyerEvent.Signal();
         }
@@ -309,7 +327,7 @@ void PVRClientBase::OnSystemSleep()
 }
 void PVRClientBase::OnSystemWake()
 {
-    CheckForInetConnection(m_waitForInetTimeout);
+    DelayStartup(m_startupDelay - CheckForInetConnection(m_waitForInetTimeout));
     CreateCoreSafe(false);
 }
 
@@ -386,7 +404,11 @@ ADDON_STATUS PVRClientBase::SetSetting(const char *settingName, const void *sett
     }
     else if (strcmp(settingName, "wait_for_inet") == 0)
     {
-        m_waitForInetTimeout = *(bool *)(settingValue);
+        m_waitForInetTimeout = *(int *)(settingValue);
+    }
+    else if (strcmp(settingName, "startup_delay") == 0)
+    {
+        m_startupDelay = *(int *)(settingValue);
     }
     else if (strcmp(settingName, "archive_start_padding") == 0)
     {

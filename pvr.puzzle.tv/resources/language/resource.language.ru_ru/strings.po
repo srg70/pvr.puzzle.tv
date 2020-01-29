@@ -100,6 +100,10 @@ msgctxt "#10020"
 msgid "Archive refresh interval (min)"
 msgstr "Интервал обновления архива (мин)"
 
+msgctxt "#10021"
+msgid "PVR startup delay (sec)"
+msgstr "Задержка загрузки PVR (сек)"
+
 msgctxt "#10097"
 msgid "Other"
 msgstr "Разное"
@@ -441,6 +445,10 @@ msgstr "Открываю следующий поток..."
 msgctxt "#32026"
 msgid "No streams available."
 msgstr "Нет доступных потоков."
+
+msgctxt "#32027"
+msgid "Delay startup for %d sec."
+msgstr "Задержка загрузки на %d сек."
 
 #============= Menus ================
 

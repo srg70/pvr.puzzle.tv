@@ -109,6 +109,7 @@ ADDON_STATUS SharaTvPVRClient::CreateCoreSafe(bool clearEpgCache)
     try
     {
         CreateCore(clearEpgCache);
+        OnCoreCreated();
     }
     catch (AuthFailedException &)
     {

@@ -25,6 +25,7 @@
     <setting label="10097" type="lsep"/>
     <setting id="rpc_local_port" type="number" label="10012" default="8080"/>
     <setting id="channel_index_offset" type="number" label="10015" default="0"/>
+    <setting id="startup_delay" type="number" label="10021" default="0" option="int"/>
 </category>
 
 <!-- Puzzle TV -->

@@ -234,7 +234,7 @@ namespace Buffers {
     
     void TimeshiftBuffer::AbortRead()
     {
-        StopThread(0);
+        StopThread(1);
         if(m_inputBuffer) {
             m_inputBuffer->AbortRead();
         }

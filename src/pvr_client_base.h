@@ -149,6 +149,8 @@ namespace PvrClient
         virtual ADDON_STATUS CreateCoreSafe(bool clearEpgCache) = 0;
         virtual void DestroyCoreSafe() = 0;
         
+        void OnCoreCreated();
+        
         static bool CheckPlaylistUrl(const std::string& url);
         
         ChannelId ChannelIdForBrodcastId(KodiChannelId uId) const {return m_kodiToPluginLut.at(uId);};
@@ -204,8 +206,9 @@ namespace PvrClient
         
         int m_rpcPort;
         int m_channelIndexOffset;
-        long m_waitForInetTimeout;
-        
+        int m_waitForInetTimeout;
+        int m_startupDelay;
+
         ActionQueue::CActionQueue* m_destroyer;
         P8PLATFORM::CEvent m_destroyerEvent;
         TKodiToPluginChannelIdLut m_kodiToPluginLut;

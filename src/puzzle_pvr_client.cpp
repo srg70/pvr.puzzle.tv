@@ -123,6 +123,7 @@ ADDON_STATUS PuzzlePVRClient::CreateCoreSafe(bool clearEpgCache)
     try
     {
         CreateCore(clearEpgCache);
+        OnCoreCreated();
     }
     catch (std::exception& ex)
     {
