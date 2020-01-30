@@ -105,6 +105,10 @@ msgctxt "#10021"
 msgid "PVR startup delay (sec)"
 msgstr "PVR startup delay (sec)"
 
+msgctxt "#10022"
+msgid "Load after EPG"
+msgstr "Load after EPG"
+
 msgctxt "#10097"
 msgid "Other"
 msgstr "Other"

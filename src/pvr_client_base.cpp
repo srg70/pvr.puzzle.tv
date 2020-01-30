@@ -194,6 +194,9 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     m_supportArchive = false;
     XBMC->GetSetting("archive_support", &m_supportArchive);
 
+    m_loadArchiveAfterEpg = false;
+    XBMC->GetSetting("archive_wait_for_epg", &m_loadArchiveAfterEpg);
+    
     m_archiveRefreshInterval = 3;
     XBMC->GetSetting("archive_refresh_interval", &m_archiveRefreshInterval);
     if(m_archiveRefreshInterval < 0)
@@ -262,6 +265,11 @@ void PVRClientBase::OnCoreCreated() {
         } else {
             auto phase =  m_clientCore->GetPhase(IClientCore::k_EpgLoadingPhase);
             phase->Wait();
+            if(m_loadArchiveAfterEpg) {
+                LogDebug("PVRClientBase: update recorderings.");
+                m_clientCore->ReloadRecordings();
+            }
+            LogDebug("PVRClientBase: sheduling first recording update.");
             ScheduleRecordingsUpdate();
         }
     });
@@ -270,13 +278,18 @@ void PVRClientBase::OnCoreCreated() {
 
 void PVRClientBase::ScheduleRecordingsUpdate() {
      m_destroyer->PerformAsync([this]() {
-         if(!m_destroyerEvent.Wait(m_archiveRefreshInterval * 60 * 1000) && nullptr != m_clientCore) {
+         if(!m_destroyerEvent.Wait(m_archiveRefreshInterval * 60 * 1000) && nullptr != m_clientCore && !m_destroyer->IsStopped()) {
+            LogDebug("PVRClientBase: call reload recorderings.");
             m_clientCore->ReloadRecordings();
+         } else {
+             LogDebug("PVRClientBase: bypass reload recorderings.");
          }
+         
      }, [this](const ActionResult& res) {
          if(ActionQueue::kActionFailed == res.status) {
              LogError("PVRClientBase: async recordings update failed!");
          } else if(ActionQueue::kActionCompleted == res.status) {
+             LogDebug("PVRClientBase: sheduling next recording update.");
              ScheduleRecordingsUpdate();
          }else {
              LogDebug("PVRClientBase: sheduling of recording update canceled.");
@@ -291,7 +304,7 @@ PVRClientBase::~PVRClientBase()
     if(m_destroyer) {
         m_destroyer->StopThread(1);
         while(m_destroyer->IsRunning()) {
-            m_destroyerEvent.Signal();
+            m_destroyerEvent.Broadcast();
         }
         SAFE_DELETE(m_destroyer);
     }
@@ -422,6 +435,11 @@ ADDON_STATUS PVRClientBase::SetSetting(const char *settingName, const void *sett
         bool newValue = *(bool*)settingValue;
         return (m_supportArchive != newValue) ? ADDON_STATUS_NEED_RESTART : ADDON_STATUS_OK;
         
+    }
+    else if (strcmp(settingName, "archive_wait_for_epg") == 0)
+    {
+        bool newValue = *(bool*)settingValue;
+        return (m_loadArchiveAfterEpg != newValue) ? ADDON_STATUS_NEED_RESTART : ADDON_STATUS_OK;
     }
     else if (strcmp(settingName, "archive_refresh_interval") == 0)
     {
@@ -822,7 +840,7 @@ void PVRClientBase::CloseLiveStream()
                 LogNotice("PVRClientBase: input stream closed.");
             }
         });
-        m_destroyerEvent.Signal();
+        m_destroyerEvent.Broadcast();
     }
     
     m_inputBuffer = nullptr;
@@ -934,6 +952,18 @@ int PVRClientBase::GetRecordingsAmount(bool deleted)
         return -1;
     
     int size = 0;
+    
+    // When archivee loading is delayed
+    // check whether EPG is loded already
+    if(m_loadArchiveAfterEpg) {
+        auto phase =  m_clientCore->GetPhase(IClientCore::k_EpgLoadingPhase);
+         if(!phase) {
+             return 0;
+         }
+        if(!phase->IsDone())
+            return 0;
+    }
+    
     // Add remote archive (if enabled)
     if(m_supportArchive) {
         auto phase =  m_clientCore->GetPhase(IClientCore::k_EpgCacheLoadingPhase);
@@ -1003,6 +1033,19 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
 
     if(deleted)
         return PVR_ERROR_NOT_IMPLEMENTED;
+    
+    // When archivee loading is delayed
+    // check whether EPG is loded already
+    if(m_loadArchiveAfterEpg) {
+        auto phase =  m_clientCore->GetPhase(IClientCore::k_EpgLoadingPhase);
+         if(!phase) {
+             return PVR_ERROR_NO_ERROR;
+         }
+        if(!phase->IsDone())
+            return PVR_ERROR_NO_ERROR;
+    }
+    
+
     
     PVR_ERROR result = PVR_ERROR_NO_ERROR;
     int size = 0;

@@ -54,13 +54,7 @@ namespace Buffers {
             m_cacheToSwap = cache;
 //            m_cacheSwapEvent.Wait();
         }
-        
-        /*!
-         * @brief Stop the thread
-         * @param iWaitMs negative = don't wait, 0 = infinite, or the amount of ms to wait
-         */
-        virtual bool StopThread(int iWaitMs = 5000);
-        
+                
         inline time_t StartTime() { return m_cache->StartTime(); }
         inline time_t EndTime() { return m_cache->EndTime(); }
         inline bool WaitForInput(uint32_t timeoutMs) {

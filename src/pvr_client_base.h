@@ -215,6 +215,7 @@ namespace PvrClient
         
         bool m_supportSeek;
         bool m_supportArchive;
+        bool m_loadArchiveAfterEpg;
 
     };
 }
