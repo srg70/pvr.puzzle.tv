@@ -84,22 +84,6 @@ namespace Buffers {
              delete m_cache;
     }
     
-    bool TimeshiftBuffer::StopThread(int iWaitMs)
-    {
-        int stopCounter = 1;
-        bool retVal = false;
-        
-        while(!(retVal = this->CThread::StopThread(iWaitMs))){
-            if(stopCounter++ > 3)
-                break;
-            LogNotice("TimeshiftBuffer: can't stop thread in %d ms", iWaitMs);
-        }
-        if(!retVal)
-            LogError("TimeshiftBuffer: can't stop thread in %d ms", stopCounter*iWaitMs);
-        
-        return retVal;
-    }
-    
     void TimeshiftBuffer::CheckAndWaitForSwap() {
         if(nullptr == m_cacheToSwap)
             return;
@@ -243,7 +227,10 @@ namespace Buffers {
              P8PLATFORM::CEvent::Sleep(100);
              m_writeEvent.Signal();
          }
-        
+        while(IsRunning()) {
+            LogNotice("TimeshiftBuffer: waiting 100 ms for thread stopping...");
+            P8PLATFORM::CEvent::Sleep(100);
+        }
     }
 }
 

@@ -196,13 +196,13 @@ void ClientCoreBase::InitAsync(bool clearEpgCache, bool updateRecordings)
                 break;
             
             // Wait for recodings transfering to Kodi.
-            auto phase =  GetPhase(k_RecordingsInitialLoadingPhase);
-            if(phase) {
-                bool wait = true;
-                do {
-                    wait = !isAborted() && !phase->Wait(100);
-                } while(wait);
-            }
+//            auto phase =  GetPhase(k_RecordingsInitialLoadingPhase);
+//            if(phase) {
+//                bool wait = true;
+//                do {
+//                    wait = !isAborted() && !phase->Wait(100);
+//                } while(wait);
+//            }
             
             if(isAborted())
                 break;
