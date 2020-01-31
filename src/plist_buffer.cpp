@@ -135,41 +135,47 @@ namespace Buffers {
         std::hash<std::thread::id> hasher;
         LogDebug("PlaylistBuffer: segment #%" PRIu64 " STARTED. (thread 0x%X).", segment->info.index, hasher(std::this_thread::get_id()));
 
-        void* f = XBMC->OpenFile(segment->info.url.c_str(), XFILE::READ_NO_CACHE | XFILE::READ_CHUNKED); //XFILE::READ_AUDIO_VIDEO);
-        if(!f)
-            throw PlistBufferException("Failed to download playlist media segment.");
+        bool isCanceled = IsCanceled(*segment);
+        bool result = !isCanceled;
 
-        // Some content type should be treated as playlist
-        // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.1
-        char* contentType = XBMC->GetFilePropertyValue(f, XFILE::FILE_PROPERTY_CONTENT_TYPE, "");
-        const bool contentIsPlaylist =  NULL != contentType && ( 0 == strcmp("application/vnd.apple.mpegurl", contentType)  || 0 == strcmp("audio/mpegurl", contentType));
-        XBMC->FreeString(contentType);
-
-        unsigned char buffer[8196];
-        std::string contentForPlaylist;
-        ssize_t  bytesRead;
-        bool isCanceled = false;
         do {
-            bytesRead = XBMC->ReadFile(f, buffer, sizeof(buffer));
-            if(contentIsPlaylist) {
-                 contentForPlaylist.append ((char *) buffer, bytesRead);
-            } else{
-                segment->Push(buffer, bytesRead);
+            // Do not bother the server with canceled segments
+            if(isCanceled)
+                break;
+            
+            void* f = XBMC->OpenFile(segment->info.url.c_str(), XFILE::READ_NO_CACHE | XFILE::READ_CHUNKED | XFILE::READ_TRUNCATED); //XFILE::READ_AUDIO_VIDEO);
+            if(!f)
+                throw PlistBufferException("Failed to download playlist media segment.");
+            
+            // Some content type should be treated as playlist
+            // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.1
+            char* contentType = XBMC->GetFilePropertyValue(f, XFILE::FILE_PROPERTY_CONTENT_TYPE, "");
+            const bool contentIsPlaylist =  NULL != contentType && ( 0 == strcmp("application/vnd.apple.mpegurl", contentType)  || 0 == strcmp("audio/mpegurl", contentType));
+            XBMC->FreeString(contentType);
+            
+            unsigned char buffer[8196];
+            std::string contentForPlaylist;
+            ssize_t  bytesRead;
+            do {
+                bytesRead = XBMC->ReadFile(f, buffer, sizeof(buffer));
+                if(contentIsPlaylist) {
+                    contentForPlaylist.append ((char *) buffer, bytesRead);
+                } else{
+                    segment->Push(buffer, bytesRead);
+                }
+                isCanceled = IsCanceled(*segment);
+                //        LogDebug(">>> Write: %d", bytesRead);
+            }while (bytesRead > 0 && !isCanceled);
+            
+            XBMC->CloseFile(f);
+            
+            if(contentIsPlaylist && !isCanceled) {
+                result = FillSegmentFromPlaylist(segment, contentForPlaylist, [&isCanceled, &IsCanceled](const MutableSegment& seg){
+                    return isCanceled = IsCanceled(seg);
+                });
             }
-            isCanceled = IsCanceled(*segment);
-            //        LogDebug(">>> Write: %d", bytesRead);
-        }while (bytesRead > 0 && !isCanceled);
-        
-        XBMC->CloseFile(f);
-        
-        bool result = true;
-        if(contentIsPlaylist && !isCanceled) {
-            result = FillSegmentFromPlaylist(segment, contentForPlaylist, [&isCanceled, &IsCanceled](const MutableSegment& seg){
-                return isCanceled = IsCanceled(seg);
-            });
-        }
-
- 
+            
+        } while(false);
         if(isCanceled){
             LogDebug("PlaylistBuffer: segment #%" PRIu64 " CANCELED.", segment->info.index);
             result = false;
@@ -350,8 +356,10 @@ namespace Buffers {
                         // Do not change it! May cause long waiting on stopping/exit.
                         bool hasNewSegment = false;
                         do {
+                            auto startAt = std::chrono::system_clock::now();
                             hasNewSegment = m_writeEvent.Wait(1000);
-                            timeoutMs -= 1000;
+                            auto waitingMs = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - startAt);
+                            timeoutMs -= waitingMs.count();
                             
                         } while (IsRunning() && !hasNewSegment && timeoutMs > 1000);
                         if(timeoutMs < 1000)
