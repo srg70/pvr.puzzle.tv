@@ -215,16 +215,18 @@ namespace Buffers {
                 
                 bool cacheIsFull = false;
                 MutableSegment* segment =  nullptr;
+                uint64_t segmentIdx (-1);
                 {
                     CLockObject lock(m_syncAccess);
                     segment = m_cache->SegmentToFill();
+                    
                     if(nullptr != segment) {
-//                        m_loadingSegmentIndex = segment->info.index;
+                        segmentIdx = segment->info.index;
                         std::hash<std::thread::id> hasher;
-                        LogDebug("PlaylistBuffer: segment #%" PRIu64 " INITIALIZED.", segment->info.index);
+                        LogDebug("PlaylistBuffer: segment #%" PRIu64 " INITIALIZED.", segmentIdx);
                     }
                     // to avoid double lock in following while() loop
-                    cacheIsFull = !m_cache->HasSpaceForNewSegment();
+                    cacheIsFull = !m_cache->HasSpaceForNewSegment(segmentIdx);
                 }
                 bool isStopped = IsStopped();
 
@@ -238,7 +240,7 @@ namespace Buffers {
                         CLockObject lock(m_syncAccess);
                         // NOTE: this method frees space in cache
                         // Must be called in any case
-                        cacheIsFull = !m_cache->HasSpaceForNewSegment();
+                        cacheIsFull = !m_cache->HasSpaceForNewSegment(segmentIdx);
                     }
                     // When we waiting for room in cache (e.g stream is on pause)
                     // try to ping server to avoid connection lost

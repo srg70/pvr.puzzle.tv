@@ -117,7 +117,7 @@ namespace Buffers {
         int64_t Length() const { return CanSeek() ? m_totalLength : -1; }
         bool ReloadPlaylist();
         bool CanSeek() const {return nullptr != m_delegate || (m_seekForVod && m_playlist->IsVod()); }
-        bool HasSpaceForNewSegment();
+        bool HasSpaceForNewSegment(const uint64_t& waitingSegment);
     private:
        
         // key is segment index in m3u file
