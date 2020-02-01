@@ -272,12 +272,14 @@ Segment* PlaylistCache::NextSegment(SegmentStatus& status) {
     return retVal;
 }
 
-bool PlaylistCache::HasSpaceForNewSegment() {
+bool PlaylistCache::HasSpaceForNewSegment(const uint64_t& waitingSegment) {
     // Current segment for read is m_currentSegmentIndex - 1
     uint64_t currentSegment = m_currentSegmentIndex > 0 ? m_currentSegmentIndex -1 : 0;
+    const uint64_t readingSegment = currentSegment;
     // Free older segments when cache is full
     // or we are on live stream (no caching requered)
-    if(IsFull()) {
+    bool hasSpace = !IsFull();
+    if(!hasSpace) {
         int64_t idx = -1;
         auto runner = m_segments.begin();
         const auto end = m_segments.end();
@@ -334,13 +336,16 @@ bool PlaylistCache::HasSpaceForNewSegment() {
                 m_segments.erase(idx);
             }
             LogDebug("PlaylistCache: segment #%" PRIu64 " removed. Cache size %d bytes", idx, m_cacheSizeInBytes);
+        } else if(waitingSegment == readingSegment){
+            // We must accept current reading segment disregarding to cache size!
+            hasSpace = true;
         } else if(CanSeek()) {
-            LogDebug("PlaylistCache: cache is full but no segments to free. Current idx #%" PRIu64 " Size %d bytes", currentSegment, m_cacheSizeInBytes);
+            LogDebug("PlaylistCache: cache is full but no segments to free. Current idx #%" PRIu64 " Size %d bytes", readingSegment, m_cacheSizeInBytes);
         } else {
-            LogDebug("PlaylistCache: cache is full but no segments to free. Current idx #%" PRIu64 " %d segments in cache.", currentSegment, m_segments.size());
+            LogDebug("PlaylistCache: cache is full but no segments to free. Current idx #%" PRIu64 " %d segments in cache.", readingSegment, m_segments.size());
         }
     }
-    return !IsFull();
+    return hasSpace;
 }
 
 // Find segment in playlist by time offset,caalculated from position
