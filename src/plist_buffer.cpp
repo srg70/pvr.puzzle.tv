@@ -262,7 +262,7 @@ namespace Buffers {
                 };
                 
                 if(nullptr != segment){
-                    if(!IsStopped() && !isSegmentCanceled(*segment)) {
+                    if(!IsStopped() /*&& !isSegmentCanceled(*segment)*/) {
                         // Load segment data
                         
                         auto startLoadingAt = std::chrono::system_clock::now();
