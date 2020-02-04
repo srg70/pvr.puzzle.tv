@@ -743,6 +743,11 @@ std::string PVRClientBase::GetStreamUrl(ChannelId channel)
 
 bool PVRClientBase::OpenLiveStream(const PVR_CHANNEL& channel)
 {
+    auto phase =  m_clientCore->GetPhase(IClientCore::k_ChannelsLoadingPhase);
+    if(phase) {
+        phase->Wait();
+    }
+
     if(m_kodiToPluginLut.count(channel.iUniqueId) == 0){
         LogError("PVRClientBase: open stream request for unknown channel ID %d", channel.iUniqueId);
         return false;
