@@ -39,6 +39,7 @@
       <setting id="puzzle_server_epg_url" type="text" label="20003" default="https://iptvx.one/epg/epg.xml.gz" visible="eq(-1,0)"/>
       <setting id="puzzle_server_epg_port" type="number" label="20004" default="8085" visible="eq(-2,1) + eq(-6,0)"/>
       <setting id="puzzle_seek_archives" type="bool" label="50002" default="false"/>
+      <setting id="puzzle_block_dead_streams" type="bool" label="20012" visible="eq(-8,1)" default="true"/>
 </category>
 
   <!-- Shara TV Player -->

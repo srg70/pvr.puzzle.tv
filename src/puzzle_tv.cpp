@@ -682,35 +682,40 @@ string PuzzleTV::GetUrl(ChannelId channelId)
     return  url;
 }
 
-string PuzzleTV::GetNextStream(ChannelId channelId, int currentChannelIdx)
+string PuzzleTV::GetNextStream(ChannelId channelId, int currentStreamIdx)
 {
     if(!CheckChannelId(channelId))
         return string();
 
-    // NOTE: assuming call to PuzzleTV::OnOpenStremFailed before GetNextStream()
-    // where bad stream should be marked as bad. So return first good stream
+    // NOTE: currentStreamIdx is an offset of current stream within "good" treams
+    // When call to PuzzleTV::OnOpenStremFailed() been done before GetNextStream(),
+    // and where bad stream should be marked as bad, the index used to be zero.
+    // We'll return next after currentStreamIdx a "good" stream
     string url;
     auto sources = GetSourcesForChannel(channelId);
     DumpStreams(sources);
-    while (!sources.empty()) {
+    bool isFound = false;
+    int goodStreamsIdx = -1;
+    
+    while (!isFound && !sources.empty()) {
         const auto& streams = sources.top()->second.Streams;
         auto goodStream = std::find_if(streams.begin(), streams.end(), [](PuzzleSource::TStreamsQuality::const_reference stream) {return stream.second;});
         if(goodStream != streams.end()) {
             url = goodStream->first;
+            ++goodStreamsIdx;
             // Check whether Ace Engine is running for ace link
             string aceServerUrlBase;
             if(!IsAceUrl(url, aceServerUrlBase)){
-                break; // return non ase stream immideatelly
+                isFound =  goodStreamsIdx > currentStreamIdx; // return non ase stream immideatelly
+            }else if(CheckAceEngineRunning(aceServerUrlBase.c_str()))  {
+                isFound = goodStreamsIdx > currentStreamIdx; // ase engin running, so return ase stream.
             }
-            if(CheckAceEngineRunning(aceServerUrlBase.c_str()))  {
-                break; // ase engin running, so return ase stream.
-            }
-            
+            LogDebug("PuzzleTV::GetNextStream(): found good stream. Idx %d. Current %d", goodStreamsIdx, currentStreamIdx);
         }
         sources.pop();
     }
     
-    return url;
+    return isFound ? url : string();
 }
 
 void PuzzleTV::OnOpenStremFailed(ChannelId channelId, const std::string& streamUrl)

@@ -56,6 +56,7 @@ static const char* c_epg_url_setting = "puzzle_server_epg_url";
 static const char* c_epg_port_setting = "puzzle_server_epg_port";
 static const char* c_server_version_setting = "puzzle_server_version";
 static const char* c_seek_archives = "puzzle_seek_archives";
+static const char* c_block_dead_streams = "puzzle_block_dead_streams";
 
 const unsigned int UPDATE_CHANNEL_STREAMS_MENU_HOOK = PVRClientBase::s_lastCommonMenuHookId + 1;
 const unsigned int UPDATE_CHANNELS_MENU_HOOK = UPDATE_CHANNEL_STREAMS_MENU_HOOK + 1;
@@ -74,7 +75,7 @@ ADDON_STATUS PuzzlePVRClient::Init(PVR_PROPERTIES* pvrprops)
 
     XBMC->GetSetting(c_server_port_setting, &m_serverPort);
     if(XBMC->GetSetting(c_server_url_setting, &buffer))
-        m_serverUri =buffer;
+        m_serverUri = buffer;
     XBMC->GetSetting(c_server_retries_setting, &m_maxServerRetries);
     if(m_maxServerRetries < 4)
         m_maxServerRetries = 4;
@@ -95,6 +96,9 @@ ADDON_STATUS PuzzlePVRClient::Init(PVR_PROPERTIES* pvrprops)
     bool supportSeek = false;
     XBMC->GetSetting(c_seek_archives, &supportSeek);
     SetSeekSupported(supportSeek);
+    
+    m_blockDeadStreams = true;
+    XBMC->GetSetting(c_block_dead_streams, &m_blockDeadStreams);
     
     PVR_MENUHOOK hook = {UPDATE_CHANNEL_STREAMS_MENU_HOOK, 32052, PVR_MENUHOOK_CHANNEL};
     PVR->AddMenuHook(&hook);
@@ -189,6 +193,9 @@ ADDON_STATUS PuzzlePVRClient::SetSetting(const char *settingName, const void *se
     else if(strcmp(settingName,  c_seek_archives) == 0) {
         SetSeekSupported(*(const bool*) settingValue);
         result = ADDON_STATUS_NEED_RESTART;
+    }
+    else if(strcmp(settingName,  c_block_dead_streams) == 0) {
+        m_blockDeadStreams = *(const bool*) settingValue;
     }
     else {
         result = PVRClientBase::SetSetting(settingName, settingValue);
@@ -396,7 +403,12 @@ void PuzzlePVRClient::OnOpenStremFailed(ChannelId channelId, const std::string& 
 {
     if(m_puzzleTV == nullptr)
         return;
+    if(!m_blockDeadStreams)
+        return;
+    
+    // Mark stream as bad and reset "good" stream offset.
     m_puzzleTV->OnOpenStremFailed(channelId, streamUrl);
+    m_currentChannelStreamIdx = 0;
     // Expe
 }
 

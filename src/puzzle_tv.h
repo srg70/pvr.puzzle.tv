@@ -120,7 +120,7 @@ namespace PuzzleEngine
         void  UpdateEpgForAllChannels(time_t startTime, time_t endTime);
 
         std::string GetUrl(PvrClient::ChannelId channelId);
-        std::string GetNextStream(PvrClient::ChannelId channelId, int currentChannelIdx);
+        std::string GetNextStream(PvrClient::ChannelId channelId, int currentStreamIdx);
         void OnOpenStremFailed(PvrClient::ChannelId channelId, const std::string& streamUrl);
 
         void SetMaxServerRetries(int maxServerRetries) {m_maxServerRetries = maxServerRetries;}

@@ -170,6 +170,10 @@ msgctxt "#20011"
 msgid "Puzzle 3"
 msgstr "Puzzle 3"
 
+msgctxt "#20012"
+msgid "Block dead streams"
+msgstr "Block dead streams"
+
 #=========== Sovok TV Settings ===============
 
 msgctxt "#30000"
@@ -343,8 +347,8 @@ msgstr "Playlist"
 #============= Notifications ================
 
 msgctxt "#32000"
-msgid "Reloading channel ..."
-msgstr "Reloading channel ..."
+msgid "Reloading stream ..."
+msgstr "Reloading stream ..."
 
 msgctxt "#32001"
 msgid "Unknown provider"
