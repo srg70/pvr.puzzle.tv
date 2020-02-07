@@ -75,6 +75,7 @@ private:
     int m_epgType;
     int m_epgPort;
     int m_serverVersion;
+    bool m_blockDeadStreams;
 };
 
 #endif //__puzzle_pvr_client_h__

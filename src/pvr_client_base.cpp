@@ -527,21 +527,23 @@ PVR_ERROR PVRClientBase::GetStreamTimes(PVR_STREAM_TIMES *times)
     
     int64_t timeStart = 0;
     int64_t  timeEnd = 0;
-    if (m_inputBuffer)
-    {
 
+    {
         CLockObject lock(m_mutex);
-        timeStart = m_inputBuffer->StartTime();
-        timeEnd   = m_inputBuffer->EndTime();
-    }
-    else if (m_recordBuffer.buffer){
+        if (m_inputBuffer)
         {
-            timeStart = 0;
-            timeEnd   = m_recordBuffer.duration;
+            timeStart = m_inputBuffer->StartTime();
+            timeEnd   = m_inputBuffer->EndTime();
         }
+        else if (m_recordBuffer.buffer){
+            {
+                timeStart = 0;
+                timeEnd   = m_recordBuffer.duration;
+            }
+        }
+        else
+            return PVR_ERROR_NOT_IMPLEMENTED;
     }
-    else
-        return PVR_ERROR_NOT_IMPLEMENTED;
     
     times->startTime = timeStart;
     times->ptsStart  = 0;
@@ -805,7 +807,7 @@ bool PVRClientBase::OpenLiveStream(const PVR_CHANNEL& channel)
     bool tryToRecover = !succeeded;
     while(tryToRecover) {
         string url = GetNextStreamUrl(chId);
-        if(url.empty()) {// nomore streams
+        if(url.empty()) {// no more streams
             LogDebug("No alternative stream found.");
             XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32026));
             break;
@@ -899,24 +901,43 @@ void PVRClientBase::CloseLiveStream()
 
 int PVRClientBase::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize)
 {
-    CLockObject lock(m_mutex);
-    if(nullptr == m_inputBuffer){
-        return -1;
+    Buffers::TimeshiftBuffer * inputBuffer = nullptr;
+    // Do NOT lock stream access for read time (may be long)
+    // to enable stream stoping command (hopefully in different Kodi's thread)
+    {
+        CLockObject lock(m_mutex);
+        if(nullptr == m_inputBuffer){
+            return -1;
+        }
+        inputBuffer = m_inputBuffer;
     }
 
     ChannelId chId = GetLiveChannelId();
-    int bytesRead = m_inputBuffer->Read(pBuffer, iBufferSize, m_channelReloadTimeout * 1000);
+    int bytesRead = inputBuffer->Read(pBuffer, iBufferSize, m_channelReloadTimeout * 1000);
     // Assuming stream hanging.
     // Try to restart current channel only when previous read operation succeeded.
     if (bytesRead != iBufferSize &&  m_lastBytesRead >= 0 && !IsLiveInRecording()) {
         LogError("PVRClientBase:: trying to restart current channel.");
-        string  url = m_inputBuffer->GetUrl();
-        if(!url.empty()){
-            XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32000));
-            if(SwitchChannel(chId, url))
-                bytesRead = m_inputBuffer->Read(pBuffer, iBufferSize, m_channelReloadTimeout * 1000);
-            else
-                bytesRead = -1;
+        // Re-accure input stream ptr (may be closed already)
+        {
+            CLockObject lock(m_mutex);
+            if(nullptr == m_inputBuffer || inputBuffer != m_inputBuffer){
+                LogInfo("PVRClientBase:: input stream ether changed or closed. Aborting the read operation.");
+                return -1;
+            }
+            inputBuffer = nullptr;
+            string  url = m_inputBuffer->GetUrl();
+            if(!url.empty()){
+                XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32000));
+                if(SwitchChannel(chId, url))
+                    inputBuffer = m_inputBuffer;
+            }
+        }
+
+        if(inputBuffer){
+            bytesRead = inputBuffer->Read(pBuffer, iBufferSize, m_channelReloadTimeout * 1000);
+        } else {
+            bytesRead = -1;
         }
     }
     

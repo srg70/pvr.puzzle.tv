@@ -400,7 +400,7 @@ namespace Buffers {
 
         }
         m_isWaitingForRead = false;
-        return !isEof && IsRunning() ?  totalBytesRead : -1;
+        return !isEof && !IsStopped() ?  totalBytesRead : -1;
     }
     
     void PlaylistBuffer::AbortRead(){
