@@ -54,6 +54,7 @@ protected:
 private:
     void CreateCore(bool clearEpgCache);
     void SetPlaylistUrl(const std::string& url) {m_playlistUrl = url;};
+    bool CheckEdemPlaylistUrl();
 
     EdemEngine::Core* m_core;
     std::string m_playlistUrl;

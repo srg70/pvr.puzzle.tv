@@ -324,7 +324,20 @@ namespace OttEngine
             return;
         
         time_t now = time(nullptr);
-        time_t epgTime = m_addCurrentEpgToArchive ? entry.StartTime : entry.EndTime;
+        time_t epgTime = entry.EndTime;
+        switch(m_addCurrentEpgToArchive) {
+            case PvrClient::k_AddCurrentEpgToArchive_Yes:
+                epgTime = entry.StartTime;
+                break;
+            case PvrClient::k_AddCurrentEpgToArchive_AfterInit:
+            {
+                auto phase = GetPhase(k_RecordingsInitialLoadingPhase);
+                epgTime = phase->IsDone() ? entry.StartTime : entry.EndTime;
+                break;
+            }
+            default:
+                break;
+        }
         entry.HasArchive = epgTime < now;
 
     }
