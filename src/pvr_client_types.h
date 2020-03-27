@@ -229,6 +229,12 @@ namespace PvrClient {
         
         virtual ~IClientCore(){}
     };
+    
+    enum AddCurrentEpgToArchive{
+        k_AddCurrentEpgToArchive_No = 0,
+        k_AddCurrentEpgToArchive_Yes = 1,
+        k_AddCurrentEpgToArchive_AfterInit = 2
+    } ;
  }
 
 #endif /* pvr_client_types_h */

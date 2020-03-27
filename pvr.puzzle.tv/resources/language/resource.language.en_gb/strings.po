@@ -109,6 +109,18 @@ msgctxt "#10022"
 msgid "Load after EPG"
 msgstr "Load after EPG"
 
+msgctxt "#10094"
+msgid "No"
+msgstr "No"
+
+msgctxt "#10095"
+msgid "Yes"
+msgstr "Yes"
+
+msgctxt "#10096"
+msgid "When Loaded"
+msgstr "When Loaded"
+
 msgctxt "#10097"
 msgid "Other"
 msgstr "Other"
