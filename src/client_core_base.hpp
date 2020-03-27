@@ -64,7 +64,7 @@ namespace PvrClient {
         void SetRpcPort(int port) {m_rpcPort = port;}
         void CallRpcAsync(const std::string & data, std::function<void(rapidjson::Document&)>  parser,
                           ActionQueue::TCompletion completion);
-        void IncludeCurrentEpgToArchive(bool add) {m_addCurrentEpgToArchive = add;}
+        void IncludeCurrentEpgToArchive(AddCurrentEpgToArchive add) {m_addCurrentEpgToArchive = add;}
 
         static bool ReadFileContent(const char* cacheFile, std::string& buffer);
         // abstract methods
@@ -106,7 +106,7 @@ namespace PvrClient {
         HttpEngine* m_httpEngine;
         const PvrClient::ChannelList & m_channelList;
         const PvrClient::GroupList& m_groupList;
-        bool m_addCurrentEpgToArchive;
+        AddCurrentEpgToArchive m_addCurrentEpgToArchive;
 
     private:
         

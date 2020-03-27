@@ -108,6 +108,18 @@ msgctxt "#10022"
 msgid "Load after EPG"
 msgstr "Ожидать загрузки EPG"
 
+msgctxt "#10094"
+msgid "No"
+msgstr "Нет"
+
+msgctxt "#10095"
+msgid "Yes"
+msgstr "Да"
+
+msgctxt "#10096"
+msgid "When Loaded"
+msgstr "После загрузки"
+
 msgctxt "#10097"
 msgid "Other"
 msgstr "Разное"

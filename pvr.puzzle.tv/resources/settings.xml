@@ -17,7 +17,7 @@
     <setting label="10098" type="lsep"/>
     <setting id="recordings_path" type="folder" label="10009" default="" />
     <setting id="archive_support" type="bool" label="30002" default="true" />
-    <setting id="archive_for_current_epg_item" type="bool" label="10013" default="true" visible="eq(-1,true)" subsetting="true"/>
+    <setting id="archive_for_current_epg_item" type="enum"  label="10013" lvalues="10094|10095|10096" default="1" visible="eq(-1,true)" subsetting="true"/>
     <setting id="archive_use_channel_groups" type="bool" label="10016" default="false"  visible="eq(-2,true)" subsetting="true"/>
     <setting id="archive_start_padding" type="number" label="10017" default="0"  visible="eq(-3,true)" subsetting="true"/>
     <setting id="archive_end_padding" type="number" label="10018" default="0"  visible="eq(-4,true)" subsetting="true"/>
