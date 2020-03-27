@@ -167,7 +167,7 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     m_channelIndexOffset = 0;
     XBMC->GetSetting("channel_index_offset", &m_channelIndexOffset);
     
-    m_addCurrentEpgToArchive = true;
+    m_addCurrentEpgToArchive = k_AddCurrentEpgToArchive_No;
     XBMC->GetSetting("archive_for_current_epg_item", &m_addCurrentEpgToArchive);
 
     m_addChannelGroupForArchive = false;
@@ -385,7 +385,7 @@ ADDON_STATUS PVRClientBase::SetSetting(const char *settingName, const void *sett
     }
     else if (strcmp(settingName, "archive_for_current_epg_item") == 0)
     {
-        bool newValue = *(bool *)(settingValue);
+        AddCurrentEpgToArchive newValue = *(AddCurrentEpgToArchive *)(settingValue);
         if(newValue != m_addCurrentEpgToArchive) {
             m_addCurrentEpgToArchive = newValue;
             return ADDON_STATUS_NEED_RESTART;

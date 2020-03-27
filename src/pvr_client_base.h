@@ -113,7 +113,8 @@ namespace PvrClient
 
     protected:
         IClientCore* m_clientCore;
-        bool m_addCurrentEpgToArchive;
+        
+        AddCurrentEpgToArchive m_addCurrentEpgToArchive;        
         bool m_addChannelGroupForArchive;
         
         virtual PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);

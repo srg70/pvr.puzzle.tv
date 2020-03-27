@@ -194,7 +194,22 @@ namespace EdemEngine
     {
         time_t now = time(nullptr);
         const time_t archivePeriod = 3 * 24 * 60 * 60; //3 days in secs
-        time_t epgTime = m_addCurrentEpgToArchive ? entry.StartTime : entry.EndTime;
+        
+        time_t epgTime = entry.EndTime;
+        switch(m_addCurrentEpgToArchive) {
+            case PvrClient::k_AddCurrentEpgToArchive_Yes:
+                epgTime = entry.StartTime;
+                break;
+            case PvrClient::k_AddCurrentEpgToArchive_AfterInit:
+            {
+                auto phase = GetPhase(k_RecordingsInitialLoadingPhase);
+                epgTime = phase->IsDone() ? entry.StartTime : entry.EndTime;
+                break;
+            }
+            default:
+                break;
+        }
+        
         auto when = now - epgTime;
         entry.HasArchive = when > 0 && when < archivePeriod;
     }
