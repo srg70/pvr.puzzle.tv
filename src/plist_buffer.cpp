@@ -68,6 +68,8 @@ namespace Buffers {
     PlaylistBuffer::~PlaylistBuffer()
     {
         StopThread();
+        if(m_cache)
+            SAFE_DELETE(m_cache);
     }
     
     void PlaylistBuffer::Init(const std::string &playlistUrl)

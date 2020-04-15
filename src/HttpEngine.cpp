@@ -55,94 +55,108 @@ HttpEngine::HttpEngine()
     bool HttpEngine::CheckInternetConnection(long timeout)
     {
         using namespace Globals;
-        const std::string url("https://www.google.com");
-        
-        std::string* response = new std::string();
-        
-        void *curl = XBMC->CURLCreate(url.c_str());
-        if (nullptr == curl || nullptr == response) {
-            Globals::LogError("CheckInternetConnection() failed. Can't instansiate CURL.");
-            return false;
-        }
-        Globals::LogInfo("Sending request: %s", url.c_str());
-        if(!XBMC->CURLOpen(curl, XFILE::READ_NO_CACHE | XFILE::READ_TRUNCATED | XFILE::READ_CHUNKED)){
-            Globals::LogError("Failed to open URL = %s.", url.c_str());
-            return false;
-        }
-        
-        ssize_t bytesRead = 0;
-        do {
-            char buffer[256];
-            bytesRead = XBMC->ReadFile(curl, &buffer[0], sizeof(buffer));
-        } while(bytesRead > 0);
-        XBMC->CloseFile(curl);
+        void *curl = nullptr;
+        try {
+            const std::string url("https://www.google.com");
+                    
+            curl = XBMC->CURLCreate(url.c_str());
+            if (nullptr == curl) {
+                Globals::LogError("CheckInternetConnection() failed. Can't instansiate CURL.");
+                return false;
+            }
+            Globals::LogInfo("Sending request: %s", url.c_str());
+            if(!XBMC->CURLOpen(curl, XFILE::READ_NO_CACHE | XFILE::READ_TRUNCATED | XFILE::READ_CHUNKED)){
+                Globals::LogError("Failed to open URL = %s.", url.c_str());
+                XBMC->CloseFile(curl);
+                return false;
+            }
+            
+            ssize_t bytesRead = 0;
+            do {
+                char buffer[256];
+                bytesRead = XBMC->ReadFile(curl, &buffer[0], sizeof(buffer));
+            } while(bytesRead > 0);
+            XBMC->CloseFile(curl);
 
-        return bytesRead == 0;
+            return bytesRead == 0;
+
+        } catch (...) {
+            if (nullptr != curl)
+                XBMC->CloseFile(curl);
+            throw;
+        }
     }
 
 
     void HttpEngine::DoCurl(const Request &request, const TCoocies &cookie, std::string* response, unsigned long long requestId, std::string* effectiveUrl)
     {
         using namespace Globals;
-
-        void *curl = XBMC->CURLCreate(request.Url.c_str());
-        if (nullptr == curl)
-            throw CurlErrorException("CURL initialisation failed.");
+        void *curl = nullptr;
         
-        // Post data
-        if(request.IsPost()) {
-            XBMC->CURLAddOption(curl, XFILE::CURL_OPTION_HEADER, "postdata",
-                                base64_encode(reinterpret_cast<const unsigned char*>(request.PostData.c_str()), request.PostData.size()).c_str());
-        }
-        // Custom headers
-        if(!request.Headers.empty()) {
-            for (const auto& header : request.Headers) {
-                auto pos =  header.find(':');
-                if(std::string::npos == pos)
-                    continue;
-                XBMC->CURLAddOption(curl, XFILE::CURL_OPTION_HEADER, header.substr(0, pos).c_str(), &header.c_str()[pos + 1]);
+        try {
+            curl = XBMC->CURLCreate(request.Url.c_str());
+            if (nullptr == curl)
+                throw CurlErrorException("CURL initialisation failed.");
+            
+            // Post data
+            if(request.IsPost()) {
+                XBMC->CURLAddOption(curl, XFILE::CURL_OPTION_HEADER, "postdata",
+                                    base64_encode(reinterpret_cast<const unsigned char*>(request.PostData.c_str()), request.PostData.size()).c_str());
             }
-        }
-        // Custom cookies
-        std::string cookieStr;
-        auto itCookie = cookie.begin();
-        for(; itCookie != cookie.end(); ++itCookie)
-        {
-            if (itCookie != cookie.begin())
-                cookieStr += "; ";
-            cookieStr += itCookie->first + "=" + itCookie->second;
-        }
-        XBMC->CURLAddOption(curl, XFILE::CURL_OPTION_HEADER, "cookie", cookieStr.c_str());
-        
-        auto start = P8PLATFORM::GetTimeMs();
-        Globals::LogInfo("Sending request: %s. ID=%llu", request.Url.c_str(), requestId);
-        
-        if(!XBMC->CURLOpen(curl, XFILE::READ_NO_CACHE | XFILE::READ_TRUNCATED | XFILE::READ_CHUNKED)){
-                        throw CurlErrorException(std::string("Failed to open URL = " + request.Url).c_str());
-        }
-
-        ssize_t bytesRead = 0;
-        do {
-            char buffer[32*1024]; //32K buffer
-            bytesRead = XBMC->ReadFile(curl, &buffer[0], sizeof(buffer));
-            response->append(&buffer[0], bytesRead);
-        } while(bytesRead > 0);
-
-        if (bytesRead < 0)
-            *response = "";
-        
-        else if(nullptr != effectiveUrl){
-            char* url = XBMC->GetFilePropertyValue(curl, XFILE::FILE_PROPERTY_EFFECTIVE_URL, "");
-            if(url) {
-                *effectiveUrl = url;
-                XBMC->FreeString(url);
+            // Custom headers
+            if(!request.Headers.empty()) {
+                for (const auto& header : request.Headers) {
+                    auto pos =  header.find(':');
+                    if(std::string::npos == pos)
+                        continue;
+                    XBMC->CURLAddOption(curl, XFILE::CURL_OPTION_HEADER, header.substr(0, pos).c_str(), &header.c_str()[pos + 1]);
+                }
             }
-        }
-        XBMC->CloseFile(curl);
+            // Custom cookies
+            std::string cookieStr;
+            auto itCookie = cookie.begin();
+            for(; itCookie != cookie.end(); ++itCookie)
+            {
+                if (itCookie != cookie.begin())
+                    cookieStr += "; ";
+                cookieStr += itCookie->first + "=" + itCookie->second;
+            }
+            XBMC->CURLAddOption(curl, XFILE::CURL_OPTION_HEADER, "cookie", cookieStr.c_str());
+            
+            auto start = P8PLATFORM::GetTimeMs();
+            Globals::LogInfo("Sending request: %s. ID=%llu", request.Url.c_str(), requestId);
+            
+            if(!XBMC->CURLOpen(curl, XFILE::READ_NO_CACHE | XFILE::READ_TRUNCATED | XFILE::READ_CHUNKED)){
+                            throw CurlErrorException(std::string("Failed to open URL = " + request.Url).c_str());
+            }
 
-        if(bytesRead < 0){
-            //delete response;
-            throw CurlErrorException(std::string("CURL (by Kodi) failed to read from " + request.Url + ". See log for details.").c_str());
+            ssize_t bytesRead = 0;
+            do {
+                char buffer[32*1024]; //32K buffer
+                bytesRead = XBMC->ReadFile(curl, &buffer[0], sizeof(buffer));
+                response->append(&buffer[0], bytesRead);
+            } while(bytesRead > 0);
+
+            if (bytesRead < 0)
+                *response = "";
+            
+            else if(nullptr != effectiveUrl){
+                char* url = XBMC->GetFilePropertyValue(curl, XFILE::FILE_PROPERTY_EFFECTIVE_URL, "");
+                if(url) {
+                    *effectiveUrl = url;
+                    XBMC->FreeString(url);
+                }
+            }
+            if(bytesRead < 0){
+                throw CurlErrorException(std::string("CURL (by Kodi) failed to read from " + request.Url + ". See log for details.").c_str());
+            }
+            
+            XBMC->CloseFile(curl);
+            curl = nullptr;
+        } catch (...) {
+            if (nullptr != curl)
+                XBMC->CloseFile(curl);
+            throw;
         }
     }
 #else
