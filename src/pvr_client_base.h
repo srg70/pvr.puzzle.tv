@@ -28,6 +28,7 @@
 #include "xbmc_pvr_types.h"
 #include "p8-platform/threads/mutex.h"
 #include "addon.h"
+#include "addon_settings.h"
 #include "globals.hpp"
 
 namespace Buffers {
@@ -217,6 +218,8 @@ namespace PvrClient
         bool m_supportSeek;
         bool m_supportArchive;
         bool m_loadArchiveAfterEpg;
+        
+        //AddonSettings m_addonSettings;
 
     };
 }

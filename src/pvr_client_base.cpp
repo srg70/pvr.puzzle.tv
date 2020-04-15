@@ -56,6 +56,7 @@
 #include "client_core_base.hpp"
 #include "ActionQueue.hpp"
 #include "XMLTV_loader.hpp"
+#include "addon_settings.h"
 
 using namespace std;
 using namespace ADDON;
@@ -113,6 +114,33 @@ static int CheckForInetConnection(int waitForInetTimeout)
     return waitingTimeInSec;
 }
 
+
+static void TestPropagator(const int& i) {
+        LogDebug("In Propagator %d", i);
+}
+
+void TestSettings()
+{
+    const string setingsToFind = "curl_timeout";
+    
+    int defaultV = 10;
+        
+    auto ss = AddonSettings<>()
+    .AddSetting("channel_reload_timeout", 0, TestPropagator)
+    .AddSetting("recordings_path", std::string())
+    .AddSetting(setingsToFind, defaultV, TestPropagator);
+
+    SettingsAdaptor sa(ss);
+    sa.init();
+    sa.print();
+            
+    int newVal = 20;
+    sa.set(setingsToFind.c_str(), &newVal);
+    sa.print();
+    LogDebug("Setting %s value %d", setingsToFind.c_str(), sa.get_int(setingsToFind.c_str()));
+
+}
+
 ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
 {
     m_clientCore = NULL;
@@ -128,6 +156,8 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     //auto g_strUserPath   = pvrprops->strUserPath;
     m_clientPath = pvrprops->strClientPath;
     m_userPath = pvrprops->strUserPath;
+    
+    TestSettings();
     
     char buffer[1024];
     
@@ -443,8 +473,6 @@ ADDON_STATUS PVRClientBase::SetSetting(const char *settingName, const void *sett
     }
     else if (strcmp(settingName, "archive_refresh_interval") == 0)
     {
-        m_archiveRefreshInterval = 3;
-        XBMC->GetSetting("archive_refresh_interval", &m_archiveRefreshInterval);
         m_archiveRefreshInterval = *(int *)settingValue;
         if(m_archiveRefreshInterval < 0)
             m_archiveRefreshInterval = 3;
