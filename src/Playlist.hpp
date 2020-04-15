@@ -34,10 +34,10 @@ typedef  float TimeOffset;
 
 struct SegmentInfo {
     SegmentInfo () : startTime(0.0), duration(0.0) , index (-1){}
-    SegmentInfo(float t, float d, std::string u, uint64_t i) : startTime(t), url(u), duration(d), index(i){}
+    SegmentInfo(float t, float d, const std::string& u, uint64_t i) : startTime(t), url(u), duration(d), index(i){}
     SegmentInfo(const SegmentInfo& info) : SegmentInfo(info.startTime, info.duration, info.url, info.index) {}
-    SegmentInfo&  operator=(const SegmentInfo&& s) { return *new (this)SegmentInfo(s.startTime, s.duration, s.url, s.index);}
-    SegmentInfo&  operator=(const SegmentInfo& s) { return *new (this)SegmentInfo(s.startTime, s.duration, s.url, s.index);}
+    SegmentInfo&  operator=(const SegmentInfo&& s) { this->~SegmentInfo(); return *new (this)SegmentInfo(s.startTime, s.duration, s.url, s.index);}
+    SegmentInfo&  operator=(const SegmentInfo& s) { this->~SegmentInfo(); return *new (this)SegmentInfo(s.startTime, s.duration, s.url, s.index);}
     const std::string url;
     // Calculated from playlist's index offset
     const TimeOffset startTime;
