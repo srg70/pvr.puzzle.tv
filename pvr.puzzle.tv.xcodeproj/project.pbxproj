@@ -29,6 +29,7 @@
 		4C5D1C5E21B83E6A004286DA /* ttv_player.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C5D1C5A21B83E6A004286DA /* ttv_player.cpp */; };
 		4C5D1C5F21B83E6A004286DA /* ttv_pvr_client.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C5D1C5B21B83E6A004286DA /* ttv_pvr_client.cpp */; };
 		4C5D1C6221C043D7004286DA /* guid.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C5D1C6121C043D6004286DA /* guid.cpp */; };
+		4C78F1A12401126C00FA2049 /* addon_settings.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C78F1A02401126C00FA2049 /* addon_settings.h */; };
 		4C8506E41EF478A000213131 /* pvr_client_base.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C8506E21EF478A000213131 /* pvr_client_base.cpp */; };
 		4C8506E51EF478A000213131 /* pvr_client_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C8506E31EF478A000213131 /* pvr_client_base.h */; };
 		4C8506E81F0E25DF00213131 /* HttpEngine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C8506E61F0E25DF00213131 /* HttpEngine.cpp */; };
@@ -217,6 +218,7 @@
 		4C5D1C5B21B83E6A004286DA /* ttv_pvr_client.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ttv_pvr_client.cpp; sourceTree = "<group>"; };
 		4C5D1C6021C04333004286DA /* guid.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = guid.hpp; sourceTree = "<group>"; };
 		4C5D1C6121C043D6004286DA /* guid.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = guid.cpp; sourceTree = "<group>"; };
+		4C78F1A02401126C00FA2049 /* addon_settings.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = addon_settings.h; sourceTree = "<group>"; };
 		4C8506E21EF478A000213131 /* pvr_client_base.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = pvr_client_base.cpp; sourceTree = "<group>"; };
 		4C8506E31EF478A000213131 /* pvr_client_base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pvr_client_base.h; sourceTree = "<group>"; };
 		4C8506E61F0E25DF00213131 /* HttpEngine.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HttpEngine.cpp; sourceTree = "<group>"; };
@@ -412,6 +414,7 @@
 				4CAC99B92180F102005D8902 /* ActionQueueTypes.hpp */,
 				4C08C7FD1D8290F6004CAAE3 /* addon.cpp */,
 				4C08C7FF1D829449004CAAE3 /* addon.h */,
+				4C78F1A02401126C00FA2049 /* addon_settings.h */,
 				4CD09EFC228318CF003C9467 /* base64.cpp */,
 				4CD09EFB228318CF003C9467 /* base64.h */,
 				4CDC11E320BDC48100EA9E2B /* globals.cpp */,
@@ -1008,6 +1011,7 @@
 				4C8506E91F0E25DF00213131 /* HttpEngine.hpp in Headers */,
 				4CEE3EC52239397900AB8F2C /* DemuxPacket.h in Headers */,
 				4CEE3ECD2239397900AB8F2C /* Filesystem.h in Headers */,
+				4C78F1A12401126C00FA2049 /* addon_settings.h in Headers */,
 				4C9F589F22A7ADF300CEF856 /* sharatv_player.h in Headers */,
 				4CEE3EDB2239397900AB8F2C /* General.h in Headers */,
 				4CEE3EF8223939A100AB8F2C /* Slider.h in Headers */,
