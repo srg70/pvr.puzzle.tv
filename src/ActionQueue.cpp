@@ -37,12 +37,12 @@ namespace ActionQueue {
 //            _name.clear();
 //        }
 
-        while (!IsStopped())
+        while (!IsStopped() || (_willStop && !_actions.IsEmpty()))
         {
             IActionQueueItem* action = NULL;
             // Do not wait infinite when pipeline is stopped.
             // Could be no new task will arrive, e.g. on StopThead()
-            if( _actions.Pop(action, (_willStop) ? 1000 : INFINITE_QUEUE_TIMEOUT))
+            if( _actions.Pop(action, (_willStop) ? 0 : INFINITE_QUEUE_TIMEOUT))
             {
                 if(NULL == action)
                     continue;
@@ -86,7 +86,7 @@ namespace ActionQueue {
     
     CActionQueue::~CActionQueue(void)
     {
-        StopThread(0);
+        StopThread(5000);
     }
     
 }

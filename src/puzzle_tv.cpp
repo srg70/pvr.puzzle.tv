@@ -621,6 +621,8 @@ std::string PuzzleTV::GetRecordId(ChannelId channelId, time_t startTime) {
         {
             P8PLATFORM::CLockObject lock(pThis->m_archiveAccessMutex);
             pThis->m_archiveInfo[channelId].records.insert(std::begin(*records), std::end(*records));
+            delete records;
+            records = nullptr;
             
             // Did we obtain an ID of the record?
             if(m_archiveInfo[channelId].records.count(startTime) != 0) {
@@ -629,6 +631,8 @@ std::string PuzzleTV::GetRecordId(ChannelId channelId, time_t startTime) {
         }
     } catch (...) {
         LogError("PuzzleTV::GetRecordId(): FAILED to obtain recordings for channel %d, day %d", channelId, day);
+        if(nullptr != records)
+            delete records;
     }
     return string();
 
