@@ -54,6 +54,7 @@ namespace PvrClient
             k_TimeshiftBufferFile = 1
         }TimeshiftBufferType;
         
+        PVRClientBase();
         ADDON_STATUS Init(PVR_PROPERTIES* pvrprops);
         virtual ~PVRClientBase();
         
@@ -85,12 +86,10 @@ namespace PvrClient
         bool SwitchChannel(const PVR_CHANNEL& channel);
 
         
-        void SetTimeshiftEnabled(bool enable);
-        void SetTimeshiftBufferSize(uint64_t size);
-        void SetTimeshiftBufferType(TimeshiftBufferType type);
-        bool IsTimeshiftEnabled() { return m_isTimeshiftEnabled; }
-        void SetTimeshiftPath(const std::string& path);
-        void SetRecordingsPath(const std::string& path);
+        uint64_t TimeshiftBufferSize() const;
+        TimeshiftBufferType TypeOfTimeshiftBuffer() const;
+        const std::string& TimeshiftPath() const;
+        const std::string& RecordingsPath() const;
 
         int GetRecordingsAmount(bool deleted);
         PVR_ERROR GetRecordings(ADDON_HANDLE handle, bool deleted);
@@ -115,9 +114,10 @@ namespace PvrClient
 
     protected:
         IClientCore* m_clientCore;
-        
-        AddCurrentEpgToArchive m_addCurrentEpgToArchive;        
-        bool m_addChannelGroupForArchive;
+        AddonSettingsDictionary& m_addonSettings;
+
+        AddCurrentEpgToArchive HowToAddCurrentEpgToArchive() const;
+        bool UseChannelGroupsForArchive() const;
         
         virtual PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
         virtual ADDON_STATUS OnReloadEpg();
@@ -140,9 +140,10 @@ namespace PvrClient
         bool IsLocalRecording(const PVR_RECORDING &recording) const;
         // Implemented for local recordings. Should be defined by derived class
         virtual bool OpenRecordedStream(const PVR_RECORDING &recording) = 0;
+        
         // Recordingd
-        uint32_t GetStartRecordingPadding() {return m_startRecordingPadding;}
-        uint32_t GetEndRecordingPadding() {return m_endRecordingPadding;}
+        uint32_t StartRecordingPadding() const;
+        uint32_t EndRecordingPadding() const;
 
         
         const std::string& GetClientPath() const { return m_clientPath;}
@@ -161,7 +162,9 @@ namespace PvrClient
         bool IsSeekSupported() const { return m_supportSeek; }
         void SetSeekSupported(bool yesNo) { m_supportSeek = yesNo; }
         
-        bool IsArchiveSupported() const { return m_supportArchive; }
+        bool IsArchiveSupported() const;
+        
+        virtual void PopulateSettings(AddonSettingsMutableDictionary& settings) = 0;
 
     private:
         typedef std::map<KodiChannelId, ChannelId> TKodiToPluginChannelIdLut;
@@ -169,9 +172,16 @@ namespace PvrClient
 
         const ChannelList& GetChannelListWhenLutsReady();
         void Cleanup();
-        void SetCacheLimit(uint64_t size);
-        void SetChannelReloadTimeout(int timeout);
-        
+        uint64_t CacheSizeLimit() const;
+        int ChannelReloadTimeout() const;
+        bool IsTimeshiftEnabled() const;
+        int RpcLocalPort() const;
+        int ChannelIndexOffset() const;
+        int WaitForInetTimeout() const;
+        int StartupDelay() const;
+        bool LoadArchiveAfterEpg() const;
+        uint ArchiveRefreshInterval() const;
+
         void FillRecording(const EpgEntryList::value_type& epgEntry, PVR_RECORDING& tag, const char* dirPrefix);
         std::string DirectoryForRecording(unsigned int epgId) const;
         std::string PathForRecordingInfo(unsigned int epgId) const;
@@ -190,26 +200,12 @@ namespace PvrClient
         } m_recordBuffer;
         ChannelId m_localRecordChannelId;
         Buffers::TimeshiftBuffer *m_localRecordBuffer;
-        bool m_isTimeshiftEnabled;
-        uint64_t m_timshiftBufferSize;
-        uint64_t m_cacheSizeLimit;
-        TimeshiftBufferType m_timeshiftBufferType;
         std::string m_cacheDir;
-        std::string m_recordingsDir;
         int m_lastRecordingsAmount;        
-        uint32_t m_startRecordingPadding;
-        uint32_t m_endRecordingPadding;
         std::string m_clientPath;
         std::string m_userPath;
-        int m_channelReloadTimeout;
         mutable P8PLATFORM::CMutex m_mutex;
         int m_lastBytesRead;
-        int m_archiveRefreshInterval;
-        
-        int m_rpcPort;
-        int m_channelIndexOffset;
-        int m_waitForInetTimeout;
-        int m_startupDelay;
 
         ActionQueue::CActionQueue* m_destroyer;
         P8PLATFORM::CEvent m_destroyerEvent;
@@ -217,10 +213,8 @@ namespace PvrClient
         TPluginToKodiChannelIdLut m_pluginToKodiLut;
         
         bool m_supportSeek;
-        bool m_supportArchive;
-        bool m_loadArchiveAfterEpg;
         
-        //AddonSettings m_addonSettings;
+        AddonSettingsMutableDictionary m_addonMutableSettings;
 
     };
 }
