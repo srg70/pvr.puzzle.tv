@@ -90,6 +90,11 @@ ADDON_STATUS TtvPVRClient::Init(PVR_PROPERTIES* pvrprops)
     
 }
 
+void TtvPVRClient::PopulateSettings(AddonSettingsMutableDictionary& settings)
+{
+    
+}
+
 TtvPVRClient::~TtvPVRClient()
 {
     // Probably is better to close streams before engine destruction
@@ -139,7 +144,7 @@ void TtvPVRClient::CreateCore(bool clearEpgCache)
     cp.filterByAlexElec = m_filterByAlexElec;
     cp.epgUrl = m_epgUrl;
     m_clientCore = m_core = new TtvEngine::Core(cp);
-    m_core->IncludeCurrentEpgToArchive(m_addCurrentEpgToArchive);
+    m_core->IncludeCurrentEpgToArchive(HowToAddCurrentEpgToArchive());
     m_core->InitAsync(clearEpgCache, IsArchiveSupported());
 }
 

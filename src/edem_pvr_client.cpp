@@ -83,6 +83,11 @@ ADDON_STATUS EdemPVRClient::Init(PVR_PROPERTIES* pvrprops)
     
 }
 
+void EdemPVRClient::PopulateSettings(AddonSettingsMutableDictionary& settings)
+{
+    
+}
+
 EdemPVRClient::~EdemPVRClient()
 {
     // Probably is better to close streams before engine destruction
@@ -133,7 +138,7 @@ void EdemPVRClient::CreateCore(bool clearEpgCache)
     
     if(CheckEdemPlaylistUrl()) {
         m_clientCore = m_core = new EdemEngine::Core(m_playlistUrl, m_epgUrl, m_enableAdult);
-        m_core->IncludeCurrentEpgToArchive(m_addCurrentEpgToArchive);
+        m_core->IncludeCurrentEpgToArchive(HowToAddCurrentEpgToArchive());
         m_core->InitAsync(clearEpgCache, IsArchiveSupported());
     }
 }
@@ -262,7 +267,7 @@ bool EdemPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     if(IsLocalRecording(recording))
         return PVRClientBase::OpenRecordedStream(recording);
     
-    auto delegate = new EdemArchiveDelegate(m_core, recording, GetStartRecordingPadding(), GetEndRecordingPadding());
+    auto delegate = new EdemArchiveDelegate(m_core, recording, StartRecordingPadding(), EndRecordingPadding());
     string url = delegate->UrlForTimeshift(0);
     if(!IsSeekSupported())
         SAFE_DELETE(delegate);

@@ -31,69 +31,23 @@
 #include <utility>
 #include <sstream>
 #include "globals.hpp"
+#include "xbmc_pvr_types.h"
 
 namespace PvrClient {
-
-
-template<typename T>
-class AddonSetting {
-public:
-    typedef std::function<void(const T&)> TPropagator;
-    AddonSetting(const std::string& n, const T& d = T{},  TPropagator f = &DefaultPropagator)
-    : name(n), propagator(f) {SetValue(d);}
-    const std::string name;
-    const T& Value() const {return value;}
-    void SetValue(const T& v) {value = v; propagator(v);}
-private:
-    static void DefaultPropagator (const T&) {}
-    T value;
-    const TPropagator propagator;
-};
-
-
-template<typename... Tp>
-class AddonSettings {
-public:
-    typedef std::tuple<Tp...> container_type;
-    
-    AddonSettings(){}
-    AddonSettings(const container_type& tuple) :settings(tuple) {}
-    AddonSettings(container_type&& tuple) :settings(tuple) {}
-    template <typename T>
-    AddonSettings<Tp..., AddonSetting<T> > AddSetting(const AddonSetting<T>& s)
-    {
-        AddonSettings<Tp..., AddonSetting<T> > as (std::tuple_cat(settings, std::make_tuple(s)));
-        return as;
-
-    }
-    template <typename T>
-    AddonSettings<Tp..., AddonSetting<T> > AddSetting(const std::string& n, const T& defaultV)
-    {
-        return AddSetting(AddonSetting<T>(n, defaultV));
-    }
-    template <typename T>
-    AddonSettings<Tp..., AddonSetting<T> > AddSetting(const std::string& n, const T& defaultV, typename AddonSetting<T>::TPropagator p)
-    {
-        return AddSetting(AddonSetting<T>(n, defaultV, p));
-    }
-
-//private:
-    container_type settings;
-};
-
 
 // for_each
 
 template<std::size_t I = 0, typename FuncT, typename... Tp>
 inline typename std::enable_if<I == sizeof...(Tp), void>::type
-for_each(std::tuple<Tp...> &, FuncT) // Unused arguments are given no names.
+for_each(const std::tuple<Tp...> &, FuncT) // Unused arguments are given no names.
 { }
 
 template<std::size_t I = 0, typename FuncT, typename... Tp>
 inline typename std::enable_if<I < sizeof...(Tp), void>::type
 for_each(std::tuple<Tp...>& t, FuncT f)
 {
-    f(std::get<I>(t));
+    auto& ref = std::get<I>(t);
+    f(ref);
     for_each<I + 1, FuncT, Tp...>(t, f);
 }
 
@@ -101,7 +55,7 @@ for_each(std::tuple<Tp...>& t, FuncT f)
 
 template<std::size_t I = 0, typename PredT, typename FuncT, typename... Tp>
 inline typename std::enable_if<I == sizeof...(Tp), bool>::type
-first_if(std::tuple<Tp...> &, PredT&&, FuncT&&) // Unused arguments are given no names.
+first_if(const std::tuple<Tp...> &, PredT&&, FuncT&&) // Unused arguments are given no names.
 { return false;}
 
 template<std::size_t I = 0, typename PredT, typename FuncT, typename... Tp>
@@ -117,6 +71,260 @@ first_if(std::tuple<Tp...>& t, PredT&& p, FuncT&& f)
 }
 
 
+class AddonSettingsDictionary {
+
+protected:
+    template<typename T>
+    class AddonSetting {
+    public:
+        typedef std::function<void(const T&)> TPropagator;
+        
+        AddonSetting(const std::string& n, const T& d = T{}, ADDON_STATUS s = ADDON_STATUS_OK, TPropagator f = &DefaultPropagator)
+        : name(n), defaultValue(d), statusWhenChanged(s), propagator(f)
+        {
+            SetValue(defaultValue);
+        }
+        AddonSetting(const AddonSetting& as)
+        : name(as.name), statusWhenChanged(as.statusWhenChanged), propagator(as.propagator)
+        {
+            SetValue(as.Value());
+        }
+        const std::string name;
+        const T& Value() const {return value;}
+        ADDON_STATUS SetValue(const T& v)
+        {
+            if(v == value)
+                return ADDON_STATUS_OK;
+            // treat empty value as default
+            if(v == T{})
+                value = defaultValue;
+            else
+                value = v;
+            propagator(value);
+            return statusWhenChanged;
+        }
+    private:
+        static void DefaultPropagator (const T&) {}
+        T value;
+        T defaultValue;
+        const ADDON_STATUS statusWhenChanged;
+        const TPropagator propagator;
+    };
+   
+private:
+
+    template<typename T>
+    struct Types{
+        typedef std::map<std::string, AddonSetting<T> > Map;
+    };
+    
+    template<typename T>
+    struct TypePredicate
+    {
+        template<typename U>
+        bool operator()(const U& ) const { return false;}
+        template<>
+        bool operator()(const typename Types<T>::Map&) const { return true;}
+    };
+    
+    template<typename T>
+    struct SettingMapAction
+    {
+        typedef std::function<void(typename Types<T>::Map&)> TFunc;
+        
+        SettingMapAction(TFunc f) : func(f) {}
+
+        template<typename U>
+        void operator()(U& t) const {
+            std::string errorStr = "Incompatable container for setting type.";
+            Globals::LogError(errorStr.c_str());
+            throw std::logic_error(errorStr);
+        }
+        template<>
+        void operator()(typename Types<T>::Map& m) const
+        {
+            func(m);
+        }
+        TFunc func;
+    };
+
+    struct SetSettingsValue
+    {
+        struct Found {
+            Found(const ADDON_STATUS& s) : status (s) {}
+            const ADDON_STATUS status;
+        };
+        
+        SetSettingsValue(const std:: string& n, const void* v) : name(n), value(v) {}
+        
+        template<typename T>
+        void operator()( std::map<std::string, AddonSetting<T> >& m) const
+        {
+            if(m.count(name) == 0)
+                return;
+            throw Found(m.at(name).SetValue(*reinterpret_cast<const T*>(value)));
+        }
+        template<>
+        void operator()(std::map<std::string, AddonSetting<std::string> >& m) const
+        {
+            if(m.count(name) == 0)
+                return;
+            throw Found(m.at(name).SetValue((reinterpret_cast<const char*>(value))));
+        }
+        const std::string name;
+        const void * value;
+    };
+
+    template <typename TFunc>
+    struct ForEachAction
+    {
+        ForEachAction(TFunc f = TFunc()) : func(f) {}
+        template<typename T>
+        void operator()(T& m) const
+        {
+            for(auto& as : m){
+                func(as.second);
+            }
+        }
+
+    protected:
+        TFunc func;
+    };
+
+    struct PrintSetting
+    {
+        template<typename T>
+        void operator()(const AddonSetting<T> & t) const
+        {
+            std::stringstream ss;
+            ss << "S[ " << t.name << " ] = " << t.Value();
+            Globals::LogDebug(ss.str().c_str());
+        }
+    };
+    
+    struct InitFromGlobals
+    {
+        template<typename T>
+        void operator()(AddonSetting<T> & t) const
+        {
+            T v;
+            Globals::XBMC->GetSetting(t.name.c_str(), &v);
+            t.SetValue(v);
+        }
+        template<>
+        void operator()(AddonSetting<std::string> & t) const
+        {
+            char v[1024];
+            Globals::XBMC->GetSetting(t.name.c_str(), &v);
+            t.SetValue(v);
+        }
+    };
+
+    template <typename T>
+    void PerformTypedAction(typename SettingMapAction<T>::TFunc func) const
+    {
+        if(!first_if(settings, TypePredicate<T>(), SettingMapAction<T>(func))){
+            std::string errorStr = "Setting of unsuported type.";
+            Globals::LogError(errorStr.c_str());
+            throw std::invalid_argument(errorStr);
+        }
+
+    }
+    
+    template <typename T>
+    const T& Get(const std::string& n) const
+    {
+        const T* p = nullptr;
+        PerformTypedAction<T>([n, &p](typename Types<T>::Map& m){
+            p = &m.at(n).Value();
+        });
+        return *p;
+    }
+
+protected:
+    template <typename T>
+    void AddSetting(const AddonSetting<T>& s)
+    {
+        PerformTypedAction<T>([s](typename Types<T>::Map& m){
+            m.emplace(s.name, s);
+        });
+    }
+
+public:
+    void Print() const
+    {
+        for_each(settings, ForEachAction<PrintSetting>());
+    }
+    
+    void Init()
+    {
+        for_each(settings, ForEachAction<InitFromGlobals>());
+    }
+
+//    template <typename T>
+//    void Set(const std::string& n, const T& v)
+//    {
+//        PerformTypedAction<T>([n, v](typename Types<T>::Map& m){
+//            m.at(n).SetValue(v);
+//        });
+//    }
+    
+    ADDON_STATUS Set(const std::string& n, const void* v)
+    {
+        try{
+            for_each(settings, SetSettingsValue(n, v));
+            std::string errorStr = " Unknown setting ";
+            errorStr += n;
+            errorStr += " can't be set.";
+            Globals::LogError(errorStr.c_str());
+            throw std::invalid_argument(errorStr);
+        }
+        catch(SetSettingsValue::Found& found){
+            return found.status;
+        }
+    }
+
+    const std::string& GetString(const std::string& n) const { return Get<std::string>(n);}
+    int GetInt(const std::string& n) const { return Get<int>(n);}
+    bool GetBool(const std::string& n) const { return Get<bool>(n);}
+private:
+    mutable std::tuple <
+    typename Types<std::string>::Map,
+    typename Types<int>::Map,
+    typename Types<bool>::Map
+    > settings;
+};
+
+class AddonSettingsMutableDictionary : public AddonSettingsDictionary
+{
+public:
+    template <typename T>
+    AddonSettingsMutableDictionary& Add(const std::string& n, const T& defaultV, ADDON_STATUS onChanged = ADDON_STATUS_OK)
+    {
+        AddSetting(AddonSetting<T>(n, defaultV, onChanged));
+        return *this;
+    }
+    template <typename T>
+    AddonSettingsMutableDictionary& Add(const std::string& n, const T& defaultV, typename AddonSetting<T>::TPropagator p, ADDON_STATUS onChanged = ADDON_STATUS_OK)
+    {
+        AddSetting(AddonSetting<T>(n, defaultV, onChanged, p));
+        return *this;
+    }
+
+    AddonSettingsMutableDictionary& Add(const std::string& n, const char* defaultV, ADDON_STATUS onChanged = ADDON_STATUS_OK)
+    {
+        AddSetting(AddonSetting<std::string>(n, defaultV, onChanged));
+        return *this;
+    }
+    AddonSettingsMutableDictionary& Add(const std::string& n, const char* defaultV, typename AddonSetting<std::string>::TPropagator p, ADDON_STATUS onChanged = ADDON_STATUS_OK)
+    {
+        AddSetting(AddonSetting<std::string>(n, defaultV, onChanged, p));
+        return *this;
+    }
+
+};
+
+/*
 
 struct SettingsAdaptor{
 public:
@@ -270,7 +478,7 @@ private:
         settings_holder = nullptr;
     }
 };
-
+*/
 
 }
 

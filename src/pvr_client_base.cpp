@@ -71,8 +71,8 @@ namespace CurlUtils
     extern void SetCurlTimeout(long timeout);
 }
 // NOTE: avoid '.' (dot) char in path. Causes to deadlock in Kodi code.
-static const char* s_DefaultCacheDir = "special://temp/pvr-puzzle-tv";
-static const char* s_DefaultRecordingsDir = "special://temp/pvr-puzzle-tv/recordings";
+static const char* const s_DefaultCacheDir = "special://temp/pvr-puzzle-tv";
+static const char* const s_DefaultRecordingsDir = "special://temp/pvr-puzzle-tv/recordings";
 static std::string s_LocalRecPrefix = "Local";
 static std::string s_RemoteRecPrefix = "On Server";
 static const int c_InitialLastByteRead = 1;
@@ -114,32 +114,58 @@ static int CheckForInetConnection(int waitForInetTimeout)
     return waitingTimeInSec;
 }
 
-
-static void TestPropagator(const int& i) {
-        LogDebug("In Propagator %d", i);
+static void CleanupTimeshiftDirectory(const std::string& path){
+    const char* nonEmptyPath = path.c_str();
+    if(!XBMC->DirectoryExists(nonEmptyPath))
+        if(!XBMC->CreateDirectory(nonEmptyPath))
+            LogError( "Failed to create cache folder");
+    // Cleanup chache
+    if(XBMC->DirectoryExists(nonEmptyPath))
+    {
+        std::vector<CVFSDirEntry> files;
+        VFSUtils::GetDirectory(XBMC, nonEmptyPath, "*.bin", files);
+        for (auto& f : files) {
+            if(!f.IsFolder())
+                if(!XBMC->DeleteFile(f.Path().c_str()))
+                    LogError( "Failed to delete timeshift folder entry %s", f.Path().c_str());
+        }
+    }
 }
 
-void TestSettings()
+static void CheckRecordingsPath(const std::string& path){
+    const char* nonEmptyPath = path.c_str();
+    if(!XBMC->DirectoryExists(nonEmptyPath))
+        if(!XBMC->CreateDirectory(nonEmptyPath))
+            LogError( "Failed to create recordings folder.");
+}
+
+
+PVRClientBase::PVRClientBase()
+    : m_addonSettings(m_addonMutableSettings)
 {
-    const string setingsToFind = "curl_timeout";
     
-    int defaultV = 10;
-        
-    auto ss = AddonSettings<>()
-    .AddSetting("channel_reload_timeout", 0, TestPropagator)
-    .AddSetting("recordings_path", std::string())
-    .AddSetting(setingsToFind, defaultV, TestPropagator);
-
-    SettingsAdaptor sa(ss);
-    sa.init();
-    sa.print();
-            
-    int newVal = 20;
-    sa.set(setingsToFind.c_str(), &newVal);
-    sa.print();
-    LogDebug("Setting %s value %d", setingsToFind.c_str(), sa.get_int(setingsToFind.c_str()));
-
 }
+
+const char* const c_curlTimeout = "curl_timeout";
+const char* const c_channelReloadTimeout = "channel_reload_timeout";
+const char* const c_numOfHlsThreads = "num_of_hls_threads";
+const char* const c_enableTimeshift = "enable_timeshift";
+const char* const c_timeshiftPath = "timeshift_path";
+const char* const c_recordingPath = "recordings_path";
+const char* const c_timeshiftSize = "timeshift_size";
+const char* const c_cacheSizeLimit = "timeshift_off_cache_limit";
+const char* const c_timeshiftType = "timeshift_type";
+const char* const c_rpcLocalPort = "rpc_local_port";
+const char* const c_channelIndexOffset = "channel_index_offset";
+const char* const c_addCurrentEpgToArchive = "archive_for_current_epg_item";
+const char* const c_useChannelGroupsForArchive = "archive_use_channel_groups";
+const char* const c_waitForInternetTimeout = "wait_for_inet";
+const char* const c_startupDelay = "startup_delay";
+const char* const c_startRecordingPadding = "archive_start_padding";
+const char* const c_endRecordingPadding = "archive_end_padding";
+const char* const c_supportArchive = "archive_support";
+const char* const c_loadArchiveAfterEpg = "archive_wait_for_epg";
+const char* const c_archiveRefreshInterval = "archive_refresh_interval";
 
 ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
 {
@@ -156,92 +182,36 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     //auto g_strUserPath   = pvrprops->strUserPath;
     m_clientPath = pvrprops->strClientPath;
     m_userPath = pvrprops->strUserPath;
+            
+    m_addonMutableSettings
+    .Add(c_curlTimeout, 15, CurlUtils::SetCurlTimeout)
+    .Add(c_channelReloadTimeout, 5)
+    .Add(c_numOfHlsThreads, 1, Buffers::PlaylistBuffer::SetNumberOfHlsTreads)
+    .Add(c_enableTimeshift, false)
+    .Add(c_timeshiftPath, s_DefaultCacheDir, CleanupTimeshiftDirectory)
+    .Add(c_recordingPath, s_DefaultRecordingsDir, CheckRecordingsPath)
+    .Add(c_timeshiftSize, 0)
+    .Add(c_cacheSizeLimit, 0)
+    .Add(c_timeshiftType, (int)k_TimeshiftBufferMemory)
+    .Add(c_rpcLocalPort, 8080, ADDON_STATUS_NEED_RESTART)
+    .Add(c_channelIndexOffset, 0, ADDON_STATUS_NEED_RESTART)
+    .Add(c_addCurrentEpgToArchive, (int)k_AddCurrentEpgToArchive_No, ADDON_STATUS_NEED_RESTART)
+    .Add(c_useChannelGroupsForArchive, false, ADDON_STATUS_NEED_RESTART)
+    .Add(c_waitForInternetTimeout, 0)
+    .Add(c_startupDelay,0)
+    .Add(c_startRecordingPadding, 0)
+    .Add(c_endRecordingPadding, 0)
+    .Add(c_supportArchive, false, ADDON_STATUS_NEED_RESTART)
+    .Add(c_loadArchiveAfterEpg, false, ADDON_STATUS_NEED_RESTART)
+    .Add(c_archiveRefreshInterval, 3);
     
-    TestSettings();
+    PopulateSettings(m_addonMutableSettings);
     
-    char buffer[1024];
+    m_addonMutableSettings.Init();
+    m_addonMutableSettings.Print();
+       
+    DelayStartup(StartupDelay() - CheckForInetConnection(WaitForInetTimeout()));
     
-    int curlTimout = 15;
-    XBMC->GetSetting("curl_timeout", &curlTimout);
-    int channelTimeout = 5;
-    XBMC->GetSetting("channel_reload_timeout", &channelTimeout);
-   
-    int hlsTreads = 1;
-    XBMC->GetSetting("num_of_hls_threads", &hlsTreads);
-    Buffers::PlaylistBuffer::SetNumberOfHlsTreads(hlsTreads);
-
-    bool isTimeshiftEnabled;
-    XBMC->GetSetting("enable_timeshift", &isTimeshiftEnabled);
-    string timeshiftPath;
-    if (XBMC->GetSetting("timeshift_path", &buffer))
-        timeshiftPath = buffer;
-    string recordingsPath;
-    if (XBMC->GetSetting("recordings_path", &buffer))
-        recordingsPath = buffer;
-    
-    int timeshiftBufferSize = 0;
-    XBMC->GetSetting("timeshift_size", &timeshiftBufferSize);
-    timeshiftBufferSize *= 1024*1024;
-    
-    int cacheSizeLimit = 0;
-    XBMC->GetSetting("timeshift_off_cache_limit", &cacheSizeLimit);
-    cacheSizeLimit *= 1024*1024;
-    
-    
-    TimeshiftBufferType timeshiftBufferType = k_TimeshiftBufferMemory;
-    XBMC->GetSetting("timeshift_type", &timeshiftBufferType);
-    
-    m_rpcPort = 8080;
-    XBMC->GetSetting("rpc_local_port", &m_rpcPort);
-    
-    m_channelIndexOffset = 0;
-    XBMC->GetSetting("channel_index_offset", &m_channelIndexOffset);
-    
-    m_addCurrentEpgToArchive = k_AddCurrentEpgToArchive_No;
-    XBMC->GetSetting("archive_for_current_epg_item", &m_addCurrentEpgToArchive);
-
-    m_addChannelGroupForArchive = false;
-    XBMC->GetSetting("archive_use_channel_groups", &m_addChannelGroupForArchive);
-    
-    m_waitForInetTimeout = 0;
-    XBMC->GetSetting("wait_for_inet", &m_waitForInetTimeout);
-    
-    m_startupDelay = 0;
-    XBMC->GetSetting("startup_delay", &m_startupDelay);
-   
-    m_startRecordingPadding = 0;
-    XBMC->GetSetting("archive_start_padding", &m_startRecordingPadding);
-    if(m_startRecordingPadding < 0)
-        m_startRecordingPadding = 0;
-    m_startRecordingPadding *= 60;
-
-    m_endRecordingPadding = 0;
-    XBMC->GetSetting("archive_end_padding", &m_endRecordingPadding);
-    if(m_endRecordingPadding < 0)
-        m_endRecordingPadding = 0;
-    m_endRecordingPadding *= 60;
-    
-    m_supportArchive = false;
-    XBMC->GetSetting("archive_support", &m_supportArchive);
-
-    m_loadArchiveAfterEpg = false;
-    XBMC->GetSetting("archive_wait_for_epg", &m_loadArchiveAfterEpg);
-    
-    m_archiveRefreshInterval = 3;
-    XBMC->GetSetting("archive_refresh_interval", &m_archiveRefreshInterval);
-    if(m_archiveRefreshInterval < 0)
-        m_archiveRefreshInterval = 3;
-    
-    DelayStartup(m_startupDelay - CheckForInetConnection(m_waitForInetTimeout));
-    
-    CurlUtils::SetCurlTimeout(curlTimout);
-    SetChannelReloadTimeout(channelTimeout);
-    SetTimeshiftEnabled(isTimeshiftEnabled);
-    SetTimeshiftPath(timeshiftPath);
-    SetRecordingsPath(recordingsPath);
-    SetTimeshiftBufferSize(timeshiftBufferSize);
-    SetTimeshiftBufferType(timeshiftBufferType);
-    SetCacheLimit(cacheSizeLimit);
     
     PVR_MENUHOOK hook = {RELOAD_EPG_MENU_HOOK, 32050, PVR_MENUHOOK_ALL};
     PVR->AddMenuHook(&hook);
@@ -250,13 +220,9 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     PVR->AddMenuHook(&hook);
 
     // Local recordings path prefix
-    char* localizedString  = XBMC->GetLocalizedString(32014);
-    s_LocalRecPrefix = localizedString;
-    XBMC->FreeString(localizedString);
+    s_LocalRecPrefix = XBMC_Message(32014);
     // Remote recordings path prefix
-    localizedString  = XBMC->GetLocalizedString(32015);
-    s_RemoteRecPrefix = localizedString;
-    XBMC->FreeString(localizedString);
+    s_RemoteRecPrefix = XBMC_Message(32015);
     
     m_liveChannelId =  m_localRecordChannelId = UnknownChannelId;
     m_lastBytesRead = c_InitialLastByteRead;
@@ -270,13 +236,15 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
 }
 
 void PVRClientBase::OnCoreCreated() {
+    m_clientCore->SetRpcPort(RpcLocalPort());
     m_destroyer->PerformAsync([this](){
-        while(m_clientCore == nullptr) {
-            P8PLATFORM::CEvent::Sleep(100);
-        }
-        
+//        while(m_clientCore == nullptr) {
+//            P8PLATFORM::CEvent::Sleep(100);
+//        }
+        if(nullptr == m_clientCore)
+            throw std::logic_error("Client core must be initialized alraedy!");
         auto phase =  m_clientCore->GetPhase(IClientCore::k_ChannelsLoadingPhase);
-         phase->Wait();
+        phase->Wait();
 
         m_kodiToPluginLut.clear();
         m_pluginToKodiLut.clear();
@@ -295,7 +263,7 @@ void PVRClientBase::OnCoreCreated() {
         } else {
             auto phase =  m_clientCore->GetPhase(IClientCore::k_EpgLoadingPhase);
             phase->Wait();
-            if(m_loadArchiveAfterEpg) {
+            if(LoadArchiveAfterEpg()) {
                 LogDebug("PVRClientBase: update recorderings.");
                 m_clientCore->ReloadRecordings();
             }
@@ -305,10 +273,9 @@ void PVRClientBase::OnCoreCreated() {
     });
 }
 
-
 void PVRClientBase::ScheduleRecordingsUpdate() {
      m_destroyer->PerformAsync([this]() {
-         if(!m_destroyerEvent.Wait(m_archiveRefreshInterval * 60 * 1000) && nullptr != m_clientCore && !m_destroyer->IsStopped()) {
+         if(!m_destroyerEvent.Wait(ArchiveRefreshInterval() * 60 * 1000) && nullptr != m_clientCore && !m_destroyer->IsStopped()) {
             LogDebug("PVRClientBase: call reload recorderings.");
             m_clientCore->ReloadRecordings();
          } else {
@@ -354,7 +321,7 @@ void PVRClientBase::OnSystemSleep()
 }
 void PVRClientBase::OnSystemWake()
 {
-    DelayStartup(m_startupDelay - CheckForInetConnection(m_waitForInetTimeout));
+    DelayStartup(StartupDelay() - CheckForInetConnection(WaitForInetTimeout()));
     CreateCoreSafe(false);
 }
 
@@ -369,115 +336,13 @@ int PVRClientBase::GetSettings(ADDON_StructSetting ***sSet)
 
 ADDON_STATUS PVRClientBase::SetSetting(const char *settingName, const void *settingValue)
 {
-    if (strcmp(settingName, "enable_timeshift") == 0)
-    {
-          SetTimeshiftEnabled(*(bool *)(settingValue));
+    try {
+        return m_addonSettings.Set(settingName, settingValue);
     }
-    else if (strcmp(settingName, "channel_reload_timeout") == 0)
-    {
-        SetChannelReloadTimeout(*(int *)(settingValue));
+    catch (std::exception& ex) {
+        LogInfo("Error on settings update: %s", ex.what());
     }
-    else if (strcmp(settingName, "timeshift_path") == 0)
-    {
-          SetTimeshiftPath((const char *)(settingValue));
-    }
-    else if (strcmp(settingName, "recordings_path") == 0)
-    {
-        SetRecordingsPath((const char *)(settingValue));
-    }
-    else if (strcmp(settingName, "timeshift_type") == 0)
-    {
-        SetTimeshiftBufferType(*(TimeshiftBufferType*)(settingValue));
-    }
-    else if (strcmp(settingName, "timeshift_size") == 0)
-    {
-        auto size = *(int *)(settingValue);
-        size *= 1024*1024;
-        SetTimeshiftBufferSize(size);
-    }
-    else if (strcmp(settingName, "timeshift_off_cache_limit") == 0)
-    {
-        auto size = *(int *)(settingValue);
-        size *= 1024*1024;
-        SetCacheLimit(size);
-    }
-    else if (strcmp(settingName, "curl_timeout") == 0)
-    {
-        CurlUtils::SetCurlTimeout(*(int *)(settingValue));
-    }
-    else if (strcmp(settingName, "num_of_hls_threads") == 0)
-    {
-        Buffers::PlaylistBuffer::SetNumberOfHlsTreads(*(int *)(settingValue));
-    }
-    else if (strcmp(settingName, "rpc_local_port") == 0)
-    {
-        m_rpcPort = *(int *)(settingValue);
-    }
-    else if (strcmp(settingName, "archive_for_current_epg_item") == 0)
-    {
-        AddCurrentEpgToArchive newValue = *(AddCurrentEpgToArchive *)(settingValue);
-        if(newValue != m_addCurrentEpgToArchive) {
-            m_addCurrentEpgToArchive = newValue;
-            return ADDON_STATUS_NEED_RESTART;
-        }
-    }
-    else if (strcmp(settingName, "archive_use_channel_groups") == 0)
-    {
-        bool newValue = *(bool *)(settingValue);
-        if(newValue != m_addChannelGroupForArchive) {
-            m_addChannelGroupForArchive = newValue;
-            return ADDON_STATUS_NEED_RESTART;
-        }
-    }
-    else if (strcmp(settingName, "channel_index_offset") == 0)
-    {
-        int newValue = *(int *)(settingValue);
-        if(newValue != m_channelIndexOffset) {
-            m_channelIndexOffset = newValue;
-            return ADDON_STATUS_NEED_RESTART;
-        }
-    }
-    else if (strcmp(settingName, "wait_for_inet") == 0)
-    {
-        m_waitForInetTimeout = *(int *)(settingValue);
-    }
-    else if (strcmp(settingName, "startup_delay") == 0)
-    {
-        m_startupDelay = *(int *)(settingValue);
-    }
-    else if (strcmp(settingName, "archive_start_padding") == 0)
-    {
-        m_startRecordingPadding = *(int *)(settingValue);
-        if(m_startRecordingPadding < 0)
-            m_startRecordingPadding = 0;
-        m_startRecordingPadding *= 60;
-    }
-    else if (strcmp(settingName, "archive_end_padding") == 0)
-    {
-        m_endRecordingPadding = *(int *)(settingValue);
-        if(m_endRecordingPadding < 0)
-            m_endRecordingPadding = 0;
-        m_endRecordingPadding *= 60;
-        
-    }
-    else if (strcmp(settingName, "archive_support") == 0)
-    {
-        bool newValue = *(bool*)settingValue;
-        return (m_supportArchive != newValue) ? ADDON_STATUS_NEED_RESTART : ADDON_STATUS_OK;
-        
-    }
-    else if (strcmp(settingName, "archive_wait_for_epg") == 0)
-    {
-        bool newValue = *(bool*)settingValue;
-        return (m_loadArchiveAfterEpg != newValue) ? ADDON_STATUS_NEED_RESTART : ADDON_STATUS_OK;
-    }
-    else if (strcmp(settingName, "archive_refresh_interval") == 0)
-    {
-        m_archiveRefreshInterval = *(int *)settingValue;
-        if(m_archiveRefreshInterval < 0)
-            m_archiveRefreshInterval = 3;
-    }
-
+    
     return ADDON_STATUS_OK;
 }
 
@@ -544,34 +409,6 @@ ADDON_STATUS PVRClientBase::GetStatus()
     return  /*(m_sovokTV == NULL)? ADDON_STATUS_LOST_CONNECTION : */ADDON_STATUS_OK;
 }
 
-void PVRClientBase::SetRecordingsPath(const std::string& path){
-    const char* nonEmptyPath = (path.empty()) ? s_DefaultRecordingsDir : path.c_str();
-    if(!XBMC->DirectoryExists(nonEmptyPath))
-        if(!XBMC->CreateDirectory(nonEmptyPath))
-            LogError( "Failed to create recordings folder.");
-    m_recordingsDir = nonEmptyPath;
-}
-
-void PVRClientBase::SetTimeshiftPath(const std::string& path){
-    const char* nonEmptyPath = (path.empty()) ? s_DefaultCacheDir : path.c_str();
-    if(!XBMC->DirectoryExists(nonEmptyPath))
-        if(!XBMC->CreateDirectory(nonEmptyPath))
-            LogError( "Failed to create cache folder");
-    // Cleanup chache
-    if(XBMC->DirectoryExists(nonEmptyPath))
-    {
-        std::vector<CVFSDirEntry> files;
-        VFSUtils::GetDirectory(XBMC, nonEmptyPath, "*.bin", files);
-        for (auto& f : files) {
-            if(!f.IsFolder())
-                if(!XBMC->DeleteFile(f.Path().c_str()))
-                    LogError( "Failed to delete timeshift folder entry %s", f.Path().c_str());
-        }
-    }
-
-    m_cacheDir = nonEmptyPath;
-}
-
 PVR_ERROR  PVRClientBase::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
 {
     
@@ -625,6 +462,7 @@ PVR_ERROR PVRClientBase::GetChannels(ADDON_HANDLE handle, bool bRadio)
     if(NULL == m_clientCore)
         return PVR_ERROR_SERVER_ERROR;
         
+    const int channelIndexOffset = ChannelIndexOffset();
     for(auto& itChannel : GetChannelListWhenLutsReady())
     {
         auto & channel = itChannel.second;
@@ -632,7 +470,7 @@ PVR_ERROR PVRClientBase::GetChannels(ADDON_HANDLE handle, bool bRadio)
         {
             PVR_CHANNEL pvrChannel = { 0 };
             pvrChannel.iUniqueId = m_pluginToKodiLut.at(channel.UniqueId) ;
-            pvrChannel.iChannelNumber = channel.Number + m_channelIndexOffset;
+            pvrChannel.iChannelNumber = channel.Number + channelIndexOffset;
             pvrChannel.bIsRadio = channel.IsRadio;
             strncpy(pvrChannel.strChannelName, channel.Name.c_str(), sizeof(pvrChannel.strChannelName));
             strncpy(pvrChannel.strIconPath, channel.IconPath.c_str(), sizeof(pvrChannel.strIconPath));
@@ -802,15 +640,15 @@ bool PVRClientBase::OpenLiveStream(const PVR_CHANNEL& channel)
 }
 
 Buffers::ICacheBuffer* PVRClientBase::CreateLiveCache() const {
-    if (m_isTimeshiftEnabled){
-        if(k_TimeshiftBufferFile == m_timeshiftBufferType) {
-            return new Buffers::FileCacheBuffer(m_cacheDir, m_timshiftBufferSize /  Buffers::FileCacheBuffer::CHUNK_FILE_SIZE_LIMIT);
+    if (IsTimeshiftEnabled()){
+        if(k_TimeshiftBufferFile == TypeOfTimeshiftBuffer()) {
+            return new Buffers::FileCacheBuffer(m_cacheDir, TimeshiftBufferSize() /  Buffers::FileCacheBuffer::CHUNK_FILE_SIZE_LIMIT);
         } else {
-            return new Buffers::MemoryCacheBuffer(m_timshiftBufferSize /  Buffers::MemoryCacheBuffer::CHUNK_SIZE_LIMIT);
+            return new Buffers::MemoryCacheBuffer(TimeshiftBufferSize() /  Buffers::MemoryCacheBuffer::CHUNK_SIZE_LIMIT);
         }
     }
     else
-        return new Buffers::SimpleCyclicBuffer(m_cacheSizeLimit / Buffers::SimpleCyclicBuffer::CHUNK_SIZE_LIMIT);
+        return new Buffers::SimpleCyclicBuffer(CacheSizeLimit() / Buffers::SimpleCyclicBuffer::CHUNK_SIZE_LIMIT);
 
 }
 
@@ -835,7 +673,7 @@ bool PVRClientBase::OpenLiveStream(ChannelId channelId, const std::string& url )
         InputBuffer* buffer = BufferForUrl(url);
         CLockObject lock(m_mutex);
         m_inputBuffer = new Buffers::TimeshiftBuffer(buffer, CreateLiveCache());
-        if(!m_inputBuffer->WaitForInput(m_channelReloadTimeout * 1000)) {
+        if(!m_inputBuffer->WaitForInput(ChannelReloadTimeout() * 1000)) {
             throw InputBufferException("no data available diring reload timeout (bad ace link?)");
         }
     }
@@ -893,7 +731,7 @@ int PVRClientBase::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSi
     }
 
     ChannelId chId = GetLiveChannelId();
-    int bytesRead = inputBuffer->Read(pBuffer, iBufferSize, m_channelReloadTimeout * 1000);
+    int bytesRead = inputBuffer->Read(pBuffer, iBufferSize, ChannelReloadTimeout() * 1000);
     // Assuming stream hanging.
     // Try to restart current channel only when previous read operation succeeded.
     if (bytesRead != iBufferSize &&  m_lastBytesRead >= 0 && !IsLiveInRecording()) {
@@ -915,7 +753,7 @@ int PVRClientBase::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSi
         }
 
         if(inputBuffer){
-            bytesRead = inputBuffer->Read(pBuffer, iBufferSize, m_channelReloadTimeout * 1000);
+            bytesRead = inputBuffer->Read(pBuffer, iBufferSize, ChannelReloadTimeout() * 1000);
         } else {
             bytesRead = -1;
         }
@@ -968,31 +806,6 @@ bool PVRClientBase::SwitchChannel(ChannelId channelId, const std::string& url)
     return OpenLiveStream(channelId, url); // Split/join live and recording streams (when nesessry)
 }
 
-void PVRClientBase::SetTimeshiftEnabled(bool enable)
-{
-    m_isTimeshiftEnabled = enable;
-}
-
-void PVRClientBase::SetChannelReloadTimeout(int timeout)
-{
-    m_channelReloadTimeout = timeout;
-}
-
-void PVRClientBase::SetCacheLimit(uint64_t size)
-{
-    m_cacheSizeLimit = size;
-}
-
-void PVRClientBase::SetTimeshiftBufferSize(uint64_t size)
-{
-    m_timshiftBufferSize = size;
-}
-
-void PVRClientBase::SetTimeshiftBufferType(PVRClientBase::TimeshiftBufferType type)
-{
-    m_timeshiftBufferType = type;
-}
-
 #pragma mark - Recordings
 
 int PVRClientBase::GetRecordingsAmount(bool deleted)
@@ -1007,7 +820,7 @@ int PVRClientBase::GetRecordingsAmount(bool deleted)
     
     // When archivee loading is delayed
     // check whether EPG is loded already
-    if(m_loadArchiveAfterEpg) {
+    if(LoadArchiveAfterEpg()) {
         auto phase =  m_clientCore->GetPhase(IClientCore::k_EpgLoadingPhase);
          if(!phase) {
              return 0;
@@ -1017,7 +830,7 @@ int PVRClientBase::GetRecordingsAmount(bool deleted)
     }
     
     // Add remote archive (if enabled)
-    if(m_supportArchive) {
+    if(IsArchiveSupported()) {
         auto phase =  m_clientCore->GetPhase(IClientCore::k_EpgCacheLoadingPhase);
         if(!phase) {
             return 0;
@@ -1026,7 +839,7 @@ int PVRClientBase::GetRecordingsAmount(bool deleted)
         size = m_clientCore->UpdateArchiveInfoAndCount();
     }
     // Add local recordings
-    if(XBMC->DirectoryExists(m_recordingsDir.c_str()))
+    if(XBMC->DirectoryExists(RecordingsPath().c_str()))
     {
         std::vector<CVFSDirEntry> files;
         VFSUtils::GetDirectory(XBMC, m_recordingsDir, "", files);
@@ -1064,7 +877,7 @@ void PVRClientBase::FillRecording(const EpgEntryList::value_type& epgEntry, PVR_
     
     string dirName(dirPrefix);
     dirName += '/';
-    if(m_addChannelGroupForArchive) {
+    if(UseChannelGroupsForArchive()) {
         GroupId groupId = m_clientCore->GroupForChannel(ch.UniqueId);
         dirName += (-1 == groupId) ? "---" : m_clientCore->GetGroupList().at(groupId).Name.c_str();
         dirName += '/';
@@ -1088,7 +901,7 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
     
     // When archivee loading is delayed
     // check whether EPG is loded already
-    if(m_loadArchiveAfterEpg) {
+    if(LoadArchiveAfterEpg()) {
         auto phase =  m_clientCore->GetPhase(IClientCore::k_EpgLoadingPhase);
          if(!phase) {
              return PVR_ERROR_NO_ERROR;
@@ -1105,7 +918,7 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
     std::shared_ptr<IClientCore::IPhase> phase = nullptr;
     LogDebug("PVRClientBase: start recorings transfering...");
     // Add remote archive (if enabled)
-    if(m_supportArchive) {
+    if(IsArchiveSupported()) {
 
         phase =  m_clientCore->GetPhase(IClientCore::k_EpgCacheLoadingPhase);
         if(!phase) {
@@ -1175,7 +988,7 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
 //        LogDebug("PVRClientBase: All Recording = %0.4f", transferTotal.count() + fillTotal.count() );
     }
     // Add local recordings
-    if(XBMC->DirectoryExists(m_recordingsDir.c_str()))
+    if(XBMC->DirectoryExists(RecordingsPath().c_str()))
     {
         std::vector<CVFSDirEntry> files;
         VFSUtils::GetDirectory(XBMC, m_recordingsDir, "", files);
@@ -1311,7 +1124,7 @@ void PVRClientBase::CloseRecordedStream(void)
 int PVRClientBase::ReadRecordedStream(unsigned char *pBuffer, unsigned int iBufferSize)
 {
     //uint32_t timeoutMs = 5000;
-    return (m_recordBuffer.buffer == NULL) ? -1 : m_recordBuffer.buffer->Read(pBuffer, iBufferSize, (m_recordBuffer.isLocal)? 0 : m_channelReloadTimeout * 1000);
+    return (m_recordBuffer.buffer == NULL) ? -1 : m_recordBuffer.buffer->Read(pBuffer, iBufferSize, (m_recordBuffer.isLocal)? 0 : ChannelReloadTimeout() * 1000);
 }
 
 long long PVRClientBase::SeekRecordedStream(long long iPosition, int iWhence)
@@ -1332,7 +1145,7 @@ long long PVRClientBase::LengthRecordedStream(void)
 
 std::string PVRClientBase::DirectoryForRecording(unsigned int epgId) const
 {
-    std::string recordingDir = m_recordingsDir;
+    std::string recordingDir(RecordingsPath());
     if(recordingDir[recordingDir.length() -1] != PATH_SEPARATOR_CHAR)
         recordingDir += PATH_SEPARATOR_CHAR;
     recordingDir += n_to_string(epgId);
@@ -1526,3 +1339,103 @@ void PvrClient::EpgEntry::FillEpgTag(EPG_TAG& tag) const{
     }
 }
 
+#pragma mark - Settings
+const std::string& PVRClientBase::TimeshiftPath() const
+{
+    return m_addonSettings.GetString(c_timeshiftPath);
+}
+
+const std::string& PVRClientBase::RecordingsPath() const
+{
+    return m_addonSettings.GetString(c_recordingPath);
+}
+
+int PVRClientBase::RpcLocalPort() const
+{
+    return m_addonSettings.GetInt(c_rpcLocalPort);
+}
+
+int PVRClientBase::ChannelIndexOffset() const
+{
+    return m_addonSettings.GetInt(c_channelIndexOffset);
+}
+
+AddCurrentEpgToArchive PVRClientBase::HowToAddCurrentEpgToArchive() const
+{
+    return (AddCurrentEpgToArchive) m_addonSettings.GetInt(c_addCurrentEpgToArchive);
+}
+
+bool PVRClientBase::UseChannelGroupsForArchive() const
+{
+    return m_addonSettings.GetBool(c_useChannelGroupsForArchive);
+}
+
+int PVRClientBase::WaitForInetTimeout() const
+{
+    return m_addonSettings.GetInt(c_waitForInternetTimeout);
+}
+
+int PVRClientBase::StartupDelay() const
+{
+    return m_addonSettings.GetInt(c_startupDelay);
+}
+
+uint32_t PVRClientBase::StartRecordingPadding() const
+{
+    int padding = m_addonSettings.GetInt(c_startRecordingPadding);
+    if(padding < 0)
+        padding = 0;
+    return padding *= 60;
+}
+
+uint32_t PVRClientBase::EndRecordingPadding() const
+{
+    int padding = m_addonSettings.GetInt(c_endRecordingPadding);
+    if(padding < 0)
+        padding = 0;
+    return padding *= 60;
+}
+
+bool PVRClientBase::IsArchiveSupported() const
+{
+    return m_addonSettings.GetBool(c_supportArchive);
+}
+
+bool PVRClientBase::LoadArchiveAfterEpg() const
+{
+    return m_addonSettings.GetBool(c_loadArchiveAfterEpg);
+}
+
+uint PVRClientBase::ArchiveRefreshInterval() const
+{
+    int interval = m_addonSettings.GetInt(c_archiveRefreshInterval);
+    if(interval < 0)
+        interval = 3;
+    return interval;
+}
+
+bool PVRClientBase::IsTimeshiftEnabled() const
+{
+    return m_addonSettings.GetBool(c_enableTimeshift);
+}
+
+int PVRClientBase::ChannelReloadTimeout() const
+{
+    return m_addonSettings.GetInt(c_channelReloadTimeout);
+}
+
+uint64_t PVRClientBase::CacheSizeLimit() const
+{
+    return m_addonSettings.GetInt(c_cacheSizeLimit) * 1024 * 1204;
+}
+
+uint64_t PVRClientBase::TimeshiftBufferSize() const
+{
+    return m_addonSettings.GetInt(c_timeshiftSize) * 1024 * 1204;
+}
+
+PVRClientBase::TimeshiftBufferType PVRClientBase::TypeOfTimeshiftBuffer() const
+{
+    return  (TimeshiftBufferType) m_addonSettings.GetInt(c_timeshiftType);
+    
+}

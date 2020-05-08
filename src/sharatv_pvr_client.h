@@ -39,7 +39,6 @@ public:
     ADDON_STATUS Init(PVR_PROPERTIES* pvrprops);
     ~SharaTvPVRClient();
 
-    ADDON_STATUS SetSetting(const char *settingName, const void *settingValue);
     PVR_ERROR GetAddonCapabilities(PVR_ADDON_CAPABILITIES* pCapabilities);
     PVR_ERROR SignalStatus(PVR_SIGNAL_STATUS &signalStatus);
     bool OpenRecordedStream(const PVR_RECORDING &recording);
@@ -50,22 +49,25 @@ protected:
 
     ADDON_STATUS CreateCoreSafe(bool clearEpgCache);
     void DestroyCoreSafe();
+    void PopulateSettings(PvrClient::AddonSettingsMutableDictionary& settings);
 
 private:
     
-    enum {
+    enum DataSourceType{
         c_DataSourceType_Login = 0,
         c_DataSourceType_Playlist = 1
-    }m_dataSourceType;
+    };
     
     void CreateCore(bool clearEpgCache);
+    const std::string& LoginName() const;
+    const std::string& LoginPassword() const;
+    const std::string& PlayListUrl() const;
+    const std::string& EpgUrl() const;
+    DataSourceType DataSource() const;
+    bool EnableAdult() const;
 
+    
     SharaTvEngine::Core* m_core;
-    std::string m_login;
-    std::string m_password;
-    std::string m_playListUrl;
-    std::string m_epgUrl;
-    bool m_enableAdult;
 };
 
 #endif //__sahra_tv_pvr_client_h__
