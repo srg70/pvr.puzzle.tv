@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<addon id="pvr.puzzle.tv" version="0.9.76" name="PVR Puzzle TV" provider-name="srg70">
+<addon id="pvr.puzzle.tv" version="0.9.77" name="PVR Puzzle TV" provider-name="srg70">
     <requires>@ADDON_DEPENDS@</requires>
   <extension
     point="xbmc.pvrclient"
@@ -12,5 +12,14 @@
     <disclaimer lang="en_US">This is unstable software! The authors are in no way responsible for failed playings, incorrect EPG times, wasted hours, or any other undesirable effects.</disclaimer>
     <disclaimer lang="ru_RU">Это нестабильная программа! Авторы не несут ответственности за неудачные воспроизведение, неверные время EPG, потраченное время и прочие нежелательные эффекты.</disclaimer>
      <platform>@PLATFORM@</platform>
+     <forum>http://xbmc.ru/forum/showthread.php?t=14438</forum>
+     <source>https://github.com/srg70/pvr.puzzle.tv</source>
+     <license>GPL-2.0-or-later</license>
+     <news>
+         v0.9.78
+         - Addon settings refactoring
+         - OTTG credentials support
+
+     </news>
   </extension>
 </addon>
