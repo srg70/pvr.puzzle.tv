@@ -267,7 +267,7 @@ namespace EdemEngine
             // Download playlist
             XBMC->Log(LOG_DEBUG, "EdemPlayer: loading playlist: %s", plistUrl.c_str());
 
-            auto f = XBMC->OpenFile(plistUrl.c_str(), 0);
+            auto f = XBMC_OpenFile(plistUrl);
             if (!f)
                 throw BadPlaylistFormatException("Failed to obtain playlist from server.");
             bool isEof = false;

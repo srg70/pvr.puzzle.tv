@@ -24,6 +24,7 @@
 #include "globals.hpp"
 #include "p8-platform/util/util.h"
 #include "p8-platform/util/StringUtils.h"
+#include "httplib.h"
 
 namespace Globals
 {
@@ -79,6 +80,11 @@ namespace Globals
 
     }
     
+    void* XBMC_OpenFile(const std::string& path, unsigned int flags)
+    {
+        return XBMC->OpenFile(httplib::detail::encode_get_url(path).c_str(), flags);
+    }
+
 # define PrintToLog(loglevel) \
 std::string strData; \
 strData.reserve(16384); \
