@@ -179,7 +179,7 @@ namespace PvrClient
         int WaitForInetTimeout() const;
         int StartupDelay() const;
         bool LoadArchiveAfterEpg() const;
-        uint ArchiveRefreshInterval() const;
+        uint32_t ArchiveRefreshInterval() const;
 
         void FillRecording(const EpgEntryList::value_type& epgEntry, PVR_RECORDING& tag, const char* dirPrefix);
         std::string DirectoryForRecording(unsigned int epgId) const;
