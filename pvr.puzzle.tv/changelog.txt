@@ -1,3 +1,36 @@
+0.9.78
+- Addon settings refactoring
+- OTTG credentials support
+
+0.9.75
+- Fixed memory leaks
+
+0.9.74
+- Fix: check edem url for default stub.
+- Option for delayed population of archive for current program.
+
+0.9.73
+- Fixed last played channel restart on wakeup.
+- Optional blocking of dead streams for Puzzle server.
+
+0.9.71
+- VOD seek improvements
+
+0.9.70
+- Option for delay of archive loading.
+- Fixed crash on channel stopping.
+
+0.9.69
+- Speedup app exit.
+- Option for delayed startup of PVR
+
+0.9.67
+- Fixed missing custom HTTP headers when Kodi's CURL is in-use.
+- Fixed crash on re-loading of plugin.
+
+0.9.65
+- Fixed HLS live streams availability.
+
 0.9.64
 - Fixed crash after bad attempt of seeking of event playlist.
 - Setting for archive refresh interval
