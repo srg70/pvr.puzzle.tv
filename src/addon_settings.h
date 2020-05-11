@@ -123,7 +123,7 @@ private:
     {
         template<typename U>
         bool operator()(const U& ) const { return false;}
-        template<>
+        //template<>
         bool operator()(const typename Types<T>::Map&) const { return true;}
     };
     
@@ -140,7 +140,7 @@ private:
             Globals::LogError(errorStr.c_str());
             throw std::logic_error(errorStr);
         }
-        template<>
+        //template<>
         void operator()(typename Types<T>::Map& m) const
         {
             func(m);
@@ -164,7 +164,7 @@ private:
                 return;
             throw Found(m.at(name).SetValue(*reinterpret_cast<const T*>(value)));
         }
-        template<>
+        //template<>
         void operator()(std::map<std::string, AddonSetting<std::string> >& m) const
         {
             if(m.count(name) == 0)
@@ -216,7 +216,7 @@ private:
             Globals::XBMC->GetSetting(t.name.c_str(), &v);
             t.Init(v);
         }
-        template<>
+        //template<>
         void operator()(AddonSetting<std::string> & t) const
         {
             char v[1024];
