@@ -24,6 +24,7 @@
 #include "p8-platform/util/util.h"
 #include "p8-platform/threads/mutex.h"
 #include "base64.h"
+#include "httplib.h"
 
 namespace CurlUtils
 {
@@ -94,7 +95,7 @@ HttpEngine::HttpEngine()
         void *curl = nullptr;
         
         try {
-            curl = XBMC->CURLCreate(request.Url.c_str());
+            curl = XBMC->CURLCreate(httplib::detail::encode_get_url(request.Url).c_str());
             if (nullptr == curl)
                 throw CurlErrorException("CURL initialisation failed.");
             
@@ -205,7 +206,7 @@ HttpEngine::HttpEngine()
         
         auto start = P8PLATFORM::GetTimeMs();
         Globals::LogInfo("Sending request: %s. ID=%llu", request.Url.c_str(), requestId);
-        curl_easy_setopt(curl, CURLOPT_URL, request.Url.c_str());
+        curl_easy_setopt(curl, CURLOPT_URL, httplib::detail::encode_get_url(request.Url).c_str());
         if(request.IsPost()) {
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request.PostData.c_str());
         }

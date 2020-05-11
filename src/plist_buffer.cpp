@@ -38,6 +38,7 @@
 #include "globals.hpp"
 #include "playlist_cache.hpp"
 #include "p8-platform/util/util.h"
+#include "httplib.h"
 
 using namespace P8PLATFORM;
 using namespace ADDON;
@@ -102,7 +103,7 @@ namespace Buffers {
         bool isCanceled = false;
         SegmentInfo info;
         while(plist.NextSegment(info, hasMoreSegments)) {
-            void* f = XBMC->OpenFile(info.url.c_str(), XFILE::READ_NO_CACHE | XFILE::READ_CHUNKED); //XFILE::READ_AUDIO_VIDEO);
+            void* f = XBMC_OpenFile(info.url, XFILE::READ_NO_CACHE | XFILE::READ_CHUNKED); //XFILE::READ_AUDIO_VIDEO);
             if(!f)
                 throw PlistBufferException("Failed to open media segment of sub-playlist.");
 
@@ -145,7 +146,7 @@ namespace Buffers {
             if(isCanceled)
                 break;
             
-            void* f = XBMC->OpenFile(segment->info.url.c_str(), XFILE::READ_NO_CACHE | XFILE::READ_CHUNKED | XFILE::READ_TRUNCATED); //XFILE::READ_AUDIO_VIDEO);
+            void* f = XBMC_OpenFile(segment->info.url, XFILE::READ_NO_CACHE | XFILE::READ_CHUNKED | XFILE::READ_TRUNCATED); //XFILE::READ_AUDIO_VIDEO);
             if(!f)
                 throw PlistBufferException("Failed to download playlist media segment.");
             
@@ -256,7 +257,7 @@ namespace Buffers {
                             LogDebug("PlaylistBuffer: waiting for space in cache...");
                             if(nullptr != segment) {
                                 struct __stat64 stat;
-                                XBMC->StatFile(segment->info.url.c_str(), &stat);
+                                XBMC->StatFile(httplib::detail::encode_get_url(segment->info.url).c_str(), &stat);
                                 LogDebug("Stat segment #%" PRIu64 ".", segment->info.index);
                             }
                         }

@@ -44,11 +44,17 @@
 
   <!-- Shara TV Player -->
   <category label="70010">
+    <setting id="plist_provider_type" type="enum" label="70007" lvalues="70008|70009|70011" default="1" />
     <setting id="sharatv_data_source" type="enum" label="70001" lvalues="70002|70003" default="0" />
-    <setting id="sharatv_login" type="text" label="30000" default="" visible="eq(-1,0)" subsetting="true"/>
-    <setting id="sharatv_password" type="text" label="30001" option="hidden" default="" visible="eq(-2,0)" subsetting="true"/>
-    <setting id="sharatv_playlist_path" type="text" label="10002" default="" visible="eq(-3,1)" subsetting="true"/>
-    <setting id="sharatv_epg_path" type="text" label="50001" default="" visible="eq(-4,1)" subsetting="true"/>
+    <setting id="sharatv_login" type="text" label="30000" default="" visible="eq(-1,0) + eq(-2,1)" subsetting="true"/>
+    <setting id="sharatv_password" type="text" label="30001" option="hidden" default="" visible="eq(-2,0) + eq(-3,1)" subsetting="true"/>
+    <setting id="ottg_login" type="text" label="30000" default="" visible="eq(-3,0) + eq(-4,2)" subsetting="true"/>
+    <setting id="ottg_password" type="text" label="30001" option="hidden" default="" visible="eq(-4,0) + eq(-5,2)" subsetting="true"/>
+    <setting id="playlist_prefer_hls" type="bool" label="70012" default="true" visible="eq(-5,0) + eq(-6,2)" subsetting="true"/>
+    <setting id="sharatv_playlist_path_type" type="enum" label="70004" lvalues="70005|70006" visible="eq(-5,1)" default="0" />
+    <setting id="sharatv_playlist_path" type="text" label="10002" default="" visible="eq(-6,1) + eq(-1,0)" subsetting="true"/>
+    <setting id="sharatv_playlist_path_local" type="file" label="10002" default="" visible="eq(-7,1) + eq(-2,1)" subsetting="true"/>
+    <setting id="sharatv_epg_path" type="text" label="50001" default="" visible="eq(-8,1)" subsetting="true"/>
     <setting id="sharatv_adult" type="bool" label="30003" default="false"/>
   </category>
   

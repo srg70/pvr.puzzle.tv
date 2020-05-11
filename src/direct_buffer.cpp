@@ -42,7 +42,7 @@ namespace Buffers {
     using namespace Globals;
 
     void* DirectBuffer::Open(const std::string & path){
-        return XBMC->OpenFile(path.c_str(),
+        return XBMC_OpenFile(path,
                               XFILE::READ_AUDIO_VIDEO |
                               XFILE::READ_TRUNCATED |
                               XFILE::READ_CHUNKED |

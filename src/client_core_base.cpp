@@ -320,7 +320,7 @@ void ClientCoreBase::ClearEpgCache(const char* cacheFile)
 
 bool ClientCoreBase::ReadFileContent(const char* cacheFile, std::string& buffer)
 {
-    void* file = XBMC->OpenFile(cacheFile, 0);
+    void* file = XBMC_OpenFile(cacheFile, 0);
     if(NULL == file)
         return false;
     int64_t fSize = XBMC->GetFileLength(file);

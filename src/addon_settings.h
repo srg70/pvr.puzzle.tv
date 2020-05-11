@@ -82,24 +82,24 @@ protected:
         AddonSetting(const std::string& n, const T& d = T{}, ADDON_STATUS s = ADDON_STATUS_OK, TPropagator f = &DefaultPropagator)
         : name(n), defaultValue(d), statusWhenChanged(s), propagator(f)
         {
-            SetValue(defaultValue);
+            Init(defaultValue);
         }
         AddonSetting(const AddonSetting& as)
-        : name(as.name), statusWhenChanged(as.statusWhenChanged), propagator(as.propagator)
+        : name(as.name), defaultValue(as.defaultValue), statusWhenChanged(as.statusWhenChanged), propagator(as.propagator)
         {
-            SetValue(as.Value());
+            Init(as.Value());
         }
         const std::string name;
-        const T& Value() const {return value;}
-        ADDON_STATUS SetValue(const T& v)
+        inline const T& Value() const {return value;}
+        inline void Init(const T& v)
+        {
+            value = v;
+        }
+        inline ADDON_STATUS SetValue(const T& v)
         {
             if(v == value)
                 return ADDON_STATUS_OK;
-            // treat empty value as default
-            if(v == T{})
-                value = defaultValue;
-            else
-                value = v;
+            Init(v);
             propagator(value);
             return statusWhenChanged;
         }
@@ -197,7 +197,12 @@ private:
         void operator()(const AddonSetting<T> & t) const
         {
             std::stringstream ss;
-            ss << "S[ " << t.name << " ] = " << t.Value();
+            const std::string& name = t.name;
+            ss << "S[ " << name << " ] = ";
+            if(name.find("password") == std::string::npos && name.find("login") == std::string::npos)
+                ss << t.Value();
+            else
+                ss << "*****";
             Globals::LogDebug(ss.str().c_str());
         }
     };
@@ -209,14 +214,14 @@ private:
         {
             T v;
             Globals::XBMC->GetSetting(t.name.c_str(), &v);
-            t.SetValue(v);
+            t.Init(v);
         }
         template<>
         void operator()(AddonSetting<std::string> & t) const
         {
             char v[1024];
             Globals::XBMC->GetSetting(t.name.c_str(), &v);
-            t.SetValue(v);
+            t.Init(v);
         }
     };
 

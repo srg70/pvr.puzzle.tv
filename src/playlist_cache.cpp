@@ -33,6 +33,7 @@
 #include "playlist_cache.hpp"
 #include "Playlist.hpp"
 #include "globals.hpp"
+#include "httplib.h"
 
 using namespace Globals;
 
@@ -101,7 +102,7 @@ bool PlaylistCache::ProcessPlaylist() {
         // Stat at least 3 segments for bitrate
         while(it != last && statCounter++ < 3) {
             struct __stat64 stat;
-            if(0 != XBMC->StatFile(it->url.c_str(), &stat)){
+            if(0 != XBMC->StatFile(httplib::detail::encode_get_url(it->url).c_str(), &stat)){
                 LogError("PlaylistCache: failed to obtain file stat for %s. Total length %" PRId64 "(%f Bps)", it->url.c_str(), m_totalLength, Bitrate());
                 return false;
             }

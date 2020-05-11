@@ -58,15 +58,36 @@ private:
         c_DataSourceType_Playlist = 1
     };
     
-    void CreateCore(bool clearEpgCache);
-    const std::string& LoginName() const;
-    const std::string& LoginPassword() const;
-    const std::string& PlayListUrl() const;
+    enum PathType{
+        c_PathType_Url = 0,
+        c_PathType_Local = 1
+    };
+    
+    enum PlistProviderType{
+        c_PlistProvider_Other = 0,
+        c_PlistProvider_SharaTv = 1,
+        c_PlistProvider_Ottg = 2
+    };
+
+    enum StreamType{
+        c_StreamType_Hls = 0,
+        c_StreamType_Ts = 1
+    };
+    
+    bool PreferHls() const;
+    PlistProviderType ProviderType() const;
     const std::string& EpgUrl() const;
     DataSourceType DataSource() const;
     bool EnableAdult() const;
+    PathType PlaylistPathType() const;
+    const std::string& PlayListUrl() const;
+    const std::string& PlayListPath() const;
+    const std::string& SharaTvLogin() const;
+    const std::string& SharaTvPassword() const;
+    const std::string& OttgLogin() const;
+    const std::string& OttgPassword() const;
 
-    
+    void CreateCore(bool clearEpgCache);
     SharaTvEngine::Core* m_core;
 };
 

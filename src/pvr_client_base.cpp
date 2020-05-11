@@ -263,6 +263,11 @@ void PVRClientBase::OnCoreCreated() {
         } else {
             auto phase =  m_clientCore->GetPhase(IClientCore::k_EpgLoadingPhase);
             phase->Wait();
+            if(nullptr == m_clientCore) {
+                // May happend on destruction...
+                // TODO: Stop m_destroyer before destruction.
+                return;
+            }
             if(LoadArchiveAfterEpg()) {
                 LogDebug("PVRClientBase: update recorderings.");
                 m_clientCore->ReloadRecordings();
@@ -1313,7 +1318,7 @@ PVR_ERROR PVRClientBase::CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_ME
 #pragma mark - Playlist Utils
 bool PVRClientBase::CheckPlaylistUrl(const std::string& url)
 {
-    auto f  = XBMC->OpenFile(url.c_str(), 0);
+    auto f  = XBMC_OpenFile(url);
     
     if (nullptr == f) {
         XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32010));
