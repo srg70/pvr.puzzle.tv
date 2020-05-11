@@ -1505,7 +1505,7 @@ bool PVRClientBase::LoadArchiveAfterEpg() const
     return m_addonSettings.GetBool(c_loadArchiveAfterEpg);
 }
 
-uint PVRClientBase::ArchiveRefreshInterval() const
+uint32_t PVRClientBase::ArchiveRefreshInterval() const
 {
     int interval = m_addonSettings.GetInt(c_archiveRefreshInterval);
     if(interval < 0)
