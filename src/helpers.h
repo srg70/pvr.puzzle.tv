@@ -34,7 +34,6 @@
 #include <ctime>
 #include <algorithm>
 
-
 template <class T>
 void dump_json(const T& jValue);
 

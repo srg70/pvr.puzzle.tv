@@ -118,7 +118,7 @@ namespace Engines
     {
         LogDebug("Timer Engine: loading cache....");
         
-        void* file = XBMC->OpenFile(c_TimersCachePath, 0);
+        void* file = XBMC_OpenFile(c_TimersCachePath);
         if(NULL == file) {
             LogDebug("Timer Engine: no cache file found");
             return;

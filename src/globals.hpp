@@ -23,6 +23,7 @@
 #ifndef __globals_hpp__
 #define __globals_hpp__
 
+#include <string>
 #include "kodi/libXBMC_pvr.h"
 #include "kodi/libXBMC_addon.h"
 #include "kodi/libKODI_guilib.h"
@@ -38,6 +39,8 @@ namespace Globals {
     void LogInfo(const char *format, ... );
     void LogNotice(const char *format, ... );
     void LogDebug(const char *format, ... );
+    
+    void* XBMC_OpenFile(const std::string& path, unsigned int flags = 0);
 
 }
 #endif /* __globals_hpp__ */

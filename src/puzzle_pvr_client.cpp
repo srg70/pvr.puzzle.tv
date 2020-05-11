@@ -113,6 +113,11 @@ ADDON_STATUS PuzzlePVRClient::Init(PVR_PROPERTIES* pvrprops)
 
 }
 
+void PuzzlePVRClient::PopulateSettings(AddonSettingsMutableDictionary& settings)
+{
+    
+}
+
 PuzzlePVRClient::~PuzzlePVRClient()
 {
     // Probably is better to close streams before engine destruction
@@ -157,7 +162,7 @@ void PuzzlePVRClient::CreateCore(bool clearEpgCache)
     m_clientCore = m_puzzleTV = new PuzzleTV((ServerVersion) m_serverVersion, m_serverUri.c_str(), m_serverPort);
     m_puzzleTV->SetMaxServerRetries(m_maxServerRetries);
     m_puzzleTV->SetEpgParams(EpgType(m_epgType), m_epgUrl, m_epgPort);
-    m_puzzleTV->IncludeCurrentEpgToArchive(m_addCurrentEpgToArchive);
+    m_puzzleTV->IncludeCurrentEpgToArchive(HowToAddCurrentEpgToArchive());
     m_puzzleTV->InitAsync(clearEpgCache, IsArchiveSupported());
 }
 

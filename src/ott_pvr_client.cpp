@@ -72,6 +72,11 @@ ADDON_STATUS OttPVRClient::Init(PVR_PROPERTIES* pvrprops)
 
 }
 
+void OttPVRClient::PopulateSettings(AddonSettingsMutableDictionary& settings)
+{
+    
+}
+
 OttPVRClient::~OttPVRClient()
 {
     // Probably is better to close streams before engine destruction
@@ -113,7 +118,7 @@ void OttPVRClient::CreateCore(bool clearEpgCache)
     DestroyCoreSafe();
     
     m_clientCore = m_core = new OttEngine::Core(m_playlistUrl, m_key);
-    m_core->IncludeCurrentEpgToArchive(m_addCurrentEpgToArchive);
+    m_core->IncludeCurrentEpgToArchive(HowToAddCurrentEpgToArchive());
     m_core->InitAsync(clearEpgCache, IsArchiveSupported());
     OttEngine::Core::TToPublicChannelId f = [this](ChannelId chId) {
         return this->BrodcastIdForChannelId(chId);
@@ -244,7 +249,7 @@ bool OttPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     if(IsLocalRecording(recording))
         return PVRClientBase::OpenRecordedStream(recording);
     
-    auto delegate = new OttArchiveDelegate(m_core, recording, GetStartRecordingPadding(), GetEndRecordingPadding());
+    auto delegate = new OttArchiveDelegate(m_core, recording, StartRecordingPadding(), EndRecordingPadding());
     string url = delegate->UrlForTimeshift(0);
     if(!IsSeekSupported())
         SAFE_DELETE(delegate);

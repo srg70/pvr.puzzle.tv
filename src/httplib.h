@@ -927,34 +927,45 @@ template <typename T> inline void write_headers(Stream &strm, const T &info) {
 }
 
 inline std::string encode_url(const std::string &s) {
-  std::string result;
+    std::string result;
 
-  for (auto i = 0; s[i]; i++) {
-    switch (s[i]) {
-    case ' ': result += "%20"; break;
-    case '+': result += "%2B"; break;
-    case '\r': result += "%0D"; break;
-    case '\n': result += "%0A"; break;
-    case '\'': result += "%27"; break;
-    case ',': result += "%2C"; break;
-    case ':': result += "%3A"; break;
-    case ';': result += "%3B"; break;
-    default:
-      auto c = static_cast<uint8_t>(s[i]);
-      if (c >= 0x80) {
-        result += '%';
-        char hex[4];
-        size_t len = snprintf(hex, sizeof(hex) - 1, "%02X", c);
-        assert(len == 2);
-        result.append(hex, len);
-      } else {
-        result += s[i];
-      }
-      break;
+    for (auto i = 0; s[i]; i++) {
+        switch (s[i]) {
+            case ' ': result += "%20"; break;
+            case '+': result += "%2B"; break;
+            case '\r': result += "%0D"; break;
+            case '\n': result += "%0A"; break;
+            case '\'': result += "%27"; break;
+            case ',': result += "%2C"; break;
+            case ':': result += "%3A"; break;
+            case ';': result += "%3B"; break;
+            case '#': result += "%23"; break;
+            default:
+                auto c = static_cast<uint8_t>(s[i]);
+                if (c >= 0x80) {
+                    result += '%';
+                    char hex[4];
+                    size_t len = snprintf(hex, sizeof(hex) - 1, "%02X", c);
+                    assert(len == 2);
+                    result.append(hex, len);
+                } else {
+                    result += s[i];
+                }
+                break;
+        }
     }
-  }
+    
+    return result;
+}
 
-  return result;
+inline std::string encode_get_url(const std::string &s) {
+    // Encode only parameters block.
+    const std::string url_params_delim("?");
+    auto pos = s.find(url_params_delim);
+    if(std::string::npos == pos)
+        return s;
+    pos += url_params_delim.size();
+    return s.substr(0, pos) + encode_url(s.substr(pos));
 }
 
 inline bool is_hex(char c, int &v) {

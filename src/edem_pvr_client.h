@@ -50,6 +50,7 @@ protected:
 
     ADDON_STATUS CreateCoreSafe(bool clearEpgCache);
     void DestroyCoreSafe();
+    void PopulateSettings(PvrClient::AddonSettingsMutableDictionary& settings);
 
 private:
     void CreateCore(bool clearEpgCache);

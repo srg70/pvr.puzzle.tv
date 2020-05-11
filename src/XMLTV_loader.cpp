@@ -37,6 +37,7 @@
 #include <limits>
 #include "globals.hpp"
 #include "helpers.h"
+#include "httplib.h"
 
 using namespace std;
 using namespace XMLTV;
@@ -105,7 +106,7 @@ namespace XMLTV {
         
         XBMC->Log(LOG_DEBUG, "XMLTV Loader: open file %s." , url.c_str());
 
-        void* fileHandle = XBMC->OpenFile(url.c_str(), 0);
+        void* fileHandle = XBMC_OpenFile(url);
         if (fileHandle)
         {
             char buffer[1024];
@@ -142,7 +143,7 @@ namespace XMLTV {
             struct __stat64 statOrig;
             
             XBMC->StatFile(strCachedPath.c_str(), &statCached);
-            XBMC->StatFile(filePath.c_str(), &statOrig);
+            XBMC->StatFile(httplib::detail::encode_get_url(filePath).c_str(), &statOrig);
             
             //bNeedReload = statCached.st_mtime < statOrig.st_mtime || statOrig.st_mtime == 0;
             // Modification time is not provided by some servers.
