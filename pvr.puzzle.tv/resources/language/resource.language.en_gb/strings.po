@@ -353,6 +353,38 @@ msgctxt "#70003"
 msgid "Playlist"
 msgstr "Playlist"
 
+msgctxt "#70004"
+msgid "Playlist Location"
+msgstr "Playlist Location"
+
+msgctxt "#70005"
+msgid "Remote"
+msgstr "Remote"
+
+msgctxt "#70006"
+msgid "Local"
+msgstr "Local"
+
+msgctxt "#70007"
+msgid "Provider"
+msgstr "Provider"
+
+msgctxt "#70008"
+msgid "Other"
+msgstr "Other"
+
+msgctxt "#70009"
+msgid "Shara TV"
+msgstr "Shara TV"
+
+msgctxt "#70011"
+msgid "OTTG"
+msgstr "OTTG"
+
+msgctxt "#70012"
+msgid "Prioritize HLS"
+msgstr "Prioritize HLS"
+
 #============= Notifications ================
 
 msgctxt "#32000"

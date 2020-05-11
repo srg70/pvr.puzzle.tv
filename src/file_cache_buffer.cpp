@@ -193,7 +193,7 @@ namespace Buffers
     
     
     CFileForRead::CFileForRead(const std::string &pathToFile)
-    : CGenericFile(XBMC->OpenFile(pathToFile.c_str(), XFILE::READ_AUDIO_VIDEO | XFILE::READ_AFTER_WRITE))
+    : CGenericFile(XBMC_OpenFile(pathToFile, XFILE::READ_AUDIO_VIDEO | XFILE::READ_AFTER_WRITE))
     {
     }
     

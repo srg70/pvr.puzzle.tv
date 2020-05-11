@@ -42,6 +42,7 @@
 #include "sharatv_player.h"
 #include "plist_buffer.h"
 #include "globals.hpp"
+#include "httplib.h"
 
 using namespace Globals;
 using namespace std;
@@ -49,50 +50,14 @@ using namespace ADDON;
 using namespace SharaTvEngine;
 using namespace PvrClient;
 
-static const char* c_login_setting = "sharatv_login";
-static const char* c_password_setting = "sharatv_password";
-static const char* c_adult_setting = "sharatv_adult";
-static const char* c_data_source_type = "sharatv_data_source";
-static const char* c_playlist_path = "sharatv_playlist_path";
-static const char* c_epg_path = "sharatv_epg_path";
-//static const char* c_seek_archives = "ttv_seek_archives";
-
-
-
-
 ADDON_STATUS SharaTvPVRClient::Init(PVR_PROPERTIES* pvrprops)
 {
     ADDON_STATUS retVal = PVRClientBase::Init(pvrprops);
     if(ADDON_STATUS_OK != retVal)
         return retVal;
-    
-    char buffer[1024];
-    
-    XBMC->GetSetting(c_data_source_type, &m_dataSourceType);
-    
-    if (XBMC->GetSetting(c_login_setting, &buffer))
-        m_login = buffer;
-    if (XBMC->GetSetting(c_password_setting, &buffer))
-        m_password = buffer;
-
-    if (XBMC->GetSetting(c_playlist_path, &buffer))
-        m_playListUrl = buffer;
-
-    if (XBMC->GetSetting(c_epg_path, &buffer))
-        m_epgUrl = buffer;
-
+     
     SetSeekSupported(true);
-//    XBMC->GetSetting(c_seek_archives, &m_supportSeek);
-    
-    m_enableAdult = false;
-    XBMC->GetSetting(c_adult_setting, &m_enableAdult);
-    
-    retVal = CreateCoreSafe(false);
-    
-    //    PVR_MENUHOOK hook = {1, 30020, PVR_MENUHOOK_EPG};
-    //    m_pvr->AddMenuHook(&hook);
-    return retVal;
-    
+    return CreateCoreSafe(false);
 }
 
 SharaTvPVRClient::~SharaTvPVRClient()
@@ -113,7 +78,15 @@ ADDON_STATUS SharaTvPVRClient::CreateCoreSafe(bool clearEpgCache)
     }
     catch (AuthFailedException &)
     {
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32007), "Shara TV");
+        const char* providerName = "Unknown provider";
+        const PlistProviderType providerType = ProviderType();
+        if(c_PlistProvider_SharaTv == providerType) {
+            providerName = "Shara TV";
+        }else if(c_PlistProvider_Ottg == providerType){
+            providerName = "OTTG";
+        }
+         
+        XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32007), providerName);
     }
     catch(...)
     {
@@ -138,65 +111,36 @@ void SharaTvPVRClient::CreateCore(bool clearEpgCache)
     
     string playlistUrl, epgUrl;
     
-    if(c_DataSourceType_Login == m_dataSourceType) {
-        if(m_login.empty() || m_password.empty())
+    if(c_DataSourceType_Login == DataSource()) {
+        const PlistProviderType providerType = ProviderType();
+        if(c_PlistProvider_SharaTv == providerType) {
+            if(SharaTvLogin().empty() || SharaTvPassword().empty())
+                throw AuthFailedException();
+            //http://tvfor.pro/g/xxx:yyy/1/playlist.m3u
+            playlistUrl = string("http://tvfor.pro/g/") +  SharaTvLogin() + ":" + SharaTvPassword() + "/1/playlist.m3u";
+        } else if(c_PlistProvider_Ottg == providerType){
+            playlistUrl = string("http://pl.ottg.tv/get.php?username=")
+                + OttgLogin() + "&password=" +  OttgPassword()
+                + "&type=m3u&output=" + (PreferHls()?"hls": "ts");
+            if(!EnableAdult())
+                playlistUrl += "&censored=0";
+            epgUrl = "http://ottg.tv/epg.xml.gz";
+        } else {
+            // Unsupported provider fro login/pass
             throw AuthFailedException();
-        //http://tvfor.pro/g/xxx:yyy/1/playlist.m3u
-        playlistUrl = string("http://tvfor.pro/g/") +  m_login + ":" + m_password + "/1/playlist.m3u";
+        }
     } else {
-        playlistUrl = m_playListUrl;
-        epgUrl = m_epgUrl;
+        if(c_PathType_Local == PlaylistPathType()){
+            playlistUrl = PlayListPath();
+        } else {
+            playlistUrl = PlayListUrl();
+        }
+        epgUrl = EpgUrl();
     }
     
-    m_clientCore = m_core = new SharaTvEngine::Core(playlistUrl, epgUrl, m_enableAdult);
-    m_core->IncludeCurrentEpgToArchive(m_addCurrentEpgToArchive);
+    m_clientCore = m_core = new SharaTvEngine::Core(playlistUrl, epgUrl, EnableAdult());
+    m_core->IncludeCurrentEpgToArchive(HowToAddCurrentEpgToArchive());
     m_core->InitAsync(clearEpgCache, IsArchiveSupported());
-}
-
-
-ADDON_STATUS SharaTvPVRClient::SetSetting(const char *settingName, const void *settingValue)
-{
-    ADDON_STATUS result = ADDON_STATUS_OK ;
-    
-    if (strcmp(settingName, c_login_setting) == 0) {
-        if(strcmp((const char*) settingValue, m_login.c_str()) != 0) {
-            m_login = (const char*) settingValue;
-            result = ADDON_STATUS_NEED_RESTART;
-        }
-    } else if (strcmp(settingName, c_password_setting) == 0) {
-        if(strcmp((const char*) settingValue, m_password.c_str()) != 0){
-            m_password = (const char*) settingValue;
-            result = ADDON_STATUS_NEED_RESTART;
-        }
-    } else if(strcmp(settingName,  c_adult_setting) == 0) {
-        bool newValue = *(const bool*) settingValue;
-        if(newValue != m_enableAdult) {
-            m_enableAdult = newValue;
-            result = CreateCoreSafe(false);
-            m_clientCore->CallRpcAsync("{\"jsonrpc\": \"2.0\", \"method\": \"GUI.ActivateWindow\", \"params\": {\"window\": \"pvrsettings\"},\"id\": 1}",
-                                       [&] (rapidjson::Document& jsonRoot) {
-                                           XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32016));
-                                       },
-                                       [&](const ActionQueue::ActionResult& s) {});
-        }
-        
-    } else if(strcmp(settingName,  c_data_source_type) == 0) {
-        XBMC->GetSetting(c_data_source_type, &m_dataSourceType);
-        result = ADDON_STATUS_NEED_RESTART;
-    } else if(strcmp(settingName,  c_playlist_path) == 0) {
-        if(strcmp((const char*) settingValue, m_playListUrl.c_str()) != 0){
-            m_playListUrl = (const char*) settingValue;
-            result = ADDON_STATUS_NEED_RESTART;
-        }
-    }  else if(strcmp(settingName,  c_epg_path) == 0) {
-        if(strcmp((const char*) settingValue, m_epgUrl.c_str()) != 0){
-            m_epgUrl = (const char*) settingValue;
-            result = ADDON_STATUS_NEED_RESTART;
-        }
-    }else {
-        result = PVRClientBase::SetSetting(settingName, settingValue);
-    }
-    return result;
 }
 
 PVR_ERROR SharaTvPVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabilities)
@@ -298,7 +242,7 @@ bool SharaTvPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     if(IsLocalRecording(recording))
         return PVRClientBase::OpenRecordedStream(recording);
     
-    auto delegate = new SharaTvArchiveDelegate(m_core, recording, GetStartRecordingPadding(), GetEndRecordingPadding());
+    auto delegate = new SharaTvArchiveDelegate(m_core, recording, StartRecordingPadding(), EndRecordingPadding());
     string url = delegate->UrlForTimeshift(0);
     if(!IsSeekSupported())
         SAFE_DELETE(delegate);
@@ -313,6 +257,104 @@ PVR_ERROR SharaTvPVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
     return PVR_ERROR_NO_ERROR;
 }
 
+#pragma mark - Settings
+
+static const char* const c_adult_setting = "sharatv_adult";
+static const char* const c_prefer_hls = "playlist_prefer_hls";
+static const char* const c_data_source_type = "sharatv_data_source";
+static const char* const c_epg_path = "sharatv_epg_path";
+static const char* const c_playlist_path_type = "sharatv_playlist_path_type";
+static const char* const c_playlist_url = "sharatv_playlist_path"; // preserve old setting name :(
+static const char* const c_playlist_path = "sharatv_playlist_path_local";
+
+static const char* const c_plist_provider = "plist_provider_type";
+static const char* const c_sharatv_login = "sharatv_login";
+static const char* const c_sharatv_password = "sharatv_password";
+static const char* const c_ottg_login = "ottg_login";
+static const char* const c_ottg_password = "ottg_password";
+
+
+template<typename T>
+static void NotifyClearPvrData(const T&) {
+    XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32016));
+}
+
+void SharaTvPVRClient::PopulateSettings(AddonSettingsMutableDictionary& settings)
+{
+    settings
+    .Add(c_epg_path, "", ADDON_STATUS_NEED_RESTART)
+    .Add(c_data_source_type, (int)c_DataSourceType_Login, ADDON_STATUS_NEED_RESTART)
+    .Add(c_adult_setting, false, NotifyClearPvrData<bool>, ADDON_STATUS_NEED_RESTART)
+    .Add(c_playlist_path_type, (int)c_PathType_Url, NotifyClearPvrData<int>, ADDON_STATUS_NEED_RESTART)
+    .Add(c_playlist_url, "", NotifyClearPvrData<std::string>, ADDON_STATUS_NEED_RESTART)
+    .Add(c_playlist_path, "", NotifyClearPvrData<std::string>, ADDON_STATUS_NEED_RESTART)
+    .Add(c_plist_provider, (int)c_PlistProvider_SharaTv, NotifyClearPvrData<int>, ADDON_STATUS_NEED_RESTART)
+    .Add(c_sharatv_login, "", ADDON_STATUS_NEED_RESTART)
+    .Add(c_sharatv_password, "", ADDON_STATUS_NEED_RESTART)
+    .Add(c_ottg_login, "", ADDON_STATUS_NEED_RESTART)
+    .Add(c_ottg_password, "", ADDON_STATUS_NEED_RESTART)
+    .Add(c_prefer_hls, true, NotifyClearPvrData<bool>, ADDON_STATUS_NEED_RESTART);
+}
+
+bool SharaTvPVRClient::PreferHls() const
+{
+    return m_addonSettings.GetBool(c_prefer_hls);
+}
+
+const std::string& SharaTvPVRClient::OttgLogin() const
+{
+    return m_addonSettings.GetString(c_ottg_login);
+}
+
+const std::string& SharaTvPVRClient::OttgPassword() const
+{
+    return m_addonSettings.GetString(c_ottg_password);
+}
+
+SharaTvPVRClient::PlistProviderType SharaTvPVRClient::ProviderType() const
+{
+    return (PlistProviderType)m_addonSettings.GetInt(c_plist_provider);
+}
+
+SharaTvPVRClient::PathType SharaTvPVRClient::PlaylistPathType() const
+{
+    return (PathType)m_addonSettings.GetInt(c_playlist_path_type);
+}
+
+const std::string& SharaTvPVRClient::PlayListPath() const
+{
+    return m_addonSettings.GetString(c_playlist_path);
+}
+
+const std::string& SharaTvPVRClient::PlayListUrl() const
+{
+    return m_addonSettings.GetString(c_playlist_url);
+}
+
+const std::string& SharaTvPVRClient::SharaTvLogin() const
+{
+    return m_addonSettings.GetString(c_sharatv_login);
+}
+
+const std::string& SharaTvPVRClient::SharaTvPassword() const
+{
+    return m_addonSettings.GetString(c_sharatv_password);
+}
+
+const std::string& SharaTvPVRClient::EpgUrl() const
+{
+    return m_addonSettings.GetString(c_epg_path);
+}
+
+SharaTvPVRClient::DataSourceType SharaTvPVRClient::DataSource() const
+{
+    return (DataSourceType)m_addonSettings.GetInt(c_data_source_type);
+}
+
+bool SharaTvPVRClient::EnableAdult() const
+{
+    return m_addonSettings.GetBool(c_adult_setting);
+}
 
 
 

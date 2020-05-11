@@ -128,7 +128,7 @@ namespace OttEngine
 
             // Download playlist
             string playlistUrl = m_baseUrl + "/ottplayer/playlist.m3u";
-            auto f = XBMC->OpenFile(playlistUrl.c_str(), 0);
+            auto f = XBMC_OpenFile(playlistUrl);
             if (!f)
                 throw BadPlaylistFormatException("Failed to obtain playlist from server.");
             bool isEof = false;

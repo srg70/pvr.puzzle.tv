@@ -40,7 +40,6 @@ XBMC_Message::~XBMC_Message() {
         Globals::XBMC->FreeString(m_message);
 }
 
-
 std::string n_to_string(int64_t n)
 {
     char buffer[15];
