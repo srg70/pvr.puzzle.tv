@@ -214,7 +214,7 @@ namespace EdemEngine
         entry.HasArchive = when > 0 && when < archivePeriod;
     }
    
-    void Core::UpdateEpgForAllChannels(time_t startTime, time_t endTime)
+    void Core::UpdateEpgForAllChannels(time_t startTime, time_t endTime, std::function<bool(void)> cancelled)
     {
         // Assuming server provides EPG at least fo next 12 hours
         // To reduce amount of API calls, allow next EPG update
@@ -229,8 +229,9 @@ namespace EdemEngine
 
         using namespace XMLTV;
         try {
-            LoadEpg();
-            SaveEpgCache(c_EpgCacheFile);
+            LoadEpg(cancelled);
+            if(!cancelled())
+                SaveEpgCache(c_EpgCacheFile);
 //        } catch (ServerErrorException& ex) {
 //            m_addonHelper->QueueNotification(QUEUE_ERROR, m_addonHelper->GetLocalizedString(32002), ex.reason.c_str() );
         } catch (...) {
@@ -238,13 +239,16 @@ namespace EdemEngine
         }
     }
     
-    void Core::LoadEpg()
+    void Core::LoadEpg(std::function<bool(void)> cancelled)
     {
         using namespace XMLTV;
 
         m_epgUpdateInterval.Init(12*60*60*1000);
 
-        EpgEntryCallback onEpgEntry = [this] (const XMLTV::EpgEntry& newEntry) {AddEpgEntry(newEntry);};
+        EpgEntryCallback onEpgEntry = [this, cancelled] (const XMLTV::EpgEntry& newEntry) {
+            AddEpgEntry(newEntry);
+            return !cancelled();
+        };
         
         XMLTV::ParseEpg(m_epgUrl, onEpgEntry);
     }

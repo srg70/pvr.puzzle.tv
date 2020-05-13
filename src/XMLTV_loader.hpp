@@ -54,7 +54,7 @@ namespace XMLTV {
         std::string iconPath;
     };
     typedef std::function<void(const EpgChannel& newChannel)> ChannelCallback;
-    typedef std::function<void(const EpgEntry& newEntry)> EpgEntryCallback;
+    typedef std::function<bool(const EpgEntry& newEntry)> EpgEntryCallback;
 
     PvrClient::KodiChannelId ChannelIdForChannelName(const std::string& strId);
     bool ParseChannels(const std::string& url,  const ChannelCallback& onChannelFound);

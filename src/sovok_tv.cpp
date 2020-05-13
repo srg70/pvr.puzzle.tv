@@ -236,7 +236,7 @@ std::string SovokTV::GetArchiveUrl(ChannelId channelId, time_t startTime)
 }
 
 
-void SovokTV::UpdateEpgForAllChannels(time_t startTime, time_t endTime)
+void SovokTV::UpdateEpgForAllChannels(time_t startTime, time_t endTime, std::function<bool(void)> cancelled)
 {
 
     // Assuming server provides EPG at least fo next 12 hours
@@ -255,7 +255,7 @@ void SovokTV::UpdateEpgForAllChannels(time_t startTime, time_t endTime)
     int64_t hoursRemaining = totalNumberOfHours;
     const int64_t hours24 = 24;
     
-    while (hoursRemaining > 0)
+    while (hoursRemaining > 0 && !cancelled())
     {
         // Query EPG for max 24 hours per single request.
         const int64_t requestNumberOfHours = min(hours24, hoursRemaining);
@@ -265,7 +265,8 @@ void SovokTV::UpdateEpgForAllChannels(time_t startTime, time_t endTime)
         hoursRemaining -= requestNumberOfHours;
         startTime += requestNumberOfHours * secondsPerHour;
     }
-    SaveEpgCache(c_EpgCacheFile, 14);
+    if(!cancelled())
+        SaveEpgCache(c_EpgCacheFile, 14);
 
 }
 

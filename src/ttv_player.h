@@ -83,7 +83,7 @@ namespace TtvEngine
         Core(const CoreParams& coreParams);
         ~Core();
         
-        void  UpdateEpgForAllChannels(time_t startTime, time_t endTime);
+        void UpdateEpgForAllChannels(time_t startTime, time_t endTime, std::function<bool(void)> cancelled);
 
         std::string GetUrl(PvrClient::ChannelId channelId);
         std::string GetNextStream(PvrClient::ChannelId channelId, int currentChannelIdx);
@@ -118,7 +118,7 @@ namespace TtvEngine
         std::string m_deviceId;
 
         // Epg management
-        void LoadEpg();
+        void LoadEpg(std::function<bool(void)> cancelled);
         void ScheduleEpgDetails();
 //        PvrClient::UniqueBroadcastIdType AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
 //        PvrClient::UniqueBroadcastIdType AddEpgEntry(PvrClient::EpgEntry& epg);
@@ -127,7 +127,7 @@ namespace TtvEngine
 
         // TSProxy plist
         void BuildChannelAndGroupList_Plist();
-        void UpdateEpgForAllChannels_Plist(time_t startTime, time_t endTime);
+        void UpdateEpgForAllChannels_Plist(time_t startTime, time_t endTime, std::function<bool(void)> cancelled);
         void LoadPlaylist(std::function<void(const rapidjson::Document::ValueType&)> onChannel);
         struct  AlexElecChannel {
             std::string name;

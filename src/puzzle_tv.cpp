@@ -312,22 +312,12 @@ UniqueBroadcastIdType PuzzleTV::AddXmlEpgEntry(const XMLTV::EpgEntry& xmlEpgEntr
     return AddEpgEntry(id, epgEntry);
 }
 
-void PuzzleTV::UpdateEpgForAllChannels(time_t startTime, time_t endTime)
+void PuzzleTV::UpdateEpgForAllChannels(time_t startTime, time_t endTime, std::function<bool(void)> cancelled)
 {
-    // Assuming server provides EPG at least fo next 12 hours
-    // To reduce amount of API calls, allow next EPG update
-    // after either 12 hours or  endTime
-    //        time_t now = time(nullptr);
-    //        time_t nextUpdateAt = now + 12*60*60;
-    ////        if(difftime(endTime, now) > 0){
-    //            nextUpdateAt = std::min(nextUpdateAt, endTime);
-    //        }
-    //        int32_t interval = nextUpdateAt - now;
-    //        if(interval > 0)
-
     try {
-        LoadEpg();
-        SaveEpgCache(c_EpgCacheFile);
+        LoadEpg(cancelled);
+        if(!cancelled())
+            SaveEpgCache(c_EpgCacheFile);
 //        } catch (ServerErrorException& ex) {
 //            XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32002), ex.reason.c_str() );
     } catch (std::exception& ex) {
@@ -342,7 +332,7 @@ static bool time_compare (const EpgEntry& first, const EpgEntry& second)
     return first.StartTime < second.StartTime;
 }
 
-void PuzzleTV::LoadEpg()
+void PuzzleTV::LoadEpg(std::function<bool(void)> cancelled)
 {
     //    using namespace XMLTV;
     auto pThis = this;
@@ -350,7 +340,10 @@ void PuzzleTV::LoadEpg()
 
     if(m_epgType == c_EpgType_File) {
         
-        XMLTV::EpgEntryCallback onEpgEntry = [pThis] (const XMLTV::EpgEntry& newEntry) {pThis->AddXmlEpgEntry(newEntry);};
+        XMLTV::EpgEntryCallback onEpgEntry = [pThis, cancelled] (const XMLTV::EpgEntry& newEntry) {
+            pThis->AddXmlEpgEntry(newEntry);
+            return !cancelled();
+        };
         XMLTV::ParseEpg(m_epgUrl, onEpgEntry);
         
     } else if(m_serverVersion == c_PuzzleServer2){ // Puzzle 2 server
