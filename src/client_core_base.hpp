@@ -68,7 +68,7 @@ namespace PvrClient {
 
         static bool ReadFileContent(const char* cacheFile, std::string& buffer);
         // abstract methods
-        virtual void UpdateEpgForAllChannels(time_t startTime, time_t endTime) = 0;
+        virtual void UpdateEpgForAllChannels(time_t startTime, time_t endTime, std::function<bool(void)> cancelled) = 0;
         virtual std::string GetUrl(PvrClient::ChannelId channelId) = 0;
 
     protected:
@@ -112,7 +112,7 @@ namespace PvrClient {
         
         // Recordings
         void OnEpgUpdateDone();
-        void _UpdateEpgForAllChannels(time_t startTime, time_t endTime);
+        void _UpdateEpgForAllChannels(time_t startTime, time_t endTime, std::function<bool(void)> cancelled);
 
 
         PvrClient::ChannelList m_mutableChannelList;
@@ -124,10 +124,13 @@ namespace PvrClient {
         mutable P8PLATFORM::CMutex m_epgAccessMutex;
         
         RecordingsDelegate m_didRecordingsUpadate;
+        
         typedef std::map<IClientCore::Phase, std::shared_ptr<ClientPhase> > TPhases;
         TPhases m_phases;
-        time_t m_lastEpgRequestEndTime;
+        P8PLATFORM::CMutex m_phasesAccessMutex;
 
+        
+        time_t m_lastEpgRequestEndTime;
         int m_rpcPort;
     };
     

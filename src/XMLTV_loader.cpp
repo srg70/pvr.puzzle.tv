@@ -484,6 +484,8 @@ return false;             \
         time_t fileStartAt = time(NULL) + 60*60*24*7; // A week after now
         time_t fileEndAt = 0;
         xml_node<> *pChannelNode = NULL;
+        
+        bool interrupted = false;
         for(pChannelNode = pRootElement->first_node("programme"); pChannelNode; pChannelNode = pChannelNode->next_sibling("programme"))
         {
             try {
@@ -519,7 +521,9 @@ return false;             \
                 GetNodeValue(pChannelNode, "title", entry.strTitle);
                 GetNodeValue(pChannelNode, "desc", entry.strPlot);
                 
-                onEpgEntryFound(entry);
+                interrupted = !onEpgEntryFound(entry);
+                if(interrupted)
+                    break;
 
             } catch (...) {
                 LogError("Bad XML EPG entry.");
@@ -528,7 +532,9 @@ return false;             \
         
         xmlDoc.doc.clear();
         
-        if(fileEndAt > 0) {
+        if(interrupted) {
+            XBMC->Log(LOG_NOTICE, "XMLTV: EPG is NOT fully loaded (cancelled ?).");
+        }else if(fileEndAt > 0) {
             XBMC->Log(LOG_NOTICE, "XMLTV: EPG loaded from %s to  %s", time_t_to_string(fileStartAt).c_str(), time_t_to_string(fileEndAt).c_str());
 
         } else {

@@ -104,7 +104,7 @@ namespace SharaTvEngine
         ~Core();
         
         std::string GetArchiveUrl(PvrClient::ChannelId channelId, time_t startTime, time_t duration);
-        void  UpdateEpgForAllChannels(time_t startTime, time_t endTime);
+        void UpdateEpgForAllChannels(time_t startTime, time_t endTime, std::function<bool(void)> cancelled);
 
         std::string GetUrl(PvrClient::ChannelId channelId);
     protected:
@@ -114,7 +114,7 @@ namespace SharaTvEngine
 
     private:
         
-        void LoadEpg();
+        void LoadEpg(std::function<bool(void)> cancelled);
 //        bool AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
 
         void Cleanup();

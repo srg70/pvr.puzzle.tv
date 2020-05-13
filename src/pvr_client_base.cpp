@@ -284,7 +284,12 @@ void PVRClientBase::OnCoreCreated() {
             LogError("PVRClientBase: async creating of LUTs failed! Critical error.");
         } else {
             auto phase =  m_clientCore->GetPhase(IClientCore::k_EpgLoadingPhase);
-            phase->Wait();
+            while(!phase->Wait(100))
+            {
+                //timeout. Check for termination...
+                if(m_destroyer->IsStopped())
+                    return;
+            }
             if(nullptr == m_clientCore) {
                 // May happend on destruction...
                 // TODO: Stop m_destroyer before destruction.
