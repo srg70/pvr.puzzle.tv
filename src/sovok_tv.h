@@ -95,7 +95,7 @@ public:
 
     const StreamerNamesList& GetStreamersList() const;
     
-    void UpdateEpgForAllChannels(time_t startTime, time_t endTime);
+    void UpdateEpgForAllChannels(time_t startTime, time_t endTime, std::function<bool(void)> cancelled);
 
     std::string GetUrl(PvrClient::ChannelId  channelId);
     std::string GetArchiveUrl(PvrClient::ChannelId  channelId, time_t startTime);

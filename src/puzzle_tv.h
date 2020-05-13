@@ -117,7 +117,7 @@ namespace PuzzleEngine
         PuzzleTV(ServerVersion serverVersion, const char* serverUrl, uint16_t serverPort);
         ~PuzzleTV();
 
-        void  UpdateEpgForAllChannels(time_t startTime, time_t endTime);
+        void UpdateEpgForAllChannels(time_t startTime, time_t endTime, std::function<bool(void)> cancelled);
 
         std::string GetUrl(PvrClient::ChannelId channelId);
         std::string GetNextStream(PvrClient::ChannelId channelId, int currentStreamIdx);
@@ -153,7 +153,7 @@ namespace PuzzleEngine
 
         struct ApiFunctionData;
         PvrClient::UniqueBroadcastIdType AddXmlEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
-        void LoadEpg();
+        void LoadEpg(std::function<bool(void)> cancelled);
         void UpdateArhivesAsync();
         std::string GetRecordId(PvrClient::ChannelId channelId, time_t startTime);
         

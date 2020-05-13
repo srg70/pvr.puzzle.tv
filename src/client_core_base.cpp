@@ -115,6 +115,13 @@ public:
         });
         m_thread->CreateThread();
     }
+    void Join(int iWaitMs)
+    {
+        if(nullptr == m_thread)
+            return;
+        if(!m_thread->StopThread(iWaitMs))
+            return;
+    }
 private:
     void Cleanup() {
         m_isDone = true;
@@ -122,9 +129,9 @@ private:
         static P8PLATFORM::CMutex s_CleanupMutex;
         P8PLATFORM::CLockObject lock(s_CleanupMutex);
         if(m_thread){
-            // Use HUGE timeout (2 minutes) for phase thread
-            // because it can perform some "heavy" operation, like EPG loading...
-            if(!m_thread->StopThread(120*1000))
+            // All time-consuming operations should be cancelled
+            // when thread is stopped. Use 5 sec timeout.
+            if(!m_thread->StopThread(5*1000))
                 LogError("ClientPhase::Cleanup(): FAILED to stop phase thread in 2 minutes!");
             SAFE_DELETE(m_thread);
         }
@@ -202,11 +209,11 @@ void ClientCoreBase::InitAsync(bool clearEpgCache, bool updateRecordings)
 //                    wait = !isAborted() && !phase->Wait(100);
 //                } while(wait);
 //            }
+//
+//            if(isAborted())
+//                break;
             
-            if(isAborted())
-                break;
-            
-            _UpdateEpgForAllChannels(startTime, endTime);
+            _UpdateEpgForAllChannels(startTime, endTime,isAborted);
  
             
         } while(false);
@@ -218,10 +225,22 @@ void ClientCoreBase::InitAsync(bool clearEpgCache, bool updateRecordings)
 
 std::shared_ptr<IClientCore::IPhase> ClientCoreBase::GetPhase(Phase phase)
 {
-    if(m_phases.count(phase) > 0) {
-        return m_phases[phase];
+    class DummyPhase : public IPhase
+    {
+    public:
+        virtual bool Wait(uint32_t iTimeout = 0){return false;}
+        virtual bool IsDone() {return false; }
+        virtual void Broadcast() {};
+        
+    };
+    
+    P8PLATFORM::CTryLockObject lock(m_phasesAccessMutex);
+    if(lock.IsLocked()) {
+        if(m_phases.count(phase) > 0) {
+            return m_phases[phase];
+        }
     }
-    return nullptr;
+    return shared_ptr<IPhase>(new DummyPhase());
 }
 
 // Should be called from destructor of dirived class
@@ -229,12 +248,15 @@ std::shared_ptr<IClientCore::IPhase> ClientCoreBase::GetPhase(Phase phase)
 void ClientCoreBase::PrepareForDestruction() {
     if(NULL == m_httpEngine)
         return ;
-//    for (auto& ph : m_phases) {
-//        if(ph.second) {
-//            delete ph.second;
-//        }
-//    }
-    m_phases.clear();
+    {
+        P8PLATFORM::CLockObject lock(m_phasesAccessMutex);
+        for (auto& ph : m_phases) {
+            if(ph.second) {
+                ph.second->Join(5000);
+            }
+        }
+        m_phases.clear();
+    }
     SAFE_DELETE(m_httpEngine);
     
     P8PLATFORM::CLockObject lock(m_epgAccessMutex);
@@ -565,10 +587,10 @@ void ClientCoreBase::GetEpg(ChannelId channelId, time_t startTime, time_t endTim
         LogDebug("GetEPG(%s): last for channel %s -> requested by Kodi %s",
                  channelName.c_str(), time_t_to_string(lastEndTime).c_str(), time_t_to_string(endTime).c_str());
     }
-    _UpdateEpgForAllChannels(/*epgRequestStart*/lastEndTime, endTime);
+    _UpdateEpgForAllChannels(/*epgRequestStart*/lastEndTime, endTime, [](){return false;});
         
 }
-void ClientCoreBase::_UpdateEpgForAllChannels(time_t startTime, time_t endTime)
+void ClientCoreBase::_UpdateEpgForAllChannels(time_t startTime, time_t endTime, std::function<bool(void)> cancelled)
 {
     if(/*endTime <= m_lastEpgRequestEndTime || */endTime <= startTime)
         return;
@@ -582,7 +604,7 @@ void ClientCoreBase::_UpdateEpgForAllChannels(time_t startTime, time_t endTime)
     //        m_lastEpgRequestEndTime = endTime;
     
     LogDebug("Requested EPG update (all channel) for interval [%s -- %s]", time_t_to_string(startTime).c_str(), time_t_to_string(endTime).c_str());
-    UpdateEpgForAllChannels(startTime, endTime);
+    UpdateEpgForAllChannels(startTime, endTime, cancelled);
 }
 
 #pragma  mark - Recordings

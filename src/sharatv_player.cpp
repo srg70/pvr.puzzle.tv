@@ -268,25 +268,29 @@ namespace SharaTvEngine {
         return std::hash<std::string>{}(strToHash);
     }
     
-    void Core::UpdateEpgForAllChannels(time_t startTime, time_t endTime)
+    void Core::UpdateEpgForAllChannels(time_t startTime, time_t endTime, std::function<bool(void)> cancelled)
     {
         using namespace XMLTV;
         try {
-            LoadEpg();
-            SaveEpgCache(c_EpgCacheFile, m_archiveInfo.archiveDays);
+            LoadEpg(cancelled);
+            if(!cancelled)
+                SaveEpgCache(c_EpgCacheFile, m_archiveInfo.archiveDays);
         } catch (...) {
             LogError("SharaTvPlayer:: failed to update EPG.");
         }
     }
     
-    void Core::LoadEpg()
+    void Core::LoadEpg(std::function<bool(void)> cancelled)
     {
         using namespace XMLTV;
         auto pThis = this;
         
         m_epgUpdateInterval.Init(24*60*60*1000);
 
-        EpgEntryCallback onEpgEntry = [&pThis] (const XMLTV::EpgEntry& newEntry) {pThis->AddEpgEntry(newEntry);};
+        EpgEntryCallback onEpgEntry = [&pThis, cancelled] (const XMLTV::EpgEntry& newEntry) {
+            pThis->AddEpgEntry(newEntry);
+            return !cancelled();
+        };
         
         XMLTV::ParseEpg(m_epgUrl, onEpgEntry, EpgChannelIdToKodi);
     }
@@ -451,13 +455,18 @@ namespace SharaTvEngine {
             try {  archiveDays = stoul(FindVar(data, 0, "catchup-days"));} catch (...) { archiveType.clear();}
             if(archiveType == "default") {
                 try {  archiveUrl = FindVar(data, 0, "catchup-source");} catch (...) { archiveType.clear();}
-            } else if(archiveType == "flussonic" || archiveType == "fs") {
+            } else if(archiveType == "flussonic" || archiveType == "fs" || archiveType == "flussonic-ts") {
                 auto lastSlash = url.find_last_of('/');
                 auto firstAmp = url.find_first_of('?');
                 if(string::npos == lastSlash)
                     throw BadPlaylistFormatException((string("Invalid channel URL: ") + url).c_str());
-                //archiveUrl = url.substr(0, lastSlash + 1) + "timeshift_abs_video-" + c_START + ".m3u8" + url.substr(firstAmp);
-                archiveUrl = url.substr(0, lastSlash + 1) + "video-" + c_START + "-" + c_DURATION + ".m3u8" + url.substr(firstAmp);
+//                if(archiveType == "flussonic-ts") {
+//                    archiveUrl = url.substr(0, lastSlash + 1) + "timeshift_abs-" + c_START + ".ts" + url.substr(firstAmp);
+//                } else
+                {
+                    //archiveUrl = url.substr(0, lastSlash + 1) + "timeshift_abs_video-" + c_START + ".m3u8" + url.substr(firstAmp);
+                    archiveUrl = url.substr(0, lastSlash + 1) + "video-" + c_START + "-" + c_DURATION + ".m3u8" + url.substr(firstAmp);
+                }
             } else if(archiveType == "shift"){
                 archiveUrl = url + "?utc=" + c_START +"&lutc=" + c_LUTC;
             }

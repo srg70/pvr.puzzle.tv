@@ -130,20 +130,9 @@ namespace TtvEngine
         BuildChannelAndGroupList_Plist();
     }
     
-    void Core::UpdateEpgForAllChannels(time_t startTime, time_t endTime)
+    void Core::UpdateEpgForAllChannels(time_t startTime, time_t endTime, std::function<bool(void)> cancelled)
     {
-        // Assuming server provides EPG at least fo next 12 hours
-        // To reduce amount of API calls, allow next EPG update
-        // after either 12 hours or  endTime
-//        time_t now = time(nullptr);
-//        time_t nextUpdateAt = now + 12*60*60;
-////        if(difftime(endTime, now) > 0){
-//            nextUpdateAt = std::min(nextUpdateAt, endTime);
-//        }
-//        int32_t interval = nextUpdateAt - now;
-//        if(interval > 0)
-        
-        UpdateEpgForAllChannels_Plist(startTime, endTime);
+        UpdateEpgForAllChannels_Plist(startTime, endTime, cancelled);
     }
     
     string Core::GetNextStream(ChannelId channelId, int currentChannelIdx)
@@ -251,12 +240,13 @@ namespace TtvEngine
 //       return ClientCoreBase::AddEpgEntry(id, epgEntry);
 //    }
     
-    void Core::UpdateEpgForAllChannels_Plist(time_t startTime, time_t endTime)
+    void Core::UpdateEpgForAllChannels_Plist(time_t startTime, time_t endTime, std::function<bool(void)> cancelled)
     {
         using namespace XMLTV;
         try {
-            LoadEpg();           
-            SaveEpgCache(c_EpgCacheFile);
+            LoadEpg(cancelled);
+            if(!cancelled())
+                SaveEpgCache(c_EpgCacheFile);
         } catch (...) {
             LogError("TtvPlayer: failed to update EPG. ");
         }
@@ -366,14 +356,17 @@ namespace TtvEngine
         }
     }
     
-    void Core::LoadEpg()
+    void Core::LoadEpg(std::function<bool(void)> cancelled)
     {
         using namespace XMLTV;
         auto pThis = this;
         
         m_epgUpdateInterval.Init(12*60*60*1000);
 
-        EpgEntryCallback onEpgEntry = [pThis] (const XMLTV::EpgEntry& newEntry) {pThis->AddEpgEntry(newEntry);};
+        EpgEntryCallback onEpgEntry = [pThis, cancelled] (const XMLTV::EpgEntry& newEntry) {
+            pThis->AddEpgEntry(newEntry);
+            return !cancelled();
+        };
         
         XMLTV::ParseEpg(m_coreParams.epgUrl, onEpgEntry);
     }

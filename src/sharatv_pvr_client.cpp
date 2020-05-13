@@ -178,7 +178,7 @@ ADDON_STATUS SharaTvPVRClient::OnReloadEpg()
         time_t endTime = startTime + 7 * 24 * 60 * 60;
         startTime -= 7 * 24 * 60 * 60;
         
-        m_core->UpdateEpgForAllChannels(startTime, endTime);
+        m_core->UpdateEpgForAllChannels(startTime, endTime, [](){return false;});
     }
     
     return retVal;
@@ -246,7 +246,11 @@ bool SharaTvPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     string url = delegate->UrlForTimeshift(0);
     if(!IsSeekSupported())
         SAFE_DELETE(delegate);
-    RecordingStreamFlags flags = (RecordingStreamFlags)(ForcePlaylist | (IsSeekSupported() ? SupportVodSeek : NoRecordingFlags));
+    RecordingStreamFlags flags = (RecordingStreamFlags)
+    (
+        (ProviderType() == c_PlistProvider_SharaTv ? ForcePlaylist : NoRecordingFlags) |
+        (IsSeekSupported() ? SupportVodSeek : NoRecordingFlags)
+    );
     return PVRClientBase::OpenRecordedStream(url, delegate, flags);
 }
 

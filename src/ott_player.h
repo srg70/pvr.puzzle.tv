@@ -76,7 +76,7 @@ namespace OttEngine
         Core(const std::string &baseUrl, const std::string &key);
         ~Core();
         
-       void  UpdateEpgForAllChannels(time_t startTime, time_t endTime);
+       void UpdateEpgForAllChannels(time_t startTime, time_t endTime, std::function<bool(void)> cancelled);
        std::string GetArchiveUrl(PvrClient::ChannelId channelId, time_t startTime, int duration);
        std::string GetUrl(PvrClient::ChannelId channelId);
         void SetChannelIdConverter(const TToPublicChannelId& converter) {m_ToPublicChannelId = converter; }

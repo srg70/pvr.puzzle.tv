@@ -82,7 +82,7 @@ namespace EdemEngine
         ~Core();
         
         std::string GetArchiveUrl(PvrClient::ChannelId channelId, time_t startTime);
-        void  UpdateEpgForAllChannels(time_t startTime, time_t endTime);
+        void UpdateEpgForAllChannels(time_t startTime, time_t endTime, std::function<bool(void)> cancelled);
 
         std::string GetUrl(PvrClient::ChannelId channelId);
     protected:
@@ -91,7 +91,7 @@ namespace EdemEngine
         virtual void BuildChannelAndGroupList();
 
     private:
-        void LoadEpg();
+        void LoadEpg(std::function<bool(void)> cancelled);
 //        PvrClient::UniqueBroadcastIdType AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
 
         void Cleanup();
