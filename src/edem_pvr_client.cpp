@@ -135,11 +135,12 @@ void EdemPVRClient::CreateCore(bool clearEpgCache)
 {
     DestroyCoreSafe();
     
-    if(CheckEdemPlaylistUrl()) {
-        m_clientCore = m_core = new EdemEngine::Core(m_playlistUrl, m_epgUrl, m_enableAdult);
-        m_core->IncludeCurrentEpgToArchive(HowToAddCurrentEpgToArchive());
-        m_core->InitAsync(clearEpgCache, IsArchiveSupported());
-    }
+    if(!CheckEdemPlaylistUrl())
+        throw AuthFailedException();
+    m_clientCore = m_core = new EdemEngine::Core(m_playlistUrl, m_epgUrl, m_enableAdult);
+    m_core->IncludeCurrentEpgToArchive(HowToAddCurrentEpgToArchive());
+    m_core->InitAsync(clearEpgCache, IsArchiveSupported());
+
 }
 
 ADDON_STATUS EdemPVRClient::SetSetting(const char *settingName, const void *settingValue)

@@ -1,3 +1,7 @@
+0.9.81
+- Support for multicat URLs
+- Fixed crash on default Edem settings
+
 0.9.78
 - Addon settings refactoring
 - OTTG credentials support
