@@ -335,11 +335,11 @@ msgctxt "#60012"
 msgid "Filter by AlexElec"
 msgstr "Filter by AlexElec"
 
-#=============== Shara TV Player Settings ===========
+#=============== Playlist (former Shara TV) Player Settings ===========
 
 msgctxt "#70010"
-msgid "Shara TV"
-msgstr "Shara TV"
+msgid "Playlist"
+msgstr "Playlist"
 
 msgctxt "#70001"
 msgid "Data Source"
@@ -350,12 +350,12 @@ msgid "User Account"
 msgstr "User Account"
 
 msgctxt "#70003"
-msgid "Playlist"
-msgstr "Playlist"
+msgid "File"
+msgstr "File"
 
 msgctxt "#70004"
-msgid "Playlist Location"
-msgstr "Playlist Location"
+msgid "File Location"
+msgstr "File Location"
 
 msgctxt "#70005"
 msgid "Remote"
@@ -384,6 +384,14 @@ msgstr "OTTG"
 msgctxt "#70012"
 msgid "Prioritize HLS"
 msgstr "Prioritize HLS"
+
+msgctxt "#70013"
+msgid "Multicast relay (udpxy)"
+msgstr "Multicast relay (udpxy)"
+
+msgctxt "#70014"
+msgid "Transform multicast stream URLs"
+msgstr "Transform multicast stream URLs"
 
 #============= Notifications ================
 

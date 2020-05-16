@@ -86,6 +86,9 @@ private:
     const std::string& SharaTvPassword() const;
     const std::string& OttgLogin() const;
     const std::string& OttgPassword() const;
+    bool SuppotMulticastUrls() const;
+    uint32_t UdpProxyPort() const;
+    const std::string& UdpProxyHost() const;
 
     void CreateCore(bool clearEpgCache);
     SharaTvEngine::Core* m_core;

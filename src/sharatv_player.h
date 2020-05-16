@@ -103,6 +103,10 @@ namespace SharaTvEngine
         Core(const std::string &playlistUrl,  const std::string &epgUrl, bool enableAdult);
         ~Core();
         
+        void SupportMuticastUrls(bool shouldSupport, const std::string& udpProxyHost = std::string(), uint32_t udpProxyPort = 0) {
+            m_supportMulticastUrls = shouldSupport;
+            m_multicastProxyAddress = std::string("http://") + udpProxyHost + ':' + std::to_string(udpProxyPort);
+        }
         std::string GetArchiveUrl(PvrClient::ChannelId channelId, time_t startTime, time_t duration);
         void UpdateEpgForAllChannels(time_t startTime, time_t endTime, std::function<bool(void)> cancelled);
 
@@ -113,7 +117,7 @@ namespace SharaTvEngine
         virtual void BuildChannelAndGroupList();
 
     private:
-        
+        std::string TransformMultucastUrl(const std::string& url) const;
         void LoadEpg(std::function<bool(void)> cancelled);
 //        bool AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
 
@@ -124,6 +128,8 @@ namespace SharaTvEngine
         GloabalTags m_globalTags;
         ArchiveInfos m_archiveInfo;
         bool m_enableAdult;
+        bool m_supportMulticastUrls;
+        std::string m_multicastProxyAddress;
     };
 }
 #endif //_shara_tv_player_h_

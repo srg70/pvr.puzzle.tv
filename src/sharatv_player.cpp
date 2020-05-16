@@ -85,6 +85,7 @@ namespace SharaTvEngine {
     
     Core::Core(const std::string &playlistUrl,  const std::string &epgUrl, bool enableAdult)
     : m_enableAdult(enableAdult)
+    , m_supportMulticastUrls(false)
     , m_playListUrl(playlistUrl)
     , m_epgUrl(epgUrl)
     {
@@ -150,19 +151,45 @@ namespace SharaTvEngine {
                 adultChannelsGroupId = group.second;
         }
         // Add channels
-        for(const auto& channelWithGroup : plistContent.channels)
+        for(auto& channelWithGroup : plistContent.channels)
         {
-            const auto& channel = channelWithGroup.second.first;
+            auto& channel = channelWithGroup.second.first;
             const auto& groupId = channelWithGroup.second.second;
             
             if(!m_enableAdult && adultChannelsGroupId == groupId)
                 continue;
+            
+            if (m_supportMulticastUrls) {
+                decltype(channel.Urls) urls;
+                for (auto& url : channel.Urls) {
+                    urls.push_back(TransformMultucastUrl(url));
+                }
+                channel.Urls = urls;
+            }
             
             AddChannel(channel);
             AddChannelToGroup(groupId, channel.UniqueId);
         }
      }
     
+    std::string Core::TransformMultucastUrl(const std::string& url) const {
+        static const std::string UDP_MULTICAST_PREFIX = "udp://@";
+        static const std::string RTP_MULTICAST_PREFIX = "rtp://@";
+                
+        auto pos = url.find(UDP_MULTICAST_PREFIX);
+        if(StringUtils::StartsWith(url, UDP_MULTICAST_PREFIX))
+        {
+            return m_multicastProxyAddress + "/udp/" + url.substr(UDP_MULTICAST_PREFIX.length());
+
+        }
+        if(StringUtils::StartsWith(url, RTP_MULTICAST_PREFIX))
+        {
+            
+            return m_multicastProxyAddress + "/rtp/" + url.substr(RTP_MULTICAST_PREFIX.length());
+        }
+        return url;
+    }
+
     std::string Core::GetArchiveUrl(ChannelId channelId, time_t startTime, time_t duration)
     {
         if(m_archiveInfo.info.count(channelId) == 0) {
@@ -490,8 +517,7 @@ namespace SharaTvEngine {
         }
         if(!archiveUrl.empty())
             LogDebug("SharaTvPlayer: %s channe's archive url %s", name.c_str(), archiveUrl.c_str());
-        
-        
+                
         Channel channel;
         channel.UniqueId = XMLTV::ChannelIdForChannelName(name);
         channel.EpgId = EpgChannelIdToKodi(tvgId);
