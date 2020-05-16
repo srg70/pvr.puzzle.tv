@@ -16,6 +16,10 @@
      <source>https://github.com/srg70/pvr.puzzle.tv</source>
      <license>GPL-2.0-or-later</license>
      <news>
+         0.9.81
+         - Support for multicat URLs
+         - Fixed crash on default Edem settings
+         
          v0.9.78
          - Addon settings refactoring
          - OTTG credentials support
