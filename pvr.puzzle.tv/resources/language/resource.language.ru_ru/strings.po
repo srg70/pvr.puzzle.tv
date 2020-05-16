@@ -341,8 +341,8 @@ msgstr "Фильтровать согласно AlexElec"
 #=============== Shara TV Player Settings ===========
 
 msgctxt "#70010"
-msgid "Shara TV"
-msgstr "Shara TV"
+msgid "Playlist"
+msgstr "Плейлист"
 
 msgctxt "#70001"
 msgid "Data Source"
@@ -353,12 +353,12 @@ msgid "User Account"
 msgstr "Учетная запись"
 
 msgctxt "#70003"
-msgid "Playlist"
-msgstr "Плейлист"
+msgid "File"
+msgstr "Файл"
 
 msgctxt "#70004"
-msgid "Playlist Location"
-msgstr "Плейлист расположен"
+msgid "File Location"
+msgstr "Файл расположен"
 
 msgctxt "#70005"
 msgid "Remote"
@@ -388,7 +388,15 @@ msgctxt "#70012"
 msgid "Prioritize HLS"
 msgstr "Предпочитать HLS"
 
-#============= Notifications ================
+msgctxt "#70013"
+msgid "Multicast relay (udpxy)"
+msgstr "Мультикаст прокси (udpxy)"
+
+msgctxt "#70014"
+msgid "Transform multicast stream URLs"
+msgstr "Поддерживать ссылки мультикаст"
+
+##============= Notifications ================
 
 msgctxt "#32000"
 msgid "Reloading stream ..."

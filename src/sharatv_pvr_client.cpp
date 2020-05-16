@@ -140,6 +140,7 @@ void SharaTvPVRClient::CreateCore(bool clearEpgCache)
     
     m_clientCore = m_core = new SharaTvEngine::Core(playlistUrl, epgUrl, EnableAdult());
     m_core->IncludeCurrentEpgToArchive(HowToAddCurrentEpgToArchive());
+    m_core->SupportMuticastUrls(SuppotMulticastUrls(), UdpProxyHost(), UdpProxyPort());
     m_core->InitAsync(clearEpgCache, IsArchiveSupported());
 }
 
@@ -263,20 +264,23 @@ PVR_ERROR SharaTvPVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
 
 #pragma mark - Settings
 
-static const char* const c_adult_setting = "sharatv_adult";
-static const char* const c_prefer_hls = "playlist_prefer_hls";
-static const char* const c_data_source_type = "sharatv_data_source";
-static const char* const c_epg_path = "sharatv_epg_path";
-static const char* const c_playlist_path_type = "sharatv_playlist_path_type";
-static const char* const c_playlist_url = "sharatv_playlist_path"; // preserve old setting name :(
-static const char* const c_playlist_path = "sharatv_playlist_path_local";
+static const std::string c_adult_setting("sharatv_adult");
+static const std::string c_prefer_hls("playlist_prefer_hls");
+static const std::string c_data_source_type("sharatv_data_source");
+static const std::string c_epg_path("sharatv_epg_path");
+static const std::string c_playlist_path_type("sharatv_playlist_path_type");
+static const std::string c_playlist_url("sharatv_playlist_path"); // preserve old setting name :(
+static const std::string c_playlist_path("sharatv_playlist_path_local");
 
-static const char* const c_plist_provider = "plist_provider_type";
-static const char* const c_sharatv_login = "sharatv_login";
-static const char* const c_sharatv_password = "sharatv_password";
-static const char* const c_ottg_login = "ottg_login";
-static const char* const c_ottg_password = "ottg_password";
+static const std::string c_plist_provider("plist_provider_type");
+static const std::string c_sharatv_login("sharatv_login");
+static const std::string c_sharatv_password("sharatv_password");
+static const std::string c_ottg_login("ottg_login");
+static const std::string c_ottg_password("ottg_password");
 
+static const std::string c_suppotMulticastUrls("playlist_support_multicast_urls");
+static const std::string c_udpProxyHost("playlist_udp_proxy_host");
+static const std::string c_udpProxyPort("playlist_udp_proxy_port");
 
 template<typename T>
 static void NotifyClearPvrData(const T&) {
@@ -287,7 +291,7 @@ void SharaTvPVRClient::PopulateSettings(AddonSettingsMutableDictionary& settings
 {
     settings
     .Add(c_epg_path, "", ADDON_STATUS_NEED_RESTART)
-    .Add(c_data_source_type, (int)c_DataSourceType_Login, ADDON_STATUS_NEED_RESTART)
+    .Add(c_data_source_type, (int)c_DataSourceType_Login,  NotifyClearPvrData<int>, ADDON_STATUS_NEED_RESTART)
     .Add(c_adult_setting, false, NotifyClearPvrData<bool>, ADDON_STATUS_NEED_RESTART)
     .Add(c_playlist_path_type, (int)c_PathType_Url, NotifyClearPvrData<int>, ADDON_STATUS_NEED_RESTART)
     .Add(c_playlist_url, "", NotifyClearPvrData<std::string>, ADDON_STATUS_NEED_RESTART)
@@ -297,7 +301,28 @@ void SharaTvPVRClient::PopulateSettings(AddonSettingsMutableDictionary& settings
     .Add(c_sharatv_password, "", ADDON_STATUS_NEED_RESTART)
     .Add(c_ottg_login, "", ADDON_STATUS_NEED_RESTART)
     .Add(c_ottg_password, "", ADDON_STATUS_NEED_RESTART)
-    .Add(c_prefer_hls, true, NotifyClearPvrData<bool>, ADDON_STATUS_NEED_RESTART);
+    .Add(c_prefer_hls, true, NotifyClearPvrData<bool>, ADDON_STATUS_NEED_RESTART)
+    .Add(c_suppotMulticastUrls, false, NotifyClearPvrData<bool>, ADDON_STATUS_NEED_RESTART)
+    .Add(c_udpProxyHost, "", NotifyClearPvrData<std::string>, ADDON_STATUS_NEED_RESTART)
+    .Add(c_udpProxyPort, 0, NotifyClearPvrData<int>, ADDON_STATUS_NEED_RESTART);
+}
+
+uint32_t SharaTvPVRClient::UdpProxyPort() const
+{
+    int port = m_addonSettings.GetInt(c_udpProxyPort);
+    if(port < 0)
+        port = 0;
+    return port;
+}
+
+const std::string& SharaTvPVRClient::UdpProxyHost() const
+{
+    return m_addonSettings.GetString(c_udpProxyHost);
+}
+
+bool SharaTvPVRClient::SuppotMulticastUrls() const
+{
+    return m_addonSettings.GetBool(c_suppotMulticastUrls);
 }
 
 bool SharaTvPVRClient::PreferHls() const
