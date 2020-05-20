@@ -146,27 +146,6 @@ PVRClientBase::PVRClientBase()
     
 }
 
-const char* const c_curlTimeout = "curl_timeout";
-const char* const c_channelReloadTimeout = "channel_reload_timeout";
-const char* const c_numOfHlsThreads = "num_of_hls_threads";
-const char* const c_enableTimeshift = "enable_timeshift";
-const char* const c_timeshiftPath = "timeshift_path";
-const char* const c_recordingPath = "recordings_path";
-const char* const c_timeshiftSize = "timeshift_size";
-const char* const c_cacheSizeLimit = "timeshift_off_cache_limit";
-const char* const c_timeshiftType = "timeshift_type";
-const char* const c_rpcLocalPort = "rpc_local_port";
-const char* const c_channelIndexOffset = "channel_index_offset";
-const char* const c_addCurrentEpgToArchive = "archive_for_current_epg_item";
-const char* const c_useChannelGroupsForArchive = "archive_use_channel_groups";
-const char* const c_waitForInternetTimeout = "wait_for_inet";
-const char* const c_startupDelay = "startup_delay";
-const char* const c_startRecordingPadding = "archive_start_padding";
-const char* const c_endRecordingPadding = "archive_end_padding";
-const char* const c_supportArchive = "archive_support";
-const char* const c_loadArchiveAfterEpg = "archive_wait_for_epg";
-const char* const c_archiveRefreshInterval = "archive_refresh_interval";
-
 ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
 {
     m_clientCore = NULL;
@@ -182,34 +161,9 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     //auto g_strUserPath   = pvrprops->strUserPath;
     m_clientPath = pvrprops->strClientPath;
     m_userPath = pvrprops->strUserPath;
-            
-    m_addonMutableSettings
-    .Add(c_curlTimeout, 15, CurlUtils::SetCurlTimeout)
-    .Add(c_channelReloadTimeout, 5)
-    .Add(c_numOfHlsThreads, 1, Buffers::PlaylistBuffer::SetNumberOfHlsTreads)
-    .Add(c_enableTimeshift, false)
-    .Add(c_timeshiftPath, s_DefaultCacheDir, CleanupTimeshiftDirectory)
-    .Add(c_recordingPath, s_DefaultRecordingsDir, CheckRecordingsPath)
-    .Add(c_timeshiftSize, 0)
-    .Add(c_cacheSizeLimit, 0)
-    .Add(c_timeshiftType, (int)k_TimeshiftBufferMemory)
-    .Add(c_rpcLocalPort, 8080, ADDON_STATUS_NEED_RESTART)
-    .Add(c_channelIndexOffset, 0, ADDON_STATUS_NEED_RESTART)
-    .Add(c_addCurrentEpgToArchive, (int)k_AddCurrentEpgToArchive_No, ADDON_STATUS_NEED_RESTART)
-    .Add(c_useChannelGroupsForArchive, false, ADDON_STATUS_NEED_RESTART)
-    .Add(c_waitForInternetTimeout, 0)
-    .Add(c_startupDelay,0)
-    .Add(c_startRecordingPadding, 0)
-    .Add(c_endRecordingPadding, 0)
-    .Add(c_supportArchive, false, ADDON_STATUS_NEED_RESTART)
-    .Add(c_loadArchiveAfterEpg, false, ADDON_STATUS_NEED_RESTART)
-    .Add(c_archiveRefreshInterval, 3);
     
-    PopulateSettings(m_addonMutableSettings);
+    InitSettings();
     
-    m_addonMutableSettings.Init();
-    m_addonMutableSettings.Print();
-       
     DelayStartup(StartupDelay() - CheckForInetConnection(WaitForInetTimeout()));
     
     
@@ -456,6 +410,13 @@ ADDON_STATUS PVRClientBase::OnReloadRecordings()
     return retVal;
 }
 
+PVR_ERROR PVRClientBase::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
+{
+    if(nullptr != m_inputBuffer) {
+        signalStatus.iSignal = m_inputBuffer->FillingRatio() * 0xFFFF;
+    }
+    return PVR_ERROR_NO_ERROR;
+}
 #pragma mark - Channels
 
 const ChannelList& PVRClientBase::GetChannelListWhenLutsReady()
@@ -683,8 +644,24 @@ bool PVRClientBase::OpenLiveStream(ChannelId channelId, const std::string& url )
         InputBuffer* buffer = BufferForUrl(url);
         CLockObject lock(m_mutex);
         m_inputBuffer = new Buffers::TimeshiftBuffer(buffer, CreateLiveCache());
+        
+        // Wait for first data from live stream
+        auto startAt = std::chrono::system_clock::now();
         if(!m_inputBuffer->WaitForInput(ChannelReloadTimeout() * 1000)) {
             throw InputBufferException("no data available diring reload timeout (bad ace link?)");
+        }
+        auto endAt = std::chrono::system_clock::now();
+        std::chrono::duration<float> validationDelay(endAt - startAt);
+        
+        // Wait preloading delay (from settings)
+        std::chrono::duration<float> livePreloadingDelay(LivePlaybackDelay());
+        auto resultDelay = livePreloadingDelay - validationDelay;
+        if(resultDelay > std::chrono::seconds(0)) {
+            int delaySeconds = (int)(resultDelay.count() + 0.5);
+            while(delaySeconds-- && m_inputBuffer->FillingRatio() < 0.95) {
+                LogDebug("Live preloading: left %d seconds. Buffer filling ratio %.3f", delaySeconds, m_inputBuffer->FillingRatio());
+                CEvent::Sleep(1000);
+            }
         }
     }
     catch (InputBufferException &ex)
@@ -1350,6 +1327,65 @@ void PvrClient::EpgEntry::FillEpgTag(EPG_TAG& tag) const{
 }
 
 #pragma mark - Settings
+
+const char* const c_curlTimeout = "curl_timeout";
+const char* const c_channelReloadTimeout = "channel_reload_timeout";
+const char* const c_numOfHlsThreads = "num_of_hls_threads";
+const char* const c_enableTimeshift = "enable_timeshift";
+const char* const c_timeshiftPath = "timeshift_path";
+const char* const c_recordingPath = "recordings_path";
+const char* const c_timeshiftSize = "timeshift_size";
+const char* const c_cacheSizeLimit = "timeshift_off_cache_limit";
+const char* const c_timeshiftType = "timeshift_type";
+const char* const c_rpcLocalPort = "rpc_local_port";
+const char* const c_channelIndexOffset = "channel_index_offset";
+const char* const c_addCurrentEpgToArchive = "archive_for_current_epg_item";
+const char* const c_useChannelGroupsForArchive = "archive_use_channel_groups";
+const char* const c_waitForInternetTimeout = "wait_for_inet";
+const char* const c_startupDelay = "startup_delay";
+const char* const c_startRecordingPadding = "archive_start_padding";
+const char* const c_endRecordingPadding = "archive_end_padding";
+const char* const c_supportArchive = "archive_support";
+const char* const c_loadArchiveAfterEpg = "archive_wait_for_epg";
+const char* const c_archiveRefreshInterval = "archive_refresh_interval";
+const char* const c_livePlaybackDelay = "live_playback_delay";
+
+void PVRClientBase::InitSettings()
+{
+    m_addonMutableSettings
+    .Add(c_curlTimeout, 15, CurlUtils::SetCurlTimeout)
+    .Add(c_channelReloadTimeout, 5)
+    .Add(c_numOfHlsThreads, 1, Buffers::PlaylistBuffer::SetNumberOfHlsTreads)
+    .Add(c_enableTimeshift, false)
+    .Add(c_timeshiftPath, s_DefaultCacheDir, CleanupTimeshiftDirectory)
+    .Add(c_recordingPath, s_DefaultRecordingsDir, CheckRecordingsPath)
+    .Add(c_timeshiftSize, 0)
+    .Add(c_cacheSizeLimit, 0)
+    .Add(c_timeshiftType, (int)k_TimeshiftBufferMemory)
+    .Add(c_rpcLocalPort, 8080, ADDON_STATUS_NEED_RESTART)
+    .Add(c_channelIndexOffset, 0, ADDON_STATUS_NEED_RESTART)
+    .Add(c_addCurrentEpgToArchive, (int)k_AddCurrentEpgToArchive_No, ADDON_STATUS_NEED_RESTART)
+    .Add(c_useChannelGroupsForArchive, false, ADDON_STATUS_NEED_RESTART)
+    .Add(c_waitForInternetTimeout, 0)
+    .Add(c_startupDelay,0)
+    .Add(c_startRecordingPadding, 0)
+    .Add(c_endRecordingPadding, 0)
+    .Add(c_supportArchive, false, ADDON_STATUS_NEED_RESTART)
+    .Add(c_loadArchiveAfterEpg, false, ADDON_STATUS_NEED_RESTART)
+    .Add(c_archiveRefreshInterval, 3)
+    .Add(c_livePlaybackDelay, 0);
+    
+    PopulateSettings(m_addonMutableSettings);
+    
+    m_addonMutableSettings.Init();
+    m_addonMutableSettings.Print();
+}
+
+int PVRClientBase::LivePlaybackDelay() const
+{
+    return m_addonSettings.GetInt(c_livePlaybackDelay);
+}
+
 const std::string& PVRClientBase::TimeshiftPath() const
 {
     return m_addonSettings.GetString(c_timeshiftPath);

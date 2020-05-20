@@ -257,9 +257,18 @@ bool SharaTvPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
 
 PVR_ERROR SharaTvPVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
 {
-    snprintf(signalStatus.strAdapterName, sizeof(signalStatus.strAdapterName), "IPTV Shara TV");
+    snprintf(signalStatus.strAdapterName, sizeof(signalStatus.strAdapterName), "IPTV Playlist");
     snprintf(signalStatus.strAdapterStatus, sizeof(signalStatus.strAdapterStatus), (m_core == NULL) ? "Not connected" :"OK");
-    return PVR_ERROR_NO_ERROR;
+    //const static int providerNames[] = {32023, 70008,70009,70011};
+    const char* const providerNames[] = {"Other", "Shara TV", "OTTG"};
+    int provideType = ProviderType();
+    if(provideType > sizeof(providerNames) / sizeof(providerNames[0]))
+        provideType = sizeof(providerNames) / sizeof(providerNames[0]) - 1;
+    
+    //const char* test = XBMC_Message(providerNames[provideType]);
+    snprintf(signalStatus.strProviderName, sizeof(signalStatus.strProviderName), "%s",  providerNames[provideType]);
+    
+    return this->PVRClientBase::SignalStatus(signalStatus);
 }
 
 #pragma mark - Settings

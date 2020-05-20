@@ -56,9 +56,11 @@ namespace Buffers
         Unit* m_currentUnit;
         Unit* m_lockedChunk;
         const uint64_t m_unitsLimit;
+        uint64_t m_fullUnistCount;
     public:
         SimpleCyclicBuffer(uint64_t maxSize = 1500)
         : m_unitsLimit (maxSize)
+        , m_fullUnistCount(0)
         , m_freeUnits(maxSize)
         , m_fullUnits(maxSize)
         {
@@ -162,6 +164,7 @@ namespace Buffers
                 }
             }
             m_fullUnits.Push(m_lockedChunk);
+            m_fullUnistCount = m_fullUnits.Size();
             m_lockedChunk = nullptr;
 //            Globals::LogDebug("SimpleCyclicBuffer::UnlockAfterWriten(): written %d bytes", writtenBytes >= 0 ? writtenBytes : Unit::size);
 
@@ -169,6 +172,7 @@ namespace Buffers
         
         virtual time_t StartTime() const {return 0;}
         virtual time_t EndTime() const {return 0;}
+        virtual float FillingRatio() const  {return  (float) m_fullUnistCount / m_unitsLimit; }
 
         ~SimpleCyclicBuffer(){}
     };

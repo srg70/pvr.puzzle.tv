@@ -459,10 +459,10 @@ PVR_ERROR PuzzlePVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
                 break;
             }
         }
-        snprintf(signalStatus.strProviderName, sizeof(signalStatus.strServiceName), "%s", serviceName.c_str());
+        snprintf(signalStatus.strProviderName, sizeof(signalStatus.strProviderName), "%s", serviceName.c_str());
         
     }
-    return PVR_ERROR_NO_ERROR;
+    return this->PVRClientBase::SignalStatus(signalStatus);
 }
        
 

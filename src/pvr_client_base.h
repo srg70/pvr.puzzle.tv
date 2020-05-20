@@ -110,6 +110,7 @@ namespace PvrClient
         
         void OnSystemSleep();
         void OnSystemWake();
+        PVR_ERROR SignalStatus(PVR_SIGNAL_STATUS &signalStatus);
 
     protected:
         IClientCore* m_clientCore;
@@ -169,8 +170,10 @@ namespace PvrClient
         typedef std::map<KodiChannelId, ChannelId> TKodiToPluginChannelIdLut;
         typedef std::map<ChannelId, KodiChannelId> TPluginToKodiChannelIdLut;
 
+        void InitSettings();
         const ChannelList& GetChannelListWhenLutsReady();
         void Cleanup();
+        
         uint64_t CacheSizeLimit() const;
         int ChannelReloadTimeout() const;
         bool IsTimeshiftEnabled() const;
@@ -180,6 +183,7 @@ namespace PvrClient
         int StartupDelay() const;
         bool LoadArchiveAfterEpg() const;
         uint32_t ArchiveRefreshInterval() const;
+        int LivePlaybackDelay() const;
 
         void FillRecording(const EpgEntryList::value_type& epgEntry, PVR_RECORDING& tag, const char* dirPrefix);
         std::string DirectoryForRecording(unsigned int epgId) const;

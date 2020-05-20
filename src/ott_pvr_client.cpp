@@ -261,7 +261,7 @@ PVR_ERROR OttPVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
 {
     snprintf(signalStatus.strAdapterName, sizeof(signalStatus.strAdapterName), "IPTV OTT Club");
     snprintf(signalStatus.strAdapterStatus, sizeof(signalStatus.strAdapterStatus), (m_core == NULL) ? "Not connected" :"OK");
-    return PVR_ERROR_NO_ERROR;
+    return this->PVRClientBase::SignalStatus(signalStatus);
 }
 
 
