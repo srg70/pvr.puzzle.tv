@@ -9,11 +9,14 @@
     <setting id="timeshift_type" type="enum" label="10004" lvalues="10005|10006" default="0"  visible="eq(-2,true)" subsetting="true"/>
     <setting id="timeshift_path" type="folder" label="10002" default="" visible="eq(-1,1) + eq(-3,true)" subsetting="true"/>
     <setting id="timeshift_off_cache_limit" type="slider" label="10011" default="30" range="10,5,100" option="int" visible="eq(-4,false)" subsetting="true"/>
+    <setting id="live_playback_delay" type="slider" label="10023" default="0" range="0,1,30" option="int"/>
+
     <setting label="10099" type="lsep"/>
     <setting id="num_of_hls_threads" type="number" label="10019" default="1" option="int"/>
     <setting id="curl_timeout" type="number" label="10007" default="15" option="int"/>
     <setting id="channel_reload_timeout" type="slider" label="10008" default="5" range="1,1,30" option="int"/>
     <setting id="wait_for_inet" type="number" label="10014" default="0" option="int"/>
+    
     <setting label="10098" type="lsep"/>
     <setting id="recordings_path" type="folder" label="10009" default="" />
     <setting id="archive_support" type="bool" label="30002" default="true" />
@@ -23,6 +26,7 @@
     <setting id="archive_end_padding" type="number" label="10018" default="0"  visible="eq(-4,true)" subsetting="true"/>
     <setting id="archive_refresh_interval" type="slider" label="10020" default="3" range="1,1,30" option="int" visible="eq(-5,true)" subsetting="true"/>
     <setting id="archive_wait_for_epg" type="bool" label="10022" default="false"  visible="eq(-6,true)" subsetting="true"/>
+    
     <setting label="10097" type="lsep"/>
     <setting id="rpc_local_port" type="number" label="10012" default="8080"/>
     <setting id="channel_index_offset" type="number" label="10015" default="0"/>

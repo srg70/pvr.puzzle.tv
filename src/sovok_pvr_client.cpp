@@ -357,7 +357,7 @@ PVR_ERROR SovokPVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
 {
     snprintf(signalStatus.strAdapterName, sizeof(signalStatus.strAdapterName), "IPTV Sovok TV");
     snprintf(signalStatus.strAdapterStatus, sizeof(signalStatus.strAdapterStatus), (!HasCore()) ? "Not connected" :"OK");
-    return PVR_ERROR_NO_ERROR;
+    return this->PVRClientBase::SignalStatus(signalStatus);
 }
 
 void SovokPVRClient::SetStreamerId(int streamerIdx)

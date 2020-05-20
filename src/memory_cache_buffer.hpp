@@ -65,6 +65,7 @@ namespace Buffers
 
         virtual time_t StartTime() const {return m_startTime;}
         virtual time_t EndTime() const {return m_endTime;}
+        virtual float FillingRatio() const {return (float)(m_length - m_position)/ m_maxSize; }
 
         ~MemoryCacheBuffer();
         

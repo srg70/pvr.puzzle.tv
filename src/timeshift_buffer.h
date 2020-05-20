@@ -55,8 +55,8 @@ namespace Buffers {
 //            m_cacheSwapEvent.Wait();
         }
                 
-        inline time_t StartTime() { return m_cache->StartTime(); }
-        inline time_t EndTime() { return m_cache->EndTime(); }
+        inline time_t StartTime() const { return m_cache->StartTime(); }
+        inline time_t EndTime() const { return m_cache->EndTime(); }
         inline bool WaitForInput(uint32_t timeoutMs) {
             if(m_isInputBufferValid)
                 return true;
@@ -66,7 +66,8 @@ namespace Buffers {
             }
             return m_isInputBufferValid;
         }
-        
+        virtual float FillingRatio() const { return m_cache->FillingRatio(); }
+
 
     private:
         void *Process();

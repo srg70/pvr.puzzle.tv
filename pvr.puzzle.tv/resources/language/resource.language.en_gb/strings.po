@@ -109,6 +109,10 @@ msgctxt "#10022"
 msgid "Load after EPG"
 msgstr "Load after EPG"
 
+msgctxt "#10023"
+msgid "Live Playback Delay (sec)"
+msgstr "Live Playback Delay (sec)"
+
 msgctxt "#10094"
 msgid "No"
 msgstr "No"
