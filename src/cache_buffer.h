@@ -60,6 +60,7 @@ namespace Buffers
         
         virtual time_t StartTime() const = 0;
         virtual time_t EndTime() const = 0;
+        virtual float FillingRatio() const = 0;
 
         virtual ~ICacheBuffer() {};
         

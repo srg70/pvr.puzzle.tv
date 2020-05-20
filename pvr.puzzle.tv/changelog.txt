@@ -1,3 +1,8 @@
+0.9.82
+- Live playback delay
+- Signal status visualization (raton of buffer filling)
+- Fixed cleanup condition of old chunks for memory cache
+
 0.9.81
 - Support for multicat URLs
 - Fixed crash on default Edem settings

@@ -227,7 +227,7 @@ namespace Buffers
             CLockObject lock(m_SyncAccess);
             // Free oldest chunks at one MByte before max size
             // NOTE: write will not wait, just will drop current unit.
-            while(m_length - m_begin >=  m_maxSize - 1024*1024 && GetChunkIndexFor(m_position) > 0)
+            while((m_length - m_begin) >= (m_maxSize - 1024*1024) && GetChunkIndexFor(m_position) > 0)
             {
                 int64_t bytesToRemove = m_ReadChunks.front()->Capacity();
                 // Forvard start time for (bitrate * removed bytes) seconds.
