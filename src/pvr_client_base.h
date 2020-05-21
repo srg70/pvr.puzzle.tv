@@ -184,7 +184,9 @@ namespace PvrClient
         int StartupDelay() const;
         bool LoadArchiveAfterEpg() const;
         uint32_t ArchiveRefreshInterval() const;
-        int LivePlaybackDelay() const;
+        int LivePlaybackDelayForHls() const;
+        int LivePlaybackDelayForTs() const;
+        int LivePlaybackDelayForMulticast() const;
 
         void FillRecording(const EpgEntryList::value_type& epgEntry, PVR_RECORDING& tag, const char* dirPrefix);
         std::string DirectoryForRecording(unsigned int epgId) const;

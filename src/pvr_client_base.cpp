@@ -161,6 +161,18 @@ static void CheckRecordingsPath(const std::string& path){
             LogError( "Failed to create recordings folder.");
 }
 
+static bool IsHlsUrl(const std::string& url)
+{
+    const std::string m3uExt = ".m3u";
+    const std::string m3u8Ext = ".m3u8";
+    return url.find(m3u8Ext) != std::string::npos || url.find(m3uExt) != std::string::npos;
+}
+static bool IsMulticastUrl(const std::string& url)
+{
+    const std::string rdpPattern = "/rdp/";
+    const std::string udpPattern = "/udp/";
+    return url.find(rdpPattern) != std::string::npos || url.find(udpPattern) != std::string::npos;
+}
 
 PVRClientBase::PVRClientBase()
     : m_addonSettings(m_addonMutableSettings)
@@ -609,9 +621,7 @@ std::string PVRClientBase::GetLiveUrl() const {
 InputBuffer*  PVRClientBase::BufferForUrl(const std::string& url )
 {
     InputBuffer* buffer = NULL;
-    const std::string m3uExt = ".m3u";
-    const std::string m3u8Ext = ".m3u8";
-    if( url.find(m3u8Ext) != std::string::npos || url.find(m3uExt) != std::string::npos)
+    if(IsHlsUrl(url))
         buffer = new Buffers::PlaylistBuffer(url, nullptr, false); // No segments cache for live playlist
     else
         buffer = new DirectBuffer(url);
@@ -689,26 +699,38 @@ bool PVRClientBase::OpenLiveStream(ChannelId channelId, const std::string& url )
     try
     {
         InputBuffer* buffer = BufferForUrl(url);
-        CLockObject lock(m_mutex);
-        m_inputBuffer = new Buffers::TimeshiftBuffer(buffer, CreateLiveCache());
+       
+        Buffers::TimeshiftBuffer* inputBuffer = new Buffers::TimeshiftBuffer(buffer, CreateLiveCache());
         
         // Wait for first data from live stream
         auto startAt = std::chrono::system_clock::now();
-        if(!m_inputBuffer->WaitForInput(ChannelReloadTimeout() * 1000)) {
+        if(!inputBuffer->WaitForInput(ChannelReloadTimeout() * 1000)) {
             throw InputBufferException("no data available diring reload timeout (bad ace link?)");
         }
         auto endAt = std::chrono::system_clock::now();
         std::chrono::duration<float> validationDelay(endAt - startAt);
         
         // Wait preloading delay (from settings)
-        std::chrono::duration<float> livePreloadingDelay(LivePlaybackDelay());
+        int liveDelayValue;
+        if(IsHlsUrl(url))
+            liveDelayValue = LivePlaybackDelayForHls();
+        else if(IsMulticastUrl(url))
+            liveDelayValue = LivePlaybackDelayForMulticast();
+        else
+            liveDelayValue = LivePlaybackDelayForTs();
+        std::chrono::duration<float> livePreloadingDelay(liveDelayValue);
         auto resultDelay = livePreloadingDelay - validationDelay;
         if(resultDelay > std::chrono::seconds(0)) {
             int delaySeconds = (int)(resultDelay.count() + 0.5);
-            while(delaySeconds-- && m_inputBuffer->FillingRatio() < 0.95) {
-                LogDebug("Live preloading: left %d seconds. Buffer filling ratio %.3f", delaySeconds, m_inputBuffer->FillingRatio());
+            while(delaySeconds-- && inputBuffer->FillingRatio() < 0.95) {
+                LogDebug("Live preloading: left %d seconds. Buffer filling ratio %.3f", delaySeconds, inputBuffer->FillingRatio());
                 CEvent::Sleep(1000);
             }
+        }
+        // Minimize lock time
+        {
+            CLockObject lock(m_mutex);
+            m_inputBuffer = inputBuffer;
         }
     }
     catch (InputBufferException &ex)
@@ -1156,9 +1178,7 @@ bool PVRClientBase::OpenRecordedStream(const std::string& url,  Buffers::IPlayli
         InputBuffer* buffer = NULL;
         
         const bool enforcePlaylist = (flags & ForcePlaylist) == ForcePlaylist;
-        const std::string m3uExt = ".m3u";
-        const std::string m3u8Ext = ".m3u8";
-        const bool isM3u = enforcePlaylist || url.find(m3u8Ext) != std::string::npos || url.find(m3uExt) != std::string::npos;
+        const bool isM3u = enforcePlaylist || IsHlsUrl(url);
         const bool seekForVod = (flags & SupportVodSeek) == SupportVodSeek;
         Buffers::PlaylistBufferDelegate plistDelegate(delegate);
         if(isM3u)
@@ -1442,7 +1462,9 @@ const char* const c_endRecordingPadding = "archive_end_padding";
 const char* const c_supportArchive = "archive_support";
 const char* const c_loadArchiveAfterEpg = "archive_wait_for_epg";
 const char* const c_archiveRefreshInterval = "archive_refresh_interval";
-const char* const c_livePlaybackDelay = "live_playback_delay";
+const char* const c_livePlaybackDelayHls = "live_playback_delay_hls";
+const char* const c_livePlaybackDelayTs = "live_playback_delay_ts";
+const char* const c_livePlaybackDelayUdp = "live_playback_delay_udp";
 
 void PVRClientBase::InitSettings()
 {
@@ -1467,7 +1489,10 @@ void PVRClientBase::InitSettings()
     .Add(c_supportArchive, false, ADDON_STATUS_NEED_RESTART)
     .Add(c_loadArchiveAfterEpg, false, ADDON_STATUS_NEED_RESTART)
     .Add(c_archiveRefreshInterval, 3)
-    .Add(c_livePlaybackDelay, 0);
+    .Add(c_livePlaybackDelayHls, 0)
+    .Add(c_livePlaybackDelayTs, 0)
+    .Add(c_livePlaybackDelayUdp, 0)
+    ;
     
     PopulateSettings(m_addonMutableSettings);
     
@@ -1475,9 +1500,19 @@ void PVRClientBase::InitSettings()
     m_addonMutableSettings.Print();
 }
 
-int PVRClientBase::LivePlaybackDelay() const
+int PVRClientBase::LivePlaybackDelayForHls() const
 {
-    return m_addonSettings.GetInt(c_livePlaybackDelay);
+    return m_addonSettings.GetInt(c_livePlaybackDelayHls);
+}
+
+int PVRClientBase::LivePlaybackDelayForTs() const
+{
+    return m_addonSettings.GetInt(c_livePlaybackDelayTs);
+}
+
+int PVRClientBase::LivePlaybackDelayForMulticast() const
+{
+    return m_addonSettings.GetInt(c_livePlaybackDelayUdp);
 }
 
 const std::string& PVRClientBase::TimeshiftPath() const
