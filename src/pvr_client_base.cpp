@@ -851,7 +851,7 @@ int PVRClientBase::GetRecordingsAmount(bool deleted)
     if(XBMC->DirectoryExists(RecordingsPath().c_str()))
     {
         std::vector<CVFSDirEntry> files;
-        VFSUtils::GetDirectory(XBMC, m_recordingsDir, "", files);
+        VFSUtils::GetDirectory(XBMC, RecordingsPath().c_str(), "", files);
         for (auto& f : files) {
             if(f.IsFolder())
                 ++size;
@@ -1000,7 +1000,7 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
     if(XBMC->DirectoryExists(RecordingsPath().c_str()))
     {
         std::vector<CVFSDirEntry> files;
-        VFSUtils::GetDirectory(XBMC, m_recordingsDir, "", files);
+        VFSUtils::GetDirectory(XBMC, RecordingsPath().c_str(), "", files);
         for (auto& f : files) {
             if(!f.IsFolder())
                 continue;
