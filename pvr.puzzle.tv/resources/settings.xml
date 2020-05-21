@@ -9,7 +9,11 @@
     <setting id="timeshift_type" type="enum" label="10004" lvalues="10005|10006" default="0"  visible="eq(-2,true)" subsetting="true"/>
     <setting id="timeshift_path" type="folder" label="10002" default="" visible="eq(-1,1) + eq(-3,true)" subsetting="true"/>
     <setting id="timeshift_off_cache_limit" type="slider" label="10011" default="30" range="10,5,100" option="int" visible="eq(-4,false)" subsetting="true"/>
-    <setting id="live_playback_delay" type="slider" label="10023" default="0" range="0,1,30" option="int"/>
+    
+    <setting label="10023" type="lsep"/>
+    <setting id="live_playback_delay_hls" type="slider" label="10024" default="0" range="0,1,30" option="int"/>
+    <setting id="live_playback_delay_ts" type="slider" label="10025" default="0" range="0,1,30" option="int"/>
+    <setting id="live_playback_delay_udp" type="slider" label="10026" default="0" range="0,1,30" option="int"/>
 
     <setting label="10099" type="lsep"/>
     <setting id="num_of_hls_threads" type="number" label="10019" default="1" option="int"/>

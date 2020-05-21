@@ -113,6 +113,18 @@ msgctxt "#10023"
 msgid "Live Playback Delay (sec)"
 msgstr "Live Playback Delay (sec)"
 
+msgctxt "#10024"
+msgid "HLS (m3u)"
+msgstr "HLS (m3u)"
+
+msgctxt "#10025"
+msgid "MPEG-TS"
+msgstr "MPEG-TS"
+
+msgctxt "#10026"
+msgid "Multicast"
+msgstr "Multicast"
+
 msgctxt "#10094"
 msgid "No"
 msgstr "No"
