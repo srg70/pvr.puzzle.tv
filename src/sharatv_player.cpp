@@ -443,6 +443,10 @@ namespace SharaTvEngine {
         int tvgShift = 0;
         try { tvgShift = static_cast<int>(std::atof(FindVar(data, 0, "tvg-shift").c_str()) * 3600);} catch (...) {}
         
+        int preloadingInterval = 0;
+        try { preloadingInterval = static_cast<int>(std::atof(FindVar(data, 0, "preload-interval").c_str()));} catch (...) {}
+
+        
         unsigned int archiveDays;
         string archiveUrl;
         string archiveType;
@@ -529,6 +533,7 @@ namespace SharaTvEngine {
         channel.IconPath = iconPath;
         channel.IsRadio = false;
         channel.TvgShift = tvgShift;
+        channel.PreloadingInterval = preloadingInterval;
         
         // Get group ID for channel by group name.
         // Add new group if missing.
