@@ -710,14 +710,18 @@ bool PVRClientBase::OpenLiveStream(ChannelId channelId, const std::string& url )
         auto endAt = std::chrono::system_clock::now();
         std::chrono::duration<float> validationDelay(endAt - startAt);
         
-        // Wait preloading delay (from settings)
-        int liveDelayValue;
-        if(IsHlsUrl(url))
-            liveDelayValue = LivePlaybackDelayForHls();
-        else if(IsMulticastUrl(url))
-            liveDelayValue = LivePlaybackDelayForMulticast();
-        else
-            liveDelayValue = LivePlaybackDelayForTs();
+        // Wait preloading delay (from settings or playlist)
+        const auto& ch = GetChannelListWhenLutsReady().at(channelId);
+
+        int liveDelayValue = ch.PreloadingInterval;
+        if(0 == liveDelayValue) {
+            if(IsHlsUrl(url))
+                liveDelayValue = LivePlaybackDelayForHls();
+            else if(IsMulticastUrl(url))
+                liveDelayValue = LivePlaybackDelayForMulticast();
+            else
+                liveDelayValue = LivePlaybackDelayForTs();
+        }
         std::chrono::duration<float> livePreloadingDelay(liveDelayValue);
         auto resultDelay = livePreloadingDelay - validationDelay;
         if(resultDelay > std::chrono::seconds(0)) {

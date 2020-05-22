@@ -55,6 +55,7 @@ namespace PvrClient {
         bool HasArchive;
         bool IsRadio;
         int TvgShift;
+        int PreloadingInterval;
        
         bool operator <(const Channel &anotherChannel) const
         {
@@ -62,7 +63,8 @@ namespace PvrClient {
         }
         Channel()
         : UniqueId(UnknownChannelId), EpgId (UnknownChannelId)
-        , Number(0), TvgShift(0), HasArchive(false), IsRadio(false)
+        , Number(0), TvgShift(0), PreloadingInterval(0)
+        , HasArchive(false), IsRadio(false)
         {}
     };
     
