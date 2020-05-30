@@ -46,7 +46,9 @@ namespace Buffers {
                               XFILE::READ_AUDIO_VIDEO |
                               XFILE::READ_TRUNCATED |
                               XFILE::READ_CHUNKED |
-                              XFILE::READ_NO_CACHE); // XFILE::READ_AFTER_WRITE);
+                              XFILE::READ_BITRATE |
+                              XFILE::READ_CACHED); 
+                            //XFILE::READ_NO_CACHE); // XFILE::READ_AFTER_WRITE);
     }
 
     DirectBuffer::DirectBuffer()
