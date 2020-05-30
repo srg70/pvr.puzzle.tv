@@ -49,6 +49,7 @@ using namespace std;
 using namespace ADDON;
 using namespace SharaTvEngine;
 using namespace PvrClient;
+using namespace Helpers;
 
 ADDON_STATUS SharaTvPVRClient::Init(PVR_PROPERTIES* pvrprops)
 {

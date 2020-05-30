@@ -48,6 +48,7 @@ using namespace std;
 using namespace ADDON;
 using namespace EdemEngine;
 using namespace PvrClient;
+using namespace Helpers;
 
 static const char* c_playlist_setting = "edem_playlist_url";
 static const char* c_epg_setting = "edem_epg_url";

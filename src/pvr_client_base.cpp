@@ -80,6 +80,7 @@ using namespace PvrClient;
 using namespace Globals;
 using namespace P8PLATFORM;
 using namespace ActionQueue;
+using namespace Helpers;
 
 namespace CurlUtils
 {
@@ -472,7 +473,8 @@ ADDON_STATUS PVRClientBase::OnReloadRecordings()
 PVR_ERROR PVRClientBase::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
 {
     if(nullptr != m_inputBuffer) {
-        signalStatus.iSignal = m_inputBuffer->FillingRatio() * 0xFFFF;
+        signalStatus.iSignal = m_inputBuffer->FillingRatio() * 	0xFFFF;
+//        signalStatus.iSNR = m_inputBuffer->GetSpeedRatio() * 0xFFFF;
     }
     return PVR_ERROR_NO_ERROR;
 }

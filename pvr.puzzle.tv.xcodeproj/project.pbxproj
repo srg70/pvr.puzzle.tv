@@ -42,6 +42,7 @@
 		4C9F58A022A7ADF300CEF856 /* sharatv_player.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C9F589C22A7ADF300CEF856 /* sharatv_player.cpp */; };
 		4C9F58A122A7ADF300CEF856 /* sharatv_pvr_client.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C9F589D22A7ADF300CEF856 /* sharatv_pvr_client.h */; };
 		4C9F58A222A7ADF300CEF856 /* sharatv_pvr_client.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C9F589E22A7ADF300CEF856 /* sharatv_pvr_client.cpp */; };
+		4CA10C24247AB10D0000FF0F /* Speedometer.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CA10C23247AB10D0000FF0F /* Speedometer.h */; };
 		4CAAE7262006438600A866C9 /* edem_player.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CAAE7222006438600A866C9 /* edem_player.cpp */; };
 		4CAAE7272006438600A866C9 /* edem_player.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CAAE7232006438600A866C9 /* edem_player.h */; };
 		4CAAE7282006438600A866C9 /* edem_pvr_client.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CAAE7242006438600A866C9 /* edem_pvr_client.cpp */; };
@@ -232,6 +233,7 @@
 		4C9F589C22A7ADF300CEF856 /* sharatv_player.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = sharatv_player.cpp; sourceTree = "<group>"; };
 		4C9F589D22A7ADF300CEF856 /* sharatv_pvr_client.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sharatv_pvr_client.h; sourceTree = "<group>"; };
 		4C9F589E22A7ADF300CEF856 /* sharatv_pvr_client.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = sharatv_pvr_client.cpp; sourceTree = "<group>"; };
+		4CA10C23247AB10D0000FF0F /* Speedometer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Speedometer.h; sourceTree = "<group>"; };
 		4CAAE7212000CB2100A866C9 /* pvr_client_types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = pvr_client_types.h; sourceTree = "<group>"; };
 		4CAAE7222006438600A866C9 /* edem_player.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = edem_player.cpp; path = src/edem_player.cpp; sourceTree = "<group>"; };
 		4CAAE7232006438600A866C9 /* edem_player.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = edem_player.h; path = src/edem_player.h; sourceTree = "<group>"; };
@@ -427,6 +429,7 @@
 				4C3EEDBE210C670B001C0DB8 /* neutral_sorting.h */,
 				4CAAE72F200691A600A866C9 /* XMLTV_loader.cpp */,
 				4CAAE730200691A600A866C9 /* XMLTV_loader.hpp */,
+				4CA10C23247AB10D0000FF0F /* Speedometer.h */,
 				4C4FBFA41E77C0590027911E /* Buffers */,
 				4CDC11DD20B452B300EA9E2B /* Client Base */,
 				4CAAE72A2006438C00A866C9 /* Edem */,
@@ -995,6 +998,7 @@
 				4CEE3EE72239398F00AB8F2C /* General.h in Headers */,
 				4CEE3F6E22393AB300AB8F2C /* writer.h in Headers */,
 				4CEE3F6422393AB300AB8F2C /* schema.h in Headers */,
+				4CA10C24247AB10D0000FF0F /* Speedometer.h in Headers */,
 				4CEE3ED82239397900AB8F2C /* xbmc_pvr_dll.h in Headers */,
 				4CEE3FA7223958B100AB8F2C /* AudioDecoder.h in Headers */,
 				4CEE3F5E22393AB300AB8F2C /* encodings.h in Headers */,

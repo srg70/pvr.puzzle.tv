@@ -46,6 +46,7 @@ using namespace std;
 using namespace ADDON;
 using namespace PvrClient;
 using namespace Globals;
+using namespace Helpers;
 
 typedef std::map<string, SovokTV::CountryTemplate*> CountryFilterMap;
 static CountryFilterMap& GetCountryFilterMap();

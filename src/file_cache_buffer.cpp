@@ -55,7 +55,8 @@ namespace Buffers
     using namespace P8PLATFORM;
     using namespace ADDON;
     using namespace Globals;
-    
+    using namespace Helpers;
+
     std::string UniqueFilename(const std::string& dir);
     
     class CAddonFile;
