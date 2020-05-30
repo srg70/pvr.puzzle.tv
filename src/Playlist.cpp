@@ -32,6 +32,7 @@
 
 namespace Buffers {
 using namespace Globals;
+using namespace Helpers;
 
 static std::string ToAbsoluteUrl(const std::string& url, const std::string& baseUrl){
     const char* c_HTTP = "http://";

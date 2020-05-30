@@ -51,6 +51,8 @@ namespace Buffers {
     , m_cache(cache)
     , m_cacheToSwap(nullptr)
     , m_isWaitingForRead(false)
+//    , m_downloadSpeed(33 * 1024 * 1024)
+//    , m_playbackSpeed(33 * 1024 * 1024)
     {
         if (!m_inputBuffer)
             throw InputBufferException("TimesiftBuffer: source stream buffer is NULL.");
@@ -59,6 +61,7 @@ namespace Buffers {
         Init();
     }
     
+//  static bool test_read_started = false;
     void TimeshiftBuffer::Init(const std::string& newUrl) {
         
         if(!newUrl.empty()) {
@@ -70,6 +73,8 @@ namespace Buffers {
         m_writeEvent.Reset();
         m_cache->Init();
         m_isInputBufferValid = false;
+//        test_read_started = false;
+//        m_downloadSpeed.Start();
         CreateThread();
 
     }
@@ -124,7 +129,6 @@ namespace Buffers {
         }
     }
 
-    
     void *TimeshiftBuffer::Process()
     {
         bool isError = false;
@@ -140,28 +144,42 @@ namespace Buffers {
                     Sleep(1000);
                 }
                 ssize_t bytesRead = 0;
+               
                 while (!isError && (bytesRead < bufferLenght) && !IsStopped() && m_inputBuffer != NULL){
                     // Use some "common" timeout (30 sec) since it is background process
                     ssize_t loacalBytesRad = m_inputBuffer->Read(buffer + bytesRead, bufferLenght - bytesRead, 30*1000);
                     bytesRead += loacalBytesRad;
                     isError = loacalBytesRad < 0;
                 }
+
                 if(nullptr != buffer) {
                     m_cache->UnlockAfterWriten(buffer, bytesRead);
                     m_isInputBufferValid = true;
                     m_writeEvent.Signal();
                 }
+//                m_downloadSpeed.StepDone(bytesRead);
             }
-            
         } catch (std::exception& ex ) {
             LogError("Exception in timshift background thread: %s", ex.what());
         }
 
         return NULL;
     }
-    
+
+//    float TimeshiftBuffer::GetSpeedRatio() const {
+//        float d = m_downloadSpeed.KBytesPerSecond();
+//        float r = m_playbackSpeed.KBytesPerSecond();
+//        float diff = d-r;
+//
+//        return 0.5 + 0.5 * diff / (diff < 0 ? r : d);
+//    }
+
     ssize_t TimeshiftBuffer::Read(unsigned char *buffer, size_t bufferSize, uint32_t timeoutMs)
     {
+//        if(!test_read_started) {
+//            test_read_started = true;
+//            m_playbackSpeed.Start();
+//        }
         size_t totalBytesRead = 0;
 
         m_isWaitingForRead = true;
@@ -184,6 +202,11 @@ namespace Buffers {
             }
         }
         m_isWaitingForRead = false;
+//        m_playbackSpeed.StepDone(totalBytesRead);
+//        LogDebug("TimeshiftBuffer: download speed: %.2f - %.2f = %.2f KB/sec",
+//                 m_downloadSpeed.KBytesPerSecond(),
+//                 m_playbackSpeed.KBytesPerSecond(),
+//                 m_downloadSpeed.KBytesPerSecond() - m_playbackSpeed.KBytesPerSecond());
         return (IsStopped() || !IsRunning()) ? -1 :totalBytesRead;
     }
     

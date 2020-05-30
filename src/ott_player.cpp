@@ -50,6 +50,7 @@ namespace OttEngine
     using namespace ADDON;
     using namespace rapidjson;
     using namespace PvrClient;
+    using namespace Helpers;
 
     
     static const int secondsPerHour = 60 * 60;

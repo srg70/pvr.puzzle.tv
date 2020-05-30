@@ -50,7 +50,7 @@ namespace SharaTvEngine {
     using namespace ADDON;
     using namespace rapidjson;
     using namespace PvrClient;
-    
+    using namespace Helpers;
     
     // Tags for archive template
     static const char* const c_START = "${start}";

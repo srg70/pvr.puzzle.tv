@@ -42,6 +42,7 @@ using namespace std;
 using namespace ADDON;
 using namespace rapidjson;
 using namespace Globals;
+using namespace Helpers;
 
 static const char* c_EpgCacheDirPath = "special://temp/pvr-puzzle-tv";
 

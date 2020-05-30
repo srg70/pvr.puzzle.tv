@@ -77,7 +77,7 @@ namespace TtvEngine
             std::string epgUrl;
             std::string AceServerUrlBase() const
             {
-                return std::string ("http://") + aceServerUri +":" + n_to_string(aceServerPort);
+                return std::string ("http://") + aceServerUri +":" + Helpers::n_to_string(aceServerPort);
             }
         };
         Core(const CoreParams& coreParams);

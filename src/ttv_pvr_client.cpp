@@ -48,6 +48,7 @@ using namespace std;
 using namespace ADDON;
 using namespace TtvEngine;
 using namespace PvrClient;
+using namespace Helpers;
 
 static const char* c_epg_setting = "ttv_epg_url";
 static const char* c_ttv_ace_server_uri = "ttv_ace_server_uri";

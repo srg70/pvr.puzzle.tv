@@ -44,6 +44,7 @@ using namespace XMLTV;
 using namespace rapidxml;
 using namespace Globals;
 using namespace ADDON;
+using namespace Helpers;
 
 namespace XMLTV {
     

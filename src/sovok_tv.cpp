@@ -47,6 +47,7 @@ using namespace std;
 using namespace ADDON;
 using namespace rapidjson;
 using namespace PvrClient;
+using namespace Helpers;
 
 #define CATCH_API_CALL(msg) \
     catch (ServerErrorException& ex) { \

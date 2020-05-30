@@ -47,6 +47,7 @@ using namespace Globals;
 using namespace std;
 using namespace ADDON;
 using namespace PvrClient;
+using namespace Helpers;
 
 static const char* c_playlist_setting = "ott_playlist_url";
 static const char* c_key_setting = "ott_key";
