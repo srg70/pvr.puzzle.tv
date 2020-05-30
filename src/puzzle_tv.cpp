@@ -46,6 +46,7 @@ using namespace ADDON;
 using namespace rapidjson;
 using namespace PuzzleEngine;
 using namespace PvrClient;
+using namespace Helpers;
 
 static const int secondsPerHour = 60 * 60;
 static const char* c_EpgCacheFile = "puzzle_epg_cache.txt";

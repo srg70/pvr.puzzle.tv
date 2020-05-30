@@ -47,6 +47,7 @@ using namespace std;
 using namespace ADDON;
 using namespace PuzzleEngine;
 using namespace PvrClient;
+using namespace Helpers;
 
 static const char* c_server_url_setting = "puzzle_server_uri";
 static const char* c_server_port_setting = "puzzle_server_port";

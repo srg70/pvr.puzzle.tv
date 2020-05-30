@@ -34,6 +34,8 @@
 #include <ctime>
 #include <algorithm>
 
+namespace Helpers {
+
 template <class T>
 void dump_json(const T& jValue);
 
@@ -71,5 +73,5 @@ private:
     char* m_message;
 };
 
-
+}
 #endif //helpers_h

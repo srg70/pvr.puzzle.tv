@@ -33,6 +33,7 @@
 #include "p8-platform/util/buffer.h"
 #include "input_buffer.h"
 #include "cache_buffer.h"
+#include "Speedometer.h"
 
 namespace Buffers {
     
@@ -49,6 +50,7 @@ namespace Buffers {
         int64_t Seek(int64_t iPosition, int iWhence);
         bool SwitchStream(const std::string &newUrl);
         void AbortRead();
+//        float GetSpeedRatio() const ;
 
         void SwapCache(ICacheBuffer* cache){
             m_cacheToSwap = cache;
@@ -83,7 +85,10 @@ namespace Buffers {
         ICacheBuffer* m_cache;
         ICacheBuffer* m_cacheToSwap;
         bool m_isInputBufferValid;
-        bool m_isWaitingForRead;        
+        bool m_isWaitingForRead;
+//        Helpers::Speedometer m_downloadSpeed;
+//        Helpers::Speedometer m_playbackSpeed;
+
     };
 }
 

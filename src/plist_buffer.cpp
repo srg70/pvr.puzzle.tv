@@ -43,6 +43,7 @@
 using namespace P8PLATFORM;
 using namespace ADDON;
 using namespace Globals;
+using namespace Helpers;
 
 namespace Buffers {
     int PlaylistBuffer::s_numberOfHlsThreads = 1;

@@ -71,6 +71,7 @@ namespace TtvEngine
     using namespace ADDON;
     using namespace rapidjson;
     using namespace PvrClient;
+    using namespace Helpers;
 
     
     static const char* c_EpgCacheFile = "trash_epg_cache.txt";

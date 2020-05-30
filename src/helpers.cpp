@@ -32,55 +32,59 @@
 #include "rapidjson/document.h"
 #include "globals.hpp"
 
-XBMC_Message:: XBMC_Message(int code) {
-    m_message  = Globals::XBMC->GetLocalizedString(code);
-}
-XBMC_Message::~XBMC_Message() {
-    if(m_message)
-        Globals::XBMC->FreeString(m_message);
-}
 
-std::string n_to_string(int64_t n)
-{
-    char buffer[15];
-    snprintf(buffer, sizeof(buffer), "%lld", n);
-
-    return buffer;
-}
-
-std::string n_to_string_hex(uint64_t n)
-{
-    char buffer[9];
-    snprintf(buffer, sizeof(buffer), "%llX", n);
+namespace Helpers{ 
     
-    return buffer;
-}
-
-std:: string time_t_to_string(const time_t& time)
-{
-    char mbstr[100];
-    
-    if (std::strftime(mbstr, sizeof(mbstr), "%d/%m/%y %H:%M", std::localtime(&time))) {
-        return mbstr;
+    XBMC_Message:: XBMC_Message(int code) {
+        m_message  = Globals::XBMC->GetLocalizedString(code);
     }
-    return std::string("Wrong time format");
-}
-
-template <class T>
-void dump_json(const T& jValue)
-{
-    using namespace rapidjson;
-
-    StringBuffer sb;
-    PrettyWriter<StringBuffer> writer(sb);
-    jValue.Accept(writer);
-    auto str = sb.GetString();
-    printf("%s\n", str);
-}
-
-template void dump_json<rapidjson::Document>(const rapidjson::Document& jValue);
-template void dump_json<rapidjson::Value>(const rapidjson::Value& jValue);
-//int strtoi(const std::string &str)
-//{
-//    return atoi(str.c_str());
-//}
+    XBMC_Message::~XBMC_Message() {
+        if(m_message)
+            Globals::XBMC->FreeString(m_message);
+    }
+    
+    std::string n_to_string(int64_t n)
+    {
+        char buffer[15];
+        snprintf(buffer, sizeof(buffer), "%lld", n);
+        
+        return buffer;
+    }
+    
+    std::string n_to_string_hex(uint64_t n)
+    {
+        char buffer[9];
+        snprintf(buffer, sizeof(buffer), "%llX", n);
+        
+        return buffer;
+    }
+    
+    std:: string time_t_to_string(const time_t& time)
+    {
+        char mbstr[100];
+        
+        if (std::strftime(mbstr, sizeof(mbstr), "%d/%m/%y %H:%M", std::localtime(&time))) {
+            return mbstr;
+        }
+        return std::string("Wrong time format");
+    }
+    
+    template <class T>
+    void dump_json(const T& jValue)
+    {
+        using namespace rapidjson;
+        
+        StringBuffer sb;
+        PrettyWriter<StringBuffer> writer(sb);
+        jValue.Accept(writer);
+        auto str = sb.GetString();
+        printf("%s\n", str);
+    }
+    
+    template void dump_json<rapidjson::Document>(const rapidjson::Document& jValue);
+    template void dump_json<rapidjson::Value>(const rapidjson::Value& jValue);
+    //int strtoi(const std::string &str)
+    //{
+    //    return atoi(str.c_str());
+    //}
+} //Helpers
