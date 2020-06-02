@@ -300,9 +300,9 @@ namespace SharaTvEngine {
         using namespace XMLTV;
         try {
             LoadEpg(cancelled);
-            if(!cancelled)
+            if(!cancelled())
                 SaveEpgCache(c_EpgCacheFile, m_archiveInfo.archiveDays);
-        } catch (...) {
+        } catch (...) {	
             LogError("SharaTvPlayer:: failed to update EPG.");
         }
     }
