@@ -1446,6 +1446,17 @@ void PvrClient::EpgEntry::FillEpgTag(EPG_TAG& tag) const{
     }
 }
 
+#pragma mark - Stream Properties
+
+PVR_ERROR PVRClientBase::GetChannelStreamProperties(const PVR_CHANNEL* channel, PVR_NAMED_VALUE* properties, unsigned int* iPropertiesCount) {
+    return PVR_ERROR_NOT_IMPLEMENTED;
+}
+
+const char * PVRClientBase::GetLiveStreamURL(const PVR_CHANNEL &channel)  {
+    return "";
+}
+
+
 #pragma mark - Settings
 
 const char* const c_curlTimeout = "curl_timeout";

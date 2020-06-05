@@ -403,14 +403,24 @@ extern "C" {
     {
         return m_DataSource->IsRealTimeStream();        
     }
+    /**********************************************************************************/
+     /**************** STREAM PROPERTIES API FUNCTIONS ***************/
+     /*********************************************************************************/
 
-    /********************************************************************************/
-    /**************************** UNUSED API FUNCTIONS ******************************/
-    /********************************************************************************/
+    PVR_ERROR GetChannelStreamProperties(const PVR_CHANNEL* channel, PVR_NAMED_VALUE* properties, unsigned int* iPropertiesCount)
+    {
+        return m_DataSource->GetChannelStreamProperties(channel, properties, iPropertiesCount);
+    }
+    const char * GetLiveStreamURL(const PVR_CHANNEL &channel)
+    {
+        return m_DataSource->GetLiveStreamURL(channel);
+    }
 
-    const char * GetLiveStreamURL(const PVR_CHANNEL &channel)  { return ""; }
+    /**********************************************************************************/
+    /*********************** UNUSED API FUNCTIONS **************************/
+    /**********************************************************************************/
+
     PVR_ERROR GetStreamProperties(PVR_STREAM_PROPERTIES* pProperties) { return PVR_ERROR_NOT_IMPLEMENTED; }
-    PVR_ERROR GetChannelStreamProperties(const PVR_CHANNEL* channel, PVR_NAMED_VALUE* properties, unsigned int* iPropertiesCount) { return PVR_ERROR_NOT_IMPLEMENTED; }
 
     PVR_ERROR OpenDialogChannelScan(void) { return PVR_ERROR_NOT_IMPLEMENTED; }
         PVR_ERROR DeleteChannel(const PVR_CHANNEL &channel) { return PVR_ERROR_NOT_IMPLEMENTED; }

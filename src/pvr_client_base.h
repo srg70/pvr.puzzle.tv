@@ -112,6 +112,10 @@ namespace PvrClient
         void OnSystemSleep();
         void OnSystemWake();
         PVR_ERROR SignalStatus(PVR_SIGNAL_STATUS &signalStatus);
+        
+        PVR_ERROR GetChannelStreamProperties(const PVR_CHANNEL* channel, PVR_NAMED_VALUE* properties, unsigned int* iPropertiesCount);
+        const char * GetLiveStreamURL(const PVR_CHANNEL &channel);
+
 
     protected:
         IClientCore* m_clientCore;
