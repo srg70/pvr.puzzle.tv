@@ -293,7 +293,7 @@ static const std::string c_udpProxyHost("playlist_udp_proxy_host");
 static const std::string c_udpProxyPort("playlist_udp_proxy_port");
 
 template<typename T>
-static void NotifyClearPvrData(const T&) {
+static void NotifyClearPvrData(std::function<const T&()>) {
     XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32016));
 }
 
