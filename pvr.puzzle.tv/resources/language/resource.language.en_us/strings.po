@@ -124,6 +124,10 @@ msgctxt "#10026"
 msgid "Multicast"
 msgstr "Multicast"
 
+msgctxt "#10027"
+msgid "Forward start padding"
+msgstr "Forward start padding"
+
 sgctxt "#10094"
 msgid "No"
 msgstr "No"
@@ -525,6 +529,10 @@ msgstr "No streams available."
 msgctxt "#32027"
 msgid "Delay startup for %d sec."
 msgstr "Delay startup for %d sec."
+
+msgctxt "#32028"
+msgid "No PRC connection!"
+msgstr "No PRC connection!"
 
 #============= Menus ================
 

@@ -146,13 +146,13 @@ private:
     P8PLATFORM::CThread* m_thread;
 };
 
-
 ClientCoreBase::ClientCoreBase(const IClientCore::RecordingsDelegate& didRecordingsUpadate)
 : m_didRecordingsUpadate(didRecordingsUpadate)
 , m_groupList(m_mutableGroupList)
 , m_channelList(m_mutableChannelList)
 , m_lastEpgRequestEndTime(0)
 , m_rpcPort(8080)
+, m_rpcWorks(false)
 {
     if(nullptr == m_didRecordingsUpadate) {
         auto pvr = PVR;
@@ -165,7 +165,6 @@ ClientCoreBase::ClientCoreBase(const IClientCore::RecordingsDelegate& didRecordi
     m_phases.emplace(k_RecordingsInitialLoadingPhase, std::move(TPhases::mapped_type(new ClientPhase())));
     m_phases.emplace(k_InitPhase, std::move(TPhases::mapped_type(new ClientPhase())));
     m_phases.emplace(k_EpgLoadingPhase, std::move(TPhases::mapped_type(new ClientPhase())));
-    
 }
 
 void ClientCoreBase::InitAsync(bool clearEpgCache, bool updateRecordings)
@@ -670,8 +669,21 @@ void ClientCoreBase::CallRpcAsync(const std::string & data,
                                   std::function<void(rapidjson::Document&)>  parser,
                                   ActionQueue::TCompletion completion)
 {
-    if(nullptr == m_httpEngine)
+    if(!m_rpcWorks){
+         completion(ActionQueue::ActionResult(ActionQueue::kActionFailed, std::make_exception_ptr(RpcCallException("No RPC connection (wrong PRC port?)."))));
+         return;
+     }
+    CallRpcAsyncImpl(data, parser, completion);
+}
+
+void ClientCoreBase::CallRpcAsyncImpl(const std::string & data,
+                                  std::function<void(rapidjson::Document&)>  parser,
+                                  ActionQueue::TCompletion completion)
+{
+    if(nullptr == m_httpEngine){
+        completion(ActionQueue::ActionResult(ActionQueue::kActionFailed, std::make_exception_ptr(RpcCallException("m_httpEngine is NULL."))));
         return;
+    }
     
     // Build HTTP request
     std::string strRequest = string("http://") + "127.0.0.1" + ":" + n_to_string(m_rpcPort) + "/jsonrpc";
@@ -709,5 +721,23 @@ void ClientCoreBase::CallRpcAsync(const std::string & data,
     m_httpEngine->CallApiAsync(HttpEngine::Request(strRequest, data, headers), parserWrapper,  [=](const ActionQueue::ActionResult& ss){completion(ss);});
 }
 
+void ClientCoreBase::CheckRpcConnection()
+{
+    if(m_rpcWorks)
+        return;
+    
+    LogDebug("ClientCoreBase: ping JSON-RPC...");
+
+    std::string rpcPingCommand = R"({ "jsonrpc": "2.0", "method": "JSONRPC.Ping", "id": 1 })";
+    CallRpcAsyncImpl(rpcPingCommand, [&](rapidjson::Document& jsonRoot){
+        m_rpcWorks = true;
+    }, [&](const ActionQueue::ActionResult& s){
+        m_rpcWorks =  s.status == ActionQueue::kActionCompleted;
+        LogDebug("ClientCoreBase: JSON-RPC %s.", (m_rpcWorks) ? "works" : "failed");
+        if(!m_rpcWorks){
+            XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32028));
+        }
+    });
+}
 
 }
