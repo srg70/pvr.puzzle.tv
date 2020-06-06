@@ -112,6 +112,10 @@ namespace PvrClient
         void OnSystemSleep();
         void OnSystemWake();
         PVR_ERROR SignalStatus(PVR_SIGNAL_STATUS &signalStatus);
+        
+        PVR_ERROR GetChannelStreamProperties(const PVR_CHANNEL* channel, PVR_NAMED_VALUE* properties, unsigned int* iPropertiesCount);
+        const char * GetLiveStreamURL(const PVR_CHANNEL &channel);
+
 
     protected:
         IClientCore* m_clientCore;
@@ -187,6 +191,7 @@ namespace PvrClient
         int LivePlaybackDelayForHls() const;
         int LivePlaybackDelayForTs() const;
         int LivePlaybackDelayForMulticast() const;
+        bool SeekArchivePadding() const;
 
         void FillRecording(const EpgEntryList::value_type& epgEntry, PVR_RECORDING& tag, const char* dirPrefix);
         std::string DirectoryForRecording(unsigned int epgId) const;
@@ -196,13 +201,15 @@ namespace PvrClient
         Buffers::ICacheBuffer* CreateLiveCache() const;
 
         void ScheduleRecordingsUpdate();
-        
+        void SeekKodiPlayerAsyncToOffset(int offsetInSeconds, std::function<void(bool done)> result);
+
         ChannelId m_liveChannelId;
         Buffers::TimeshiftBuffer *m_inputBuffer;
         struct {
             Buffers::InputBuffer * buffer;
             time_t duration;
             bool isLocal;
+            unsigned int seekToSec;
         } m_recordBuffer;
         ChannelId m_localRecordChannelId;
         Buffers::TimeshiftBuffer *m_localRecordBuffer;

@@ -90,6 +90,10 @@ public:
     virtual  void OnSystemSleep() = 0;
     virtual void OnSystemWake() = 0;
     
+    virtual PVR_ERROR GetChannelStreamProperties(const PVR_CHANNEL* channel, PVR_NAMED_VALUE* properties, unsigned int* iPropertiesCount) = 0;
+    virtual const char * GetLiveStreamURL(const PVR_CHANNEL &channel) = 0;
+
+    
     virtual ~IPvrIptvDataSource(){}
 };
 

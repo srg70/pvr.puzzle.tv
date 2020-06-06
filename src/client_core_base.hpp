@@ -62,6 +62,7 @@ namespace PvrClient {
         void GetEpg(ChannelId channelId, time_t startTime, time_t endTime, EpgEntryAction& onEpgEntry);
         
         void SetRpcPort(int port) {m_rpcPort = port;}
+        void CheckRpcConnection();
         void CallRpcAsync(const std::string & data, std::function<void(rapidjson::Document&)>  parser,
                           ActionQueue::TCompletion completion);
         void IncludeCurrentEpgToArchive(AddCurrentEpgToArchive add) {m_addCurrentEpgToArchive = add;}
@@ -113,6 +114,7 @@ namespace PvrClient {
         // Recordings
         void OnEpgUpdateDone();
         void _UpdateEpgForAllChannels(time_t startTime, time_t endTime, std::function<bool(void)> cancelled);
+        void CallRpcAsyncImpl(const std::string & data, std::function<void(rapidjson::Document&)>  parser, ActionQueue::TCompletion completion);
 
 
         PvrClient::ChannelList m_mutableChannelList;
@@ -132,6 +134,7 @@ namespace PvrClient {
         
         time_t m_lastEpgRequestEndTime;
         int m_rpcPort;
+        bool m_rpcWorks;
     };
     
     class ExceptionBase : public std::exception

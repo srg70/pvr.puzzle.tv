@@ -78,14 +78,16 @@ protected:
     class AddonSetting {
     public:
         typedef std::function<void(const T&)> TPropagator;
-        
-        AddonSetting(const std::string& n, const T& d = T{}, ADDON_STATUS s = ADDON_STATUS_OK, TPropagator f = &DefaultPropagator)
-        : name(n), defaultValue(d), statusWhenChanged(s), propagator(f)
+        typedef std::function<void(std::function<const T&()>)> TOnValueSet;
+
+        AddonSetting(const std::string& n, const T& d = T{}, ADDON_STATUS s = ADDON_STATUS_OK, TOnValueSet onSet = &DefaultOnValueSet, TPropagator f = &DefaultPropagator)
+        : name(n), defaultValue(d), statusWhenChanged(s), onValueSet(onSet), propagator(f)
         {
             Init(defaultValue);
         }
         AddonSetting(const AddonSetting& as)
-        : name(as.name), defaultValue(as.defaultValue), statusWhenChanged(as.statusWhenChanged), propagator(as.propagator)
+        : name(as.name), defaultValue(as.defaultValue), statusWhenChanged(as.statusWhenChanged)
+        , onValueSet(as.onValueSet), propagator(as.propagator)
         {
             Init(as.Value());
         }
@@ -94,20 +96,24 @@ protected:
         inline void Init(const T& v)
         {
             value = v;
+            propagator(value);
         }
         inline ADDON_STATUS SetValue(const T& v)
         {
             if(v == value)
                 return ADDON_STATUS_OK;
             Init(v);
-            propagator(value);
+            onValueSet([v]{return v;});
             return statusWhenChanged;
         }
-    private:
         static void DefaultPropagator (const T&) {}
+        static void DefaultOnValueSet (std::function<const T&()>) {}
+    private:
+
         T value;
         T defaultValue;
         const ADDON_STATUS statusWhenChanged;
+        const TOnValueSet onValueSet;
         const TPropagator propagator;
     };
    
@@ -310,9 +316,19 @@ public:
         return *this;
     }
     template <typename T>
-    AddonSettingsMutableDictionary& Add(const std::string& n, const T& defaultV, typename AddonSetting<T>::TPropagator p, ADDON_STATUS onChanged = ADDON_STATUS_OK)
+    AddonSettingsMutableDictionary& Add(const std::string& n, const T& defaultV,
+                                        typename AddonSetting<T>::TOnValueSet onSet,
+                                        ADDON_STATUS onChanged = ADDON_STATUS_OK)
     {
-        AddSetting(AddonSetting<T>(n, defaultV, onChanged, p));
+        AddSetting(AddonSetting<T>(n, defaultV, onChanged, onSet));
+        return *this;
+    }
+    template <typename T>
+    AddonSettingsMutableDictionary& Add(const std::string& n, const T& defaultV,
+                                        typename AddonSetting<T>::TPropagator p,
+                                        ADDON_STATUS onChanged = ADDON_STATUS_OK)
+    {
+        AddSetting(AddonSetting<T>(n, defaultV, onChanged, &AddonSetting<T>::DefaultOnValueSet, p));
         return *this;
     }
 
@@ -321,169 +337,22 @@ public:
         AddSetting(AddonSetting<std::string>(n, defaultV, onChanged));
         return *this;
     }
-    AddonSettingsMutableDictionary& Add(const std::string& n, const char* defaultV, typename AddonSetting<std::string>::TPropagator p, ADDON_STATUS onChanged = ADDON_STATUS_OK)
+    AddonSettingsMutableDictionary& Add(const std::string& n, const char* defaultV,
+                                        typename AddonSetting<std::string>::TOnValueSet onSet,
+                                        ADDON_STATUS onChanged = ADDON_STATUS_OK)
     {
-        AddSetting(AddonSetting<std::string>(n, defaultV, onChanged, p));
+        AddSetting(AddonSetting<std::string>(n, defaultV, onChanged, onSet));
+        return *this;
+    }
+    AddonSettingsMutableDictionary& Add(const std::string& n, const char* defaultV,
+                                        typename AddonSetting<std::string>::TPropagator p,
+                                        ADDON_STATUS onChanged = ADDON_STATUS_OK)
+    {
+        AddSetting(AddonSetting<std::string>(n, defaultV, onChanged, &AddonSetting<std::string>::DefaultOnValueSet, p));
         return *this;
     }
 
 };
-
-/*
-
-struct SettingsAdaptor{
-public:
-    template<typename... Tp>
-    SettingsAdaptor(const AddonSettings<Tp...>& ss)
-    : init(std::bind(&SettingsAdaptor::Init<Tp...>, this))
-    , print(std::bind(&SettingsAdaptor::Print<Tp...>, this))
-    , set(std::bind(&SettingsAdaptor::Set<Tp...>, this,  std::placeholders::_1,  std::placeholders::_2))
-    , get_int(std::bind(&SettingsAdaptor::Get<int, Tp...>, this,  std::placeholders::_1))
-    , destroy(std::bind(&SettingsAdaptor::Destroy<Tp...>, this))
-    {
-        settings_holder = new typename AddonSettings<Tp...>::container_type(ss.settings);
-    }
-    ~SettingsAdaptor() { destroy();}
-    
-    const std::function<void()> init;
-    const std::function<void()> print;
-    const std::function<void(const char*, const void*)> set;
-    const std::function<int(const char*)> get_int;
-private:
-    void* settings_holder;
-    const std::function<void()> destroy;
-
-    struct InitFromGlobals
-    {
-        
-        template<typename T>
-        void operator()(T& t) const;
-        template<typename T>
-        void operator()(AddonSetting<T> & t) const
-        {
-            T v;
-            Globals::XBMC->GetSetting(t.name.c_str(), &v);
-            t.SetValue(v);
-        }
-        template<>
-        void operator()(AddonSetting<std::string> & t) const
-        {
-            char v[1024];
-            Globals::XBMC->GetSetting(t.name.c_str(), &v);
-            t.SetValue(v);
-        }
-    };
-
-    struct SettingComparator
-    {
-        SettingComparator(const char* settingName) : name (settingName) {}
-            
-        template<typename T>
-        bool operator()(const T& t) const;
-        template<typename T>
-        bool operator()(const AddonSetting<T> & t) const
-        {
-            return t.name == name;
-        }
-            
-        const std:: string name;
-            
-    };
-
-    struct SetSettingsValue
-    {
-        SetSettingsValue(const void* newSettingValue) : value(newSettingValue) {}
-        template<typename T>
-        void operator()(T& t) const;
-        template<typename T>
-        void operator()(AddonSetting<T> & t) const
-        {
-            t.SetValue(*reinterpret_cast<const T*>(value));
-        }
-        template<>
-        void operator()(AddonSetting<std::string> & t) const
-        {
-            t.SetValue((reinterpret_cast<const char*>(value)));
-        }
-        const void * value;
-    };
-
-    template<typename T>
-    struct GetSettingsValue
-    {
-        template<typename U>
-        void operator()(U& t)
-        {
-            std::string errorStr("Wrong setting's value type.");
-            Globals::LogError(errorStr.c_str());
-            throw std::invalid_argument(errorStr);
-        }
-        template<>
-        void operator()(AddonSetting<T> & t)
-        {
-            value = t.Value();
-        }
-        T value;
-    };
-
-    struct PrintSetting
-    {
-        
-        template<typename T>
-        void operator()(T& t) const;
-        
-        template<typename T>
-        void operator()(AddonSetting<T> & t) const
-        {
-            std::stringstream ss;
-            ss << "S[ " << t.name << " ] = " << t.Value();
-            Globals::LogDebug(ss.str().c_str());
-        }
-    };
-    template<typename... Tp>
-    void Init(){
-        typename AddonSettings<Tp...>::container_type* pSs = reinterpret_cast<typename AddonSettings<Tp...>::container_type*>(settings_holder);
-        for_each(*pSs, InitFromGlobals());
-    }
-    template<typename... Tp>
-    void Print(){
-        typename AddonSettings<Tp...>::container_type* pSs = reinterpret_cast<typename AddonSettings<Tp...>::container_type*>(settings_holder);
-        for_each(*pSs, PrintSetting());
-    }
-    template<typename... Tp>
-    void Set(const char* name, const void* value){
-        typename AddonSettings<Tp...>::container_type* pSs = reinterpret_cast<typename AddonSettings<Tp...>::container_type*>(settings_holder);
-        
-        if(!first_if(*pSs, SettingComparator(name), SetSettingsValue(value))){
-            std::string errorStr = "Setting ";
-            errorStr += name;
-            errorStr += " not found.";
-            Globals::LogError(errorStr.c_str());
-            throw std::invalid_argument(errorStr);
-        }
-    }
-    template<typename T, typename... Tp>
-    T Get(const char* name){
-        typename AddonSettings<Tp...>::container_type* pSs = reinterpret_cast<typename AddonSettings<Tp...>::container_type*>(settings_holder);
-        
-        GetSettingsValue<T> v;
-        if(!first_if(*pSs, SettingComparator(name), v)){
-            std::string errorStr = "Setting ";
-            errorStr += name;
-            errorStr += " not found.";
-            Globals::LogError(errorStr.c_str());
-            throw std::invalid_argument(errorStr);
-        }
-        return v.value;
-    }
-    template<typename... Tp>
-    void Destroy(){
-        typename AddonSettings<Tp...>::container_type* pSs = reinterpret_cast<typename AddonSettings<Tp...>::container_type*>(settings_holder);
-        delete pSs;
-        settings_holder = nullptr;
-    }
-};
-*/
 
 }
 

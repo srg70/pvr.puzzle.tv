@@ -188,6 +188,7 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     m_recordBuffer.buffer = NULL;
     m_recordBuffer.duration = 0;
     m_recordBuffer.isLocal = false;
+    m_recordBuffer.seekToSec = 0;
     m_localRecordBuffer = NULL;
     m_supportSeek = false;
     
@@ -226,6 +227,8 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
 
 void PVRClientBase::OnCoreCreated() {
     m_clientCore->SetRpcPort(RpcLocalPort());
+    m_clientCore->CheckRpcConnection();
+
     m_destroyer->PerformAsync([this](){
 //        while(m_clientCore == nullptr) {
 //            P8PLATFORM::CEvent::Sleep(100);
@@ -1167,13 +1170,14 @@ bool PVRClientBase::OpenRecordedStream(const PVR_RECORDING &recording)
         m_recordBuffer.buffer = buffer;
         m_recordBuffer.duration = recording.iDuration;
         m_recordBuffer.isLocal = true;
+        m_recordBuffer.seekToSec = 0;
     } catch (std::exception ex) {
         LogError("OpenRecordedStream (local) exception: %s", ex.what());
     }
     
     return true;
 }
-
+    
 bool PVRClientBase::OpenRecordedStream(const std::string& url,  Buffers::IPlaylistBufferDelegate* delegate, RecordingStreamFlags flags)
 {
      if (url.empty())
@@ -1195,6 +1199,7 @@ bool PVRClientBase::OpenRecordedStream(const std::string& url,  Buffers::IPlayli
         m_recordBuffer.buffer = buffer;
         m_recordBuffer.duration = (delegate) ? delegate->Duration() : 0;
         m_recordBuffer.isLocal = false;
+        m_recordBuffer.seekToSec = (SeekArchivePadding() && (!isM3u || seekForVod) ) ?  StartRecordingPadding() : 0;
     }
     catch (InputBufferException & ex)
     {
@@ -1221,9 +1226,68 @@ PVR_ERROR PVRClientBase::GetStreamReadChunkSize(int* chunksize) {
     return PVR_ERROR_NO_ERROR;
 }
 
+void PVRClientBase::SeekKodiPlayerAsyncToOffset(int offsetInSeconds, std::function<void(bool done)> result)
+{
+
+    auto pThis = this;
+    m_clientCore->CallRpcAsync("{\"jsonrpc\": \"2.0\", \"method\": \"Player.GetProperties\", \"params\": {\"playerid\":1, \"properties\":[ \"time\"]},\"id\": 1}",
+                               [offsetInSeconds, pThis, result] (rapidjson::Document& jsonRoot)
+    {
+        if(!jsonRoot.IsObject()) {
+            LogError("PVRClientBase: wrong JSON format of Player.GetProperties.Time response.");
+            throw RpcCallException("Wrong JSON-RPC response format.");
+        }
+        if(!jsonRoot.HasMember("result")) {
+            LogError("PVRClientBase: missing 'result' in Player.GetProperties.Time response.");
+            throw RpcCallException("Wrong JSON-RPC response format.");
+        }
+        auto& r = jsonRoot["result"];
+        if(!r.IsObject() || !r.HasMember("time")){
+            LogError("PVRClientBase: missing 'time' in Player.GetProperties.Time response.");
+            throw RpcCallException("Wrong JSON-RPC response format.");
+        }
+        auto& t = r["time"];
+        float playedSeconds = t["milliseconds"].GetInt()/1000.0f + t["seconds"].GetInt() + t["minutes"].GetInt() * 60 + t["hours"].GetInt() * 60  * 60;
+        if( 0 == playedSeconds) {
+            LogDebug("PVRClientBase: waiting for Kodi's player becomes started...");
+            throw RpcCallException("Waiting for Kodi's player becomes started.");
+        }
+        if(offsetInSeconds <= playedSeconds) {
+            LogDebug("PVRClientBase: Kodi's player position (%d) is after the offset (%d).", playedSeconds, offsetInSeconds);
+            return;
+        }
+        
+        //        {"jsonrpc":"2.0", "method":"Player.Seek", "params": { "playerid":1, "value":{ "seconds": 30 } }, "id":1}
+        std::string rpcCommand(
+                               std::string("{\"jsonrpc\": \"2.0\", \"method\": \"Player.Seek\", \"params\": {\"playerid\":1, \"value\":{ \"seconds\":") +
+                               std::to_string(offsetInSeconds) +
+                               "}},\"id\": 1}"
+                               );
+        pThis->m_clientCore->CallRpcAsync(rpcCommand,
+                                          [result] (rapidjson::Document& jsonRoot) {result(true);},
+                                          [result](const ActionQueue::ActionResult& s) {});
+        LogDebug("PVRClientBase: sent JSON commad to seek to %d sec offset.", offsetInSeconds);
+    },[result](const ActionQueue::ActionResult& s) {
+        if(s.status == kActionFailed) {
+            result(false);
+        } else {
+            result(true);
+        }
+    });
+}
+
 int PVRClientBase::ReadRecordedStream(unsigned char *pBuffer, unsigned int iBufferSize)
 {
     //uint32_t timeoutMs = 5000;
+    if(m_recordBuffer.seekToSec > 0){
+        auto offset = m_recordBuffer.seekToSec;
+        auto pThis = this;
+        m_recordBuffer.seekToSec = 0;
+        SeekKodiPlayerAsyncToOffset(offset, [offset, pThis] (bool done) {
+            if(!done)
+                pThis->m_recordBuffer.seekToSec = offset;
+        } );
+    }
     return (m_recordBuffer.buffer == NULL) ? -1 : m_recordBuffer.buffer->Read(pBuffer, iBufferSize, (m_recordBuffer.isLocal)? 0 : ChannelReloadTimeout() * 1000);
 }
 
@@ -1446,6 +1510,17 @@ void PvrClient::EpgEntry::FillEpgTag(EPG_TAG& tag) const{
     }
 }
 
+#pragma mark - Stream Properties
+
+PVR_ERROR PVRClientBase::GetChannelStreamProperties(const PVR_CHANNEL* channel, PVR_NAMED_VALUE* properties, unsigned int* iPropertiesCount) {
+    return PVR_ERROR_NOT_IMPLEMENTED;
+}
+
+const char * PVRClientBase::GetLiveStreamURL(const PVR_CHANNEL &channel)  {
+    return "";
+}
+
+
 #pragma mark - Settings
 
 const char* const c_curlTimeout = "curl_timeout";
@@ -1471,6 +1546,7 @@ const char* const c_archiveRefreshInterval = "archive_refresh_interval";
 const char* const c_livePlaybackDelayHls = "live_playback_delay_hls";
 const char* const c_livePlaybackDelayTs = "live_playback_delay_ts";
 const char* const c_livePlaybackDelayUdp = "live_playback_delay_udp";
+const char* const c_seekArchivePadding = "archive_seek_padding_on_start";
 
 void PVRClientBase::InitSettings()
 {
@@ -1498,12 +1574,18 @@ void PVRClientBase::InitSettings()
     .Add(c_livePlaybackDelayHls, 0)
     .Add(c_livePlaybackDelayTs, 0)
     .Add(c_livePlaybackDelayUdp, 0)
+    .Add(c_seekArchivePadding, false)
     ;
     
     PopulateSettings(m_addonMutableSettings);
     
     m_addonMutableSettings.Init();
     m_addonMutableSettings.Print();
+}
+
+bool PVRClientBase::SeekArchivePadding() const
+{
+    return m_addonSettings.GetBool(c_seekArchivePadding);
 }
 
 int PVRClientBase::LivePlaybackDelayForHls() const
