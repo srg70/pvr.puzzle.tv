@@ -65,8 +65,8 @@ msgid "Cache limit (MB)"
 msgstr "Макс. размер кэша (MB)"
 
 msgctxt "#10012"
-msgid "RPC local port"
-msgstr "Локальный порт RPC"
+msgid "Kodi's remote control port"
+msgstr "Порт удаленного управления Kodi"
 
 msgctxt "#10013"
 msgid "Archive for current broadcast"
@@ -531,8 +531,8 @@ msgid "Delay startup for %d sec."
 msgstr "Задержка загрузки на %d сек."
 
 msgctxt "#32028"
-msgid "No PRC connection!"
-msgstr "Нет соединения PRC!"
+msgid "Unable to control Kodi remotely!"
+msgstr "Не могу управлять Kodi удаленно!"
 
 #============= Menus ================
 
