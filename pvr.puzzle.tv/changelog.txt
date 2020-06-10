@@ -1,3 +1,8 @@
+0.9.87
+- Added option: forward recording padding 
+- Fixed EPG not loaded issue (Shara TV)
+- Fixed multithreaded HLS downloading
+
 0.9.82
 - Live playback delay
 - Signal status visualization (raton of buffer filling)

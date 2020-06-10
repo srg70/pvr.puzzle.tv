@@ -16,6 +16,11 @@
      <source>https://github.com/srg70/pvr.puzzle.tv</source>
      <license>GPL-2.0-or-later</license>
      <news>
+         0.9.87
+         - Added option: forward recording padding
+         - Fixed EPG not loaded issue (Shara TV)
+         - Fixed multithreaded HLS downloading
+         
          0.9.82
          - Live playback delay
          - Signal status visualization (raton of buffer filling)
