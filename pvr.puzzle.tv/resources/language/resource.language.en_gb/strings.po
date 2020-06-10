@@ -66,8 +66,8 @@ msgid "Cache limit (MB)"
 msgstr "Cache limit (MB)"
 
 msgctxt "#10012"
-msgid "RPC local port"
-msgstr "RPC local port"
+msgid "Kodi's remote control port"
+msgstr "Kodi's remote control port"
 
 msgctxt "#10013"
 msgid "Archive for current broadcast"
@@ -528,8 +528,8 @@ msgid "Delay startup for %d sec."
 msgstr "Delay startup for %d sec."
 
 msgctxt "#32028"
-msgid "No PRC connection!"
-msgstr "No PRC connection!"
+msgid "Unable to control Kodi remotely!"
+msgstr "Unable to control Kodi remotely!"
 
 #============= Menus ================
 
