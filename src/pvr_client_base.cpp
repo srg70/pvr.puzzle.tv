@@ -1248,7 +1248,7 @@ void PVRClientBase::SeekKodiPlayerAsyncToOffset(int offsetInSeconds, std::functi
         }
         auto& t = r["time"];
         float playedSeconds = t["milliseconds"].GetInt()/1000.0f + t["seconds"].GetInt() + t["minutes"].GetInt() * 60 + t["hours"].GetInt() * 60  * 60;
-        if( 0 == playedSeconds) {
+        if(playedSeconds < 0.01) {
             LogDebug("PVRClientBase: waiting for Kodi's player becomes started...");
             throw RpcCallException("Waiting for Kodi's player becomes started.");
         }
@@ -1266,7 +1266,7 @@ void PVRClientBase::SeekKodiPlayerAsyncToOffset(int offsetInSeconds, std::functi
         pThis->m_clientCore->CallRpcAsync(rpcCommand,
                                           [result] (rapidjson::Document& jsonRoot) {result(true);},
                                           [result](const ActionQueue::ActionResult& s) {});
-        LogDebug("PVRClientBase: sent JSON commad to seek to %d sec offset.", offsetInSeconds);
+        LogDebug("PVRClientBase: sent JSON commad to seek to %d sec offset. Played seconds %f", offsetInSeconds, playedSeconds);
     },[result](const ActionQueue::ActionResult& s) {
         if(s.status == kActionFailed) {
             result(false);
