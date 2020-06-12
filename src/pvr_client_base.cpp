@@ -1178,14 +1178,25 @@ void PVRClientBase::SeekKodiPlayerAsyncToOffset(int offsetInSeconds, std::functi
         }
         
         //        {"jsonrpc":"2.0", "method":"Player.Seek", "params": { "playerid":1, "value":{ "seconds": 30 } }, "id":1}
-        std::string rpcCommand(
-                               std::string("{\"jsonrpc\": \"2.0\", \"method\": \"Player.Seek\", \"params\": {\"playerid\":1, \"value\":{ \"seconds\":") +
-                               std::to_string(offsetInSeconds) +
-                               "}},\"id\": 1}"
-                               );
-        pThis->m_clientCore->CallRpcAsync(rpcCommand,
-                                          [result] (rapidjson::Document& jsonRoot) {result(true);},
-                                          [result](const ActionQueue::ActionResult& s) {});
+        std::string rpcCommand(R"({"jsonrpc": "2.0", "method": "Player.Seek", "params": {"playerid":1, "value":{ "time": {)");
+        rpcCommand+= R"("hours":)";
+        rpcCommand+= std::to_string(offsetInSeconds / 3600);
+        rpcCommand+= R"(, "minutes":)";
+         rpcCommand+= std::to_string((offsetInSeconds % 3600) / 60);
+        rpcCommand+= R"(, "seconds":)";
+         rpcCommand+= std::to_string((offsetInSeconds % 3600) %	 60);
+        rpcCommand += R"(, "milliseconds":0 }}},"id": 1})";
+        pThis->m_clientCore->CallRpcAsync(rpcCommand, [result] (rapidjson::Document& jsonRoot) {
+            LogDebug("PVRClientBase: JSON seek commend response:");
+            dump_json(jsonRoot);
+            result(true);
+        }, [result](const ActionQueue::ActionResult& s) {
+            if(s.status == kActionFailed) {
+                LogError("PVRClientBase: JSON seek command failed");
+            } else {
+                LogDebug("PVRClientBase: JSON seek command succeeded.");
+            }
+        });
         LogDebug("PVRClientBase: sent JSON commad to seek to %d sec offset. Played seconds %f", offsetInSeconds, playedSeconds);
     },[result](const ActionQueue::ActionResult& s) {
         if(s.status == kActionFailed) {
