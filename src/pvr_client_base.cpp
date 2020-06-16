@@ -1098,7 +1098,7 @@ bool PVRClientBase::OpenRecordedStream(const PVR_RECORDING &recording)
     return true;
 }
     
-bool PVRClientBase::OpenRecordedStream(const std::string& url,  Buffers::IPlaylistBufferDelegate* delegate, RecordingStreamFlags flags)
+bool PVRClientBase::OpenRecordedStream(const std::string& url, Buffers::IPlaylistBufferDelegate* delegate, RecordingStreamFlags flags)
 {
      if (url.empty())
         return false;
@@ -1146,29 +1146,72 @@ PVR_ERROR PVRClientBase::GetStreamReadChunkSize(int* chunksize) {
     return PVR_ERROR_NO_ERROR;
 }
 
+static bool IsPlayerItemSameTo(rapidjson::Document& jsonRoot, const std::string& recordingName)
+{
+    LogDebug("PVRClientBase: JSON Player.GetItem commend response:");
+    dump_json(jsonRoot);
+
+    if(!jsonRoot.IsObject()) {
+        LogError("PVRClientBase: wrong JSON format of Player.GetItem response.");
+        return false;
+    }
+    if(!jsonRoot.HasMember("result")) {
+        LogError("PVRClientBase: missing 'result' in Player.GetItem response.");
+        return false;
+    }
+    auto& r = jsonRoot["result"];
+    if(!r.IsObject() || !r.HasMember("item")){
+        LogError("PVRClientBase: missing 'item' in Player.GetItem response.");
+        return false;
+    }
+    auto& i = r["item"];
+    if(!i.IsObject() || !i.HasMember("label")){
+        LogError("PVRClientBase: missing 'item.label' in Player.GetItem response.");
+        return false;
+    }
+
+    if(recordingName != i["label"].GetString() ) {
+        LogDebug("PVRClientBase: waiting for Kodi's player becomes playing %s ...", recordingName.c_str());
+        return false;
+    }
+    return true;
+
+}
+static float GetPlayedSeconds(rapidjson::Document& jsonRoot, float& total)
+{
+    if(!jsonRoot.IsObject()) {
+        LogError("PVRClientBase: wrong JSON format of Player.GetProperties.Time response.");
+        throw RpcCallException("Wrong JSON-RPC response format.");
+    }
+    if(!jsonRoot.HasMember("result")) {
+        LogError("PVRClientBase: missing 'result' in Player.GetProperties.Time response.");
+        throw RpcCallException("Wrong JSON-RPC response format.");
+    }
+    auto& r = jsonRoot["result"];
+    if(!r.IsObject() || !r.HasMember("time") || !r.HasMember("totaltime")){
+        LogError("PVRClientBase: missing 'time' in Player.GetProperties.Time response.");
+        throw RpcCallException("Wrong JSON-RPC response format.");
+    }
+    auto& tt = r["totaltime"];
+    total = tt["milliseconds"].GetInt()/1000.0f + tt["seconds"].GetInt() + tt["minutes"].GetInt() * 60 + tt["hours"].GetInt() * 60  * 60;
+    auto& t = r["time"];
+    return t["milliseconds"].GetInt()/1000.0f + t["seconds"].GetInt() + t["minutes"].GetInt() * 60 + t["hours"].GetInt() * 60  * 60;
+    
+}
+
 void PVRClientBase::SeekKodiPlayerAsyncToOffset(int offsetInSeconds, std::function<void(bool done)> result)
 {
-
+    
     auto pThis = this;
-    m_clientCore->CallRpcAsync("{\"jsonrpc\": \"2.0\", \"method\": \"Player.GetProperties\", \"params\": {\"playerid\":1, \"properties\":[ \"time\"]},\"id\": 1}",
-                               [offsetInSeconds, pThis, result] (rapidjson::Document& jsonRoot)
-    {
-        if(!jsonRoot.IsObject()) {
-            LogError("PVRClientBase: wrong JSON format of Player.GetProperties.Time response.");
-            throw RpcCallException("Wrong JSON-RPC response format.");
-        }
-        if(!jsonRoot.HasMember("result")) {
-            LogError("PVRClientBase: missing 'result' in Player.GetProperties.Time response.");
-            throw RpcCallException("Wrong JSON-RPC response format.");
-        }
-        auto& r = jsonRoot["result"];
-        if(!r.IsObject() || !r.HasMember("time")){
-            LogError("PVRClientBase: missing 'time' in Player.GetProperties.Time response.");
-            throw RpcCallException("Wrong JSON-RPC response format.");
-        }
-        auto& t = r["time"];
-        float playedSeconds = t["milliseconds"].GetInt()/1000.0f + t["seconds"].GetInt() + t["minutes"].GetInt() * 60 + t["hours"].GetInt() * 60  * 60;
-        if(playedSeconds < 0.01) {
+    // m_clientCore->CallRpcAsync(R"({"jsonrpc": "2.0", "method": "Player.GetItem", "params": {"playerid":1},"id": 1})",
+    m_clientCore->CallRpcAsync(R"({"jsonrpc": "2.0", "method": "Player.GetProperties", "params": {"playerid":1, "properties":["totaltime", "time"]},"id": 1})",
+                               [offsetInSeconds, pThis, result] (rapidjson::Document& jsonRoot) {
+        dump_json(jsonRoot);
+        
+        float totalTime = 0.0;
+        float playedSeconds  = GetPlayedSeconds(jsonRoot, totalTime);
+        
+        if(totalTime < 0.01 || playedSeconds < 0.01) {
             LogDebug("PVRClientBase: waiting for Kodi's player becomes started...");
             throw RpcCallException("Waiting for Kodi's player becomes started.");
         }
@@ -1176,21 +1219,20 @@ void PVRClientBase::SeekKodiPlayerAsyncToOffset(int offsetInSeconds, std::functi
             LogDebug("PVRClientBase: Kodi's player position (%d) is after the offset (%d).", playedSeconds, offsetInSeconds);
             return;
         }
-        
         //        {"jsonrpc":"2.0", "method":"Player.Seek", "params": { "playerid":1, "value":{ "seconds": 30 } }, "id":1}
         std::string rpcCommand(R"({"jsonrpc": "2.0", "method": "Player.Seek", "params": {"playerid":1, "value":{ "time": {)");
         rpcCommand+= R"("hours":)";
         rpcCommand+= std::to_string(offsetInSeconds / 3600);
         rpcCommand+= R"(, "minutes":)";
-         rpcCommand+= std::to_string((offsetInSeconds % 3600) / 60);
+        rpcCommand+= std::to_string((offsetInSeconds % 3600) / 60);
         rpcCommand+= R"(, "seconds":)";
-         rpcCommand+= std::to_string((offsetInSeconds % 3600) %	 60);
+        rpcCommand+= std::to_string((offsetInSeconds % 3600) %	 60);
         rpcCommand += R"(, "milliseconds":0 }}},"id": 1})";
         pThis->m_clientCore->CallRpcAsync(rpcCommand, [result] (rapidjson::Document& jsonRoot) {
             LogDebug("PVRClientBase: JSON seek commend response:");
             dump_json(jsonRoot);
-            result(true);
         }, [result](const ActionQueue::ActionResult& s) {
+            //result(true);
             if(s.status == kActionFailed) {
                 LogError("PVRClientBase: JSON seek command failed");
             } else {
