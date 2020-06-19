@@ -34,7 +34,7 @@
 #include "HttpEngine.hpp"
 #include "helpers.h"
 #include "XMLTV_loader.hpp"
-
+#include "base64.h"
 
 namespace PvrClient{
 
@@ -152,7 +152,6 @@ ClientCoreBase::ClientCoreBase(const IClientCore::RecordingsDelegate& didRecordi
 , m_groupList(m_mutableGroupList)
 , m_channelList(m_mutableChannelList)
 , m_lastEpgRequestEndTime(0)
-, m_rpcPort(8080)
 , m_rpcWorks(false)
 {
     if(nullptr == m_didRecordingsUpadate) {
@@ -687,7 +686,8 @@ void ClientCoreBase::CallRpcAsyncImpl(const std::string & data,
     }
     
     // Build HTTP request
-    std::string strRequest = string("http://") + "127.0.0.1" + ":" + n_to_string(m_rpcPort) + "/jsonrpc";
+    std::string strRequest = m_rpcSettings.is_secure ? "https://" : "http://";
+    strRequest += "127.0.0.1:" + n_to_string(m_rpcSettings.port) + "/jsonrpc";
     auto start = P8PLATFORM::GetTimeMs();
     
     //    LogDebug("Calling '%s'.",  data.name.c_str());
@@ -716,9 +716,13 @@ void ClientCoreBase::CallRpcAsyncImpl(const std::string & data,
     
     std::vector<std::string> headers;
     headers.push_back("Content-Type:application/json");
-    //            headers = curl_slist_append(headers, "Accept:application/json");
-    //headers = curl_slist_append(headers, "charsets:utf-8");
-    
+    if(!m_rpcSettings.password.empty()) {
+        std::string auth (m_rpcSettings.user + std::string(":") + m_rpcSettings.password);
+        auth = base64_encode(reinterpret_cast<const unsigned char*>(auth.c_str()), auth.size());
+        auth = "Authorization:Basic " + auth;
+        headers.push_back(auth);
+    }
+
     m_httpEngine->CallApiAsync(HttpEngine::Request(strRequest, data, headers), parserWrapper,  [=](const ActionQueue::ActionResult& ss){completion(ss);});
 }
 

@@ -226,7 +226,13 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
 }
 
 void PVRClientBase::OnCoreCreated() {
-    m_clientCore->SetRpcPort(RpcLocalPort());
+    IClientCore::RpcSettings rpc;
+    rpc.port = RpcLocalPort();
+    rpc.user = RpcUser();
+    rpc.password = RpcPassword();
+    rpc.is_secure = RpcEnableSsl();
+    
+    m_clientCore->SetRpcSettings(rpc);
     m_clientCore->CheckRpcConnection();
 
     m_destroyer->PerformAsync([this](){
@@ -1586,6 +1592,9 @@ const char* const c_timeshiftSize = "timeshift_size";
 const char* const c_cacheSizeLimit = "timeshift_off_cache_limit";
 const char* const c_timeshiftType = "timeshift_type";
 const char* const c_rpcLocalPort = "rpc_local_port";
+const char* const c_rpcUser = "rpc_user";
+const char* const c_rpcPassword = "rpc_password";
+const char* const c_rpcEnableSsl = "rpc_enable_ssl";
 const char* const c_channelIndexOffset = "channel_index_offset";
 const char* const c_addCurrentEpgToArchive = "archive_for_current_epg_item";
 const char* const c_useChannelGroupsForArchive = "archive_use_channel_groups";
@@ -1628,12 +1637,28 @@ void PVRClientBase::InitSettings()
     .Add(c_livePlaybackDelayTs, 0)
     .Add(c_livePlaybackDelayUdp, 0)
     .Add(c_seekArchivePadding, false)
+    .Add(c_rpcUser,"kodi")
+    .Add(c_rpcPassword, "")
+    .Add(c_rpcEnableSsl, false)
     ;
     
     PopulateSettings(m_addonMutableSettings);
     
     m_addonMutableSettings.Init();
     m_addonMutableSettings.Print();
+}
+bool PVRClientBase::RpcEnableSsl() const
+{
+    return m_addonSettings.GetBool(c_rpcEnableSsl);
+}
+
+const std::string& PVRClientBase::RpcUser() const
+{
+    return m_addonSettings.GetString(c_rpcUser);
+}
+const std::string& PVRClientBase::RpcPassword() const
+{
+    return m_addonSettings.GetString(c_rpcPassword);
 }
 
 bool PVRClientBase::SeekArchivePadding() const

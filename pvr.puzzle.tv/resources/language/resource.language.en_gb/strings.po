@@ -66,8 +66,8 @@ msgid "Cache limit (MB)"
 msgstr "Cache limit (MB)"
 
 msgctxt "#10012"
-msgid "Kodi's remote control port"
-msgstr "Kodi's remote control port"
+msgid "Port"
+msgstr "Port"
 
 msgctxt "#10013"
 msgid "Archive for current broadcast"
@@ -128,6 +128,14 @@ msgstr "Multicast"
 msgctxt "#10027"
 msgid "Forward start padding"
 msgstr "Forward start padding"
+
+msgctxt "#10028"
+msgid "Enable SSL"
+msgstr "Enable SSL"
+
+msgctxt "#10093"
+msgid "Kodi's Remote Control"
+msgstr "Kodi's Remote Control"
 
 msgctxt "#10094"
 msgid "No"
