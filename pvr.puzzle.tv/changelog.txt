@@ -1,3 +1,7 @@
+0.9.89
+- RPC authentication
+- Fixed forward recording padding not working in some scenario
+
 0.9.87
 - Added option: forward recording padding 
 - Fixed EPG not loaded issue (Shara TV)

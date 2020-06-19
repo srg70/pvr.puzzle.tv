@@ -16,6 +16,10 @@
      <source>https://github.com/srg70/pvr.puzzle.tv</source>
      <license>GPL-2.0-or-later</license>
      <news>
+         0.9.89
+         - RPC authentication
+         - Fixed forward recording padding not working in some scenario
+
          0.9.87
          - Added option: forward recording padding
          - Fixed EPG not loaded issue (Shara TV)
