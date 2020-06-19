@@ -226,7 +226,13 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
 }
 
 void PVRClientBase::OnCoreCreated() {
-    m_clientCore->SetRpcPort(RpcLocalPort());
+    IClientCore::RpcSettings rpc;
+    rpc.port = RpcLocalPort();
+    rpc.user = RpcUser();
+    rpc.password = RpcPassword();
+    rpc.is_secure = RpcEnableSsl();
+    
+    m_clientCore->SetRpcSettings(rpc);
     m_clientCore->CheckRpcConnection();
 
     m_destroyer->PerformAsync([this](){
@@ -1178,7 +1184,7 @@ bool PVRClientBase::OpenRecordedStream(const PVR_RECORDING &recording)
     return true;
 }
     
-bool PVRClientBase::OpenRecordedStream(const std::string& url,  Buffers::IPlaylistBufferDelegate* delegate, RecordingStreamFlags flags)
+bool PVRClientBase::OpenRecordedStream(const std::string& url, Buffers::IPlaylistBufferDelegate* delegate, RecordingStreamFlags flags)
 {
      if (url.empty())
         return false;
@@ -1226,29 +1232,72 @@ PVR_ERROR PVRClientBase::GetStreamReadChunkSize(int* chunksize) {
     return PVR_ERROR_NO_ERROR;
 }
 
+static bool IsPlayerItemSameTo(rapidjson::Document& jsonRoot, const std::string& recordingName)
+{
+    LogDebug("PVRClientBase: JSON Player.GetItem commend response:");
+    dump_json(jsonRoot);
+
+    if(!jsonRoot.IsObject()) {
+        LogError("PVRClientBase: wrong JSON format of Player.GetItem response.");
+        return false;
+    }
+    if(!jsonRoot.HasMember("result")) {
+        LogError("PVRClientBase: missing 'result' in Player.GetItem response.");
+        return false;
+    }
+    auto& r = jsonRoot["result"];
+    if(!r.IsObject() || !r.HasMember("item")){
+        LogError("PVRClientBase: missing 'item' in Player.GetItem response.");
+        return false;
+    }
+    auto& i = r["item"];
+    if(!i.IsObject() || !i.HasMember("label")){
+        LogError("PVRClientBase: missing 'item.label' in Player.GetItem response.");
+        return false;
+    }
+
+    if(recordingName != i["label"].GetString() ) {
+        LogDebug("PVRClientBase: waiting for Kodi's player becomes playing %s ...", recordingName.c_str());
+        return false;
+    }
+    return true;
+
+}
+static float GetPlayedSeconds(rapidjson::Document& jsonRoot, float& total)
+{
+    if(!jsonRoot.IsObject()) {
+        LogError("PVRClientBase: wrong JSON format of Player.GetProperties.Time response.");
+        throw RpcCallException("Wrong JSON-RPC response format.");
+    }
+    if(!jsonRoot.HasMember("result")) {
+        LogError("PVRClientBase: missing 'result' in Player.GetProperties.Time response.");
+        throw RpcCallException("Wrong JSON-RPC response format.");
+    }
+    auto& r = jsonRoot["result"];
+    if(!r.IsObject() || !r.HasMember("time") || !r.HasMember("totaltime")){
+        LogError("PVRClientBase: missing 'time' in Player.GetProperties.Time response.");
+        throw RpcCallException("Wrong JSON-RPC response format.");
+    }
+    auto& tt = r["totaltime"];
+    total = tt["milliseconds"].GetInt()/1000.0f + tt["seconds"].GetInt() + tt["minutes"].GetInt() * 60 + tt["hours"].GetInt() * 60  * 60;
+    auto& t = r["time"];
+    return t["milliseconds"].GetInt()/1000.0f + t["seconds"].GetInt() + t["minutes"].GetInt() * 60 + t["hours"].GetInt() * 60  * 60;
+    
+}
+
 void PVRClientBase::SeekKodiPlayerAsyncToOffset(int offsetInSeconds, std::function<void(bool done)> result)
 {
-
+    
     auto pThis = this;
-    m_clientCore->CallRpcAsync("{\"jsonrpc\": \"2.0\", \"method\": \"Player.GetProperties\", \"params\": {\"playerid\":1, \"properties\":[ \"time\"]},\"id\": 1}",
-                               [offsetInSeconds, pThis, result] (rapidjson::Document& jsonRoot)
-    {
-        if(!jsonRoot.IsObject()) {
-            LogError("PVRClientBase: wrong JSON format of Player.GetProperties.Time response.");
-            throw RpcCallException("Wrong JSON-RPC response format.");
-        }
-        if(!jsonRoot.HasMember("result")) {
-            LogError("PVRClientBase: missing 'result' in Player.GetProperties.Time response.");
-            throw RpcCallException("Wrong JSON-RPC response format.");
-        }
-        auto& r = jsonRoot["result"];
-        if(!r.IsObject() || !r.HasMember("time")){
-            LogError("PVRClientBase: missing 'time' in Player.GetProperties.Time response.");
-            throw RpcCallException("Wrong JSON-RPC response format.");
-        }
-        auto& t = r["time"];
-        float playedSeconds = t["milliseconds"].GetInt()/1000.0f + t["seconds"].GetInt() + t["minutes"].GetInt() * 60 + t["hours"].GetInt() * 60  * 60;
-        if(playedSeconds < 0.01) {
+    // m_clientCore->CallRpcAsync(R"({"jsonrpc": "2.0", "method": "Player.GetItem", "params": {"playerid":1},"id": 1})",
+    m_clientCore->CallRpcAsync(R"({"jsonrpc": "2.0", "method": "Player.GetProperties", "params": {"playerid":1, "properties":["totaltime", "time"]},"id": 1})",
+                               [offsetInSeconds, pThis, result] (rapidjson::Document& jsonRoot) {
+        dump_json(jsonRoot);
+        
+        float totalTime = 0.0;
+        float playedSeconds  = GetPlayedSeconds(jsonRoot, totalTime);
+        
+        if(totalTime < 0.01 || playedSeconds < 0.01) {
             LogDebug("PVRClientBase: waiting for Kodi's player becomes started...");
             throw RpcCallException("Waiting for Kodi's player becomes started.");
         }
@@ -1256,21 +1305,20 @@ void PVRClientBase::SeekKodiPlayerAsyncToOffset(int offsetInSeconds, std::functi
             LogDebug("PVRClientBase: Kodi's player position (%d) is after the offset (%d).", playedSeconds, offsetInSeconds);
             return;
         }
-        
         //        {"jsonrpc":"2.0", "method":"Player.Seek", "params": { "playerid":1, "value":{ "seconds": 30 } }, "id":1}
         std::string rpcCommand(R"({"jsonrpc": "2.0", "method": "Player.Seek", "params": {"playerid":1, "value":{ "time": {)");
         rpcCommand+= R"("hours":)";
         rpcCommand+= std::to_string(offsetInSeconds / 3600);
         rpcCommand+= R"(, "minutes":)";
-         rpcCommand+= std::to_string((offsetInSeconds % 3600) / 60);
+        rpcCommand+= std::to_string((offsetInSeconds % 3600) / 60);
         rpcCommand+= R"(, "seconds":)";
-         rpcCommand+= std::to_string((offsetInSeconds % 3600) %	 60);
+        rpcCommand+= std::to_string((offsetInSeconds % 3600) %	 60);
         rpcCommand += R"(, "milliseconds":0 }}},"id": 1})";
         pThis->m_clientCore->CallRpcAsync(rpcCommand, [result] (rapidjson::Document& jsonRoot) {
             LogDebug("PVRClientBase: JSON seek commend response:");
             dump_json(jsonRoot);
-            result(true);
         }, [result](const ActionQueue::ActionResult& s) {
+            //result(true);
             if(s.status == kActionFailed) {
                 LogError("PVRClientBase: JSON seek command failed");
             } else {
@@ -1544,6 +1592,9 @@ const char* const c_timeshiftSize = "timeshift_size";
 const char* const c_cacheSizeLimit = "timeshift_off_cache_limit";
 const char* const c_timeshiftType = "timeshift_type";
 const char* const c_rpcLocalPort = "rpc_local_port";
+const char* const c_rpcUser = "rpc_user";
+const char* const c_rpcPassword = "rpc_password";
+const char* const c_rpcEnableSsl = "rpc_enable_ssl";
 const char* const c_channelIndexOffset = "channel_index_offset";
 const char* const c_addCurrentEpgToArchive = "archive_for_current_epg_item";
 const char* const c_useChannelGroupsForArchive = "archive_use_channel_groups";
@@ -1586,12 +1637,28 @@ void PVRClientBase::InitSettings()
     .Add(c_livePlaybackDelayTs, 0)
     .Add(c_livePlaybackDelayUdp, 0)
     .Add(c_seekArchivePadding, false)
+    .Add(c_rpcUser,"kodi")
+    .Add(c_rpcPassword, "")
+    .Add(c_rpcEnableSsl, false)
     ;
     
     PopulateSettings(m_addonMutableSettings);
     
     m_addonMutableSettings.Init();
     m_addonMutableSettings.Print();
+}
+bool PVRClientBase::RpcEnableSsl() const
+{
+    return m_addonSettings.GetBool(c_rpcEnableSsl);
+}
+
+const std::string& PVRClientBase::RpcUser() const
+{
+    return m_addonSettings.GetString(c_rpcUser);
+}
+const std::string& PVRClientBase::RpcPassword() const
+{
+    return m_addonSettings.GetString(c_rpcPassword);
 }
 
 bool PVRClientBase::SeekArchivePadding() const

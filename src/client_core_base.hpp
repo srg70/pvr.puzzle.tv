@@ -48,9 +48,9 @@ namespace PvrClient {
         
         virtual ~ClientCoreBase();
         
-        const PvrClient::ChannelList &GetChannelList();
-        const PvrClient::GroupList &GetGroupList();
-        PvrClient::GroupId GroupForChannel(PvrClient::ChannelId chId);
+        const ChannelList &GetChannelList();
+        const GroupList &GetGroupList();
+        GroupId GroupForChannel(ChannelId chId);
         void RebuildChannelAndGroupList();
 
         void ReloadRecordings();
@@ -61,7 +61,7 @@ namespace PvrClient {
         void ForEachEpgUnlocked(const EpgEntryAction& predicate, const EpgEntryAction& action) const;
         void GetEpg(ChannelId channelId, time_t startTime, time_t endTime, EpgEntryAction& onEpgEntry);
         
-        void SetRpcPort(int port) {m_rpcPort = port;}
+        void SetRpcSettings(const RpcSettings& settings) {m_rpcSettings = settings;}
         void CheckRpcConnection();
         void CallRpcAsync(const std::string & data, std::function<void(rapidjson::Document&)>  parser,
                           ActionQueue::TCompletion completion);
@@ -70,7 +70,7 @@ namespace PvrClient {
         static bool ReadFileContent(const char* cacheFile, std::string& buffer);
         // abstract methods
         virtual void UpdateEpgForAllChannels(time_t startTime, time_t endTime, std::function<bool(void)> cancelled) = 0;
-        virtual std::string GetUrl(PvrClient::ChannelId channelId) = 0;
+        virtual std::string GetUrl(ChannelId channelId) = 0;
 
     protected:
         ClientCoreBase(const RecordingsDelegate& didRecordingsUpadate = nullptr);
@@ -99,14 +99,14 @@ namespace PvrClient {
         
         // Required methods to implement for derived classes
         virtual void Init(bool clearEpgCache) = 0;
-        virtual void UpdateHasArchive(PvrClient::EpgEntry& entry) = 0;
+        virtual void UpdateHasArchive(EpgEntry& entry) = 0;
         // Do not call directly, only through RebuildChannelAndGroupList()
         virtual void BuildChannelAndGroupList() = 0;
 
         
         HttpEngine* m_httpEngine;
-        const PvrClient::ChannelList & m_channelList;
-        const PvrClient::GroupList& m_groupList;
+        const ChannelList & m_channelList;
+        const GroupList& m_groupList;
         AddCurrentEpgToArchive m_addCurrentEpgToArchive;
 
     private:
@@ -117,12 +117,12 @@ namespace PvrClient {
         void CallRpcAsyncImpl(const std::string & data, std::function<void(rapidjson::Document&)>  parser, ActionQueue::TCompletion completion);
 
 
-        PvrClient::ChannelList m_mutableChannelList;
-        PvrClient::GroupList m_mutableGroupList;
-        std::map<PvrClient::ChannelId, PvrClient::GroupId> m_channelToGroupLut;
+        ChannelList m_mutableChannelList;
+        GroupList m_mutableGroupList;
+        std::map<ChannelId, GroupId> m_channelToGroupLut;
 
         
-        PvrClient::EpgEntryList m_epgEntries;
+        EpgEntryList m_epgEntries;
         mutable P8PLATFORM::CMutex m_epgAccessMutex;
         
         RecordingsDelegate m_didRecordingsUpadate;
@@ -133,7 +133,7 @@ namespace PvrClient {
 
         
         time_t m_lastEpgRequestEndTime;
-        int m_rpcPort;
+        RpcSettings m_rpcSettings;
         bool m_rpcWorks;
     };
     

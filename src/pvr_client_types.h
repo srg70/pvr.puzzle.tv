@@ -210,6 +210,13 @@ namespace PvrClient {
             virtual void Broadcast() = 0;
         };
 
+        struct RpcSettings {
+            int port;
+            std::string user;
+            std::string password;
+            bool is_secure;
+        };
+
         typedef std::function<void(void)> RecordingsDelegate;
         typedef std::function<bool(const EpgEntryList::value_type&)> EpgEntryAction;
         
@@ -226,7 +233,7 @@ namespace PvrClient {
 
         virtual void ReloadRecordings() = 0;
         virtual int UpdateArchiveInfoAndCount() = 0;
-        virtual void SetRpcPort(int port) = 0;
+        virtual void SetRpcSettings(const RpcSettings& settings) = 0;
         virtual void CheckRpcConnection() = 0;
         virtual void CallRpcAsync(const std::string & data, std::function<void(rapidjson::Document&)>  parser,
                                   ActionQueue::TCompletion completion) = 0;

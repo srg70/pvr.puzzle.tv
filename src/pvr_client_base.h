@@ -183,6 +183,9 @@ namespace PvrClient
         int ChannelReloadTimeout() const;
         bool IsTimeshiftEnabled() const;
         int RpcLocalPort() const;
+        const std::string& RpcUser() const;
+        const std::string& RpcPassword() const;
+        bool RpcEnableSsl() const;
         int ChannelIndexOffset() const;
         int WaitForInetTimeout() const;
         int StartupDelay() const;
