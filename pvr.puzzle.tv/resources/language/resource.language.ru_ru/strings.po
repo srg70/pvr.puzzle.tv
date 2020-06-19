@@ -65,8 +65,8 @@ msgid "Cache limit (MB)"
 msgstr "Макс. размер кэша (MB)"
 
 msgctxt "#10012"
-msgid "Kodi's remote control port"
-msgstr "Порт удаленного управления Kodi"
+msgid "Port"
+msgstr "Порт"
 
 msgctxt "#10013"
 msgid "Archive for current broadcast"
@@ -127,6 +127,14 @@ msgstr "Multicast"
 msgctxt "#10027"
 msgid "Forward start padding"
 msgstr "Проматывать начальную задержку"
+
+msgctxt "#10028"
+msgid "Enable SSL"
+msgstr "Включить SSL"
+
+msgctxt "#10093"
+msgid "Kodi's Remote Control"
+msgstr "Удаленного управления Kodi"
 
 sgctxt "#10094"
 msgid "No"
