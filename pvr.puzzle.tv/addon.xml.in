@@ -16,6 +16,10 @@
      <source>https://github.com/srg70/pvr.puzzle.tv</source>
      <license>GPL-2.0-or-later</license>
      <news>
+         0.9.90
+         - Reduced non-debug log size
+         - Faster restore of last played channel after wakeup signal
+
          0.9.89
          - RPC authentication
          - Fixed forward recording padding not working in some scenario

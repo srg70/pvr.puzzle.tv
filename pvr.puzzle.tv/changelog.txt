@@ -1,3 +1,7 @@
+0.9.90
+- Reduced non-debug log size
+- Faster restore of last played channel after wakeup signal
+
 0.9.89
 - RPC authentication
 - Fixed forward recording padding not working in some scenario
