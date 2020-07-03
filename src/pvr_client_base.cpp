@@ -303,12 +303,12 @@ void PVRClientBase::Cleanup()
 void PVRClientBase::OnSystemSleep()
 {
     Cleanup();
-    DestroyCoreSafe();
+    //DestroyCoreSafe();
 }
 void PVRClientBase::OnSystemWake()
 {
     DelayStartup(StartupDelay() - CheckForInetConnection(WaitForInetTimeout()));
-    CreateCoreSafe(false);
+    //CreateCoreSafe(false);
 }
 
 
