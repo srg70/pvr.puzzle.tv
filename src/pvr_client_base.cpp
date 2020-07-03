@@ -325,14 +325,13 @@ void PVRClientBase::Cleanup()
 void PVRClientBase::OnSystemSleep()
 {
     Cleanup();
-    DestroyCoreSafe();
+    //DestroyCoreSafe();
 }
 void PVRClientBase::OnSystemWake()
 {
     DelayStartup(StartupDelay() - CheckForInetConnection(WaitForInetTimeout()));
-    CreateCoreSafe(false);
+    //CreateCoreSafe(false);
 }
-
 
 ADDON_STATUS PVRClientBase::SetSetting(const char *settingName, const void *settingValue)
 {
