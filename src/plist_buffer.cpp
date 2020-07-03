@@ -354,7 +354,7 @@ namespace Buffers {
                        PlaylistCache::k_SegmentStatus_CacheEmpty == segmentStatus)
                     {
                         if(!IsRunning()){
-                            LogError("PlaylistBuffer: not running (aka stopping) ...");
+                            LogDebug("PlaylistBuffer: not running (aka stopping) ...");
                             break;
                         }
                         LogDebug("PlaylistBuffer: waiting for segment loading (max %d ms)...", timeoutMs);
@@ -384,7 +384,7 @@ namespace Buffers {
             if(NULL == m_currentSegment)
             {
                 // StopThread();
-                LogNotice("PlaylistBuffer: no segment for read.");
+                LogDebug("PlaylistBuffer: no segment for read.");
                 break;
             }
             size_t bytesToRead = bufferSize - totalBytesRead;
