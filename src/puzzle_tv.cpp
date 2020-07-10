@@ -124,11 +124,15 @@ PuzzleTV::PuzzleTV(ServerVersion serverVersion, const char* serverUrl, uint16_t 
 
 void PuzzleTV::Init(bool clearEpgCache)
 {
-    RebuildChannelAndGroupList();
     if(clearEpgCache)
-        ClearEpgCache(c_EpgCacheFile);
-    else
+        ClearEpgCache(c_EpgCacheFile, m_epgUrl.c_str());
+    
+    // Channels use EPG for name synch!
+    RebuildChannelAndGroupList();
+    
+    if(!clearEpgCache)
         LoadEpgCache(c_EpgCacheFile);
+
     UpdateArhivesAsync();
 }
 

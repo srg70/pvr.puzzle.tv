@@ -104,12 +104,14 @@ namespace TtvEngine
             XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32021));
         }
 
+        if(clearEpgCache)
+            ClearEpgCache(c_EpgCacheFile, m_coreParams.epgUrl.c_str());
+        
+        // Channels use EPG for name synch!
         RebuildChannelAndGroupList();
-        if(clearEpgCache) {
-            ClearEpgCache(c_EpgCacheFile);
-        } else {
+        
+        if(!clearEpgCache)
             LoadEpgCache(c_EpgCacheFile);
-        }
     }
     
     Core::~Core()

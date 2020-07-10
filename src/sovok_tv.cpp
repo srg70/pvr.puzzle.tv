@@ -100,7 +100,7 @@ void SovokTV::Init(bool clearEpgCache)
     InitArchivesInfo();
     RebuildChannelAndGroupList();
     if(clearEpgCache) {
-        ClearEpgCache(c_EpgCacheFile);
+        ClearEpgCache(c_EpgCacheFile, nullptr);
      } else {
         LoadEpgCache(c_EpgCacheFile);
     }

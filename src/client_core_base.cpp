@@ -334,9 +334,18 @@ string ClientCoreBase::MakeEpgCachePath(const char* cacheFile)
 {
     return string(c_EpgCacheDirPath) + "/" + cacheFile;
 }
-void ClientCoreBase::ClearEpgCache(const char* cacheFile)
+void ClientCoreBase::ClearEpgCache(const char* cacheFile, const char* epgUrl)
 {
-    XBMC->DeleteFile(MakeEpgCachePath(cacheFile).c_str());
+    string cacheFilePath = MakeEpgCachePath(cacheFile);
+    if(!XBMC->DeleteFile(cacheFilePath.c_str()))
+       LogError("ClearEpgCache(): failed to delete EPG cache %s", cacheFilePath.c_str());
+
+    if(nullptr == epgUrl)
+        return;
+    
+    string compressedFilePath = XMLTV::GetCachedPathFor(epgUrl);
+    if(!XBMC->DeleteFile(compressedFilePath.c_str()))
+       LogError("ClearEpgCache(): failed to delete compressed EPG cache %s", compressedFilePath.c_str());
 }
 
 bool ClientCoreBase::ReadFileContent(const char* cacheFile, std::string& buffer)

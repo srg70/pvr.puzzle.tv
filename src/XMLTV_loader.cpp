@@ -125,7 +125,7 @@ namespace XMLTV {
         return strContent.length();
     }
     
-    static std::string GetCachedPathFor(const std::string& original)
+    std::string GetCachedPathFor(const std::string& original)
     {
         return c_CacheFolder + std::to_string(std::hash<std::string>{}(original));
     }

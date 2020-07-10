@@ -79,7 +79,7 @@ namespace PvrClient {
         P8PLATFORM::CTimeout m_epgUpdateInterval;
 
         static std::string MakeEpgCachePath(const char* cacheFile);
-        void ClearEpgCache(const char* cacheFile);
+        void ClearEpgCache(const char* cacheFile, const char* epgUrl);
         void LoadEpgCache(const char* cacheFile);
         void SaveEpgCache(const char* cacheFile, unsigned int daysToPreserve = 7);
         UniqueBroadcastIdType AddEpgEntry(UniqueBroadcastIdType id, EpgEntry& entry);
