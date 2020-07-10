@@ -83,12 +83,14 @@ namespace OttEngine
     
     void Core::Init(bool clearEpgCache)
     {
+        if(clearEpgCache)
+            ClearEpgCache(c_EpgCacheFile, nullptr);
+        
+        // Channels use EPG for name synch!
         RebuildChannelAndGroupList();
-        if(clearEpgCache) {
-            ClearEpgCache(c_EpgCacheFile);
-        } else {
+        
+        if(!clearEpgCache)
             LoadEpgCache(c_EpgCacheFile);
-        }
     }
     
     Core::~Core()

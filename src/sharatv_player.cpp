@@ -108,12 +108,14 @@ namespace SharaTvEngine {
     
     void Core::Init(bool clearEpgCache)
     {
+        if(clearEpgCache)
+            ClearEpgCache(c_EpgCacheFile, m_epgUrl.c_str());
+        
+        // Channels use EPG for name synch!
         RebuildChannelAndGroupList();
-        if(clearEpgCache) {
-            ClearEpgCache(c_EpgCacheFile);
-        } else {
+        
+        if(!clearEpgCache)
             LoadEpgCache(c_EpgCacheFile);
-        }
     }
     
     
