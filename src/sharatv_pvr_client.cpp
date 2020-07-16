@@ -69,6 +69,19 @@ SharaTvPVRClient::~SharaTvPVRClient()
     DestroyCoreSafe();
 }
 
+void SharaTvPVRClient::NotifyAccessDenied() const
+{
+    const char* providerName = "Unknown provider";
+    const PlistProviderType providerType = ProviderType();
+    if(c_PlistProvider_SharaTv == providerType) {
+        providerName = "Shara TV";
+    }else if(c_PlistProvider_Ottg == providerType){
+        providerName = "OTTG";
+    }
+     
+    XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32007), providerName);
+}
+
 ADDON_STATUS SharaTvPVRClient::CreateCoreSafe(bool clearEpgCache)
 {
     ADDON_STATUS retVal = ADDON_STATUS_OK;
@@ -77,17 +90,13 @@ ADDON_STATUS SharaTvPVRClient::CreateCoreSafe(bool clearEpgCache)
         CreateCore(clearEpgCache);
         OnCoreCreated();
     }
+    catch (ServerErrorException &)
+    {
+        NotifyAccessDenied();
+    }
     catch (AuthFailedException &)
     {
-        const char* providerName = "Unknown provider";
-        const PlistProviderType providerType = ProviderType();
-        if(c_PlistProvider_SharaTv == providerType) {
-            providerName = "Shara TV";
-        }else if(c_PlistProvider_Ottg == providerType){
-            providerName = "OTTG";
-        }
-         
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32007), providerName);
+        NotifyAccessDenied();
     }
     catch(...)
     {

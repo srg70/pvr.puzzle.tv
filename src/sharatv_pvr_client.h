@@ -90,6 +90,7 @@ private:
     uint32_t UdpProxyPort() const;
     const std::string& UdpProxyHost() const;
 
+    void NotifyAccessDenied() const;
     void CreateCore(bool clearEpgCache);
     SharaTvEngine::Core* m_core;
 };
