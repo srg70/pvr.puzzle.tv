@@ -143,6 +143,21 @@ namespace SharaTvEngine {
         PlaylistContent plistContent;
         ParsePlaylist(data, m_globalTags, plistContent, m_archiveInfo);
         
+        PlaylistContent::TChannels& channels = plistContent.channels;
+        // Verify tvg-id from EPG file
+        ChannelCallback onNewChannel = [&channels](const EpgChannel& newChannel){
+            for(const auto& epgChannelName : newChannel.strNames) {
+                 if(channels.count(epgChannelName) != 0) {
+                     auto& plistChannel = channels[epgChannelName].first;
+                     plistChannel.EpgId = newChannel.id;
+                     if(plistChannel.IconPath.empty())
+                         plistChannel.IconPath = newChannel.strIcon;
+                 }
+             }
+        };
+        
+        XMLTV::ParseChannels(m_epgUrl, onNewChannel);
+        
         // Add groups
         GroupId adultChannelsGroupId = -1;
         for(const auto& group :  plistContent.groups) {
