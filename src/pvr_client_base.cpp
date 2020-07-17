@@ -1146,12 +1146,6 @@ void PVRClientBase::CloseRecordedStream(void)
     
 }
 
-PVR_ERROR PVRClientBase::GetStreamReadChunkSize(int* chunksize) {
-    // TODO: obtain from buffer...
-    *chunksize = 32 * 1024; // 32K chunk.
-    return PVR_ERROR_NO_ERROR;
-}
-
 static bool IsPlayerItemSameTo(rapidjson::Document& jsonRoot, const std::string& recordingName)
 {
     LogDebug("PVRClientBase: JSON Player.GetItem commend response:");
