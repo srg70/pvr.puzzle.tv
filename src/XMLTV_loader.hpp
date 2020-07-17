@@ -65,6 +65,7 @@ namespace XMLTV {
     bool GzipInflate( const std::string& compressedBytes, std::string& uncompressedBytes);
     int GetCachedFileContents(const std::string &filePath, std::string &strContents);
     std::string GetCachedFilePath(const std::string &filePath);
+    std::string GetCachedPathFor(const std::string& original);
 }
 
 #endif /* XMLTV_loader_hpp */
