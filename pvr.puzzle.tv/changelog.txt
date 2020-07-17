@@ -1,3 +1,7 @@
+0.9.91
+- cleanup download cache on reload EPG
+- support tgv-name XML TV tag for playlist tab
+
 0.9.90
 - Reduced non-debug log size
 - Faster restore of last played channel after wakeup signal
