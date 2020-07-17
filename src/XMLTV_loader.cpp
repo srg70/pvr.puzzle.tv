@@ -408,9 +408,13 @@ return false;             \
         // internal DB serialisation accepts only signed positive IDs
         return id < 0 ? -id : id;
     }
-    
+   
+#include "expat.h"
+
     bool ParseChannels(const std::string& url,  const ChannelCallback& onChannelFound)
     {
+        XML_Parser p = XML_ParserCreate(NULL);
+        XML_ParserFree(p);
 
         XmlDocumentAndData xmlDoc;
         
