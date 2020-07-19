@@ -228,7 +228,7 @@ void PuzzleTV::BuildChannelAndGroupList()
             auto pThis = this;
             // Build LUT channels ID from EPG to Server
             ChannelCallback onNewChannel = [&plistContent, pThis](const EpgChannel& newChannel){
-                for(const auto& epgChannelName : newChannel.strNames) {
+                for(const auto& epgChannelName : newChannel.displayNames) {
                     if(plistContent.count(epgChannelName) != 0) {
                         auto& plistChannel = plistContent[epgChannelName].first;
                         pThis->m_epgToServerLut[newChannel.id] = plistChannel.EpgId;

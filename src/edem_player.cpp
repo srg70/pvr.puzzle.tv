@@ -113,7 +113,7 @@ namespace EdemEngine
         
         
         ChannelCallback onNewChannel = [&plistContent](const EpgChannel& newChannel){
-            for(const auto& epgChannelName : newChannel.strNames) {
+            for(const auto& epgChannelName : newChannel.displayNames) {
                  if(plistContent.count(epgChannelName) != 0) {
                      auto& plistChannel = plistContent[epgChannelName].first;
                      plistChannel.EpgId = newChannel.id;

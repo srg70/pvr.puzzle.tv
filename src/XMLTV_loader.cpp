@@ -443,7 +443,7 @@ return false;             \
             
             channel.id = ChannelIdForChannelName(strId);
             
-            if(!GetAllNodesValue(pChannelNode, "display-name", channel.strNames)){
+            if(!GetAllNodesValue(pChannelNode, "display-name", channel.displayNames)){
                 XBMC->Log(LOG_DEBUG, "XMLTV Loader: no channel display name found.");
                 continue;
             }
