@@ -213,10 +213,15 @@ void PVRClientBase::OnCoreCreated() {
     m_clientCore->SetRpcSettings(rpc);
     m_clientCore->CheckRpcConnection();
 
-    m_destroyer->PerformAsync([this](){
+    // We may be here when core is re-creating
+    // In thos case Destroyer is running and may be busy
+    // Validate that this criticlal Init tast is started
+    bool isAsyncInitStarted = false;
+    m_destroyer->PerformAsync([&isAsyncInitStarted, this](){
 //        while(m_clientCore == nullptr) {
 //            P8PLATFORM::CEvent::Sleep(100);
 //        }
+        isAsyncInitStarted = true;
         if(nullptr == m_clientCore)
             throw std::logic_error("Client core must be initialized alraedy!");
         auto phase =  m_clientCore->GetPhase(IClientCore::k_ChannelsLoadingPhase);
@@ -257,6 +262,10 @@ void PVRClientBase::OnCoreCreated() {
             ScheduleRecordingsUpdate();
         }
     });
+    while(!isAsyncInitStarted) {
+        m_destroyerEvent.Broadcast();
+        m_destroyerEvent.Wait(100);
+    }
 }
 
 void PVRClientBase::ScheduleRecordingsUpdate() {
