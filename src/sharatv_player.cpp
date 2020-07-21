@@ -142,21 +142,30 @@ namespace SharaTvEngine {
         m_archiveInfo.Reset();
         PlaylistContent plistContent;
         ParsePlaylist(data, m_globalTags, plistContent, m_archiveInfo);
-        
-        PlaylistContent::TChannels& channels = plistContent.channels;
+
         // Verify tvg-id from EPG file
-        ChannelCallback onNewChannel = [&channels](const EpgChannel& newChannel){
-            for(const auto& epgChannelName : newChannel.strNames) {
-                 if(channels.count(epgChannelName) != 0) {
-                     auto& plistChannel = channels[epgChannelName].first;
-                     plistChannel.EpgId = newChannel.id;
-                     if(plistChannel.IconPath.empty())
-                         plistChannel.IconPath = newChannel.strIcon;
-                 }
-             }
-        };
-        
-        XMLTV::ParseChannels(m_epgUrl, onNewChannel);
+        // For channels with EpgId == UnknownChannelId (no tvg-id tag in playlist)
+        // search for EpgId by comparision of channel name from playlist and display name from EPG
+
+        std::map<const std::string, Channel&> channelsWithoutEpgIds;
+        for (auto & ch : plistContent.channels) {
+            if(ch.second.first.EpgId == UnknownChannelId)
+                channelsWithoutEpgIds.emplace(ch.first, ch.second.first);
+        }
+        if(!channelsWithoutEpgIds.empty()) {
+            ChannelCallback onNewChannel = [&channelsWithoutEpgIds](const EpgChannel& newChannel){
+                for(const auto& epgChannelName : newChannel.displayNames) {
+                    if(channelsWithoutEpgIds.count(epgChannelName) != 0) {
+                        auto& plistChannel = channelsWithoutEpgIds.at(epgChannelName);
+                        plistChannel.EpgId = newChannel.id;
+                        if(plistChannel.IconPath.empty())
+                            plistChannel.IconPath = newChannel.strIcon;
+                    }
+                }
+            };
+            
+            XMLTV::ParseChannels(m_epgUrl, onNewChannel);
+        }
         
         // Add groups
         GroupId adultChannelsGroupId = -1;
@@ -307,6 +316,8 @@ namespace SharaTvEngine {
     
     static PvrClient::KodiChannelId EpgChannelIdToKodi(const std::string& strId)
     {
+        if(strId.empty())
+            return UnknownChannelId;
         string strToHash(strId);
         StringUtils::ToLower(strToHash);
         return std::hash<std::string>{}(strToHash);

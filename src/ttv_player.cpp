@@ -326,7 +326,7 @@ namespace TtvEngine
         auto pThis = this;
         
         ChannelCallback onNewChannel = [pThis, &plistContent](const EpgChannel& newChannel){
-            for(const auto& epgChannelName : newChannel.strNames) {
+            for(const auto& epgChannelName : newChannel.displayNames) {
                  if(plistContent.count(epgChannelName) != 0) {
                      auto& plistChannel = plistContent[epgChannelName].first;
                      plistChannel.EpgId = newChannel.id;

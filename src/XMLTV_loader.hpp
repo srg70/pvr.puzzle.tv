@@ -39,7 +39,7 @@ namespace XMLTV {
     struct EpgChannel
     {
         PvrClient::ChannelId     id;
-        std::list<std::string>   strNames;
+        std::list<std::string>   displayNames;
         std::string         strIcon;
     };
 
