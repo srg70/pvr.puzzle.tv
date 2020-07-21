@@ -1,3 +1,7 @@
+0.9.92
+- fix: startup delay (up to archive reloading timeout) on plugin restart
+- fix: "playlist" tab. Searching for EPG by tvg-id, than by channel name.
+
 0.9.91
 - cleanup download cache on reload EPG
 - support tgv-name XML TV tag for playlist tab

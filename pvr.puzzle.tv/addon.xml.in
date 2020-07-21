@@ -16,6 +16,10 @@
      <source>https://github.com/srg70/pvr.puzzle.tv</source>
      <license>GPL-2.0-or-later</license>
      <news>
+         0.9.92
+         - fix: startup delay (up to archive reloading timeout) on plugin restart
+         - fix: "playlist" tab. Searching for EPG by tvg-id, than by channel name.
+
          0.9.91
          - cleanup download cache on reload EPG
          - support tgv-name XML TV tag for playlist tab
