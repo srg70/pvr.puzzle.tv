@@ -542,6 +542,10 @@ msgctxt "#32028"
 msgid "Unable to control Kodi remotely!"
 msgstr "Unable to control Kodi remotely!"
 
+msgctxt "#32029"
+msgid "Playlist contains errors!"
+msgstr "Playlist contains errors!"
+
 #============= Menus ================
 
 msgctxt "#32050"
