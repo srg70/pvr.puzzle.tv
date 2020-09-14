@@ -256,7 +256,10 @@ namespace XMLTV {
         _get_timezone(&offset);
         int daylightHours = 0;
         _get_daylight(&daylightHours);
-        offset += daylightHours;
+        XBMC->Log(LOG_DEBUG, "Timezone offset: %d sec, daylight offset %d h", offset, daylightHours);
+        offset += daylightHours * 60 * 60;
+        XBMC->Log(LOG_DEBUG, "Total timezone offset: %d sec", offset);
+
 #endif // TARGET_WINDOWS
 
         return offset;
