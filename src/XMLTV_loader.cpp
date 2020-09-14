@@ -254,6 +254,9 @@ namespace XMLTV {
         offset = -std::localtime(&current_time)->tm_gmtoff;
 #else
         _get_timezone(&offset);
+        int daylightHours = 0;
+        _get_daylight(&daylightHours);
+        offset += daylightHours;
 #endif // TARGET_WINDOWS
 
         return offset;
