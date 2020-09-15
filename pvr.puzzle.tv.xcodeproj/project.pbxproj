@@ -258,6 +258,7 @@
 		4CDC11DF20B4531900EA9E2B /* client_core_base.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = client_core_base.hpp; sourceTree = "<group>"; };
 		4CDC11E320BDC48100EA9E2B /* globals.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = globals.cpp; sourceTree = "<group>"; };
 		4CDC11E420BDC48100EA9E2B /* globals.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = globals.hpp; sourceTree = "<group>"; };
+		4CDCBE6824D4031600C641B2 /* JsonSaxHandler.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = JsonSaxHandler.h; sourceTree = "<group>"; };
 		4CEE3EAB2239397800AB8F2C /* DemuxPacket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DemuxPacket.h; path = build/build/depends/include/kodi/DemuxPacket.h; sourceTree = "<group>"; };
 		4CEE3EAC2239397800AB8F2C /* DemuxCrypto.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DemuxCrypto.h; path = build/build/depends/include/kodi/DemuxCrypto.h; sourceTree = "<group>"; };
 		4CEE3EAD2239397800AB8F2C /* kodi_game_types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = kodi_game_types.h; path = build/build/depends/include/kodi/kodi_game_types.h; sourceTree = "<group>"; };
@@ -410,26 +411,27 @@
 		4C08C78B1D818381004CAAE3 /* src */ = {
 			isa = PBXGroup;
 			children = (
-				4CC6207423BF3D240053B627 /* ThreadPool.h */,
 				4CFEAA8D1E4DA81A002C2BA4 /* ActionQueue.cpp */,
+				4C08C7FD1D8290F6004CAAE3 /* addon.cpp */,
+				4CD09EFC228318CF003C9467 /* base64.cpp */,
+				4CDC11E320BDC48100EA9E2B /* globals.cpp */,
+				4C08C7F71D81E34A004CAAE3 /* helpers.cpp */,
+				4C8506E61F0E25DF00213131 /* HttpEngine.cpp */,
+				4CAAE72F200691A600A866C9 /* XMLTV_loader.cpp */,
+				4C78F1A02401126C00FA2049 /* addon_settings.h */,
+				4C08C7FF1D829449004CAAE3 /* addon.h */,
+				4CD09EFB228318CF003C9467 /* base64.h */,
+				4C08C7F81D81E34A004CAAE3 /* helpers.h */,
+				4CFB13172267569A00372DB3 /* httplib.h */,
+				4CDCBE6824D4031600C641B2 /* JsonSaxHandler.h */,
+				4C3EEDBE210C670B001C0DB8 /* neutral_sorting.h */,
+				4CA10C23247AB10D0000FF0F /* Speedometer.h */,
+				4CC6207423BF3D240053B627 /* ThreadPool.h */,
 				4CFEAA8E1E4DA81A002C2BA4 /* ActionQueue.hpp */,
 				4CAC99B92180F102005D8902 /* ActionQueueTypes.hpp */,
-				4C08C7FD1D8290F6004CAAE3 /* addon.cpp */,
-				4C08C7FF1D829449004CAAE3 /* addon.h */,
-				4C78F1A02401126C00FA2049 /* addon_settings.h */,
-				4CD09EFC228318CF003C9467 /* base64.cpp */,
-				4CD09EFB228318CF003C9467 /* base64.h */,
-				4CDC11E320BDC48100EA9E2B /* globals.cpp */,
 				4CDC11E420BDC48100EA9E2B /* globals.hpp */,
-				4C08C7F71D81E34A004CAAE3 /* helpers.cpp */,
-				4C08C7F81D81E34A004CAAE3 /* helpers.h */,
-				4C8506E61F0E25DF00213131 /* HttpEngine.cpp */,
 				4C8506E71F0E25DF00213131 /* HttpEngine.hpp */,
-				4CFB13172267569A00372DB3 /* httplib.h */,
-				4C3EEDBE210C670B001C0DB8 /* neutral_sorting.h */,
-				4CAAE72F200691A600A866C9 /* XMLTV_loader.cpp */,
 				4CAAE730200691A600A866C9 /* XMLTV_loader.hpp */,
-				4CA10C23247AB10D0000FF0F /* Speedometer.h */,
 				4C4FBFA41E77C0590027911E /* Buffers */,
 				4CDC11DD20B452B300EA9E2B /* Client Base */,
 				4CAAE72A2006438C00A866C9 /* Edem */,

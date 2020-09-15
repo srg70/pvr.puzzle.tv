@@ -1,3 +1,7 @@
+0.9.93
+- fix: support uncompleted channel list from Trash.
+- fix: timezone offset detection for Windows.
+
 0.9.92
 - fix: startup delay (up to archive reloading timeout) on plugin restart
 - fix: "playlist" tab. Searching for EPG by tvg-id, than by channel name.

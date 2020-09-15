@@ -142,6 +142,7 @@ src/sharatv_pvr_client.h
 src/ThreadPool.h
 src/addon_settings.h
 src/Speedometer.h
+src/JsonSaxHandler.h
 )
 
 addon_version(pvr.puzzle.tv IPTV)

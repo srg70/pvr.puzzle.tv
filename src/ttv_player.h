@@ -128,6 +128,12 @@ namespace TtvEngine
         // TSProxy plist
         void BuildChannelAndGroupList_Plist();
         void UpdateEpgForAllChannels_Plist(time_t startTime, time_t endTime, std::function<bool(void)> cancelled);
+        struct TTVChanel {
+            std::string name;
+            std::string cat;
+            std::string cid;
+        };
+        bool LoadPlaylist(std::function<bool(const TTVChanel&)> onChannel);
         void LoadPlaylist(std::function<void(const rapidjson::Document::ValueType&)> onChannel);
         struct  AlexElecChannel {
             std::string name;
