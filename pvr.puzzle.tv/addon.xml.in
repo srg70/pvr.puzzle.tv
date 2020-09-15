@@ -16,6 +16,10 @@
      <source>https://github.com/srg70/pvr.puzzle.tv</source>
      <license>GPL-2.0-or-later</license>
      <news>
+         0.9.93
+         - fix: support uncompleted channel list from Trash.
+         - fix: timezone offset detection for Windows.
+
          0.9.92
          - fix: startup delay (up to archive reloading timeout) on plugin restart
          - fix: "playlist" tab. Searching for EPG by tvg-id, than by channel name.
