@@ -214,13 +214,10 @@ void PVRClientBase::OnCoreCreated() {
     m_clientCore->CheckRpcConnection();
 
     // We may be here when core is re-creating
-    // In thos case Destroyer is running and may be busy
-    // Validate that this criticlal Init tast is started
+    // In this case Destroyer is running and may be busy
+    // Validate that this criticlal Init action is started
     bool isAsyncInitStarted = false;
     m_destroyer->PerformAsync([&isAsyncInitStarted, this](){
-//        while(m_clientCore == nullptr) {
-//            P8PLATFORM::CEvent::Sleep(100);
-//        }
         isAsyncInitStarted = true;
         if(nullptr == m_clientCore)
             throw std::logic_error("Client core must be initialized alraedy!");

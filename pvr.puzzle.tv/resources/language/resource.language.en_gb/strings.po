@@ -98,8 +98,8 @@ msgid "Number of HSL threads"
 msgstr "Number of HSL threads"
 
 msgctxt "#10020"
-msgid "Archive refresh interval (min)"
-msgstr "Archive refresh interval (min)"
+msgid "Archive refresh interval (min). 0 - no refresh"
+msgstr "Archive refresh interval (min). 0 - no refresh"
 
 msgctxt "#10021"
 msgid "PVR startup delay (sec)"
