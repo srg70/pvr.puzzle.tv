@@ -376,10 +376,20 @@ namespace SharaTvEngine {
         string header = data.substr(pos, range);
         try { globalTags.m_epgUrl = FindVar(header, 0, "url-tvg");} catch (...) {}
         try { globalTags.m_catchupDays = stoul(FindVar(header, 0, "catchup-days"));} catch (...) {}
-        try {
-            globalTags.m_catchupType = FindVar(header, 0, "catchup");
-            LogDebug("SharaTvPlayer: gloabal catchup type: %s", globalTags.m_catchupType.c_str());
-        } catch (...) {}
+        
+        //Catchup type tags options: "catchup", "catchup-type" (cbilling).
+        vector<const char*> tagNameOptions;
+        tagNameOptions.push_back("catchup");
+        tagNameOptions.push_back("catchup-type");
+        for (auto& tagName : tagNameOptions) {
+            try {
+                globalTags.m_catchupType = FindVar(header, 0, tagName);
+                StringUtils::ToLower(globalTags.m_catchupType);
+                LogDebug("SharaTvPlayer: gloabal catchup type: %s", globalTags.m_catchupType.c_str());
+                break;
+            } catch (...) {}
+        }
+        
         try {
             globalTags.m_catchupSource = FindVar(header, 0, "catchup-source");
             LogDebug("SharaTvPlayer: gloabal catchup-source: %s", globalTags.m_catchupSource.c_str());
@@ -450,6 +460,8 @@ namespace SharaTvEngine {
         //#EXTGRP:Базовые
         //http://oa5iy59taouocss24ctr.mine.nu:8000/Perviykanal?auth=oa123456+12345678
         
+        const char* c_REC = "tvg-rec";
+
         auto pos = data.find(',');
         if(string::npos == pos)
             throw BadPlaylistFormatException("Invalid channel block format: missing ','  delinmeter.");
@@ -474,7 +486,13 @@ namespace SharaTvEngine {
         int preloadingInterval = 0;
         try { preloadingInterval = static_cast<int>(std::atof(FindVar(data, 0, "preload-interval").c_str()));} catch (...) {}
 
-        
+        int tvgRec = 0;
+        try {
+            tvgRec = stoul(FindVar(data, 0, c_REC));
+        } catch (...) {
+            // Not mandatory var
+        }
+
         unsigned int archiveDays;
         string archiveUrl;
         string archiveType;
@@ -490,7 +508,6 @@ namespace SharaTvEngine {
                 StringUtils::ToLower(archiveType);
             } catch (...) {}
         }
-        
         // Channel URL. Should be before archive!
         // Flussonic archives depend from channel URL.
         endlLine = 0;
@@ -546,6 +563,11 @@ namespace SharaTvEngine {
                 // catchup-days is mandatory tag.
                 try {  archiveDays = stoul(FindVar(data, 0, "catchup-days"));} catch (...) { archiveUrl.clear();}
             }
+        } else if(globalTags.m_catchupType == "shift"){
+            // We have archive only when archive days are > 0
+            archiveDays = tvgRec;
+            if(archiveDays > 0)
+                archiveUrl = url + "?utc=" + c_START +"&lutc=" + c_LUTC;
         }
         if(!archiveUrl.empty())
             LogDebug("SharaTvPlayer: %s channe's archive url %s", name.c_str(), archiveUrl.c_str());

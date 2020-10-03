@@ -338,6 +338,8 @@ namespace EdemEngine
         // #EXTINF:-1 catchup group-title="Познавательные" tvg-id="738589577doktor",Доктор
         // http://192.168.1.69:9094/InternationalID=386
 
+        const char* c_REC = "tvg-rec";
+
         auto pos = data.find(',');
         if(string::npos == pos)
             throw BadPlaylistFormatException("Invalid channel block format: missing ','  delinmeter.");
@@ -368,12 +370,20 @@ namespace EdemEngine
         string url = tail.substr(endlLine);
         rtrim(url);
         
+        bool hasArchive = true;
+        try {
+            hasArchive = stoul(FindVar(data, 0, c_REC)) > 0;
+        } catch (...) {
+            // Not mandatory var
+        }
+
+        
         Channel channel;
         channel.UniqueId = plistIndex;
         channel.Name = name;
         channel.Number = plistIndex;
         channel.Urls.push_back(url);
-        channel.HasArchive = true;
+        channel.HasArchive = hasArchive;
         //channel.IconPath = m_logoUrl + FindVar(vars, 0, c_LOGO);
         channel.IsRadio = false;
         channels[channel.Name] = PlaylistContent::mapped_type(channel,groupName);
