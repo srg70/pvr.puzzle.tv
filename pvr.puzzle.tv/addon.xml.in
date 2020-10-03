@@ -16,6 +16,10 @@
      <source>https://github.com/srg70/pvr.puzzle.tv</source>
      <license>GPL-2.0-or-later</license>
      <news>
+         0.9.94
+         - feat: support tvg-rec tag in Playlist and Edem slot.
+         - feat: support value "shift" of global cachup-type tag
+
          0.9.93
          - fix: support uncompleted channel list from Trash.
          - fix: timezone offset detection for Windows.
