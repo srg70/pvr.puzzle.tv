@@ -261,10 +261,15 @@ namespace SharaTvEngine {
         }
         
         // Optional UTC and LUTC params
-        pos = url.find(c_LUTC);
+        const char* tagName = c_LUTC;
+        pos = url.find(tagName);
+        if(string::npos == pos){
+            tagName = "${timestamp}";
+            pos = url.find(tagName);
+        }
         if(string::npos != pos) {
             auto lutc = time(NULL) - startTime;
-            url.replace(pos, strlen(c_LUTC), n_to_string(lutc));
+            url.replace(pos, strlen(tagName), n_to_string(lutc));
             debugTimes += " local UTC " + time_t_to_string(lutc);
         }
                             
@@ -528,6 +533,7 @@ namespace SharaTvEngine {
         
         // Has archive support
         if(!archiveType.empty()) {
+             // catchup-days is mandatory tag.
             try {  archiveDays = stoul(FindVar(data, 0, "catchup-days"));} catch (...) { archiveType.clear();}
             if(archiveType == "default") {
                 try {  archiveUrl = FindVar(data, 0, "catchup-source");} catch (...) { archiveType.clear();}
@@ -545,6 +551,21 @@ namespace SharaTvEngine {
                 }
             } else if(archiveType == "shift"){
                 archiveUrl = url + "?utc=" + c_START +"&lutc=" + c_LUTC;
+            } else if(archiveType == "append") {
+                try {
+                    string catchupSource = FindVar(data, 0, "catchup-source");
+                    archiveUrl = url;
+                    if(archiveUrl.find("?") == string::npos) {
+                        // Just add catchup tag a parameters block
+                        archiveUrl += catchupSource;
+                    } else {
+                        // Add catchup tag to parameters block
+                        StringUtils::Replace(archiveUrl, "?", catchupSource + "&");
+                    }
+                } catch (...) {
+                    archiveType.clear();
+                    archiveUrl.clear();
+                }
             }
         }
         // probably we have global archive tag
