@@ -29,7 +29,7 @@
     <setting id="archive_start_padding" type="number" label="10017" default="0"  visible="eq(-3,true)" subsetting="true"/>
     <setting id="archive_end_padding" type="number" label="10018" default="0"  visible="eq(-4,true)" subsetting="true"/>
     <setting id="archive_seek_padding_on_start" type="bool" label="10027" default="false" visible="eq(-5,true)" subsetting="true"/>
-    <setting id="archive_refresh_interval" type="slider" label="10020" default="3" range="1,1,30" option="int" visible="eq(-6,true)" subsetting="true"/>
+    <setting id="archive_refresh_interval" type="number" label="10020" default="3" visible="eq(-6,true)" subsetting="true"/>
     <setting id="archive_wait_for_epg" type="bool" label="10022" default="false"  visible="eq(-7,true)" subsetting="true"/>
     
     <setting label="10093" type="lsep"/>

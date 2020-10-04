@@ -1,3 +1,6 @@
+0.9.95
+- unlimited time interval of archive update
+- support Zabava proxy (slot playlist). No rewind.
 
 0.9.94
 - feat: support tvg-rec tag in Playlist and Edem slot.
