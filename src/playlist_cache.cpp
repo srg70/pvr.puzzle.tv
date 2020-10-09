@@ -85,13 +85,16 @@ void PlaylistCache::QueueAllSegmentsForLoading() {
     }
 }
 
+bool PlaylistCache::ShouldCalculateOffset() const
+{
+    return CanSeek() && m_bitrate == 0;
+}
 bool PlaylistCache::ProcessPlaylist() {
     
     QueueAllSegmentsForLoading();
     // For VOD we can fill data offset for segments already.
     // Do it only first time, i.e. when m_bitrate == 0
-    const bool shouldCalculateOffset = CanSeek() && m_bitrate == 0;
-    if (shouldCalculateOffset) {
+    if (ShouldCalculateOffset()) {
         TimeOffset timeOffaset = 0.0;
         MutableSegment::DataOffset dataOfset = 0;
         
@@ -199,7 +202,7 @@ void PlaylistCache::SegmentReady(MutableSegment* segment) {
     // (file stat on initializin may fail e.g. for zabava proxy)
     // do it now when we'll have at least 3 segments loaded
     int valid_segments = 0;
-    if(m_segments.size() > 3 && 0.0 == m_bitrate) {
+    if(ShouldCalculateOffset()  && m_segments.size() > 3) {
         int validSegments = 0;
         float totalDuration = 0.0;
         size_t totalSize = 0;
@@ -427,7 +430,7 @@ bool PlaylistCache::PrepareSegmentForPosition(int64_t position, uint64_t* nextSe
             return false;
         } else {
             if(timePosition > m_delegate->Duration()) {
-                LogError("PlaylistCache: requested time offset %f exits stream duration %d.", timePosition, (nullptr != m_delegate ? m_delegate->Duration() : -1.0));
+                LogError("PlaylistCache: requested time offset %f exits stream duration %d.", timePosition, m_delegate->Duration());
                 // Can't be
                 return false;
             }

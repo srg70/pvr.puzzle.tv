@@ -131,6 +131,7 @@ namespace Buffers {
         float Bitrate() const { return m_bitrate;}
         bool ProcessPlaylist();
         void QueueAllSegmentsForLoading();
+        bool ShouldCalculateOffset() const;
         
         Playlist* m_playlist;
         PlaylistBufferDelegate m_delegate;
