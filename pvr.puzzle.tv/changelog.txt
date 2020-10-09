@@ -1,3 +1,7 @@
+0.9.96
+- support playlists with unknown tags
+- fix rewind for all zabaza channels
+
 0.9.95
 - unlimited time interval of archive update
 - support Zabava proxy (slot playlist). No rewind.
