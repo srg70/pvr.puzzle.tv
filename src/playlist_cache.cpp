@@ -195,6 +195,26 @@ void PlaylistCache::SegmentReady(MutableSegment* segment) {
     segment->DataReady();
     m_cacheSizeInBytes += segment->Size();
     LogDebug("PlaylistCache: segment #%" PRIu64 " added. Cache size %d bytes", segment->info.index, m_cacheSizeInBytes);
+    // if we still have bitrate not calculate
+    // (file stat on initializin may fail e.g. for zabava proxy)
+    // do it now when we'll have at least 3 segments loaded
+    int valid_segments = 0;
+    if(m_segments.size() > 3 && 0.0 == m_bitrate) {
+        int validSegments = 0;
+        float totalDuration = 0.0;
+        size_t totalSize = 0;
+        for (auto& it : m_segments) {
+            auto& segment = it.second;
+            totalDuration += segment->Duration();
+            totalSize += segment->Size();
+            ++validSegments;
+        }
+        if(validSegments > 2){
+            m_bitrate = totalSize / totalDuration;
+            m_totalLength = m_delegate->Duration() * Bitrate();
+        }
+
+    }
 }
 
 void PlaylistCache::SegmentCanceled(MutableSegment* segment) {

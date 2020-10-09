@@ -528,8 +528,19 @@ namespace SharaTvEngine {
             rtrim(groupName);
             ++endlLine;
         }
-        string url = tail.substr(endlLine);
-        rtrim(url);
+        // skip unsupported by Puzzle tags
+        string url;
+        do{
+            url = tail.substr(endlLine);
+            rtrim(url);
+            endlLine = tail.find('\n', endlLine);
+            if(std::string::npos == endlLine)
+                throw BadPlaylistFormatException("Invalid channel block format: missing NEW LINE after #EXTGRP.");
+            ++endlLine;
+        }while(!url.empty() && url[0] == '#');
+        
+        if(url.empty())
+            throw BadPlaylistFormatException("Invalid channel block format: missing channel URL.");
         
         // Has archive support
         if(!archiveType.empty()) {
