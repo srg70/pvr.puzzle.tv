@@ -483,7 +483,7 @@ return false;             \
     }
 
     
-    bool ParseEpg(const std::string& url,  const EpgEntryCallback& onEpgEntryFound, PvrClient::KodiChannelId (*idConverter)(const std::string& strId))
+    bool ParseEpg(const std::string& url,  const EpgEntryCallback& onEpgEntryFound)
     {
         XmlDocumentAndData xmlDoc;
         
@@ -528,7 +528,7 @@ return false;             \
                     GetAttributeValue(iconAttribute, "src", entry.iconPath);
                 }
                 
-                entry.EpgId = idConverter(strId);
+                entry.EpgId = EpgChannelIdForXmlEpgId(strId);
                // LogDebug("Program: TVG id %s => EPG id %d", strId.c_str(), entry.EpgId);
                 entry.startTime = iTmpStart;
                 entry.endTime = iTmpEnd;
