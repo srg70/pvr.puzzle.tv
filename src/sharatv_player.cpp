@@ -359,7 +359,7 @@ namespace SharaTvEngine {
             return !cancelled();
         };
         
-        XMLTV::ParseEpg(m_epgUrl, onEpgEntry, XMLTV::EpgChannelIdForXmlEpgId);
+        XMLTV::ParseEpg(m_epgUrl, onEpgEntry);
     }
     
     string Core::GetUrl(ChannelId channelId)
