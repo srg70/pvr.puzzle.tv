@@ -288,7 +288,7 @@ void Playlist::LoadPlaylist(std::string& data) const
         }
         
         HttpEngine::Request request(requestUrl, "", headers);
-        HttpEngine::DoCurl(request, HttpEngine::TCoocies(), &data, 9999999, &m_effectivePlayListUrl);
+        HttpEngine::DoCurl(request, HttpEngine::TCookies(), &data, 9999999, &m_effectivePlayListUrl);
         succeeded = true;
         
     }catch (std::exception& ex) {
