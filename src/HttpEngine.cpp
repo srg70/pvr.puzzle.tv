@@ -89,7 +89,7 @@ HttpEngine::HttpEngine()
     }
 
 
-    void HttpEngine::DoCurl(const Request &request, const TCoocies &cookie, std::string* response, unsigned long long requestId, std::string* effectiveUrl)
+    void HttpEngine::DoCurl(const Request &request, const TCookies &cookie, std::string* response, unsigned long long requestId, std::string* effectiveUrl)
     {
         using namespace Globals;
         void *curl = nullptr;
@@ -197,7 +197,7 @@ HttpEngine::HttpEngine()
     }
 
 
-    void HttpEngine::DoCurl(const Request &request, const TCoocies &cookie, std::string* response, unsigned long long requestId, std::string* effectiveUrl)
+    void HttpEngine::DoCurl(const Request &request, const TCookies &cookie, std::string* response, unsigned long long requestId, std::string* effectiveUrl)
     {
         char errorMessage[CURL_ERROR_SIZE];
         CURL *curl = curl_easy_init();

@@ -148,18 +148,34 @@ namespace SharaTvEngine {
         // search for EpgId by comparision of channel name from playlist and display name from EPG
 
         std::map<const std::string, Channel&> channelsWithoutEpgIds;
+        std::map<ChannelId, vector<Channel*> > channelsWithoutIcons;
+
         for (auto & ch : plistContent.channels) {
-            if(ch.second.first.EpgId == UnknownChannelId)
-                channelsWithoutEpgIds.emplace(ch.first, ch.second.first);
+            Channel& theChannel = ch.second.first;
+            if(theChannel.EpgId == UnknownChannelId) {
+                channelsWithoutEpgIds.emplace(ch.first, theChannel);
+            } else if(theChannel.IconPath.empty()){
+                channelsWithoutIcons[theChannel.EpgId].push_back(&theChannel);
+            }
         }
-        if(!channelsWithoutEpgIds.empty()) {
-            ChannelCallback onNewChannel = [&channelsWithoutEpgIds](const EpgChannel& newChannel){
-                for(const auto& epgChannelName : newChannel.displayNames) {
-                    if(channelsWithoutEpgIds.count(epgChannelName) != 0) {
-                        auto& plistChannel = channelsWithoutEpgIds.at(epgChannelName);
-                        plistChannel.EpgId = newChannel.id;
-                        if(plistChannel.IconPath.empty())
-                            plistChannel.IconPath = newChannel.strIcon;
+        if(!channelsWithoutEpgIds.empty() || !channelsWithoutIcons.empty()) {
+            ChannelCallback onNewChannel = [&channelsWithoutEpgIds, &channelsWithoutIcons](const EpgChannel& newChannel){
+                // fill EpgId of channel from EPG
+                if(!channelsWithoutEpgIds.empty()) {
+                    for(const auto& epgChannelName : newChannel.displayNames) {
+                        if(channelsWithoutEpgIds.count(epgChannelName) != 0) {
+                            auto& plistChannel = channelsWithoutEpgIds.at(epgChannelName);
+                            plistChannel.EpgId = newChannel.id;
+                            if(plistChannel.IconPath.empty())
+                                plistChannel.IconPath = newChannel.strIcon;
+                        }
+                    }
+                }
+                // use logo url from EPG
+                if(channelsWithoutIcons.count(newChannel.id) > 0) {
+                    auto& plistChannels = channelsWithoutIcons.at(newChannel.id);
+                    for (auto pChannel : plistChannels) {
+                        pChannel->IconPath = newChannel.strIcon;
                     }
                 }
             };
@@ -318,16 +334,7 @@ namespace SharaTvEngine {
         auto when = now - epgTime;
         entry.HasArchive = when > 0 && when < archivePeriod;
     }
-    
-    static PvrClient::KodiChannelId EpgChannelIdToKodi(const std::string& strId)
-    {
-        if(strId.empty())
-            return UnknownChannelId;
-        string strToHash(strId);
-        StringUtils::ToLower(strToHash);
-        return std::hash<std::string>{}(strToHash);
-    }
-    
+        
     void Core::UpdateEpgForAllChannels(time_t startTime, time_t endTime, std::function<bool(void)> cancelled)
     {
         using namespace XMLTV;
@@ -352,7 +359,7 @@ namespace SharaTvEngine {
             return !cancelled();
         };
         
-        XMLTV::ParseEpg(m_epgUrl, onEpgEntry, EpgChannelIdToKodi);
+        XMLTV::ParseEpg(m_epgUrl, onEpgEntry);
     }
     
     string Core::GetUrl(ChannelId channelId)
@@ -606,7 +613,7 @@ namespace SharaTvEngine {
                 
         Channel channel;
         channel.UniqueId = XMLTV::ChannelIdForChannelName(name);
-        channel.EpgId = EpgChannelIdToKodi(tvgId);
+        channel.EpgId = XMLTV::EpgChannelIdForXmlEpgId(tvgId);
         // LogDebug("Channe: TVG id %s => EPG id %d", tvgId.c_str(), channel.EpgId);
         channel.Name = name;
         channel.Number = plistIndex;

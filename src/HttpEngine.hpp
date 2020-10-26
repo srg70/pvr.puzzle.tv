@@ -67,7 +67,7 @@ public:
         RequestPriority_Low
     };
     
-    typedef std::map<std::string, std::string> TCoocies;
+    typedef std::map<std::string, std::string> TCookies;
     
     HttpEngine ();
     ~HttpEngine();
@@ -111,11 +111,11 @@ public:
     static void SetCurlTimeout(long timeout);
 //    static std::string Escape(const std::string& str);
     
-    TCoocies m_sessionCookie;
+    TCookies m_sessionCookie;
 
     static bool CheckInternetConnection(long timeout);
     
-    static void DoCurl(const Request &request, const TCoocies &cookie, std::string* response, unsigned long long requestId = 0, std::string* effectiveUrl = nullptr);
+    static void DoCurl(const Request &request, const TCookies &cookie, std::string* response, unsigned long long requestId = 0, std::string* effectiveUrl = nullptr);
     
 private:
     static size_t CurlWriteData(void *buffer, size_t size, size_t nmemb, void *userp);
@@ -123,7 +123,7 @@ private:
     mutable unsigned long long m_DebugRequestId;
 
     template <typename TResultCallback, typename TCompletion>
-    void SendHttpRequest(const Request &request, const TCoocies &cookie, TResultCallback result, TCompletion completion, RequestPriority priority) const
+    void SendHttpRequest(const Request &request, const TCookies &cookie, TResultCallback result, TCompletion completion, RequestPriority priority) const
     {
         std::string* response = new std::string();
         const unsigned long long requestId = m_DebugRequestId++;

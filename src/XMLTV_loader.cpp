@@ -414,6 +414,15 @@ return false;             \
         return id < 0 ? -id : id;
     }
     
+    PvrClient::KodiChannelId EpgChannelIdForXmlEpgId(const std::string& strId)
+    {
+        if(strId.empty())
+            return PvrClient::UnknownChannelId;
+        string strToHash(strId);
+        StringUtils::ToLower(strToHash);
+        return std::hash<std::string>{}(strToHash);
+    }
+
     bool ParseChannels(const std::string& url,  const ChannelCallback& onChannelFound)
     {
 
@@ -446,7 +455,7 @@ return false;             \
                 continue;
             }
             
-            channel.id = ChannelIdForChannelName(strId);
+            channel.id = XMLTV::EpgChannelIdForXmlEpgId(strId);
             
             if(!GetAllNodesValue(pChannelNode, "display-name", channel.displayNames)){
                 XBMC->Log(LOG_DEBUG, "XMLTV Loader: no channel display name found.");
@@ -474,7 +483,7 @@ return false;             \
     }
 
     
-    bool ParseEpg(const std::string& url,  const EpgEntryCallback& onEpgEntryFound, PvrClient::KodiChannelId (*idConverter)(const std::string& strId))
+    bool ParseEpg(const std::string& url,  const EpgEntryCallback& onEpgEntryFound)
     {
         XmlDocumentAndData xmlDoc;
         
@@ -519,7 +528,7 @@ return false;             \
                     GetAttributeValue(iconAttribute, "src", entry.iconPath);
                 }
                 
-                entry.EpgId = idConverter(strId);
+                entry.EpgId = EpgChannelIdForXmlEpgId(strId);
                // LogDebug("Program: TVG id %s => EPG id %d", strId.c_str(), entry.EpgId);
                 entry.startTime = iTmpStart;
                 entry.endTime = iTmpEnd;
