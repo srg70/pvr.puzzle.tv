@@ -28,25 +28,14 @@ using namespace rapidjson;
 
 template<class TDerived>
 struct ParserForBase : public BaseReaderHandler<UTF8<>, TDerived>  {
-private:
-    typedef BaseReaderHandler<UTF8<>, TDerived>  TBase;
 
 public:
     inline bool HasError() const { return m_isError; }
     inline const string& GetParseError() const {return m_error; }
 
-    inline bool Null() { return this->TBase::Null();}
-    inline bool Bool(bool b) { return this->TBase::Bool(b);}
-    inline bool Int(int i) { return this->TBase::Int(i);}
-    inline bool Uint(unsigned i) { return this->TBase::Uint(i);}
-    inline bool Int64(int64_t i) { return this->TBase::Int64(i);}
-    inline bool Uint64(uint64_t i) { return this->TBase::Uint64(i);}
-    inline bool Double(double d) { return this->TBase::Double(d);}
-    inline bool RawNumber(const typename TBase::Ch* str, SizeType length, bool copy){ return this->TBase::RawNumber(str, length, copy);}
-    inline bool StartArray() { return this->TBase::StartArray();}
-    inline bool EndArray(SizeType elementCount) { return this->TBase::EndArray(elementCount);}
-
 protected:
+    typedef BaseReaderHandler<UTF8<>, TDerived>  TBase;
+
     inline bool error(const string& reason)
     {
         m_isError = true;
@@ -60,21 +49,46 @@ private:
 };
 
 template<class T>
+struct ObjectDeliverer {
+    ObjectDeliverer() {
+        m_delegate = [](const T&){return false;};
+    }
+    typedef function <bool(const T&)> TObjectDelegate;
+    inline bool SendObject(const T& obj) { return m_delegate(obj);}
+    void SetDelegate(const TObjectDelegate& delegate) {m_delegate = delegate;}
+private:
+    TObjectDelegate m_delegate;
+};
+
+
+
+template<class T>
 struct ParserForObject : public ParserForBase<ParserForObject<T> > {
 
 private :
-    typedef ParserForBase<ParserForObject<T> > TBase;
+    typedef typename ParserForBase<ParserForObject<T> >::TBase TBase;
 
 public:
-    typedef function <bool(const T&)> TObjectDelegate;
+    typedef typename ObjectDeliverer<T>::TObjectDelegate TObjectDelegate;
     typedef string T::*TStringField;
-    
-    inline ParserForObject<T>& WithField(const string& name, TStringField field)
+    typedef vector<string> T::*TStringArrayField;
+
+    inline ParserForObject<T>& WithField(const string& name, TStringField field, bool isMandatory = true)
     {
         m_stringFields.emplace(name, field);
+        if(isMandatory)
+            m_mandatoryTags.push_back(name);
         return *this;
     }
     
+    inline ParserForObject<T>& WithField(const string& name, TStringArrayField arrayField, bool isMandatory = true)
+    {
+        m_stringArrayFields.emplace(name, arrayField);
+        if(isMandatory)
+            m_mandatoryTags.push_back(name);
+        return *this;
+    }
+
     bool StartObject() {
         switch (m_state) {
             case kExpectObjectStart:
@@ -117,6 +131,17 @@ public:
                 }
                 return true;
             }
+            case kExpectArrayValue:
+            {
+                auto pName = prev(m_jsonFields.end());
+               
+                if(m_stringArrayFields.count(*pName) == 0){
+                    m_jsonFields.erase(pName); // OK. The field was not registerd for parsing
+                } else {
+                    (m_object.*m_stringArrayFields[*pName]).push_back(string(str, length));
+                }
+                return true;
+            }
             default:
                 return this->error(string("String: unexpected state") + to_string(m_state));
         }
@@ -124,37 +149,71 @@ public:
     
     bool EndObject(SizeType) {
         switch (m_state) {
-            case kExpectNameOrObjectEnd: 
-                if(m_jsonFields.size() != m_stringFields.size()) {
-                    string e = string("EndObject: missing value(s) for field(s):");
-                    auto l = m_jsonFields.end();
-                    for (const auto& f : m_stringFields) {
-                        const auto& key = f.first;
-                        if(find(m_jsonFields.begin(), l, key) == l) { // Not found
-                            e += " '";
-                            e += key + "'";
-                        }
+            case kExpectNameOrObjectEnd:
+            {
+                auto l = m_jsonFields.end();
+                for (const auto& tagName : m_mandatoryTags) {
+                    if(find(m_jsonFields.begin(), l, tagName) == l) { // Not found
+                        string e = string("EndObject: missing value(s) for field(s):");
+                        e += " '";
+                        e += tagName + "'";
+                        return this->error(e); // Not all fields set.
                     }
-                    return TBase::error(e); // Not all fields set.
                 }
-                m_delegate(m_object);
                 m_state = kExpectObjectStart;
-                return true;
+                return m_deliverer.SendObject(m_object);
+            }
             default:
                 return this->error(string("EndObject: unexpected state") + to_string(m_state));
         }
     }
 
-    inline bool Null() { return this->TBase::Null();}
-    inline bool Bool(bool b) { return this->TBase::Bool(b);}
-    inline bool Int(int i) { return this->TBase::Int(i);}
-    inline bool Uint(unsigned i) { return this->TBase::Uint(i);}
-    inline bool Int64(int64_t i) { return this->TBase::Int64(i);}
-    inline bool Uint64(uint64_t i) { return this->TBase::Uint64(i);}
-    inline bool Double(double d) { return this->TBase::Double(d);}
-    inline bool RawNumber(const typename TBase::Ch* str, SizeType length, bool copy){ return this->TBase::RawNumber(str, length, copy);}
-    inline bool StartArray(){ return this->TBase::StartArray();}
-    inline bool EndArray(SizeType elementCount){ return this->TBase::EndArray(elementCount);}
+    inline bool Null() { return TBase::Null();}
+    inline bool Bool(bool b) { return TBase::Bool(b);}
+    inline bool Int(int i) { return TBase::Int(i);}
+    inline bool Uint(unsigned i) { return TBase::Uint(i);}
+    inline bool Int64(int64_t i) { return TBase::Int64(i);}
+    inline bool Uint64(uint64_t i) { return TBase::Uint64(i);}
+    inline bool Double(double d) { return TBase::Double(d);}
+    inline bool RawNumber(const typename TBase::Ch* str, SizeType length, bool copy){ return TBase::RawNumber(str, length, copy);}
+    inline bool StartArray() {
+        // if we expect value, probably it is array field
+        if(kExpectValue == m_state){
+            m_state = kExpectArrayValue;
+            return true;
+        }
+        // else - check start of array of objects
+        else {
+            switch (m_arrayState) {
+                case kExpectStartArray:
+                {
+                    if(kExpectObjectStart != m_state)
+                        return this->error(string("StartArray: unexpected object state") + to_string(m_state));
+                    m_arrayState = kExpectEndArray;
+                    return true;
+                }
+                default:
+                    return this->error(string("StartArray: unexpected array state") + to_string(m_arrayState));
+            }
+        }
+    }
+    inline bool EndArray(SizeType elementCount){
+        if(kExpectArrayValue == m_state){
+            m_state = kExpectNameOrObjectEnd;
+            return true;
+        }
+        switch (m_arrayState) {
+            case kExpectEndArray:
+            {
+                if(kExpectObjectStart != m_state)
+                    return this->error(string("EndArray: unexpected object state") + to_string(m_state));
+                m_arrayState = kExpectStartArray;
+                return true;
+            }
+            default:
+                return this->error(string("EndArray: unexpected array state") + to_string(m_arrayState));
+        }
+    }
 
     bool Default() {
         switch (m_state) {
@@ -171,30 +230,71 @@ public:
         }
     }
     
-    ParserForObject( TObjectDelegate delegate)
+    ParserForObject()
     : m_state(kExpectObjectStart)
-    , m_delegate(delegate)
+    , m_arrayState(kExpectStartArray)
     {}
 
 protected:
     typedef map<string, TStringField> StringFieldsMap;
+    typedef map<string, TStringArrayField> StringArrayFieldsMap;
     typedef vector<string> FieldNames;
+    void SetDeliverer(const ObjectDeliverer<T>& deliverer) {m_deliverer = deliverer;}
+    
 private:
+    template<class U>
+    friend bool ParseJsonStream(const char* json,
+                                   ParserForObject<U>& handler,
+                                   typename ParserForObject<U>::TObjectDelegate onObjectReady,
+                                   string* errorMessage);
+//    template<class U>
+//    friend bool ParseJsonArray(const char* json, ParserForObject<U>& handler,
+//                               typename ParserForObject<U>::TObjectDelegate onObjectReady,
+//                               string* errorMessage);
     
     StringFieldsMap m_stringFields;
+    StringArrayFieldsMap m_stringArrayFields;
+
     enum State {
         kExpectObjectStart,
         kExpectNameOrObjectEnd,
         kExpectValue,
+        kExpectArrayValue
     }m_state;
+    
+    enum ArrayState {
+        kExpectStartArray,
+        kExpectEndArray
+    }m_arrayState;
     
     T m_object;
     FieldNames m_jsonFields;
+    FieldNames m_mandatoryTags;
+    ObjectDeliverer<T> m_deliverer;
+};
+
+template<class TArray, class TElement>
+struct ParserForArrayObject : public ParserForObject<TElement> {
+private:
+    typedef ParserForObject<TElement> TBase;
+public:
+    typedef function<bool(TArray&, const TElement&)> TObjectDelegate;
+    ParserForArrayObject(TObjectDelegate delegate)
+    : TBase()
+    , m_delegate (delegate)
+    {}
+private:
     TObjectDelegate m_delegate;
 };
 
 template<class T>
-inline bool ParseJsonObject(const char* json, ParserForObject<T>& handler, string* errorMessage = nullptr) {
+inline bool ParseJsonStream(const char* json, ParserForObject<T>& handler,
+                            typename ParserForObject<T>::TObjectDelegate onObjectReady,
+                            string* errorMessage) {
+    ObjectDeliverer<T> deliverer;
+    deliverer.SetDelegate(onObjectReady);
+    handler.SetDeliverer(deliverer);
+    
     Reader reader;
     StringStream ss(json);
     if (!reader.Parse(ss, handler)){
@@ -221,121 +321,6 @@ inline bool ParseJsonObject(const char* json, ParserForObject<T>& handler, strin
     return true;
 }
 
-
-
-template<class TObjectParser>
-struct ParserForObjectArray : public ParserForBase<ParserForObjectArray<TObjectParser> > {
-    
-private :
-    typedef ParserForBase<ParserForObjectArray<TObjectParser> > TBase;
-
-public:
-    ParserForObjectArray( TObjectParser objParser)
-    : m_state(kExpectStartArray)
-    , m_objectParser(objParser)
-    {}
-
-    bool StartArray() {
-        switch (m_state) {
-            case kExpectStartArray:
-            {
-                m_state = kExpectEndArray;
-                return true;
-            }
-            default:
-                return this->error(string("StartArray: unexpected state") + to_string(m_state));
-        }
-    }
-    bool EndArray(SizeType elementCount){
-        switch (m_state) {
-            case kExpectEndArray:
-            {
-                m_state = kExpectStartArray;
-                return true;
-            }
-            default:
-                return this->error(string("EndArray: unexpected state") + to_string(m_state));
-        }
-    }
-
-    bool StartObject() { return CallObjectParser(&TObjectParser::StartObject); }
-    
-    bool String(const char* str, SizeType length, bool copy) {
-        return CallObjectParser(&TObjectParser::String, str, length, copy);
-    }
-    bool Key(const char* str, SizeType length, bool copy) {
-        return CallObjectParser(&TObjectParser::Key, str, length, copy);
-    }
-
-    bool EndObject(SizeType size){return CallObjectParser(&TObjectParser::EndObject, size);}
-    bool Null(){ return CallObjectParser(&TObjectParser::Null); }
-    bool Bool(bool b){ return CallObjectParser(&TObjectParser::Bool, b); }
-    bool Int(int i){ return CallObjectParser(&TObjectParser::Int, i); }
-    bool Uint(unsigned i){ return CallObjectParser(&TObjectParser::Uint, i); }
-    bool Int64(int64_t i){ return CallObjectParser(&TObjectParser::Int64, i); }
-    bool Uint64(uint64_t i){ return CallObjectParser(&TObjectParser::Uint64, i); }
-    bool Double(double d){ return CallObjectParser(&TObjectParser::Double, d); }
-    bool RawNumber(const typename TBase::Ch* str, SizeType length, bool copy){
-        return CallObjectParser(&TObjectParser::RawNumber, str, length, copy);
-    }
-
-    bool Default() {
-        return this->error("Default: unknown event for array parser");
-    }
-private:
-    template<class ... Types>
-    inline bool CallObjectParser(bool (TObjectParser::*f)(Types...), Types ... args)
-    {
-        switch (m_state) {
-            case kExpectEndArray:
-                return (m_objectParser.*f)(args...);
-            default:
-                return this->error(string("CallObjectParser: unexpected state") + to_string(m_state));
-        }
-    }
- 
-    enum State {
-        kExpectStartArray,
-        kExpectEndArray
-    }m_state;
-    
-    TObjectParser m_objectParser;
-};
-
-
-template<class T>
-inline bool ParseJsonArray(const char* json, ParserForObject<T>& handler, string* errorMessage = nullptr) {
-    Reader reader;
-    StringStream ss(json);
-    ParserForObjectArray<ParserForObject<T> > arrayHandler(handler);
-    
-    if (!reader.Parse(ss, arrayHandler)){
-        if(nullptr  != errorMessage) {
-            ParseErrorCode e = reader.GetParseErrorCode();
-            size_t o = reader.GetErrorOffset();
-            *errorMessage += "Parser error: '";
-            *errorMessage += GetParseError_En(e);
-            *errorMessage += "' at offset ";
-            *errorMessage += to_string(o);
-            string tail = string(&json[o]);
-            if(tail.size() > 0){
-               *errorMessage += " near '" + tail.substr(10) +  "...'\n";
-            } else  {
-                *errorMessage += " (last symbol) \n";
-            }
-            if(arrayHandler.HasError()) {
-                *errorMessage += "Array error: '";
-                *errorMessage += arrayHandler.GetParseError() + "'\n";
-            }
-            if(handler.HasError()) {
-                *errorMessage += "Object error: '";
-                *errorMessage += handler.GetParseError() + "'";
-            }
-        }
-        return false;
-    }
-    return true;
-}
 } // Json
 } // Helpers
  

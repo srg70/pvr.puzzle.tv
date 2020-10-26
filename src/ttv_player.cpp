@@ -90,7 +90,8 @@ namespace TtvEngine
         }
     };
 
-    typedef map<string, pair<Channel, string>, NoCaseComparator> PlaylistContent;
+    // map<channel name, pair<Cahnnel, groups vertor>>
+    typedef map<string, pair<Channel, vector<string> >, NoCaseComparator> PlaylistContent;
     
     Core::Core(const CoreParams& coreParams)
     : m_coreParams(coreParams)
@@ -159,7 +160,8 @@ namespace TtvEngine
             XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32021));
             return string();
         }
-        return m_coreParams.AceServerUrlBase() + c_ACE_ENGINE_HLS_STREAM + /*(m_coreParams.filterByAlexElec ? "infohash=" : */"id="/*)*/ + m_channelList.at(channelId).Urls[0] + "&pid=" + m_deviceId;
+        return m_coreParams.AceServerUrlBase() + c_ACE_ENGINE_HLS_STREAM + /*(m_coreParams.filterByAlexElec ? "infohash=" : */"infohash="/*)*/ + m_channelList.at(channelId).Urls[0] + "&pid=" + m_deviceId;
+//        return m_coreParams.AceServerUrlBase() + c_ACE_ENGINE_HLS_STREAM + /*(m_coreParams.filterByAlexElec ? "infohash=" : */"id="/*)*/ + m_channelList.at(channelId).Urls[0] + "&pid=" + m_deviceId;
     }
 
     bool Core::CheckAceEngineRunning()
@@ -298,41 +300,19 @@ namespace TtvEngine
             channel.UniqueId = plistIndex;
             channel.Name = ch.name;
             channel.Number = plistIndex++;
-            channel.Urls.push_back(ch.cid);
+            channel.Urls.push_back(ch.infohash);
             channel.HasArchive = false;
             channel.IsRadio = false;
-            plistContent[channel.Name] = PlaylistContent::mapped_type(channel,ch.cat);
+            plistContent[channel.Name] = PlaylistContent::mapped_type(channel,ch.cats);
             return true;
         });
         if(!succeded){
             XBMC->QueueNotification(((plistContent.size() > 0) ? QUEUE_WARNING : QUEUE_ERROR), XBMC_Message(32029));
         }
-//        LoadPlaylist([&plistIndex, &plistContent] (const Document::ValueType& ch)
-//                     {
-//                         //TTVChanel ttvChannel;
-//                         
-//                         Channel channel;
-//                         channel.UniqueId = plistIndex;
-//                         channel.Name = ch["name"].GetString();
-//                         channel.Number = plistIndex++;
-//                         channel.Urls.push_back(ch["cid"].GetString());
-//                         channel.HasArchive = false;
-//                         channel.IsRadio = false;
-//                         plistContent[channel.Name] = PlaylistContent::mapped_type(channel,ch["cat"].GetString());
-//                         
-//                     });
         if(m_coreParams.filterByAlexElec) {
             PlaylistContent alexPlistContent;
             LoadPlaylistAlexelec([&plistIndex, &plistContent, &alexPlistContent] (const AlexElecChannel & ch)
             {
-//                Channel channel;
-//                channel.UniqueId = plistIndex;
-//                channel.Name = ch.name;
-//                channel.Number = plistIndex++;
-//                channel.Urls.push_back(ch.cid);
-//                channel.HasArchive = false;
-//                channel.IsRadio = false;
-//                plistContent[channel.Name] = PlaylistContent::mapped_type(channel, TtvEngine::GroupMap(ch.cat));
                 if(plistContent.count(ch.name) == 1) {
                     alexPlistContent[ch.name] = plistContent.at(ch.name);
                 }
@@ -357,21 +337,24 @@ namespace TtvEngine
         for(const auto& channelWithGroup : plistContent)
         {
             const auto& channel = channelWithGroup.second.first;
-            const auto& groupName = channelWithGroup.second.second;
-            
+
             AddChannel(channel);
             
             const auto& groupList = m_groupList;
-            auto itGroup =  std::find_if(groupList.begin(), groupList.end(), [&](const GroupList::value_type& v ){
-                return groupName ==  v.second.Name;
-            });
-            if (itGroup == groupList.end()) {
-                Group newGroup;
-                newGroup.Name = groupName;
-                AddGroup(groupList.size(), newGroup);
-                itGroup = --groupList.end();
+            const auto& groupNames = channelWithGroup.second.second;
+
+            for (const auto& groupName : groupNames) {
+                auto itGroup =  std::find_if(groupList.begin(), groupList.end(), [&](const GroupList::value_type& v ){
+                    return groupName ==  v.second.Name;
+                });
+                if (itGroup == groupList.end()) {
+                    Group newGroup;
+                    newGroup.Name = groupName;
+                    AddGroup(groupList.size(), newGroup);
+                    itGroup = --groupList.end();
+                }
+                AddChannelToGroup(itGroup->first, channel.UniqueId);
             }
-            AddChannelToGroup(itGroup->first, channel.UniqueId);
         }
     }
     
@@ -389,11 +372,12 @@ namespace TtvEngine
         
         XMLTV::ParseEpg(m_coreParams.epgUrl, onEpgEntry);
     }
-    
+ 
+
     bool Core::LoadPlaylist(std::function<bool(const TTVChanel&)> onChannel)
     {
         try {
-            string trashUrl("http://91.92.66.82/trash/ttv-list/acelive.json|encoding=gzip");
+            string trashUrl("https://api.acestream.me/all?api_version=1.0&api_key=test_api_key");
             const string& plistUrl = trashUrl;
             // Download playlist
             XBMC->Log(LOG_DEBUG, "TtvPlayer: loading playlist: %s", plistUrl.c_str());
@@ -408,15 +392,15 @@ namespace TtvEngine
                     throw IoErrorException("Failed to unzip playlist.");
                 data = unzipedContent;
             }
-                        
+
             using namespace Helpers::Json;
-            auto parser = ParserForObject<TTVChanel>(onChannel)
+            auto parser = ParserForObject<TTVChanel>()
             .WithField("name", &TTVChanel::name)
-            .WithField("cat", &TTVChanel::cat)
-            .WithField("cid", &TTVChanel::cid);
+            .WithField("categories", &TTVChanel::cats, false)
+            .WithField("infohash", &TTVChanel::infohash);
 
             string parserError;
-            bool succeded = ParseJsonArray(data.c_str(), parser, &parserError);
+            bool succeded = ParseJsonStream(data.c_str(), parser, onChannel, &parserError);
             if(succeded){
                 XBMC->Log(LOG_DEBUG, "TtvPlayer: parsing of playlist done.");
             } else {
@@ -429,75 +413,85 @@ namespace TtvEngine
             return false;
         }
     }
-    void Core::LoadPlaylist(std::function<void(const Document::ValueType &)> onChannel)
-    {
-        try {
-            string trashUrl("http://91.92.66.82/trash/ttv-list/acelive.json|encoding=gzip");
-            const string& plistUrl = trashUrl;
-            // Download playlist
-            XBMC->Log(LOG_DEBUG, "TtvPlayer: loading playlist: %s", plistUrl.c_str());
-            
-            string zipContent;
-            string unzipedContent;
-            XMLTV::GetCachedFileContents(plistUrl, zipContent);
-            string& data = zipContent;
-            
-            if(XMLTV::IsDataCompressed(zipContent)) {
-                if(!XMLTV::GzipInflate(zipContent, unzipedContent))
-                    throw IoErrorException("Failed to unzip playlist.");
-                data = unzipedContent;
-            }
-            
-            
-            //            string compressedFile = XMLTV::GetCachedFilePath(plistUrl);
-            //            if(compressedFile.empty())
-            //                throw ServerErrorException("Failed to obtain playlist from server.");
-            //
-            //            if(!XBMC->CreateDirectory(c_TrashDataCacheDir))
-            //                    throw IoErrorException((string("Failed to create cahce directory ") + c_TrashDataCacheDir).c_str());
-            //
-            //            char* realPath = XBMC->TranslateSpecialProtocol(compressedFile.c_str());
-            //
-            //            TAR *pTar;
-            //            int i=0;
-            //            if(0 != tar_open(&pTar, realPath, NULL, O_RDONLY, 0, TAR_IGNORE_CRC)) {
-            //                XBMC->FreeString(realPath);
-            //                throw IoErrorException((string("Bad TAR archive ") + compressedFile).c_str());
-            //            }
-            //            XBMC->FreeString(realPath);
-            //            realPath = XBMC->TranslateSpecialProtocol(c_TrashDataCacheDir);
-            //
-            //            if(0 != tar_extract_all(pTar, (char*) realPath))
-            //            {
-            //                XBMC->FreeString(realPath);
-            //                tar_close(pTar);
-            //                LogError("Failed to extract files from TAR archive %s. Error %d", compressedFile.c_str(), errno);
-            //                throw IoErrorException("Failed to extract files from TAR archive");
-            //            }
-            //            XBMC->FreeString(realPath);
-            //            tar_close(pTar);
-                        
-            //XBMC->Log(LOG_ERROR, ">>> DUMP M3U : \n %s", data.c_str() );
 
-            ParseJson(data, [onChannel] (Document& jsonRoot)
-                      {
-                bool isArray = jsonRoot.IsArray();
-                if(isArray) {
-                    for(const auto& ch : jsonRoot.GetArray()){
-                        onChannel(ch);
-                    }
-                } else {
-                    LogError("TtvPlayer: bad playlist format. No channel will be loaded");
-                }
-            });
-            
-            XBMC->Log(LOG_DEBUG, "TtvPlayer: parsing of playlist done.");
-            
-        } catch (std::exception& ex) {
-            LogError("TtvPlayer: exception during playlist loading: %s", ex.what());
-            
-        }
-    }
+
+//    bool Core::LoadPlaylist(std::function<bool(const TTVChanel&)> onChannel)
+//    {
+//        try {
+//            string trashUrl("http://91.92.66.82/trash/ttv-list/acelive.json|encoding=gzip");
+//            const string& plistUrl = trashUrl;
+//            // Download playlist
+//            XBMC->Log(LOG_DEBUG, "TtvPlayer: loading playlist: %s", plistUrl.c_str());
+//
+//            string zipContent;
+//            string unzipedContent;
+//            XMLTV::GetCachedFileContents(plistUrl, zipContent);
+//            string& data = zipContent;
+//
+//            if(XMLTV::IsDataCompressed(zipContent)) {
+//                if(!XMLTV::GzipInflate(zipContent, unzipedContent))
+//                    throw IoErrorException("Failed to unzip playlist.");
+//                data = unzipedContent;
+//            }
+//
+//            using namespace Helpers::Json;
+//            auto parser = ParserForObject<TTVChanel>()
+//            .WithField("name", &TTVChanel::name)
+//            .WithField("cat", &TTVChanel::cat)
+//            .WithField("cid", &TTVChanel::cid);
+//
+//            string parserError;
+//            bool succeded = ParseJsonStream(data.c_str(), parser, onChannel, &parserError);
+//            if(succeded){
+//                XBMC->Log(LOG_DEBUG, "TtvPlayer: parsing of playlist done.");
+//            } else {
+//                XBMC->Log(LOG_DEBUG, "TtvPlayer: parsing of playlist faled with error %s.", parserError.c_str());
+//            }
+//            return succeded;
+//
+//        } catch (std::exception& ex) {
+//            LogError("TtvPlayer: exception during playlist loading: %s", ex.what());
+//            return false;
+//        }
+//    }
+//    void Core::LoadPlaylist(std::function<void(const Document::ValueType &)> onChannel)
+//    {
+//        try {
+//            string trashUrl("http://91.92.66.82/trash/ttv-list/acelive.json|encoding=gzip");
+//            const string& plistUrl = trashUrl;
+//            // Download playlist
+//            XBMC->Log(LOG_DEBUG, "TtvPlayer: loading playlist: %s", plistUrl.c_str());
+//
+//            string zipContent;
+//            string unzipedContent;
+//            XMLTV::GetCachedFileContents(plistUrl, zipContent);
+//            string& data = zipContent;
+//
+//            if(XMLTV::IsDataCompressed(zipContent)) {
+//                if(!XMLTV::GzipInflate(zipContent, unzipedContent))
+//                    throw IoErrorException("Failed to unzip playlist.");
+//                data = unzipedContent;
+//            }
+//
+//            ParseJson(data, [onChannel] (Document& jsonRoot)
+//            {
+//                bool isArray = jsonRoot.IsArray();
+//                if(isArray) {
+//                    for(const auto& ch : jsonRoot.GetArray()){
+//                        onChannel(ch);
+//                    }
+//                } else {
+//                    LogError("TtvPlayer: bad playlist format. No channel will be loaded");
+//                }
+//            });
+//
+//            XBMC->Log(LOG_DEBUG, "TtvPlayer: parsing of playlist done.");
+//
+//        } catch (std::exception& ex) {
+//            LogError("TtvPlayer: exception during playlist loading: %s", ex.what());
+//
+//        }
+//    }
     
     void Core::LoadPlaylistAlexelec(std::function<void(const AlexElecChannel &)> onChannel)
     {

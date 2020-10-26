@@ -130,15 +130,15 @@ namespace TtvEngine
         void UpdateEpgForAllChannels_Plist(time_t startTime, time_t endTime, std::function<bool(void)> cancelled);
         struct TTVChanel {
             std::string name;
-            std::string cat;
-            std::string cid;
+            std::vector<std::string> cats;
+            std::string infohash;
         };
         bool LoadPlaylist(std::function<bool(const TTVChanel&)> onChannel);
         void LoadPlaylist(std::function<void(const rapidjson::Document::ValueType&)> onChannel);
         struct  AlexElecChannel {
             std::string name;
             std::string cid;
-            std::string cat;
+            std::vector<std::string> cats;
         };
         void LoadPlaylistAlexelec(std::function<void(const AlexElecChannel &)> onChannel);
         
