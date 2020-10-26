@@ -16,6 +16,10 @@
      <source>https://github.com/srg70/pvr.puzzle.tv</source>
      <license>GPL-2.0-or-later</license>
      <news>
+         0.9.98
+         - use channel logo URL from EPG when it does not exist in playlist.
+         - trash been replaced by api.acestream.me
+
          0.9.96
          - support playlists with unknown tags
          - fix rewind for all zabaza channels

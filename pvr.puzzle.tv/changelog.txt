@@ -1,3 +1,7 @@
+0.9.98
+- use channel logo URL from EPG when it does not exist in playlist.
+- trash been replaced by api.acestream.me
+
 0.9.96
 - support playlists with unknown tags
 - fix rewind for all zabaza channels
