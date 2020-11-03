@@ -150,6 +150,7 @@ src/ThreadPool.h
 src/addon_settings.h
 src/Speedometer.h
 src/JsonSaxHandler.h
+src/XmlSaxHandler.h
 )
 
 addon_version(pvr.puzzle.tv IPTV)
