@@ -38,9 +38,9 @@
 #include "globals.hpp"
 #include "helpers.h"
 #include "httplib.h"
+#include "XmlSaxHandler.h"
 
 using namespace std;
-using namespace XMLTV;
 using namespace rapidxml;
 using namespace Globals;
 using namespace ADDON;
@@ -423,14 +423,13 @@ return false;             \
         return std::hash<std::string>{}(strToHash);
     }
 
-   
-#include "expat.h"
-
     bool ParseChannels(const std::string& url,  const ChannelCallback& onChannelFound)
     {
-        XML_Parser p = XML_ParserCreate(NULL);
-        XML_ParserFree(p);
-
+        class ChannelHandler : public XmlEventHandler<ChannelHandler>
+        {
+            
+        } handler;
+        
         XmlDocumentAndData xmlDoc;
         
         XBMC->Log(LOG_DEBUG, "XMLTV Loader: open document from %s." , url.c_str());
@@ -460,7 +459,7 @@ return false;             \
                 continue;
             }
             
-            channel.id = XMLTV::EpgChannelIdForXmlEpgId(strId);
+            channel.id = EpgChannelIdForXmlEpgId(strId);
             
             if(!GetAllNodesValue(pChannelNode, "display-name", channel.displayNames)){
                 XBMC->Log(LOG_DEBUG, "XMLTV Loader: no channel display name found.");
