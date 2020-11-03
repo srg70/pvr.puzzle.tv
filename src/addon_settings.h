@@ -298,11 +298,13 @@ public:
     const std::string& GetString(const std::string& n) const { return Get<std::string>(n);}
     int GetInt(const std::string& n) const { return Get<int>(n);}
     bool GetBool(const std::string& n) const { return Get<bool>(n);}
+    float GetFloat(const std::string& n) const { return Get<float>(n);}
 private:
     mutable std::tuple <
     typename Types<std::string>::Map,
     typename Types<int>::Map,
-    typename Types<bool>::Map
+    typename Types<bool>::Map,
+    typename Types<float>::Map
     > settings;
 };
 
