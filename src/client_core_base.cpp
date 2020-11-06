@@ -152,6 +152,7 @@ ClientCoreBase::ClientCoreBase(const IClientCore::RecordingsDelegate& didRecordi
 , m_channelList(m_mutableChannelList)
 , m_lastEpgRequestEndTime(0)
 , m_rpcWorks(false)
+, m_destructionRequested(false)
 {
     if(nullptr == m_didRecordingsUpadate) {
         auto pvr = PVR;
@@ -245,6 +246,7 @@ std::shared_ptr<IClientCore::IPhase> ClientCoreBase::GetPhase(Phase phase)
 // Should be called from destructor of dirived class
 // During engine destruction vitrual functions may be called...
 void ClientCoreBase::PrepareForDestruction() {
+    m_destructionRequested = true;
     if(NULL == m_httpEngine)
         return ;
     {
@@ -507,7 +509,7 @@ void ClientCoreBase::ForEachEpgLocked(const EpgEntryAction& action) const
 {
     P8PLATFORM::CLockObject lock(m_epgAccessMutex);
     for(const auto& i : m_epgEntries) {
-        if(!action(i))
+        if(m_destructionRequested || !action(i))
             return;
     }
 }
@@ -524,20 +526,20 @@ void ClientCoreBase::ForEachEpgUnlocked(const EpgEntryAction& predicate, const E
         // Find relevat EPG item
         while (!predicate(*it)) {
             ++it;
-            if(it == end)
+            if(it == end || m_destructionRequested)
                 return;
         }
         EpgEntryList::key_type key = it->first;
         lock.Unlock();
         // Perform action while EPG is unlocked
         // to avoid possible deadlock (Kodi access EPG during i.g. recording transfer)
-        if(!action(*it))
+        if(m_destructionRequested || !action(*it))
             return;
         // Lock EPG for future search
         // and renew iterator after potential EPG changes
         lock.Lock();
         it = m_epgEntries.find(key);
-        if(it == end)
+        if(it == end || m_destructionRequested)
             return;
         ++it;
     }
