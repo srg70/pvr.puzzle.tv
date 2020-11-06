@@ -1,3 +1,7 @@
+0.9.99
+- common setting for manual correction of EPG time offse
+- speedup HLS stream startup and rewind
+
 0.9.98
 - use channel logo URL from EPG when it does not exist in playlist.
 - trash been replaced by api.acestream.me
