@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <inttypes.h>
 #include "p8-platform/os.h"
+#include "p8-platform/threads/mutex.h"
 #include <memory>
 #include <list>
 #include "playlist_cache.hpp"
@@ -101,26 +102,36 @@ bool PlaylistCache::ProcessPlaylist() {
         // Stat first 3 segments to calculate bitrate
         auto it = m_dataToLoad.begin();
         auto last  = m_dataToLoad.end();
-        int statCounter = 0;
-        // Stat at least 3 segments for bitrate
-        while(it != last && statCounter++ < 3) {
-            struct __stat64 stat;
-            if(0 != XBMC->StatFile(httplib::detail::encode_get_url(it->url).c_str(), &stat)){
-                LogError("PlaylistCache: failed to obtain file stat for %s. Total length %" PRId64 "(%f Bps)", it->url.c_str(), m_totalLength, Bitrate());
-                return false;
-            }
-            MutableSegment* segment = new MutableSegment(*it, timeOffaset);
-            segment->_length = stat.st_size;
-            m_segments[it->index] = std::unique_ptr<MutableSegment>(segment);
-            timeOffaset += segment->Duration();
-            m_totalLength += segment->_length;
-            
-            ++it;
-        }
-        
-        // Define "virtual" bitrate.
-        m_bitrate =  m_totalLength/timeOffaset;
-        
+//        int statCounter = 0;
+//        // Stat at least 3 segments for bitrate
+//        while(it != last && statCounter++ < 3) {
+//
+//            auto startLoadingAt = std::chrono::system_clock::now();
+//            struct __stat64 stat;
+//            if(0 != XBMC->StatFile(httplib::detail::encode_get_url(it->url).c_str(), &stat)){
+//                LogError("PlaylistCache: failed to obtain file stat for %s. Total length %" PRId64 "(%f Bps)", it->url.c_str(), m_totalLength, Bitrate());
+//                //return false;
+//                break;
+//            }
+//            auto endLoadingAt = std::chrono::system_clock::now();
+//            std::chrono::duration<float> statTime = endLoadingAt-startLoadingAt;
+//            LogDebug("PlaylistCache: stat segment in %0.2f sec.", statTime.count());
+//
+//            // If we can't stat segment, don't spend the time for nothing
+//            if(stat.st_size == 0)
+//                break;
+//            MutableSegment* segment = new MutableSegment(*it, timeOffaset);
+//            segment->_length = stat.st_size;
+//            m_segments[it->index] = std::unique_ptr<MutableSegment>(segment);
+//            timeOffaset += segment->Duration();
+//            m_totalLength += segment->_length;
+//
+//            ++it;
+//        }
+//
+//        // Define "virtual" bitrate.
+//        m_bitrate =  m_totalLength/timeOffaset;
+        m_bitrate = 0;
         if(m_playlist->IsVod()) {
             while(it!=last) {
                 MutableSegment* segment = new MutableSegment(*it, timeOffaset);
@@ -276,16 +287,16 @@ Segment* PlaylistCache::NextSegment(SegmentStatus& status) {
         float segmentTimeOffset = m_currentSegmentIndex * m_playlist->TargetDuration();
         if(segmentTimeOffset >= m_delegate->Duration()) {
             status = k_SegmentStatus_EOF;
-            LogDebug("PlaylistCache: wrong current segment index #%" PRIu64 ". Requested time offset %f. Stream duration %d.", m_currentSegmentIndex, segmentTimeOffset, m_delegate->Duration());
+            LogDebug("PlaylistCache: wrong index of current segment #%" PRIu64 ". Requested time offset %f. Stream duration %d.", m_currentSegmentIndex, segmentTimeOffset, m_delegate->Duration());
         } else {
             status = k_SegmentStatus_Loading;
-            LogDebug("PlaylistCache: segment with index #%" PRIu64 " should start loading shortly. Requested time offset %f. Stream duration %d.", m_currentSegmentIndex, segmentTimeOffset, m_delegate->Duration());
+            LogDebug("PlaylistCache: segment #%" PRIu64 " should start loading shortly. Requested time offset %f. Stream duration %d.", m_currentSegmentIndex, segmentTimeOffset, m_delegate->Duration());
         }
     }else {
         // Live stream
         // TODO: check whether segment loading now
         status = k_SegmentStatus_Loading;
-        LogDebug("PlaylistCache: segment with index #%" PRIu64 " should start loading shortly. Last known segment #%" PRIu64 ".", m_currentSegmentIndex, m_segments.size() > 0 ? m_segments.rbegin()->first : 0);
+        LogDebug("PlaylistCache: segment #%" PRIu64 " should start loading shortly. Last known segment #%" PRIu64 ".", m_currentSegmentIndex, m_segments.size() > 0 ? m_segments.rbegin()->first : 0);
     }
     
     // Forward to nex segment only if we found current
@@ -303,7 +314,7 @@ bool PlaylistCache::HasSpaceForNewSegment(const uint64_t& waitingSegment) {
     // Free older segments when cache is full
     // or we are on live stream (no caching requered)
     bool hasSpace = !IsFull();
-    if(!hasSpace) {
+    while(!hasSpace) {
         int64_t idx = -1;
         auto runner = m_segments.begin();
         const auto end = m_segments.end();
@@ -360,6 +371,7 @@ bool PlaylistCache::HasSpaceForNewSegment(const uint64_t& waitingSegment) {
                 m_segments.erase(idx);
             }
             LogDebug("PlaylistCache: segment #%" PRIu64 " removed. Cache size %d bytes", idx, m_cacheSizeInBytes);
+            hasSpace = !IsFull();
         } else if(waitingSegment == readingSegment){
             // We must accept current reading segment disregarding to cache size!
             hasSpace = true;
@@ -377,6 +389,15 @@ bool PlaylistCache::PrepareSegmentForPosition(int64_t position, uint64_t* nextSe
     // Can't seek without delegate
     if(!CanSeek())
         return false;
+    int waitForBitrateTimeout = 10;
+    while(ShouldCalculateOffset()) {
+        if(--waitForBitrateTimeout == 0) {
+            LogDebug("PlaylistCache: can't prepare segment for position %" PRIu64 ". Bitrate not ready in 10 sec.", position);
+            return false;
+        }
+        LogDebug("PlaylistCache: waiting for bitrate calculation...");
+        P8PLATFORM::CEvent::Sleep(1000);
+    }
     
     TimeOffset timePosition = TimeOffsetFromProsition(position);
     TimeOffset segmentTime = 0.0;
@@ -462,7 +483,7 @@ bool PlaylistCache::PrepareSegmentForPosition(int64_t position, uint64_t* nextSe
     if(m_currentSegmentPositionFactor > 1.0) {
         LogError("PlaylistCache: segment position factor can't be > 1.0. Requested offset %f, segment timestamp %f, duration %f", timePosition, segmentTime, segmentDuration);
     } else {
-        LogDebug("PlaylistCache:  seek segment index #%" PRIu64 " and positon ratio %f", m_currentSegmentIndex, m_currentSegmentPositionFactor);
+        LogDebug("PlaylistCache:  seek to segment #%" PRIu64 " and positon ratio %f", m_currentSegmentIndex, m_currentSegmentPositionFactor);
     }
     return true;
 }

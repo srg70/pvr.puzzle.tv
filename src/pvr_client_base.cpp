@@ -277,7 +277,7 @@ void PVRClientBase::OnCoreCreated() {
                 LogDebug("PVRClientBase: update recorderings.");
                 m_clientCore->ReloadRecordings();
             }
-            LogDebug("PVRClientBase: sheduling first recording update.");
+            LogDebug("PVRClientBase: scheduling first recording update.");
             ScheduleRecordingsUpdate();
         }
     });
@@ -300,10 +300,10 @@ void PVRClientBase::ScheduleRecordingsUpdate() {
          if(ActionQueue::kActionFailed == res.status) {
              LogError("PVRClientBase: async recordings update failed!");
          } else if(ActionQueue::kActionCompleted == res.status) {
-             LogDebug("PVRClientBase: sheduling next recording update.");
+             LogDebug("PVRClientBase: scheduling next recording update.");
              ScheduleRecordingsUpdate();
          }else {
-             LogDebug("PVRClientBase: sheduling of recording update canceled.");
+             LogDebug("PVRClientBase: scheduling of recording update canceled.");
          }
      });
 }
