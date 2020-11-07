@@ -135,6 +135,7 @@ namespace PvrClient {
         time_t m_lastEpgRequestEndTime;
         RpcSettings m_rpcSettings;
         bool m_rpcWorks;
+        bool m_destructionRequested;
     };
     
     class ExceptionBase : public std::exception

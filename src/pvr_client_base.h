@@ -195,7 +195,8 @@ namespace PvrClient
         int LivePlaybackDelayForTs() const;
         int LivePlaybackDelayForMulticast() const;
         bool SeekArchivePadding() const;
-
+        float EpgCorrectionShift() const;
+        
         void FillRecording(const EpgEntryList::value_type& epgEntry, PVR_RECORDING& tag, const char* dirPrefix);
         std::string DirectoryForRecording(unsigned int epgId) const;
         std::string PathForRecordingInfo(unsigned int epgId) const;

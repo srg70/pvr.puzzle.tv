@@ -132,6 +132,10 @@ msgctxt "#10028"
 msgid "Enable SSL"
 msgstr "Включить SSL"
 
+msgctxt "#10029"
+msgid "EPG Offset Correction"
+msgstr "Корректировка смещения EPG"
+
 msgctxt "#10093"
 msgid "Kodi's Remote Control"
 msgstr "Удаленного управления Kodi"

@@ -277,7 +277,7 @@ void PVRClientBase::OnCoreCreated() {
                 LogDebug("PVRClientBase: update recorderings.");
                 m_clientCore->ReloadRecordings();
             }
-            LogDebug("PVRClientBase: sheduling first recording update.");
+            LogDebug("PVRClientBase: scheduling first recording update.");
             ScheduleRecordingsUpdate();
         }
     });
@@ -300,10 +300,10 @@ void PVRClientBase::ScheduleRecordingsUpdate() {
          if(ActionQueue::kActionFailed == res.status) {
              LogError("PVRClientBase: async recordings update failed!");
          } else if(ActionQueue::kActionCompleted == res.status) {
-             LogDebug("PVRClientBase: sheduling next recording update.");
+             LogDebug("PVRClientBase: scheduling next recording update.");
              ScheduleRecordingsUpdate();
          }else {
-             LogDebug("PVRClientBase: sheduling of recording update canceled.");
+             LogDebug("PVRClientBase: scheduling of recording update canceled.");
          }
      });
 }
@@ -610,14 +610,16 @@ PVR_ERROR PVRClientBase::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL
     ChannelId chUniqueId = m_kodiToPluginLut.at(channel.iUniqueId);
     const auto& ch = GetChannelListWhenLutsReady().at(chUniqueId);
     
-    IClientCore::EpgEntryAction onEpgEntry = [&channel, &handle, ch](const EpgEntryList::value_type& epgEntry)
+    float epgCorrectuonShift = EpgCorrectionShift();
+    
+    IClientCore::EpgEntryAction onEpgEntry = [&channel, &handle, ch, epgCorrectuonShift](const EpgEntryList::value_type& epgEntry)
     {
         EPG_TAG tag = { 0 };
         tag.iUniqueBroadcastId = epgEntry.first;
         epgEntry.second.FillEpgTag(tag);
         tag.iUniqueChannelId = channel.iUniqueId;//m_pluginToKodiLut.at(itEpgEntry->second.ChannelId);
-        tag.startTime += ch.TvgShift;
-        tag.endTime += ch.TvgShift;
+        tag.startTime += ch.TvgShift + epgCorrectuonShift;
+        tag.endTime += ch.TvgShift + epgCorrectuonShift;
         PVR->TransferEpgEntry(handle, &tag);
         return true;// always continue enumeration...
     };
@@ -1614,6 +1616,7 @@ const char* const c_livePlaybackDelayHls = "live_playback_delay_hls";
 const char* const c_livePlaybackDelayTs = "live_playback_delay_ts";
 const char* const c_livePlaybackDelayUdp = "live_playback_delay_udp";
 const char* const c_seekArchivePadding = "archive_seek_padding_on_start";
+const char* const c_epgCorrectionShift = "epg_correction_shift";
 
 void PVRClientBase::InitSettings()
 {
@@ -1645,6 +1648,7 @@ void PVRClientBase::InitSettings()
     .Add(c_rpcUser,"kodi")
     .Add(c_rpcPassword, "")
     .Add(c_rpcEnableSsl, false)
+    .Add(c_epgCorrectionShift, 0.0f)
     ;
     
     PopulateSettings(m_addonMutableSettings);
@@ -1785,3 +1789,10 @@ PVRClientBase::TimeshiftBufferType PVRClientBase::TypeOfTimeshiftBuffer() const
     return  (TimeshiftBufferType) m_addonSettings.GetInt(c_timeshiftType);
     
 }
+
+float PVRClientBase::EpgCorrectionShift() const
+{
+    return m_addonSettings.GetFloat(c_epgCorrectionShift) * 60 * 60;
+}
+
+
