@@ -94,6 +94,7 @@ namespace Buffers {
             m_segmentIndexAfterSeek = 0;
         }
         CreateThread();
+        m_cache->WaitForBitrate();
     }
         
     static bool FillSegmentFromPlaylist(MutableSegment* segment, const std::string& content, std::function<bool(const MutableSegment&)> IsCanceled)

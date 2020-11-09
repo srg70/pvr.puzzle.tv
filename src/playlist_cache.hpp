@@ -114,10 +114,12 @@ namespace Buffers {
         bool HasSegmentsToFill() const;
 //        bool IsEof() const;
         bool IsFull() const {return CanSeek() ? m_cacheSizeInBytes > m_cacheSizeLimit : m_segments.size() > 5; }
-        int64_t Length() const { return CanSeek() ? m_totalLength : -1; }
+        int64_t Length() const { return CanSeek() ? (WaitForBitrate() ? m_totalLength : -1) : -1; }
         bool ReloadPlaylist();
         bool CanSeek() const {return nullptr != m_delegate || (m_seekForVod && m_playlist->IsVod()); }
         bool HasSpaceForNewSegment(const uint64_t& waitingSegment);
+        bool WaitForBitrate(unsigned int timeoutInSec = 10)  const;
+
     private:
        
         // key is segment index in m3u file
@@ -128,7 +130,7 @@ namespace Buffers {
             float bitrate = Bitrate();
             return (bitrate == 0.0) ? 0.0 : position/bitrate;
         }
-        float Bitrate() const { return m_bitrate;}
+        float Bitrate() const { return  (WaitForBitrate() ? m_bitrate : 0.0);}
         bool ProcessPlaylist();
         void QueueAllSegmentsForLoading();
         bool ShouldCalculateOffset() const;

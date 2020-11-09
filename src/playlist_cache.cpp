@@ -56,8 +56,8 @@ PlaylistCache::PlaylistCache(const std::string &playlistUrl, PlaylistBufferDeleg
     }
     m_currentSegmentIndex = m_dataToLoad.size() > 0 ?  m_dataToLoad.front().index : 0;
     m_cacheSizeLimit = CanSeek()
-    ? ((nullptr != delegate) ? delegate->SegmentsAmountToCache() : 20) * 6 * 1024 * 1024
-    : 0; // ~6 MByte/chunck (usualy 6 sec)
+    ? ((nullptr != delegate) ? delegate->SegmentsAmountToCache() : 20) * 6 * 1024 * 1024 // ~6 MByte/chunck (usualy 6 sec)
+    : 0;
 }
 
 PlaylistCache::~PlaylistCache() {
@@ -93,19 +93,47 @@ bool PlaylistCache::ShouldCalculateOffset() const
 bool PlaylistCache::ProcessPlaylist() {
     
     QueueAllSegmentsForLoading();
+    
     // For VOD we can fill data offset for segments already.
     // Do it only first time, i.e. when m_bitrate == 0
-    if (ShouldCalculateOffset()) {
+    if(ShouldCalculateOffset() && m_playlist->IsVod()) {
         TimeOffset timeOffaset = 0.0;
-        MutableSegment::DataOffset dataOfset = 0;
-        
-        // Stat first 3 segments to calculate bitrate
         auto it = m_dataToLoad.begin();
         auto last  = m_dataToLoad.end();
+
+        while(it!=last) {
+            MutableSegment* segment = new MutableSegment(*it, timeOffaset);
+//            segment->_length = m_bitrate * it->duration;
+            m_segments[it->index] = std::unique_ptr<MutableSegment>(segment);
+            timeOffaset += segment->Duration();
+//            m_totalLength += segment->_length;
+            ++it;
+        }
+
+        // For VOD playlist we would like to load last segment just after first to be ready for seek to end of stream
+        // Move last to second.
+//        m_dataToLoad.insert(m_dataToLoad.begin() + 1, m_dataToLoad.back());
+//        m_dataToLoad.pop_back();
+    }
+    return true;
+    // For VOD we can fill data offset for segments already.
+    // Do it only first time, i.e. when m_bitrate == 0
+//    if (ShouldCalculateOffset()) {
+//        if(!WaitForBitrate())
+//        {
+//            LogError("PlaylistCache: failed to calculate initial bitrate.");
+//            return false;
+//        }
+//        TimeOffset timeOffaset = 0.0;
+//        //MutableSegment::DataOffset dataOfset = 0;
+//
+//        // Stat first 3 segments to calculate bitrate
+//        auto it = m_dataToLoad.begin();
+//        auto last  = m_dataToLoad.end();
 //        int statCounter = 0;
 //        // Stat at least 3 segments for bitrate
 //        while(it != last && statCounter++ < 3) {
-//
+
 //            auto startLoadingAt = std::chrono::system_clock::now();
 //            struct __stat64 stat;
 //            if(0 != XBMC->StatFile(httplib::detail::encode_get_url(it->url).c_str(), &stat)){
@@ -125,35 +153,34 @@ bool PlaylistCache::ProcessPlaylist() {
 //            m_segments[it->index] = std::unique_ptr<MutableSegment>(segment);
 //            timeOffaset += segment->Duration();
 //            m_totalLength += segment->_length;
-//
+
 //            ++it;
 //        }
-//
-//        // Define "virtual" bitrate.
+
+        // Define "virtual" bitrate.
 //        m_bitrate =  m_totalLength/timeOffaset;
-        m_bitrate = 0;
-        if(m_playlist->IsVod()) {
-            while(it!=last) {
-                MutableSegment* segment = new MutableSegment(*it, timeOffaset);
-                segment->_length = m_bitrate * it->duration;
-                m_segments[it->index] = std::unique_ptr<MutableSegment>(segment);
-                timeOffaset += segment->Duration();
-                m_totalLength += segment->_length;
-                ++it;
-            }
-            
-            // For VOD playlist we would like to load last segment just after first to be ready for seek to end of stream
-            // Move last to second.
-            m_dataToLoad.insert(m_dataToLoad.begin() + 1, m_dataToLoad.back());
-            m_dataToLoad.pop_back();
-        } else {
-            m_totalLength = m_delegate->Duration() * Bitrate();
-        }
-        
-        LogError("PlaylistCache: playlist reloaded. Total length %" PRId64 "(%f B/sec).", m_totalLength, Bitrate());
-    }
-    
-    return true;
+//        if(m_playlist->IsVod()) {
+//            while(it!=last) {
+//                MutableSegment* segment = new MutableSegment(*it, timeOffaset);
+//                segment->_length = m_bitrate * it->duration;
+//                m_segments[it->index] = std::unique_ptr<MutableSegment>(segment);
+//                timeOffaset += segment->Duration();
+//                m_totalLength += segment->_length;
+//                ++it;
+//            }
+//
+//            // For VOD playlist we would like to load last segment just after first to be ready for seek to end of stream
+//            // Move last to second.
+//            m_dataToLoad.insert(m_dataToLoad.begin() + 1, m_dataToLoad.back());
+//            m_dataToLoad.pop_back();
+//        } else {
+//            m_totalLength = m_delegate->Duration() * Bitrate();
+//        }
+//
+//        LogError("PlaylistCache: playlist reloaded. Total length %" PRId64 "(%f B/sec).", m_totalLength, Bitrate());
+//    }
+//
+//    return true;
 }
 
 MutableSegment* PlaylistCache::SegmentToFill()  {
@@ -219,6 +246,8 @@ void PlaylistCache::SegmentReady(MutableSegment* segment) {
         size_t totalSize = 0;
         for (auto& it : m_segments) {
             auto& segment = it.second;
+            if(!segment->IsValid())
+                continue;
             totalDuration += segment->Duration();
             totalSize += segment->Size();
             ++validSegments;
@@ -226,6 +255,7 @@ void PlaylistCache::SegmentReady(MutableSegment* segment) {
         if(validSegments > 2){
             m_bitrate = totalSize / totalDuration;
             m_totalLength = m_delegate->Duration() * Bitrate();
+            LogError("PlaylistCache: bitrate is ready. Total length %" PRId64 "(%f B/sec).", m_totalLength, Bitrate());
         }
 
     }
@@ -308,14 +338,15 @@ Segment* PlaylistCache::NextSegment(SegmentStatus& status) {
 }
 
 bool PlaylistCache::HasSpaceForNewSegment(const uint64_t& waitingSegment) {
-    // Current segment for read is m_currentSegmentIndex - 1
-    uint64_t currentSegment = m_currentSegmentIndex > 0 ? m_currentSegmentIndex -1 : 0;
-    const uint64_t readingSegment = currentSegment;
     // Free older segments when cache is full
     // or we are on live stream (no caching requered)
     bool hasSpace = !IsFull();
     while(!hasSpace) {
         int64_t idx = -1;
+        // Current segment for read is m_currentSegmentIndex - 1
+        uint64_t currentSegment = m_currentSegmentIndex > 0 ? m_currentSegmentIndex -1 : 0;
+        const uint64_t readingSegment = currentSegment;
+
         auto runner = m_segments.begin();
         const auto end = m_segments.end();
         if(CanSeek()) {
@@ -377,27 +408,38 @@ bool PlaylistCache::HasSpaceForNewSegment(const uint64_t& waitingSegment) {
             hasSpace = true;
         } else if(CanSeek()) {
             LogDebug("PlaylistCache: cache is full but no segments to free. Current idx #%" PRIu64 " Size %d bytes", readingSegment, m_cacheSizeInBytes);
+            break; // no room
         } else {
             LogDebug("PlaylistCache: cache is full but no segments to free. Current idx #%" PRIu64 " %d segments in cache.", readingSegment, m_segments.size());
+            break; // no room
         }
     }
     return hasSpace;
 }
 
-// Find segment in playlist by time offset,caalculated from position
-bool PlaylistCache::PrepareSegmentForPosition(int64_t position, uint64_t* nextSegmentIndex) {
-    // Can't seek without delegate
+bool PlaylistCache::WaitForBitrate(unsigned int timeoutInSec) const
+{
     if(!CanSeek())
-        return false;
-    int waitForBitrateTimeout = 10;
-    while(ShouldCalculateOffset()) {
-        if(--waitForBitrateTimeout == 0) {
-            LogDebug("PlaylistCache: can't prepare segment for position %" PRIu64 ". Bitrate not ready in 10 sec.", position);
+        return true;
+
+    while(m_bitrate == 0) {
+        if(--timeoutInSec == 0) {
+            LogDebug("PlaylistCache: bitrate not ready in 10 sec.");
             return false;
         }
         LogDebug("PlaylistCache: waiting for bitrate calculation...");
         P8PLATFORM::CEvent::Sleep(1000);
     }
+    return m_bitrate != 0;
+}
+// Find segment in playlist by time offset,caalculated from position
+bool PlaylistCache::PrepareSegmentForPosition(int64_t position, uint64_t* nextSegmentIndex) {
+    // Can't seek without delegate
+    if(!CanSeek())
+        return false;
+    
+    if(!(WaitForBitrate()))
+        return false;
     
     TimeOffset timePosition = TimeOffsetFromProsition(position);
     TimeOffset segmentTime = 0.0;
