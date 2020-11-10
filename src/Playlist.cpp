@@ -335,11 +335,11 @@ bool Playlist::NextSegment(SegmentInfo& info, bool& hasMoreSegments) {
 
 bool Playlist::SetNextSegmentIndex(uint64_t idx) {
     if(m_segmentUrls.count(idx) == 0) {
-        LogDebug("Playlist: failed to set next segment to #%" PRIu64 ". m_segmentUrls contains serments [%" PRIu64 ", %" PRIu64 "].", idx, m_segmentUrls.begin()->first, (--m_segmentUrls.end())->first);
+        LogDebug("Playlist: failed to set next segment #%" PRIu64 ". m_segmentUrls contains serments [%" PRIu64 ", %" PRIu64 "].", idx, m_segmentUrls.begin()->first, (--m_segmentUrls.end())->first);
         return false;
     }
     m_loadIterator = idx;
-    LogDebug("Playlist: next segment index been set to #%" PRIu64 ".", m_loadIterator);
+    LogDebug("Playlist: next segment index been set to segment #%" PRIu64 ".", m_loadIterator);
     return true;
 }
 }
