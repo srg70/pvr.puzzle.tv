@@ -16,6 +16,9 @@
      <source>https://github.com/srg70/pvr.puzzle.tv</source>
      <license>GPL-2.0-or-later</license>
      <news>
+         0.9.100
+         - fixed HLS archives playback
+
          0.9.99
          - common setting for manual correction of EPG time offse
          - speedup HLS stream startup and rewind
