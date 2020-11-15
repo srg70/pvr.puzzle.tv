@@ -50,6 +50,285 @@ namespace XMLTV {
     
     static const std::string c_CacheFolder = "special://temp/pvr-puzzle-tv/XmlTvCache/";
     
+    class Inflator{
+    public:
+        Inflator(DataWriter writer)
+        {
+            _writer = writer;
+            /* allocate inflate state */
+            _strm.zalloc = Z_NULL;
+            _strm.zfree = Z_NULL;
+            _strm.opaque = Z_NULL;
+            _strm.avail_in = 0;
+            _strm.next_in = Z_NULL;
+            _state = inflateInit2(&_strm, (16+MAX_WBITS));//inflateInit(&strm);
+            if (_state != Z_OK) {
+                LogError("Inflator: failed to initialize ZIP library %d (inflateInit(...))", _state);
+            }
+
+        }
+        bool Process(const char* buffer, unsigned int size)
+        {
+            if(_state == Z_STREAM_END)
+                return true;
+            if(_state != Z_OK && _state != Z_BUF_ERROR)
+                return false;
+            _strm.avail_in = size;
+             if ((int)(_strm.avail_in) < 0) {
+                 _state = Z_BUF_ERROR;
+                 LogError("Inflator: failed to read from source.");
+                 return false;
+             }
+             if (_strm.avail_in == 0)
+                 return true;
+            _strm.next_in = (unsigned char*)buffer;
+            
+            /* run inflate() on input until output buffer not full */
+            const unsigned int CHUNK  = 16384;
+            char out[CHUNK];
+            int have;
+            do {
+                _strm.avail_out = CHUNK;
+                _strm.next_out = (unsigned char*)out;
+                _state = inflate(&_strm, Z_NO_FLUSH);
+                assert(_state != Z_STREAM_ERROR);  /* state not clobbered */
+                switch (_state) {
+                case Z_NEED_DICT:
+                    _state = Z_DATA_ERROR;     /* and fall through */
+                case Z_DATA_ERROR:
+                case Z_MEM_ERROR:
+                    LogError("Inflator: failed to inflate compressed chunk %d (inflate(...))", _state);
+                    return false;
+                }
+                have = CHUNK - _strm.avail_out;
+                if (_writer(out, have) != have) {
+                    LogError("Inflator: failed to write to destination.");
+                    return Z_ERRNO;
+                }
+            } while (_strm.avail_out == 0);
+            return true;
+        }
+        
+        bool IsDone() const {return _state == Z_STREAM_END;}
+        
+        ~Inflator() {
+            (void)inflateEnd(&_strm);
+        }
+    private:
+        int _state;
+        z_stream _strm;
+        DataWriter _writer;
+
+    };
+
+#pragma mark - File Cache
+    static bool GetFileContents(const string& url, DataWriter writer)
+    {
+        LogDebug("XMLTV Loader: open file %s." , url.c_str());
+
+        void* fileHandle = XBMC_OpenFile(url);
+        if (fileHandle)
+        {
+            char buffer[1024];
+            bool isError = false;
+            while (int bytesRead = XBMC->ReadFile(fileHandle, buffer, 1024)) {
+                if(bytesRead != writer(buffer, bytesRead)) {
+                    isError = true;
+                    break;
+                }
+            }
+            XBMC->CloseFile(fileHandle);
+            if(isError) {
+                LogError("XMLTV Loader: file reading callback failed.");
+            } else {
+                LogDebug("XMLTV Loader: file reading done.");
+            }
+
+        }
+        else
+        {
+            LogDebug("XMLTV Loader: failed  to open file.");
+            return false;
+        }
+        
+        return true;
+    }
+    
+    static bool ShouldreloadCahcedFile(const std::string &filePath, const std::string& strCachedPath)
+    {
+        bool bNeedReload = false;
+        
+        
+        LogDebug("XMLTV Loader: open cached file %s." , filePath.c_str());
+        
+        // check cached file is exists
+        if (XBMC->FileExists(strCachedPath.c_str(), false))
+        {
+            struct __stat64 statCached;
+            struct __stat64 statOrig;
+            
+            XBMC->StatFile(strCachedPath.c_str(), &statCached);
+            XBMC->StatFile(httplib::detail::encode_get_url(filePath).c_str(), &statOrig);
+            
+            // Modification time is not provided by some servers.
+            // It should be safe to compare file sizes.
+            // Patch: Puzzle server does not provide file attributes. If we have cached file less than 5 min old - use it
+            using namespace P8PLATFORM;
+            struct timeval cur_time = {0};
+            if(0 != gettimeofday(&cur_time, nullptr)){
+                cur_time.tv_sec = statCached.st_mtime;//st_mtimespec.tv_sec;
+            }
+            bNeedReload = (cur_time.tv_sec - statCached.st_mtime) > 5 * 60  && (statOrig.st_size == 0 ||  statOrig.st_size != statCached.st_size);
+            LogDebug("XMLTV Loader: cached file exists. Reload?  %s." , bNeedReload ? "Yes" : "No");
+            
+        }
+        else
+            bNeedReload = true;
+        return bNeedReload;
+    }
+    
+    static bool IsDataCompressed(const char* data, unsigned int size)
+    {
+        return size > 2 && (data[0] == '\x1F' && data[1] == '\x8B' && data[2] == '\x08');
+    }
+
+    static bool ReloadCachedFile(const std::string &filePath, const std::string& strCachedPath, DataWriter writer)
+    {
+
+        void* fileHandle = XBMC->OpenFileForWrite(strCachedPath.c_str(), true);
+        if(!fileHandle) {
+            XBMC->CreateDirectory(c_CacheFolder.c_str());
+            fileHandle = XBMC->OpenFileForWrite(strCachedPath.c_str(), true);
+        }
+        DataWriter cacheWriter = writer;
+        if (fileHandle)
+        {
+            cacheWriter = [&fileHandle, &writer](const char* buffer, unsigned int size){
+                XBMC->WriteFile(fileHandle, buffer, size);
+                return writer(buffer, size);
+            };
+        }
+
+        bool succeeded = false;
+        bool isContentZipped = false;
+        bool checkCompression = true;
+        Inflator inflator(cacheWriter);
+        DataWriter decompressor = [&cacheWriter, &inflator, &isContentZipped, &checkCompression](const char* buffer, unsigned int size){
+            if(checkCompression){
+                checkCompression = false;
+                isContentZipped = IsDataCompressed(buffer, size);
+            }
+            if(isContentZipped)
+                return inflator.Process(buffer, size) ? (int)size : -1;
+            return cacheWriter(buffer, size);
+        };;
+
+        succeeded = GetFileContents(filePath, decompressor);
+        if (fileHandle)
+        {
+           XBMC->CloseFile(fileHandle);
+        }
+        return succeeded;
+    }
+    
+    bool GetCachedFileContents(const std::string &filePath, DataWriter writer)
+    {
+        std::string strCachedPath =  GetCachedPathFor(filePath);
+        bool bNeedReload =  ShouldreloadCahcedFile(filePath, strCachedPath);
+        
+        if (bNeedReload)
+        {
+            return ReloadCachedFile(filePath, strCachedPath, writer);
+        }
+        
+        return GetFileContents(strCachedPath, writer);
+    }
+
+    std::string GetCachedPathFor(const std::string& original)
+    {
+        return c_CacheFolder + std::to_string(std::hash<std::string>{}(original));
+    }
+
+    /*
+     * This method uses zlib to decompress a gzipped file in memory.
+     * Author: Andrew Lim Chong Liang
+     * http://windrealm.org
+     */
+    // Modified by srg70 to reduce memory footprint based on examples from https://zlib.net/zlib_how.html
+    static bool GzipInflate(DataReder reader, DataWriter writer) {
+        const unsigned int CHUNK  = 16384;
+        char in[CHUNK];
+        Inflator inflator(writer);
+        do {
+            int size = reader(in, CHUNK);
+            if(!inflator.Process(in, size))
+                break;
+        } while(!inflator.IsDone());
+        return inflator.IsDone();
+//        const unsigned int CHUNK  = 16384;
+//        int ret;
+//        unsigned have;
+//        z_stream strm;
+//        char in[CHUNK];
+//        char out[CHUNK];
+//        /* allocate inflate state */
+//        strm.zalloc = Z_NULL;
+//        strm.zfree = Z_NULL;
+//        strm.opaque = Z_NULL;
+//        strm.avail_in = 0;
+//        strm.next_in = Z_NULL;
+//        ret = inflateInit2(&strm, (16+MAX_WBITS));//inflateInit(&strm);
+//        if (ret != Z_OK) {
+//            LogError("XMLTV: failed to initialize ZIP library %d (inflateInit(...))", ret);
+//            return false;
+//        }
+//
+//        /* decompress until deflate stream ends or end of file */
+//        do {
+//            strm.avail_in = reader(in,CHUNK);
+//             if ((int)(strm.avail_in) < 0) {
+//                 (void)inflateEnd(&strm);
+//                 LogError("XMLTV: failed to read from source.");
+//                 return false;
+//             }
+//             if (strm.avail_in == 0)
+//                 break;
+//             strm.next_in = (unsigned char*)in;
+//
+//            /* run inflate() on input until output buffer not full */
+//            do {
+//                strm.avail_out = CHUNK;
+//                 strm.next_out = (unsigned char*)out;
+//                ret = inflate(&strm, Z_NO_FLUSH);
+//                assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
+//                switch (ret) {
+//                case Z_NEED_DICT:
+//                    ret = Z_DATA_ERROR;     /* and fall through */
+//                case Z_DATA_ERROR:
+//                case Z_MEM_ERROR:
+//                    LogError("XMLTV: failed to inflate compressed chunk %d (inflate(...))", ret);
+//                    (void)inflateEnd(&strm);
+//                    return false;
+//                }
+//                have = CHUNK - strm.avail_out;
+//                if (writer(out, have) != have) {
+//                    LogError("XMLTV: failed to write to destination.");
+//                    (void)inflateEnd(&strm);
+//                    return Z_ERRNO;
+//                }
+//            } while (strm.avail_out == 0);
+//
+//            /* done when inflate() says it's done */
+//        } while (ret != Z_STREAM_END);
+//
+//        /* clean up and return */
+//        (void)inflateEnd(&strm);
+//        return ret == Z_STREAM_END;// ? Z_OK : Z_DATA_ERROR;
+
+    }
+
+#pragma mark - XML
+
     struct XmlDocumentAndData {
         xml_document<> doc;
         template<int Flags>
@@ -60,7 +339,7 @@ namespace XMLTV {
     private:
         string data;
     };
-    
+
     template<class Ch>
     inline bool GetNodeValue(const xml_node<Ch> * pRootNode, const char* strTag, string& strStringValue)
     {
@@ -72,7 +351,7 @@ namespace XMLTV {
         strStringValue = pChildNode->value();
         return true;
     }
-    
+
     template<class Ch>
     inline bool GetAllNodesValue(const xml_node<Ch> * pRootNode, const char* strTag, list<string>& strStringValues)
     {
@@ -100,123 +379,8 @@ namespace XMLTV {
         strStringValue = pAttribute->value();
         return true;
     }
-    
-    static int GetFileContents(const string& url, string &strContent)
-    {
-        strContent.clear();
-        
-        XBMC->Log(LOG_DEBUG, "XMLTV Loader: open file %s." , url.c_str());
 
-        void* fileHandle = XBMC_OpenFile(url);
-        if (fileHandle)
-        {
-            char buffer[1024];
-            while (int bytesRead = XBMC->ReadFile(fileHandle, buffer, 1024))
-                strContent.append(buffer, bytesRead);
-            XBMC->CloseFile(fileHandle);
-            XBMC->Log(LOG_DEBUG, "XMLTV Loader: file reading done.");
 
-        }
-        else
-        {
-            XBMC->Log(LOG_DEBUG, "XMLTV Loader: failed  to open file.");
-        }
-        
-        return strContent.length();
-    }
-    
-    std::string GetCachedPathFor(const std::string& original)
-    {
-        return c_CacheFolder + std::to_string(std::hash<std::string>{}(original));
-    }
-    
-    static bool ShouldreloadCahcedFile(const std::string &filePath, const std::string& strCachedPath)
-    {
-        bool bNeedReload = false;
-        
-        
-        XBMC->Log(LOG_DEBUG, "XMLTV Loader: open cached file %s." , filePath.c_str());
-        
-        // check cached file is exists
-        if (XBMC->FileExists(strCachedPath.c_str(), false))
-        {
-            struct __stat64 statCached;
-            struct __stat64 statOrig;
-            
-            XBMC->StatFile(strCachedPath.c_str(), &statCached);
-            XBMC->StatFile(httplib::detail::encode_get_url(filePath).c_str(), &statOrig);
-            
-            //bNeedReload = statCached.st_mtime < statOrig.st_mtime || statOrig.st_mtime == 0;
-            // Modification time is not provided by some servers.
-            // It should be safe to compare file sizes.
-            // Patch: Puzzle server does not provide file attributes. If we have cached file less than 5 min old - use it
-            using namespace P8PLATFORM;
-            struct timeval cur_time = {0};
-            if(0 != gettimeofday(&cur_time, nullptr)){
-                cur_time.tv_sec = statCached.st_mtime;//st_mtimespec.tv_sec;
-            }
-            bNeedReload = (cur_time.tv_sec - statCached.st_mtime) > 5 * 60  && (statOrig.st_size == 0 ||  statOrig.st_size != statCached.st_size);
-            XBMC->Log(LOG_DEBUG, "XMLTV Loader: cached file exists. Reload?  %s." , bNeedReload ? "Yes" : "No");
-            
-        }
-        else
-            bNeedReload = true;
-        return bNeedReload;
-    }
-    
-    static bool ReloadCachedFile(const std::string &filePath, const std::string& strCachedPath, std::string &strContents)
-    {
-        bool succeeded = false;
-        
-        GetFileContents(filePath, strContents);
-        
-        // write to cache
-        if (strContents.length() > 0)
-        {
-            void* fileHandle = XBMC->OpenFileForWrite(strCachedPath.c_str(), true);
-            if(!fileHandle) {
-                XBMC->CreateDirectory(c_CacheFolder.c_str());
-                fileHandle = XBMC->OpenFileForWrite(strCachedPath.c_str(), true);
-            }
-            if (fileHandle)
-            {
-                auto bytesToWrite = strContents.length();
-                succeeded = bytesToWrite == XBMC->WriteFile(fileHandle, strContents.c_str(), bytesToWrite);
-                XBMC->CloseFile(fileHandle);
-            }
-        }
-        return succeeded;
-    }
-    
-    int GetCachedFileContents(const std::string &filePath, std::string &strContents)
-    {
-        std::string strCachedPath =  GetCachedPathFor(filePath);
-        bool bNeedReload =  ShouldreloadCahcedFile(filePath, strCachedPath);
-        
-        if (bNeedReload)
-        {
-            ReloadCachedFile(filePath, strCachedPath, strContents);
-            return strContents.length();
-        }
-        
-        return GetFileContents(strCachedPath, strContents);
-    }
-
-    std::string GetCachedFilePath(const std::string &filePath)
-    {
-        std::string strCachedPath =  GetCachedPathFor(filePath);
-        bool bNeedReload =  ShouldreloadCahcedFile(filePath, strCachedPath);
-        
-        if (!bNeedReload)
-            return strCachedPath;
-
-        std::string strContents;
-        if(ReloadCachedFile(filePath, strCachedPath, strContents))
-            return strCachedPath;
-        
-        return std::string();
-    }
-    
     static time_t ParseDateTime(std::string& strDate, bool iDateFormat = true)
     {
         static  long offset = LocalTimeOffset();
@@ -256,95 +420,15 @@ namespace XMLTV {
         _get_timezone(&offset);
         int daylightHours = 0;
         _get_daylight(&daylightHours);
-        XBMC->Log(LOG_DEBUG, "Timezone offset: %d sec, daylight offset %d h", offset, daylightHours);
+        LogDebug("Timezone offset: %d sec, daylight offset %d h", offset, daylightHours);
         offset -= daylightHours * 60 * 60;
 #endif // TARGET_WINDOWS
 
-        XBMC->Log(LOG_DEBUG, "Total timezone offset: %d sec", offset);
+        LogDebug("Total timezone offset: %d sec", offset);
         return offset;
     }
     
-    /*
-     * This method uses zlib to decompress a gzipped file in memory.
-     * Author: Andrew Lim Chong Liang
-     * http://windrealm.org
-     */
-    bool GzipInflate( const string& compressedBytes, string& uncompressedBytes ) {
-        
-#define HANDLE_CALL_ZLIB(status) {   \
-if(status != Z_OK) {        \
-free(uncomp);             \
-return false;             \
-}                           \
-}
-        
-        if ( compressedBytes.size() == 0 )
-        {
-            uncompressedBytes = compressedBytes ;
-            return true ;
-        }
-        
-        uncompressedBytes.clear() ;
-        
-        unsigned full_length = compressedBytes.size() ;
-        unsigned half_length = compressedBytes.size() / 2;
-        
-        unsigned uncompLength = full_length ;
-        char* uncomp = (char*) calloc( sizeof(char), uncompLength );
-        
-        z_stream strm;
-        strm.next_in = (Bytef *) compressedBytes.c_str();
-        strm.avail_in = compressedBytes.size() ;
-        strm.total_out = 0;
-        strm.zalloc = Z_NULL;
-        strm.zfree = Z_NULL;
-        
-        bool done = false ;
-        
-        HANDLE_CALL_ZLIB(inflateInit2(&strm, (16+MAX_WBITS)));
-        
-        while (!done)
-        {
-            // If our output buffer is too small
-            if (strm.total_out >= uncompLength )
-            {
-                // Increase size of output buffer
-                uncomp = (char *) realloc(uncomp, uncompLength + half_length);
-                if (uncomp == NULL)
-                    return false;
-                uncompLength += half_length ;
-            }
-            
-            strm.next_out = (Bytef *) (uncomp + strm.total_out);
-            strm.avail_out = uncompLength - strm.total_out;
-            
-            // Inflate another chunk.
-            int err = inflate (&strm, Z_SYNC_FLUSH);
-            if (err == Z_STREAM_END)
-                done = true;
-            else if (err != Z_OK)
-            {
-                break;
-            }
-        }
-        
-        HANDLE_CALL_ZLIB(inflateEnd (&strm));
-        
-        for ( size_t i=0; i<strm.total_out; ++i )
-        {
-            uncompressedBytes += uncomp[ i ];
-        }
-        
-        free( uncomp );
-        return true ;
-    }
-   
-    bool IsDataCompressed(const std::string& data)
-    {
-        return (data[0] == '\x1F' && data[1] == '\x8B' && data[2] == '\x08');
-    }
-    
-   bool CreateDocument(const std::string& url,  XmlDocumentAndData& xmlDoc)
+    bool CreateDocument(const std::string& url,  XmlDocumentAndData& xmlDoc)
     {
         if (url.empty())
         {
@@ -353,19 +437,30 @@ return false;             \
         }
         
         string data;
-        string decompressed;
-        
-        if (GetCachedFileContents(url, data) == 0)
+        if (!GetCachedFileContents(url, [&data](const char* buf, unsigned int size) {
+            data.append(buf, size);
+            return size;
+        }))
         {
             XBMC->Log(LOG_ERROR, "Unable to load EPG file '%s':  file is missing or empty.", url.c_str());
             return false;
         }
         
         char * buffer;
+        string decompressed;
         // gzip packed
-        if (IsDataCompressed(data))
+        if (IsDataCompressed(data.c_str(), data.length()))
         {
-            if (!GzipInflate(data, decompressed))
+            unsigned int dataIndex = 0;
+            if (!GzipInflate([&data, &dataIndex](char* buf, unsigned int size){
+                const unsigned int toBeCopied = std::min(data.size() - dataIndex, (size_t)size);
+                memcpy(buf, &data[dataIndex], toBeCopied);
+                dataIndex += toBeCopied;
+                return toBeCopied;
+            }, [&decompressed](const char* buf, unsigned int size) {
+                decompressed.append(buf, size);
+                return size;
+            }))
             {
                 XBMC->Log(LOG_ERROR, "Invalid EPG file '%s': unable to decompress file.", url.c_str());
                 return false;
@@ -432,13 +527,13 @@ return false;             \
         
         XmlDocumentAndData xmlDoc;
         
-        XBMC->Log(LOG_DEBUG, "XMLTV Loader: open document from %s." , url.c_str());
+        LogDebug("XMLTV Loader: open document from %s." , url.c_str());
 
         
         if(!CreateDocument(url, xmlDoc))
            return false;
         
-        XBMC->Log(LOG_DEBUG, "XMLTV Loader: start document parsing.");
+        LogDebug("XMLTV Loader: start document parsing.");
 
         xml_node<> *pRootElement = xmlDoc.doc.first_node("tv");
         if (!pRootElement)
@@ -450,23 +545,23 @@ return false;             \
         xml_node<> *pChannelNode = NULL;
         for(pChannelNode = pRootElement->first_node("channel"); pChannelNode; pChannelNode = pChannelNode->next_sibling("channel"))
         {
-            //XBMC->Log(LOG_DEBUG, "XMLTV Loader: found channel node.");
+            //LogDebug("XMLTV Loader: found channel node.");
 
             EpgChannel channel;
             std::string strId;
             if(!GetAttributeValue(pChannelNode, "id", strId)){
-                XBMC->Log(LOG_DEBUG, "XMLTV Loader: no channel ID found.");
+                LogDebug("XMLTV Loader: no channel ID found.");
                 continue;
             }
             
             channel.id = EpgChannelIdForXmlEpgId(strId);
             
             if(!GetAllNodesValue(pChannelNode, "display-name", channel.displayNames)){
-                XBMC->Log(LOG_DEBUG, "XMLTV Loader: no channel display name found.");
+                LogDebug("XMLTV Loader: no channel display name found.");
                 continue;
             }
             
-            //XBMC->Log(LOG_DEBUG, "XMLTV Loader: found channel %s.", channel.strName.c_str());
+            //LogDebug("XMLTV Loader: found channel %s.", channel.strName.c_str());
 
             xml_node<> *pIconNode = pChannelNode->first_node("icon");
             if (pIconNode == NULL)
@@ -474,7 +569,7 @@ return false;             \
             else if (!GetAttributeValue(pIconNode, "src", channel.strIcon))
                 channel.strIcon = "";
             
-            //XBMC->Log(LOG_DEBUG, "XMLTV Loader: populating channel");
+            //LogDebug("XMLTV Loader: populating channel");
 
             onChannelFound(channel);
         }

@@ -55,6 +55,8 @@ namespace XMLTV {
     };
     typedef std::function<void(const EpgChannel& newChannel)> ChannelCallback;
     typedef std::function<bool(const EpgEntry& newEntry)> EpgEntryCallback;
+    typedef std::function<int(char* buffer, unsigned int size)> DataReder;
+    typedef std::function<int(const char* buffer, unsigned int size)> DataWriter;
 
     PvrClient::KodiChannelId ChannelIdForChannelName(const std::string& strId);
     PvrClient::KodiChannelId EpgChannelIdForXmlEpgId(const std::string& strId);
@@ -63,11 +65,11 @@ namespace XMLTV {
     bool ParseEpg(const std::string& url,  const EpgEntryCallback& onEpgEntryFound);
 
     long LocalTimeOffset();
-    bool IsDataCompressed(const std::string& data);
-    bool GzipInflate( const std::string& compressedBytes, std::string& uncompressedBytes);
-    int GetCachedFileContents(const std::string &filePath, std::string &strContents);
-    std::string GetCachedFilePath(const std::string &filePath);
+//    bool IsDataCompressed(const char* data, unsigned int size);
+    bool GetCachedFileContents(const std::string &filePath, DataWriter writer);
     std::string GetCachedPathFor(const std::string& original);
+
+//    bool GzipInflate(DataReder reader, DataWriter writer);
 }
 
 #endif /* XMLTV_loader_hpp */
