@@ -610,7 +610,7 @@ PVR_ERROR PVRClientBase::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL
     ChannelId chUniqueId = m_kodiToPluginLut.at(channel.iUniqueId);
     const auto& ch = GetChannelListWhenLutsReady().at(chUniqueId);
     
-    float epgCorrectuonShift = EpgCorrectionShift();
+    const int epgCorrectuonShift = EpgCorrectionShift();
     
     IClientCore::EpgEntryAction onEpgEntry = [&channel, &handle, ch, epgCorrectuonShift](const EpgEntryList::value_type& epgEntry)
     {
@@ -1790,9 +1790,9 @@ PVRClientBase::TimeshiftBufferType PVRClientBase::TypeOfTimeshiftBuffer() const
     
 }
 
-float PVRClientBase::EpgCorrectionShift() const
+int PVRClientBase::EpgCorrectionShift() const
 {
-    return m_addonSettings.GetFloat(c_epgCorrectionShift) * 60 * 60;
+    return m_addonSettings.GetFloat(c_epgCorrectionShift) * 60 * 60 + 0.5;
 }
 
 
