@@ -482,6 +482,7 @@ bool ClientCoreBase::AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry)
     
     bool isAdded = false;
     UniqueBroadcastIdType id = xmlEpgEntry.startTime;
+    // Search for ALL channels with same EpgId
     for(const auto& ch : m_channelList) {
         if(ch.second.EpgId != xmlEpgEntry.EpgId)
             continue;

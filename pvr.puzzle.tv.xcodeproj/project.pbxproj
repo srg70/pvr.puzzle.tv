@@ -24,6 +24,7 @@
 		4C534CD31F418BB50038539D /* memory_cache_buffer.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 4C534CD11F418BB50038539D /* memory_cache_buffer.hpp */; };
 		4C534CD41F46C9D40038539D /* ott_player.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C5BF3611F1A310D00437252 /* ott_player.cpp */; };
 		4C534CD51F46C9EA0038539D /* ott_pvr_client.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C5BF3601F18DAEE00437252 /* ott_pvr_client.cpp */; };
+		4C5CF17B255D9D73008343C8 /* XmlSaxHandler.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C5CF17A255D9D73008343C8 /* XmlSaxHandler.h */; };
 		4C5D1C5C21B83E6A004286DA /* ttv_player.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C5D1C5821B83E6A004286DA /* ttv_player.h */; };
 		4C5D1C5D21B83E6A004286DA /* ttv_pvr_client.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C5D1C5921B83E6A004286DA /* ttv_pvr_client.h */; };
 		4C5D1C5E21B83E6A004286DA /* ttv_player.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C5D1C5A21B83E6A004286DA /* ttv_player.cpp */; };
@@ -213,6 +214,7 @@
 		4C5BF35F1F18DAEE00437252 /* ott_pvr_client.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ott_pvr_client.h; sourceTree = "<group>"; };
 		4C5BF3601F18DAEE00437252 /* ott_pvr_client.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ott_pvr_client.cpp; sourceTree = "<group>"; };
 		4C5BF3611F1A310D00437252 /* ott_player.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ott_player.cpp; sourceTree = "<group>"; };
+		4C5CF17A255D9D73008343C8 /* XmlSaxHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = XmlSaxHandler.h; sourceTree = "<group>"; };
 		4C5D1C5821B83E6A004286DA /* ttv_player.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ttv_player.h; sourceTree = "<group>"; };
 		4C5D1C5921B83E6A004286DA /* ttv_pvr_client.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ttv_pvr_client.h; sourceTree = "<group>"; };
 		4C5D1C5A21B83E6A004286DA /* ttv_player.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ttv_player.cpp; sourceTree = "<group>"; };
@@ -220,6 +222,7 @@
 		4C5D1C6021C04333004286DA /* guid.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = guid.hpp; sourceTree = "<group>"; };
 		4C5D1C6121C043D6004286DA /* guid.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = guid.cpp; sourceTree = "<group>"; };
 		4C78F1A02401126C00FA2049 /* addon_settings.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = addon_settings.h; sourceTree = "<group>"; };
+		4C81362F24B8CEC7001BC899 /* expat.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = expat.h; path = build/build/depends/include/expat.h; sourceTree = "<group>"; };
 		4C8506E21EF478A000213131 /* pvr_client_base.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = pvr_client_base.cpp; sourceTree = "<group>"; };
 		4C8506E31EF478A000213131 /* pvr_client_base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pvr_client_base.h; sourceTree = "<group>"; };
 		4C8506E61F0E25DF00213131 /* HttpEngine.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HttpEngine.cpp; sourceTree = "<group>"; };
@@ -432,6 +435,7 @@
 				4CDC11E420BDC48100EA9E2B /* globals.hpp */,
 				4C8506E71F0E25DF00213131 /* HttpEngine.hpp */,
 				4CAAE730200691A600A866C9 /* XMLTV_loader.hpp */,
+				4C5CF17A255D9D73008343C8 /* XmlSaxHandler.h */,
 				4C4FBFA41E77C0590027911E /* Buffers */,
 				4CDC11DD20B452B300EA9E2B /* Client Base */,
 				4CAAE72A2006438C00A866C9 /* Edem */,
@@ -623,6 +627,7 @@
 		4CEE3E97223938F300AB8F2C /* include */ = {
 			isa = PBXGroup;
 			children = (
+				4C81362F24B8CEC7001BC899 /* expat.h */,
 				4CEE3EAA2239396000AB8F2C /* kodi */,
 				4CFB1316226734A000372DB3 /* libtar_listhash.h */,
 				4CFB1315226734A000372DB3 /* libtar.h */,
@@ -914,6 +919,7 @@
 				4CEE3F3F22393A7F00AB8F2C /* StdString.h in Headers */,
 				4CEE3F8D22393AE300AB8F2C /* diyfp.h in Headers */,
 				4CEE3EDE2239397900AB8F2C /* xbmc_addon_types.h in Headers */,
+				4C5CF17B255D9D73008343C8 /* XmlSaxHandler.h in Headers */,
 				4CEE3ECC2239397900AB8F2C /* ActionIDs.h in Headers */,
 				4C534CD31F418BB50038539D /* memory_cache_buffer.hpp in Headers */,
 				4CEE3F6622393AB300AB8F2C /* encodedstream.h in Headers */,

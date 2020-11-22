@@ -93,7 +93,10 @@ namespace SharaTvEngine {
         // NOTE: shara TV does NOT check credentials
         // Just builds a playlist.
         // I.e. GetCachedFileContents alwais succeeded.
-        if(0 == XMLTV::GetCachedFileContents(m_playListUrl, data)){
+        if(!XMLTV::GetCachedFileContents(m_playListUrl, [&data](const char* buf, unsigned int size) {
+            data.append(buf, size);
+            return size;
+        })){
             LogError("SharaTvPlayer: failed to download playlist. URL: %s", playlistUrl.c_str());
             throw ServerErrorException("SharaTvPlayer: failed to download playlist.", -1);
         }
@@ -137,7 +140,10 @@ namespace SharaTvEngine {
         using namespace XMLTV;
         
         string data;
-        XMLTV::GetCachedFileContents(m_playListUrl, data);
+        XMLTV::GetCachedFileContents(m_playListUrl, [&data](const char* buf, unsigned int size) {
+            data.append(buf, size);
+            return size;
+        });
         
         m_archiveInfo.Reset();
         PlaylistContent plistContent;
@@ -613,7 +619,7 @@ namespace SharaTvEngine {
                 
         Channel channel;
         channel.UniqueId = XMLTV::ChannelIdForChannelName(name);
-        channel.EpgId = XMLTV::EpgChannelIdForXmlEpgId(tvgId);
+        channel.EpgId = XMLTV::EpgChannelIdForXmlEpgId(tvgId.c_str());
         // LogDebug("Channe: TVG id %s => EPG id %d", tvgId.c_str(), channel.EpgId);
         channel.Name = name;
         channel.Number = plistIndex;

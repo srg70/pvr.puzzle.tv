@@ -382,16 +382,11 @@ namespace TtvEngine
             // Download playlist
             XBMC->Log(LOG_DEBUG, "TtvPlayer: loading playlist: %s", plistUrl.c_str());
 
-            string zipContent;
-            string unzipedContent;
-            XMLTV::GetCachedFileContents(plistUrl, zipContent);
-            string& data = zipContent;
-
-            if(XMLTV::IsDataCompressed(zipContent)) {
-                if(!XMLTV::GzipInflate(zipContent, unzipedContent))
-                    throw IoErrorException("Failed to unzip playlist.");
-                data = unzipedContent;
-            }
+            string data;
+            XMLTV::GetCachedFileContents(plistUrl, [&data](const char* buffer, unsigned int size){
+                data.append(buffer, size);
+                return size;
+            });
 
             using namespace Helpers::Json;
             auto parser = ParserForObject<TTVChanel>()
