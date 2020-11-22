@@ -38,6 +38,9 @@ namespace XMLTV {
   
     struct EpgChannel
     {
+        EpgChannel()
+        : id(PvrClient::UnknownChannelId)
+        {}
         PvrClient::ChannelId     id;
         std::list<std::string>   displayNames;
         std::string         strIcon;
@@ -45,6 +48,11 @@ namespace XMLTV {
 
     struct EpgEntry
     {
+        EpgEntry()
+        : EpgId(PvrClient::UnknownChannelId)
+        , startTime(0)
+        , endTime(0)
+        {}
         PvrClient::ChannelId         EpgId;
         time_t      startTime;
         time_t      endTime;
@@ -59,17 +67,14 @@ namespace XMLTV {
     typedef std::function<int(const char* buffer, unsigned int size)> DataWriter;
 
     PvrClient::KodiChannelId ChannelIdForChannelName(const std::string& strId);
-    PvrClient::KodiChannelId EpgChannelIdForXmlEpgId(const std::string& strId);
+    PvrClient::KodiChannelId EpgChannelIdForXmlEpgId(const char* strId);
 
     bool ParseChannels(const std::string& url,  const ChannelCallback& onChannelFound);
     bool ParseEpg(const std::string& url,  const EpgEntryCallback& onEpgEntryFound);
 
     long LocalTimeOffset();
-//    bool IsDataCompressed(const char* data, unsigned int size);
     bool GetCachedFileContents(const std::string &filePath, DataWriter writer);
     std::string GetCachedPathFor(const std::string& original);
-
-//    bool GzipInflate(DataReder reader, DataWriter writer);
 }
 
 #endif /* XMLTV_loader_hpp */

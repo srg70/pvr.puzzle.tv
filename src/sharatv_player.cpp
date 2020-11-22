@@ -619,7 +619,7 @@ namespace SharaTvEngine {
                 
         Channel channel;
         channel.UniqueId = XMLTV::ChannelIdForChannelName(name);
-        channel.EpgId = XMLTV::EpgChannelIdForXmlEpgId(tvgId);
+        channel.EpgId = XMLTV::EpgChannelIdForXmlEpgId(tvgId.c_str());
         // LogDebug("Channe: TVG id %s => EPG id %d", tvgId.c_str(), channel.EpgId);
         channel.Name = name;
         channel.Number = plistIndex;

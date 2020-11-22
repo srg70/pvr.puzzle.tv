@@ -134,7 +134,7 @@ static void CleanupTimeshiftDirectory(const std::string& path){
     const char* nonEmptyPath = path.c_str();
     if(!XBMC->DirectoryExists(nonEmptyPath))
         if(!XBMC->CreateDirectory(nonEmptyPath))
-            LogError( "Failed to create cache folder");
+            LogError( "Failed to create timeshift folder %s", path.c_str());
     // Cleanup chache
     if(XBMC->DirectoryExists(nonEmptyPath))
     {

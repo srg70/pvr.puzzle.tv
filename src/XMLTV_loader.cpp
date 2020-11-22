@@ -124,7 +124,7 @@ namespace XMLTV {
 #pragma mark - File Cache
     static bool GetFileContents(const string& url, DataWriter writer)
     {
-        LogDebug("XMLTV Loader: open file %s." , url.c_str());
+        LogDebug("XMLTV: open file %s." , url.c_str());
 
         void* fileHandle = XBMC_OpenFile(url);
         if (fileHandle)
@@ -139,15 +139,15 @@ namespace XMLTV {
             }
             XBMC->CloseFile(fileHandle);
             if(isError) {
-                LogError("XMLTV Loader: file reading callback failed.");
+                LogError("XMLTV: file reading callback failed.");
             } else {
-                LogDebug("XMLTV Loader: file reading done.");
+                LogDebug("XMLTV: file reading done.");
             }
 
         }
         else
         {
-            LogDebug("XMLTV Loader: failed  to open file.");
+            LogDebug("XMLTV: failed  to open file.");
             return false;
         }
         
@@ -159,27 +159,32 @@ namespace XMLTV {
         bool bNeedReload = false;
         
         
-        LogDebug("XMLTV Loader: open cached file %s." , filePath.c_str());
+        LogDebug("XMLTV: open cached file %s." , filePath.c_str());
         
         // check cached file is exists
         if (XBMC->FileExists(strCachedPath.c_str(), false))
         {
             struct __stat64 statCached;
-            struct __stat64 statOrig;
             
             XBMC->StatFile(strCachedPath.c_str(), &statCached);
-            XBMC->StatFile(httplib::detail::encode_get_url(filePath).c_str(), &statOrig);
             
             // Modification time is not provided by some servers.
             // It should be safe to compare file sizes.
-            // Patch: Puzzle server does not provide file attributes. If we have cached file less than 5 min old - use it
+            // Patch: Puzzle server does not provide file attributes. If we have cached file less than 12 hours old - use it
             using namespace P8PLATFORM;
             struct timeval cur_time = {0};
             if(0 != gettimeofday(&cur_time, nullptr)){
                 cur_time.tv_sec = statCached.st_mtime;//st_mtimespec.tv_sec;
             }
-            bNeedReload = (cur_time.tv_sec - statCached.st_mtime) > 5 * 60  && (statOrig.st_size == 0 ||  statOrig.st_size != statCached.st_size);
-            LogDebug("XMLTV Loader: cached file exists. Reload?  %s." , bNeedReload ? "Yes" : "No");
+            bNeedReload = (cur_time.tv_sec - statCached.st_mtime) > 12 * 60 * 60;
+            if(bNeedReload) {
+                // Check remote file stat only when time check failed
+                // because it may take a time
+                struct __stat64 statOrig;
+                XBMC->StatFile(httplib::detail::encode_get_url(filePath).c_str(), &statOrig);
+                bNeedReload = statOrig.st_size == 0 ||  statOrig.st_size != statCached.st_size;
+            }
+            LogDebug("XMLTV: cached file exists. Reload?  %s." , bNeedReload ? "Yes" : "No");
             
         }
         else
@@ -204,8 +209,11 @@ namespace XMLTV {
         if (fileHandle)
         {
             cacheWriter = [&fileHandle, &writer](const char* buffer, unsigned int size){
-                XBMC->WriteFile(fileHandle, buffer, size);
-                return writer(buffer, size);
+                auto written = XBMC->WriteFile(fileHandle, buffer, size);
+                writer(buffer, size);
+                // NOTE: when caching - ignore pareser errors.
+                // We  should write full cache file in any case
+                return written;
             };
         }
 
@@ -265,66 +273,6 @@ namespace XMLTV {
                 break;
         } while(!inflator.IsDone());
         return inflator.IsDone();
-//        const unsigned int CHUNK  = 16384;
-//        int ret;
-//        unsigned have;
-//        z_stream strm;
-//        char in[CHUNK];
-//        char out[CHUNK];
-//        /* allocate inflate state */
-//        strm.zalloc = Z_NULL;
-//        strm.zfree = Z_NULL;
-//        strm.opaque = Z_NULL;
-//        strm.avail_in = 0;
-//        strm.next_in = Z_NULL;
-//        ret = inflateInit2(&strm, (16+MAX_WBITS));//inflateInit(&strm);
-//        if (ret != Z_OK) {
-//            LogError("XMLTV: failed to initialize ZIP library %d (inflateInit(...))", ret);
-//            return false;
-//        }
-//
-//        /* decompress until deflate stream ends or end of file */
-//        do {
-//            strm.avail_in = reader(in,CHUNK);
-//             if ((int)(strm.avail_in) < 0) {
-//                 (void)inflateEnd(&strm);
-//                 LogError("XMLTV: failed to read from source.");
-//                 return false;
-//             }
-//             if (strm.avail_in == 0)
-//                 break;
-//             strm.next_in = (unsigned char*)in;
-//
-//            /* run inflate() on input until output buffer not full */
-//            do {
-//                strm.avail_out = CHUNK;
-//                 strm.next_out = (unsigned char*)out;
-//                ret = inflate(&strm, Z_NO_FLUSH);
-//                assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
-//                switch (ret) {
-//                case Z_NEED_DICT:
-//                    ret = Z_DATA_ERROR;     /* and fall through */
-//                case Z_DATA_ERROR:
-//                case Z_MEM_ERROR:
-//                    LogError("XMLTV: failed to inflate compressed chunk %d (inflate(...))", ret);
-//                    (void)inflateEnd(&strm);
-//                    return false;
-//                }
-//                have = CHUNK - strm.avail_out;
-//                if (writer(out, have) != have) {
-//                    LogError("XMLTV: failed to write to destination.");
-//                    (void)inflateEnd(&strm);
-//                    return Z_ERRNO;
-//                }
-//            } while (strm.avail_out == 0);
-//
-//            /* done when inflate() says it's done */
-//        } while (ret != Z_STREAM_END);
-//
-//        /* clean up and return */
-//        (void)inflateEnd(&strm);
-//        return ret == Z_STREAM_END;// ? Z_OK : Z_DATA_ERROR;
-
     }
 
 #pragma mark - XML
@@ -381,7 +329,7 @@ namespace XMLTV {
     }
 
 
-    static time_t ParseDateTime(std::string& strDate, bool iDateFormat = true)
+    static time_t ParseDateTime(const char* strDate, bool iDateFormat = true)
     {
         static  long offset = LocalTimeOffset();
 
@@ -392,9 +340,9 @@ namespace XMLTV {
         int minutes = 0;
         
         if (iDateFormat)
-            sscanf(strDate.c_str(), "%04d%02d%02d%02d%02d%02d %c%02d%02d", &timeinfo.tm_year, &timeinfo.tm_mon, &timeinfo.tm_mday, &timeinfo.tm_hour, &timeinfo.tm_min, &timeinfo.tm_sec, &sign, &hours, &minutes);
+            sscanf(strDate, "%04d%02d%02d%02d%02d%02d %c%02d%02d", &timeinfo.tm_year, &timeinfo.tm_mon, &timeinfo.tm_mday, &timeinfo.tm_hour, &timeinfo.tm_min, &timeinfo.tm_sec, &sign, &hours, &minutes);
         else
-            sscanf(strDate.c_str(), "%02d.%02d.%04d%02d:%02d:%02d", &timeinfo.tm_mday, &timeinfo.tm_mon, &timeinfo.tm_year, &timeinfo.tm_hour, &timeinfo.tm_min, &timeinfo.tm_sec);
+            sscanf(strDate, "%02d.%02d.%04d%02d:%02d:%02d", &timeinfo.tm_mday, &timeinfo.tm_mon, &timeinfo.tm_year, &timeinfo.tm_hour, &timeinfo.tm_min, &timeinfo.tm_sec);
         
         timeinfo.tm_mon  -= 1;
         timeinfo.tm_year -= 1900;
@@ -428,79 +376,6 @@ namespace XMLTV {
         return offset;
     }
     
-    bool CreateDocument(const std::string& url,  XmlDocumentAndData& xmlDoc)
-    {
-        if (url.empty())
-        {
-            XBMC->Log(LOG_NOTICE, "EPG file path is not configured. EPG not loaded.");
-            return false;
-        }
-        
-        string data;
-        if (!GetCachedFileContents(url, [&data](const char* buf, unsigned int size) {
-            data.append(buf, size);
-            return size;
-        }))
-        {
-            XBMC->Log(LOG_ERROR, "Unable to load EPG file '%s':  file is missing or empty.", url.c_str());
-            return false;
-        }
-        
-        char * buffer;
-        string decompressed;
-        // gzip packed
-        if (IsDataCompressed(data.c_str(), data.length()))
-        {
-            unsigned int dataIndex = 0;
-            if (!GzipInflate([&data, &dataIndex](char* buf, unsigned int size){
-                const unsigned int toBeCopied = std::min(data.size() - dataIndex, (size_t)size);
-                memcpy(buf, &data[dataIndex], toBeCopied);
-                dataIndex += toBeCopied;
-                return toBeCopied;
-            }, [&decompressed](const char* buf, unsigned int size) {
-                decompressed.append(buf, size);
-                return size;
-            }))
-            {
-                XBMC->Log(LOG_ERROR, "Invalid EPG file '%s': unable to decompress file.", url.c_str());
-                return false;
-            }
-            buffer = &(decompressed[0]);
-        }
-        else
-            buffer = &(data[0]);
-        
-        // xml should starts with '<?xml'
-        if (buffer[0] != '\x3C' || buffer[1] != '\x3F' || buffer[2] != '\x78' ||
-            buffer[3] != '\x6D' || buffer[4] != '\x6C')
-        {
-            // check for BOM
-            if (buffer[0] != '\xEF' || buffer[1] != '\xBB' || buffer[2] != '\xBF')
-            {
-                // check for tar archive
-                if (strcmp(buffer + 0x101, "ustar") || strcmp(buffer + 0x101, "GNUtar"))
-                    buffer += 0x200; // RECORDSIZE = 512
-                else
-                {
-                    XBMC->Log(LOG_ERROR, "Invalid EPG file '%s': unable to parse file.", url.c_str());
-                    return false;
-                }
-            }
-        }
-        
-        try
-        {
-            xmlDoc.parse<0>(buffer);
-        }
-        catch(parse_error p)
-        {
-            XBMC->Log(LOG_ERROR, "Unable parse EPG XML: %s", p.what());
-            return false;
-        }
-        return true;
-
-    }
-    
     PvrClient::KodiChannelId ChannelIdForChannelName(const std::string& channelName)
     {
         int id = std::hash<std::string>{}(channelName);
@@ -509,152 +384,268 @@ namespace XMLTV {
         return id < 0 ? -id : id;
     }
     
-    PvrClient::KodiChannelId EpgChannelIdForXmlEpgId(const std::string& strId)
+    PvrClient::KodiChannelId EpgChannelIdForXmlEpgId(const char* strId)
     {
-        if(strId.empty())
+        if(*strId == '\0')
             return PvrClient::UnknownChannelId;
         string strToHash(strId);
         StringUtils::ToLower(strToHash);
         return std::hash<std::string>{}(strToHash);
     }
 
+    template <class T>
+    class ChannelHandler : public XmlEventHandler<ChannelHandler<T> >
+    {
+    public:
+        typedef std::function<void(const T& newChannel)> TCallback;
+        ChannelHandler(TCallback onChannelReady)
+        : _isTvTag(false)
+        , _isChannelTag(false)
+        , _isDisplayNameTag(false)
+        , _onChannelReady(onChannelReady)
+        {}
+        
+        bool Element(const XML_Char *name, const XML_Char **attributes) {
+            if(strcmp(name, "tv") == 0) {
+                _isTvTag = true;
+            } else if(strcmp(name, "channel") == 0) {
+                if(!_isTvTag) {
+                    LogError("XMLTV: no <tv> tag found");
+                    return false;
+                }
+                Cleanup();
+                new (&_currentChannel) T();
+                for (int i = 0; attributes[i]; i += 2) {
+                    if(strcmp(attributes[i], "id") == 0) {
+                        _currentChannel.id = EpgChannelIdForXmlEpgId(attributes[i + 1]);
+                        break;
+                    }
+                }
+                if(PvrClient::UnknownChannelId == _currentChannel.id) {
+                    // Skip this channel, i.e. retrun true when _isChannelTag is false.
+                    LogDebug("XMLTV: no channel ID found.");
+                    return true;
+                }
+                _isChannelTag = true;
+            }else if(_isChannelTag && strcmp(name, "display-name") == 0) {
+                _isDisplayNameTag = true;
+            } else if(_isChannelTag && strcmp(name, "icon") == 0) {
+                for (int i = 0; attributes[i]; i += 2) {
+                    if(strcmp(attributes[i], "src") == 0) {
+                        _currentChannel.strIcon = attributes[i + 1];
+                        break;
+                    }
+                }
+            } else if(strcmp(name, "programme") == 0){
+                LogDebug("XMLTV: found <programme> tag, i.e. channels processing is done.");
+                return false;
+            }
+                
+            return true;
+        }
+        bool ElementEnd(const XML_Char *name) {
+            if(strcmp(name, "tv") == 0) {
+                _isTvTag = false;
+            } else if(strcmp(name, "channel") == 0) {
+                if(_isChannelTag) {
+                    _onChannelReady(_currentChannel);
+                    // NOTE: cleanup will done on element start
+                    // because final destructor will destruct _currentChannel (twice)
+                    //Cleanup();
+                 }
+            } else if(strcmp(name, "display-name") == 0) {
+                _isDisplayNameTag = false;
+            }
+            return true;
+        }
+        
+        bool ElementData(const XML_Char *data, int length) {
+            if(_isChannelTag && _isDisplayNameTag){
+                std::string name(data, length);
+                _currentChannel.displayNames.push_back(name);
+            }
+            return true;
+        }
+
+    private:
+        void Cleanup() {
+            _currentChannel.~T();
+            _isChannelTag = false;
+        }
+        bool _isTvTag;
+        bool _isChannelTag;
+        bool _isDisplayNameTag;
+        TCallback _onChannelReady;
+        T _currentChannel;
+
+    };
+
     bool ParseChannels(const std::string& url,  const ChannelCallback& onChannelFound)
     {
-        class ChannelHandler : public XmlEventHandler<ChannelHandler>
+        ChannelHandler<EpgChannel> handler (onChannelFound);
+        
+        if (!GetCachedFileContents(url, [&handler](const char* buf, unsigned int size) {
+            /// NOTE: add parsing error prepegation
+            if(handler.Parse(buf, size, false))
+               return (int)size;
+            return -1;
+        }))
         {
-            
-        } handler;
-        
-        XmlDocumentAndData xmlDoc;
-        
-        LogDebug("XMLTV Loader: open document from %s." , url.c_str());
-
-        
-        if(!CreateDocument(url, xmlDoc))
-           return false;
-        
-        LogDebug("XMLTV Loader: start document parsing.");
-
-        xml_node<> *pRootElement = xmlDoc.doc.first_node("tv");
-        if (!pRootElement)
-        {
-            XBMC->Log(LOG_ERROR, "Invalid EPG XML: no <tv> tag found");
+            LogError("XMLTV: unable to load EPG file '%s'.", url.c_str());
             return false;
         }
-        
-        xml_node<> *pChannelNode = NULL;
-        for(pChannelNode = pRootElement->first_node("channel"); pChannelNode; pChannelNode = pChannelNode->next_sibling("channel"))
-        {
-            //LogDebug("XMLTV Loader: found channel node.");
-
-            EpgChannel channel;
-            std::string strId;
-            if(!GetAttributeValue(pChannelNode, "id", strId)){
-                LogDebug("XMLTV Loader: no channel ID found.");
-                continue;
-            }
-            
-            channel.id = EpgChannelIdForXmlEpgId(strId);
-            
-            if(!GetAllNodesValue(pChannelNode, "display-name", channel.displayNames)){
-                LogDebug("XMLTV Loader: no channel display name found.");
-                continue;
-            }
-            
-            //LogDebug("XMLTV Loader: found channel %s.", channel.strName.c_str());
-
-            xml_node<> *pIconNode = pChannelNode->first_node("icon");
-            if (pIconNode == NULL)
-                channel.strIcon = "";
-            else if (!GetAttributeValue(pIconNode, "src", channel.strIcon))
-                channel.strIcon = "";
-            
-            //LogDebug("XMLTV Loader: populating channel");
-
-            onChannelFound(channel);
-        }
-        
-        xmlDoc.doc.clear();
-        
-        XBMC->Log(LOG_NOTICE, "XMLTV: channels Loaded.");
-        
+        char dummy;
+        handler.Parse(&dummy, 0, true);
+        XBMC->Log(LOG_NOTICE, "XMLTV: channels loaded.");
         return true;
     }
 
-    
+    template <class T>
+    class ProgrammeHandler : public XmlEventHandler<ProgrammeHandler<T> >
+    {
+    public:
+        typedef std::function<bool(const T& newProgramme)> TCallback;
+        ProgrammeHandler(TCallback onProgrammeReady)
+        : _isTvTag(false)
+        , _isProgrammeTag(false)
+        , _isTitleTag(false)
+        , _isDescTag(false)
+        , _onProgrammeReady(onProgrammeReady)
+        {
+            _fileStartAt = time(NULL) + 60*60*24*7; // A week after now
+            _fileEndAt = 0;
+        }
+        
+        bool Element(const XML_Char *name, const XML_Char **attributes) {
+            if(strcmp(name, "tv") == 0) {
+                _isTvTag = true;
+            } else if(strcmp(name, "programme") == 0) {
+                if(!_isTvTag) {
+                    LogError("XMLTV: no <tv> tag found");
+                    return false;
+                }
+                Cleanup();
+                new (&_currentProgramme) T();
+                _isProgrammeTag = ProcessPorgarmmeAttributes(attributes);
+            } else if(_isProgrammeTag && strcmp(name, "title") == 0) {
+                _isTitleTag = true;
+            } else if(_isProgrammeTag && strcmp(name, "desc") == 0) {
+                _isDescTag = true;
+            } else if(_isProgrammeTag && strcmp(name, "icon") == 0) {
+                for (int i = 0; attributes[i]; i += 2) {
+                    if(strcmp(attributes[i], "src") == 0) {
+                        _currentProgramme.iconPath = attributes[i + 1];
+                        break;
+                    }
+                }
+            }
+                
+            return true;
+        }
+        bool ElementEnd(const XML_Char *name) {
+            if(strcmp(name, "tv") == 0) {
+                _isTvTag = false;
+            } else if(strcmp(name, "programme") == 0) {
+                if(_isProgrammeTag) {
+                    bool interrupted = !_onProgrammeReady(_currentProgramme);
+                    // NOTE: cleanup will done on element start
+                    // because final destructor will destruct _currentProgramme (twice)
+                    //Cleanup();
+                    if(interrupted)
+                        XBMC->Log(LOG_NOTICE, "XMLTV: EPG is NOT fully loaded (cancelled ?).");
+                    return !interrupted;
+                 }
+            } else if(strcmp(name, "title") == 0) {
+                _isTitleTag = false;
+            } else if(strcmp(name, "desc") == 0) {
+                _isDescTag = false;
+            }
+            return true;
+        }
+        bool ElementData(const XML_Char *data, int length) {
+            if(_isProgrammeTag && _isTitleTag){
+                _currentProgramme.strTitle.assign(data, length);
+            } else if(_isProgrammeTag && _isDescTag) {
+                _currentProgramme.strPlot.assign(data, length);
+            }
+            return true;
+        }
+        time_t StartAt() const { return _fileStartAt;}
+        time_t EndAt() const { return _fileEndAt;}
+    private:
+        bool ProcessPorgarmmeAttributes(const XML_Char ** attributes) {
+            const XML_Char* strId = nullptr;
+            const XML_Char* strStart = nullptr;
+            const XML_Char* strStop = nullptr;
+            for (int i = 0; attributes[i]; i += 2) {
+                if(strcmp(attributes[i], "channel") == 0) {
+                    strId = attributes[i + 1];
+                } else if (strcmp(attributes[i], "start") == 0){
+                    strStart = attributes[i + 1];
+                } else if (strcmp(attributes[i], "stop") == 0){
+                    strStop = attributes[i + 1];
+                }
+            }
+            
+            if(nullptr == strId)  {
+                LogDebug("XMLTV: no channel ID found (programme).");
+                return false;
+            }
+            if(nullptr == strStart || nullptr == strStop){
+                LogDebug("XMLTV: no programme start/stop found.");
+                return false;
+            }
+            
+            time_t iTmpStart = ParseDateTime(strStart);
+            if(iTmpStart > 0 && _fileStartAt > iTmpStart)
+                _fileStartAt = iTmpStart;
+            time_t iTmpEnd = ParseDateTime(strStop);
+            if(_fileEndAt < iTmpEnd)
+                _fileEndAt = iTmpEnd;
+            
+            _currentProgramme.EpgId = EpgChannelIdForXmlEpgId(strId);
+            _currentProgramme.startTime = iTmpStart;
+            _currentProgramme.endTime = iTmpEnd;
+            return true;
+        }
+        void Cleanup() {
+            _currentProgramme.~T();
+            _isProgrammeTag = false;
+        }
+        
+        bool _isTvTag;
+        bool _isProgrammeTag;
+        bool _isTitleTag;
+        bool _isDescTag;
+        TCallback _onProgrammeReady;
+        T _currentProgramme;
+        time_t _fileStartAt;
+        time_t _fileEndAt;
+
+    };
+
     bool ParseEpg(const std::string& url,  const EpgEntryCallback& onEpgEntryFound)
     {
-        XmlDocumentAndData xmlDoc;
+        ProgrammeHandler<EpgEntry> handler (onEpgEntryFound);
         
-        if(!CreateDocument(url, xmlDoc))
-           return false;
-           
-        xml_node<> *pRootElement = xmlDoc.doc.first_node("tv");
-        if (!pRootElement)
+        if (!GetCachedFileContents(url, [&handler](const char* buf, unsigned int size) {
+            /// NOTE: add parsing error propagation
+            if(handler.Parse(buf, size, false))
+               return (int)size;
+            return -1;
+        }))
         {
-            XBMC->Log(LOG_ERROR, "Invalid EPG XML: no <tv> tag found");
+            LogError("XMLTV: unable to load EPG file '%s'.", url.c_str());
             return false;
         }
-        time_t fileStartAt = time(NULL) + 60*60*24*7; // A week after now
-        time_t fileEndAt = 0;
-        xml_node<> *pChannelNode = NULL;
-        
-        bool interrupted = false;
-        for(pChannelNode = pRootElement->first_node("programme"); pChannelNode; pChannelNode = pChannelNode->next_sibling("programme"))
-        {
-            try {
-                string strId;
-                if (!GetAttributeValue(pChannelNode, "channel", strId))
-                    continue;
-                
-                string strStart, strStop;
-                if ( !GetAttributeValue(pChannelNode, "start", strStart)
-                    || !GetAttributeValue(pChannelNode, "stop", strStop))
-                    continue;
-                
-                time_t iTmpStart = ParseDateTime(strStart);
-                if(fileStartAt > iTmpStart)
-                    fileStartAt = iTmpStart;
-                time_t iTmpEnd = ParseDateTime(strStop);
-                if(fileEndAt < iTmpEnd)
-                    fileEndAt = iTmpEnd;
+        char dummy;
+        handler.Parse(&dummy, 0, true);
 
-                
-                EpgEntry entry;
-                xml_node<> * iconAttribute = pChannelNode->first_node("icon");
-                if (iconAttribute != NULL)
-                {
-                    GetAttributeValue(iconAttribute, "src", entry.iconPath);
-                }
-                
-                entry.EpgId = EpgChannelIdForXmlEpgId(strId);
-               // LogDebug("Program: TVG id %s => EPG id %d", strId.c_str(), entry.EpgId);
-                entry.startTime = iTmpStart;
-                entry.endTime = iTmpEnd;
-                
-                GetNodeValue(pChannelNode, "title", entry.strTitle);
-                GetNodeValue(pChannelNode, "desc", entry.strPlot);
-                
-                interrupted = !onEpgEntryFound(entry);
-                if(interrupted)
-                    break;
-
-            } catch (...) {
-                LogError("Bad XML EPG entry.");
-            }
-        }
-        
-        xmlDoc.doc.clear();
-        
-        if(interrupted) {
-            XBMC->Log(LOG_NOTICE, "XMLTV: EPG is NOT fully loaded (cancelled ?).");
-        }else if(fileEndAt > 0) {
-            XBMC->Log(LOG_NOTICE, "XMLTV: EPG loaded from %s to  %s", time_t_to_string(fileStartAt).c_str(), time_t_to_string(fileEndAt).c_str());
-
+        if(handler.EndAt() > 0) {
+            XBMC->Log(LOG_NOTICE, "XMLTV: EPG loaded from %s to  %s", time_t_to_string(handler.StartAt()).c_str(), time_t_to_string(handler.EndAt()).c_str());
         } else {
             XBMC->Log(LOG_NOTICE, "XMLTV: EPG is empty.");
         }
-        
         return true;
     }
     
