@@ -1,3 +1,7 @@
+0.9.101
+- feat: optimized performance and memory footprint of EPG subsystem
+- fix: rounding of EPG times
+
 0.9.100
 - fixed HLS archives playback
 

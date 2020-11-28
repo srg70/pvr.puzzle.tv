@@ -109,6 +109,8 @@ namespace SharaTvEngine
         }
         std::string GetArchiveUrl(PvrClient::ChannelId channelId, time_t startTime, time_t duration);
         void UpdateEpgForAllChannels(time_t startTime, time_t endTime, std::function<bool(void)> cancelled);
+        // -1 to remove limitation
+        void SetMaxArchiveDuration(int duration) { m_maxArchiveDuration = duration; }
 
         std::string GetUrl(PvrClient::ChannelId channelId);
     protected:
@@ -130,6 +132,9 @@ namespace SharaTvEngine
         bool m_enableAdult;
         bool m_supportMulticastUrls;
         std::string m_multicastProxyAddress;
+        // Shara TV supports archive length up to 2 hours
+        // Split EPG items longer than m_maxArchiveDuration to avoid this limitation
+        int m_maxArchiveDuration;
     };
 }
 #endif //_shara_tv_player_h_
