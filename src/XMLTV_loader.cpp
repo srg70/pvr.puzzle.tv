@@ -496,7 +496,7 @@ namespace XMLTV {
         }
         char dummy;
         handler.Parse(&dummy, 0, true);
-        XBMC->Log(LOG_NOTICE, "XMLTV: channels loaded.");
+        LogNotice( "XMLTV: channels loaded.");
         return true;
     }
 
@@ -511,6 +511,7 @@ namespace XMLTV {
         , _isTitleTag(false)
         , _isDescTag(false)
         , _onProgrammeReady(onProgrammeReady)
+        , _validElementCounter(0)
         {
             _fileStartAt = time(NULL) + 60*60*24*7; // A week after now
             _fileEndAt = 0;
@@ -552,7 +553,9 @@ namespace XMLTV {
                     // because final destructor will destruct _currentProgramme (twice)
                     //Cleanup();
                     if(interrupted)
-                        XBMC->Log(LOG_NOTICE, "XMLTV: EPG is NOT fully loaded (cancelled ?).");
+                        LogNotice( "XMLTV: EPG is NOT fully loaded (cancelled ?).");
+                    else
+                        ++_validElementCounter;
                     return !interrupted;
                  }
             } else if(strcmp(name, "title") == 0) {
@@ -572,6 +575,7 @@ namespace XMLTV {
         }
         time_t StartAt() const { return _fileStartAt;}
         time_t EndAt() const { return _fileEndAt;}
+        uint32_t Count() const {return _validElementCounter;}
     private:
         bool ProcessPorgarmmeAttributes(const XML_Char ** attributes) {
             const XML_Char* strId = nullptr;
@@ -597,10 +601,10 @@ namespace XMLTV {
             }
             
             time_t iTmpStart = ParseDateTime(strStart);
-            if(iTmpStart > 0 && _fileStartAt > iTmpStart)
+            if(iTmpStart > 0 &&  difftime(_fileStartAt, iTmpStart) > 0)
                 _fileStartAt = iTmpStart;
             time_t iTmpEnd = ParseDateTime(strStop);
-            if(_fileEndAt < iTmpEnd)
+            if(difftime(_fileEndAt, iTmpEnd) < 0)
                 _fileEndAt = iTmpEnd;
             
             _currentProgramme.EpgId = EpgChannelIdForXmlEpgId(strId);
@@ -621,6 +625,7 @@ namespace XMLTV {
         T _currentProgramme;
         time_t _fileStartAt;
         time_t _fileEndAt;
+        uint32_t _validElementCounter;
 
     };
 
@@ -640,11 +645,11 @@ namespace XMLTV {
         }
         char dummy;
         handler.Parse(&dummy, 0, true);
-
+        LogDebug("XMLTV: found %d valid EPG elements.", handler.Count());
         if(handler.EndAt() > 0) {
-            XBMC->Log(LOG_NOTICE, "XMLTV: EPG loaded from %s to  %s", time_t_to_string(handler.StartAt()).c_str(), time_t_to_string(handler.EndAt()).c_str());
+            LogNotice("XMLTV: EPG loaded from %s to  %s", time_t_to_string(handler.StartAt()).c_str(), time_t_to_string(handler.EndAt()).c_str());
         } else {
-            XBMC->Log(LOG_NOTICE, "XMLTV: EPG is empty.");
+            LogNotice( "XMLTV: EPG is empty.");
         }
         return true;
     }

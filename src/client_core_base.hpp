@@ -82,7 +82,7 @@ namespace PvrClient {
         void ClearEpgCache(const char* cacheFile, const char* epgUrl);
         void LoadEpgCache(const char* cacheFile);
         void SaveEpgCache(const char* cacheFile, unsigned int daysToPreserve = 7);
-        UniqueBroadcastIdType AddEpgEntry(UniqueBroadcastIdType id, EpgEntry& entry);
+        UniqueBroadcastIdType AddEpgEntry(UniqueBroadcastIdType id, const EpgEntry& entry);
         bool AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
 //        void UpdateEpgEntry(UniqueBroadcastIdType id, const EpgEntry& entry);
 
