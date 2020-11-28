@@ -151,6 +151,11 @@ void SharaTvPVRClient::CreateCore(bool clearEpgCache)
     m_clientCore = m_core = new SharaTvEngine::Core(playlistUrl, epgUrl, EnableAdult());
     m_core->IncludeCurrentEpgToArchive(HowToAddCurrentEpgToArchive());
     m_core->SupportMuticastUrls(SuppotMulticastUrls(), UdpProxyHost(), UdpProxyPort());
+    if(c_PlistProvider_SharaTv == ProviderType()) {
+        // Shara TV supports archive length up to 2 hours
+        // Split EPG items longer than 120 min to avoid this limitation
+        m_core->SetMaxArchiveDuration(120 * 60);
+    }
     m_core->InitAsync(clearEpgCache, IsArchiveSupported());
 }
 
