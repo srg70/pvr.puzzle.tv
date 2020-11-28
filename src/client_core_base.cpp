@@ -21,9 +21,10 @@
  */
 
 #include <algorithm>
+#include <cstdio>
 #include <rapidjson/error/en.h>
 #include "rapidjson/writer.h"
-#include "rapidjson/stringbuffer.h"
+#include "rapidjson/filewritestream.h"
 
 #include "p8-platform/util/StringUtils.h"
 #include "p8-platform/threads/mutex.h"
@@ -35,6 +36,7 @@
 #include "helpers.h"
 #include "XMLTV_loader.hpp"
 #include "base64.h"
+#include "JsonSaxHandler.h"
 
 namespace PvrClient{
 
@@ -372,34 +374,66 @@ bool ClientCoreBase::ReadFileContent(const char* cacheFile, std::string& buffer)
     return true;
 }
 
+
+namespace epg_cache{
+const char* const EpgEntryIdName  = "k";
+const char* const UniqueChannelIdName  = "ch";
+const char* const StartTimeName  = "st";
+const char* const EndTimeName  = "et";
+const char* const TitleName  = "ti";
+const char* const DescriptionName  = "de";
+const char* const HasArchiveName  = "ar";
+const char* const IconPathName  = "ip";
+const char* const ProgramIdName  = "pi";
+const char* const CategoryName  = "ca";
+
+struct CachedEpgEntry : EpgEntry
+{
+    UniqueBroadcastIdType Key;
+    CachedEpgEntry()
+    : EpgEntry()
+    , Key(c_UniqueBroadcastIdUnknown)
+    {}
+};
+}
+
 void ClientCoreBase::LoadEpgCache(const char* cacheFile)
 {
-    string cacheFilePath = MakeEpgCachePath(cacheFile);
-    
-    string ss;
-    if(!ReadFileContent(cacheFilePath.c_str(), ss))
-        return;
-    
+
     try {
-        ParseJson(ss, [&] (Document& jsonRoot) {
-            
-            const Value& v = jsonRoot["m_epgEntries"];
-            Value::ConstValueIterator it = v.Begin();
-            for(; it != v.End(); ++it)
-            {
-                EpgEntryList::key_type k = (*it)["k"].GetInt64();
-                EpgEntryList::mapped_type e;
-                if(!e.Deserialize((*it)["v"]))
-                    continue;
+        using namespace Helpers::Json;
+        using namespace epg_cache;
+        
+        string cacheFilePath = XBMC->TranslateSpecialProtocol(MakeEpgCachePath(cacheFile).c_str());
+
+        auto parser = ParserForObject<CachedEpgEntry>()
+        .WithField(EpgEntryIdName, &CachedEpgEntry::Key)
+        .WithField(UniqueChannelIdName, &CachedEpgEntry::UniqueChannelId)
+        .WithField(StartTimeName, &CachedEpgEntry::StartTime)
+        .WithField(EndTimeName, &CachedEpgEntry::EndTime)
+        .WithField(TitleName, &CachedEpgEntry::Title)
+        .WithField(DescriptionName, &CachedEpgEntry::Description, false)
+        .WithField(HasArchiveName, &CachedEpgEntry::HasArchive, false)
+        .WithField(IconPathName, &CachedEpgEntry::IconPath, false)
+        .WithField(ProgramIdName, &CachedEpgEntry::ProgramId, false)
+        .WithField(CategoryName, &CachedEpgEntry::Category, false);
+        
+        string parserError;
+        bool succeded = ParseJsonFile(cacheFilePath.c_str(), parser, [&](const CachedEpgEntry& e){
                 if(difftime(e.EndTime, m_lastEpgRequestEndTime) > 0 ) { // e.EndTime >  m_lastEpgRequestEndTime
                     m_lastEpgRequestEndTime = e.EndTime;
                 }
-                AddEpgEntry(k,e);
-            }
-        });
-        
+                AddEpgEntry(e.Key, e);
+            return true;
+
+        } , &parserError);
+        if(!succeded){
+            LogDebug("ClientCoreBase: parsing of EPG cache faled with error %s.", parserError.c_str());
+            throw 1;
+        }
+        LogDebug("ClientCoreBase: parsing of EPG cache done.");
     } catch (...) {
-        LogError(" >>>>  FAILED load EPG cache <<<<<");
+        LogError("ClientCoreBase: FAILED load EPG cache.");
         m_epgEntries.clear();
         m_lastEpgRequestEndTime = 0;
     }
@@ -407,66 +441,97 @@ void ClientCoreBase::LoadEpgCache(const char* cacheFile)
 
 void ClientCoreBase::SaveEpgCache(const char* cacheFile, unsigned int daysToPreserve)
 {
-    string cacheFilePath = MakeEpgCachePath(cacheFile);
-    
-    StringBuffer s;
+    XBMC->CreateDirectory(c_EpgCacheDirPath);
+    string cacheFilePath = XBMC->TranslateSpecialProtocol(MakeEpgCachePath(cacheFile).c_str());
+    FILE* fp = fopen(cacheFilePath.c_str(), "w"); // non-Windows use "w"
+    if(NULL == fp) {
+        LogError("ClientCoreBase: failed to open EPG cashe file for write. Path %s", cacheFilePath.c_str());
+        return;
+    }
+
+    char writeBuffer[65536];
+    FileWriteStream os(fp, writeBuffer, sizeof(writeBuffer));
+     
     {
+
         P8PLATFORM::CLockObject lock(m_epgAccessMutex);
         
         // Leave epg entries not older then 1 weeks from now
         time_t now = time(nullptr);
         auto oldest = now - daysToPreserve*24*60*60;
         erase_if(m_epgEntries,  [oldest] (const EpgEntryList::value_type& i)
-                 {
+        {
             return i.second.StartTime < oldest;
         });
         
-        Writer<StringBuffer> writer(s);
-        
-        writer.StartObject();               // Between StartObject()/EndObject(),
-        
-        writer.Key("m_epgEntries");
+        Writer<FileWriteStream> writer(os);
         writer.StartArray();                // Between StartArray()/EndArray(),
-        for_each(m_epgEntries.begin(), m_epgEntries.end(),[&](const EpgEntryList::value_type& i) {
+        for_each(m_epgEntries.begin(), m_epgEntries.end(),[&writer](const EpgEntryList::value_type& i) {
+            using namespace epg_cache;
+            
             writer.StartObject();               // Between StartObject()/EndObject(),
-            writer.Key("k");
-            writer.Int64(i.first);
-            writer.Key("v");
-            i.second.Serialize(writer);
+            // ID
+            writer.Key(EpgEntryIdName);
+            writer.Uint64(i.first);
+            // Entry
+            auto& entry = i.second;
+            writer.Key(UniqueChannelIdName);
+            writer.Uint(entry.UniqueChannelId);
+            
+            writer.Key(StartTimeName);
+            writer.Int64(entry.StartTime);
+            
+            writer.Key(EndTimeName);
+            writer.Int64(entry.EndTime);
+            
+            writer.Key(TitleName);
+            writer.String(entry.Title.c_str());
+            if(!entry.Description.empty()) {
+                writer.Key(DescriptionName);
+                writer.String(entry.Description.c_str());
+            }
+            if(entry.HasArchive) {
+                writer.Key(HasArchiveName);
+                writer.Bool(entry.HasArchive);
+            }
+            if(!entry.IconPath.empty()) {
+                writer.Key(IconPathName);
+                writer.String(entry.IconPath.c_str());
+            }
+            if(!entry.ProgramId.empty()) {
+                writer.Key(ProgramIdName);
+                writer.String(entry.ProgramId.c_str());
+            }
+            if(!entry.Category.empty()) {
+                writer.Key(CategoryName);
+                writer.String(entry.Category.c_str());
+            }
             writer.EndObject();
         });
         writer.EndArray();
-        
-        writer.EndObject();
     }
-    XBMC->CreateDirectory(c_EpgCacheDirPath);
-    
-    void* file = XBMC->OpenFileForWrite(cacheFilePath.c_str(), true);
-    if(NULL == file)
-        return;
-    auto buf = s.GetString();
-    XBMC->WriteFile(file, buf, s.GetSize());
-    XBMC->CloseFile(file);
-    
+    fclose(fp);
 }
 
-UniqueBroadcastIdType ClientCoreBase::AddEpgEntry(UniqueBroadcastIdType id, EpgEntry& entry)
+UniqueBroadcastIdType ClientCoreBase::AddEpgEntry(UniqueBroadcastIdType id, const EpgEntry& entry)
 {
     bool isUnknownChannel = m_channelList.count(entry.UniqueChannelId) == 0;
     // Do not add EPG for unknown channels
     if(isUnknownChannel)
         return c_UniqueBroadcastIdUnknown;
-    
-    UpdateHasArchive(entry);
-    
-    P8PLATFORM::CLockObject lock(m_epgAccessMutex);
-    while(m_epgEntries.count(id) != 0) {
-        // Check duplicates.
-        if(m_epgEntries[id].UniqueChannelId == entry.UniqueChannelId)
-            return id;
-        ++id;
+    // lock boundary
+    {
+        P8PLATFORM::CLockObject lock(m_epgAccessMutex);
+        while(m_epgEntries.count(id) != 0) {
+            // Check duplicates.
+            if(m_epgEntries[id].UniqueChannelId == entry.UniqueChannelId)
+                return id;
+            ++id;
+        }
+        m_epgEntries[id] =  entry;
     }
-    m_epgEntries[id] =  entry;
+    UpdateHasArchive(m_epgEntries[id]);
+
     return id;
 }
 

@@ -811,8 +811,9 @@ int PVRClientBase::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSi
     ChannelId chId = GetLiveChannelId();
     int bytesRead = inputBuffer->Read(pBuffer, iBufferSize, ChannelReloadTimeout() * 1000);
     // Assuming stream hanging.
-    // Try to restart current channel only when previous read operation succeeded.
-    if (bytesRead != iBufferSize &&  m_lastBytesRead >= 0 && !IsLiveInRecording()) {
+    // Try to restart current channel only when previous read operation succeeded
+    // and current stream was NOT stopped
+    if (bytesRead != iBufferSize &&  m_lastBytesRead >= 0 && !IsLiveInRecording() && !inputBuffer->IsStopped()) {
         LogError("PVRClientBase:: trying to restart current channel.");
         // Re-accure input stream ptr (may be closed already)
         {
@@ -971,7 +972,8 @@ void PVRClientBase::FillRecording(const EpgEntryList::value_type& epgEntry, PVR_
     }
     dirName += tag.strChannelName;
     char buff[20];
-    strftime(buff, sizeof(buff), "/%d-%m-%y", localtime(&epgTag.StartTime));
+    time_t startTime = epgTag.StartTime;
+    strftime(buff, sizeof(buff), "/%d-%m-%y", localtime(&startTime));
     dirName += buff;
     strncpy(tag.strDirectory, dirName.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
 

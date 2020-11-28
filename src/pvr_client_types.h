@@ -83,102 +83,24 @@ namespace PvrClient {
     
     struct EpgEntry
     {
+        ChannelId UniqueChannelId;
+        unsigned int StartTime;
+        unsigned int EndTime;
+        std::string Title;
+        std::string Description;
+        bool HasArchive;
+        std::string IconPath;
+        // Used by TTV for async EPG details update
+        std::string ProgramId;
+        std::string Category;
+
         EpgEntry()
         : UniqueChannelId(UnknownChannelId)
         , StartTime(0)
         , EndTime(0)
         , HasArchive (false)
         {}
-        const char* ChannelIdName = "uch";
-        ChannelId UniqueChannelId;
         
-        const char* StartTimeName = "st";
-        time_t StartTime;
-        
-        const char* EndTimeName = "et";
-        time_t EndTime;
-        
-        const char* TitileName = "ti";
-        std::string Title;
-        
-        const char* DescriptionName = "de";
-        std::string Description;
-        
-        const char* HasArchiveName = "ha";
-        bool HasArchive;
-        
-        const char* IconPathName = "ic";
-        std::string IconPath;
-        
-        // Used by TTV for async EPG details update
-        const char* ProgramIdName = "pi";
-        std::string ProgramId;
-      
-        const char* CategoryName = "ca";
-        std::string Category;
-
-        template <class T>
-        void Serialize(T& writer) const
-        {
-            writer.StartObject();               // Between StartObject()/EndObject(),
-            writer.Key(ChannelIdName);
-            writer.Uint(UniqueChannelId);
-            writer.Key(StartTimeName);
-            writer.Int64(StartTime);
-            writer.Key(EndTimeName);
-            writer.Int64(EndTime);
-            writer.Key(TitileName);
-            writer.String(Title.c_str());
-            if(!Description.empty()) {
-                writer.Key(DescriptionName);
-                writer.String(Description.c_str());
-            }
-            if(HasArchive) {
-                writer.Key(HasArchiveName);
-                writer.Bool(HasArchive);
-            }
-            if(!IconPath.empty()) {
-                writer.Key(IconPathName);
-                writer.String(IconPath.c_str());
-            }
-            if(!ProgramId.empty()) {
-                writer.Key(ProgramIdName);
-                writer.String(ProgramId.c_str());
-            }
-            if(!Category.empty()) {
-                writer.Key(CategoryName);
-                writer.String(Category.c_str());
-            }
-
-            writer.EndObject();
-        }
-        template <class T>
-        bool Deserialize(T& reader)
-        {
-            if(!reader.HasMember(ChannelIdName))
-                return false;
-            UniqueChannelId = reader[ChannelIdName].GetUint();
-            if(!reader.HasMember(StartTimeName))
-                return false;
-            StartTime = reader[StartTimeName].GetInt64();
-            if(!reader.HasMember(EndTimeName))
-                return false;
-            EndTime = reader[EndTimeName].GetInt64();
-            if(!reader.HasMember(TitileName))
-                return false;
-            Title = reader[TitileName].GetString();
-            if(reader.HasMember(DescriptionName))
-                Description = reader[DescriptionName].GetString();
-            if(reader.HasMember(HasArchiveName))
-                HasArchive = reader[HasArchiveName].GetBool();
-            if(reader.HasMember(IconPathName))
-                IconPath = reader[IconPathName].GetString();
-            if(reader.HasMember(ProgramIdName))
-                ProgramId = reader[ProgramIdName].GetString();
-            if(reader.HasMember(CategoryName))
-                Category = reader[CategoryName].GetString();
-            return true;
-        }
         void FillEpgTag(EPG_TAG& tag) const;
     };
     
