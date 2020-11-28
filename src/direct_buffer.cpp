@@ -100,20 +100,25 @@ namespace Buffers {
     
     ssize_t DirectBuffer::Read(unsigned char *buffer, size_t bufferSize, uint32_t timeoutMs)
     {
+        if(m_abortRead)
+            return -1;
+        
+        ssize_t result = -1;
+        m_isWaitingForRead = true;
+
         if(m_cacheBuffer) {
-            m_isWaitingForRead = true;
-            ssize_t result = m_cacheBuffer->Read(buffer, bufferSize);
+            result = m_cacheBuffer->Read(buffer, bufferSize);
             while(0 == result && timeoutMs > 1000 && !m_abortRead){
                 using namespace P8PLATFORM;
                 usleep(1000 * 1000);
                 timeoutMs -= 1000;
                 result = m_cacheBuffer->Read(buffer, bufferSize);
             }
-            m_isWaitingForRead = false;
-            return result;
+        } else {
+            result =  XBMC->ReadFile(m_streamHandle, buffer, bufferSize);
         }
-
-        return XBMC->ReadFile(m_streamHandle, buffer, bufferSize);
+        m_isWaitingForRead = false;
+        return result;
     }
     
     int64_t DirectBuffer::Seek(int64_t iPosition, int iWhence)
