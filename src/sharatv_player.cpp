@@ -88,6 +88,7 @@ namespace SharaTvEngine {
     , m_supportMulticastUrls(false)
     , m_playListUrl(playlistUrl)
     , m_epgUrl(epgUrl)
+    , m_maxArchiveDuration(-1)
     {
         string data;
         // NOTE: shara TV does NOT check credentials
@@ -349,7 +350,7 @@ namespace SharaTvEngine {
             if(!cancelled())
                 SaveEpgCache(c_EpgCacheFile, m_archiveInfo.archiveDays);
         } catch (...) {	
-            LogError("SharaTvPlayer:: failed to update EPG.");
+            LogError("SharaTvPlayer: failed to update EPG.");
         }
     }
     
@@ -361,7 +362,25 @@ namespace SharaTvEngine {
         m_epgUpdateInterval.Init(24*60*60*1000);
 
         EpgEntryCallback onEpgEntry = [&pThis, cancelled] (const XMLTV::EpgEntry& newEntry) {
-            pThis->AddEpgEntry(newEntry);
+            if(newEntry.startTime == 0 || newEntry.endTime == 0 || newEntry.endTime - newEntry.startTime < 0) {
+                LogNotice("SharaTvPlayer: invslid EPG entry %s [%d-%d]", newEntry.strTitle.c_str(), newEntry.startTime, newEntry.endTime);
+                return true;
+            }
+            if(-1 == pThis->m_maxArchiveDuration || newEntry.endTime - newEntry.startTime < pThis->m_maxArchiveDuration) {
+                pThis->AddEpgEntry(newEntry);
+            } else {
+                XMLTV::EpgEntry splittedEntry = newEntry;
+                while(splittedEntry.endTime - splittedEntry.startTime > pThis->m_maxArchiveDuration){
+                    splittedEntry.endTime = splittedEntry.startTime + pThis->m_maxArchiveDuration;
+                    pThis->AddEpgEntry(splittedEntry);
+                    splittedEntry.startTime = splittedEntry.endTime;
+                    splittedEntry.endTime = newEntry.endTime;
+                }
+                // remining chunk
+                if(splittedEntry.endTime - splittedEntry.startTime > 0)
+                    pThis->AddEpgEntry(splittedEntry);
+                    
+            }
             return !cancelled();
         };
         
