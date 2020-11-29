@@ -10,6 +10,7 @@
 #define XmlSaxHandler_h
 
 #include <type_traits>
+#define XML_STATIC 1
 #include "expat.h"
 #include "globals.hpp"
 
