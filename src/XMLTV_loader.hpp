@@ -73,7 +73,7 @@ namespace XMLTV {
     bool ParseEpg(const std::string& url,  const EpgEntryCallback& onEpgEntryFound);
 
     long LocalTimeOffset();
-    bool GetCachedFileContents(const std::string &filePath, DataWriter writer);
+    bool GetCachedFileContents(const std::string &filePath, DataWriter writer, bool forceReleoad = false);
     std::string GetCachedPathFor(const std::string& original);
 }
 

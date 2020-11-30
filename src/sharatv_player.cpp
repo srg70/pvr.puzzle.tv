@@ -97,7 +97,7 @@ namespace SharaTvEngine {
         if(!XMLTV::GetCachedFileContents(m_playListUrl, [&data](const char* buf, unsigned int size) {
             data.append(buf, size);
             return size;
-        })){
+        }, true)){
             LogError("SharaTvPlayer: failed to download playlist. URL: %s", playlistUrl.c_str());
             throw ServerErrorException("SharaTvPlayer: failed to download playlist.", -1);
         }
