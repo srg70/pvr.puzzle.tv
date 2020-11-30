@@ -239,10 +239,10 @@ namespace XMLTV {
         return succeeded;
     }
     
-    bool GetCachedFileContents(const std::string &filePath, DataWriter writer)
+    bool GetCachedFileContents(const std::string &filePath, DataWriter writer, bool forceReleoad)
     {
         std::string strCachedPath =  GetCachedPathFor(filePath);
-        bool bNeedReload =  ShouldreloadCahcedFile(filePath, strCachedPath);
+        bool bNeedReload =  forceReleoad || ShouldreloadCahcedFile(filePath, strCachedPath);
         
         if (bNeedReload)
         {
@@ -505,13 +505,14 @@ namespace XMLTV {
     {
     public:
         typedef std::function<bool(const T& newProgramme)> TCallback;
-        ProgrammeHandler(TCallback onProgrammeReady)
+        ProgrammeHandler(TCallback onProgrammeReady/*, FILE* testDump = nullptr*/)
         : _isTvTag(false)
         , _isProgrammeTag(false)
         , _isTitleTag(false)
         , _isDescTag(false)
         , _onProgrammeReady(onProgrammeReady)
         , _validElementCounter(0)
+//        , _testDump(testDump)
         {
             _fileStartAt = time(NULL) + 60*60*24*7; // A week after now
             _fileEndAt = 0;
@@ -549,6 +550,10 @@ namespace XMLTV {
             } else if(strcmp(name, "programme") == 0) {
                 if(_isProgrammeTag) {
                     bool interrupted = !_onProgrammeReady(_currentProgramme);
+//                    if(nullptr != _testDump){
+//                        fprintf(_testDump, "Title: %s\n", _currentProgramme.strTitle.c_str());
+//                        fprintf(_testDump, "Desc: %s\n", _currentProgramme.strPlot.c_str());
+//                    }
                     // NOTE: cleanup will done on element start
                     // because final destructor will destruct _currentProgramme (twice)
                     //Cleanup();
@@ -567,9 +572,9 @@ namespace XMLTV {
         }
         bool ElementData(const XML_Char *data, int length) {
             if(_isProgrammeTag && _isTitleTag){
-                _currentProgramme.strTitle.assign(data, length);
+                _currentProgramme.strTitle.append(data, length);
             } else if(_isProgrammeTag && _isDescTag) {
-                _currentProgramme.strPlot.assign(data, length);
+                _currentProgramme.strPlot.append(data, length);
             }
             return true;
         }
@@ -626,12 +631,17 @@ namespace XMLTV {
         time_t _fileStartAt;
         time_t _fileEndAt;
         uint32_t _validElementCounter;
+//        FILE* _testDump;
 
     };
 
     bool ParseEpg(const std::string& url,  const EpgEntryCallback& onEpgEntryFound)
     {
-        ProgrammeHandler<EpgEntry> handler (onEpgEntryFound);
+//        std::string path =  GetCachedPathFor(url) + "_dump";
+//        path = XBMC->TranslateSpecialProtocol(path.c_str());
+//        FILE* dumpTest = fopen(path.c_str(), "w");
+
+        ProgrammeHandler<EpgEntry> handler (onEpgEntryFound/*, dumpTest*/);
         
         if (!GetCachedFileContents(url, [&handler](const char* buf, unsigned int size) {
             /// NOTE: add parsing error propagation
@@ -645,6 +655,10 @@ namespace XMLTV {
         }
         char dummy;
         handler.Parse(&dummy, 0, true);
+//        if(nullptr != dumpTest)
+//        {
+//            fclose(dumpTest);
+//        }
         LogDebug("XMLTV: found %d valid EPG elements.", handler.Count());
         if(handler.EndAt() > 0) {
             LogNotice("XMLTV: EPG loaded from %s to  %s", time_t_to_string(handler.StartAt()).c_str(), time_t_to_string(handler.EndAt()).c_str());
