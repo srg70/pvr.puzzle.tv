@@ -16,6 +16,9 @@
      <source>https://github.com/srg70/pvr.puzzle.tv</source>
      <license>GPL-2.0-or-later</license>
      <news>
+         0.9.104
+         - fix: support EPG shift for recordings
+
          0.9.103
          - fix: support chunked XML tag content delivery in XMLTV parser
 
