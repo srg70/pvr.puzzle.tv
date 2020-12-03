@@ -363,7 +363,7 @@ namespace SharaTvEngine {
 
         EpgEntryCallback onEpgEntry = [&pThis, cancelled] (const XMLTV::EpgEntry& newEntry) {
             if(newEntry.startTime == 0 || newEntry.endTime == 0 || newEntry.endTime - newEntry.startTime < 0) {
-                LogNotice("SharaTvPlayer: invslid EPG entry %s [%d-%d]", newEntry.strTitle.c_str(), newEntry.startTime, newEntry.endTime);
+                LogNotice("SharaTvPlayer: inaslid EPG entry %s [%d-%d]", newEntry.strTitle.c_str(), newEntry.startTime, newEntry.endTime);
                 return true;
             }
             if(-1 == pThis->m_maxArchiveDuration || newEntry.endTime - newEntry.startTime < pThis->m_maxArchiveDuration) {

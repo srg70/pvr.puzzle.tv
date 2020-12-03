@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<addon id="pvr.puzzle.tv" version="0.9.103" name="PVR Puzzle TV" provider-name="srg70">
+<addon id="pvr.puzzle.tv" version="0.9.104" name="PVR Puzzle TV" provider-name="srg70">
     <requires>@ADDON_DEPENDS@</requires>
   <extension
     point="xbmc.pvrclient"
@@ -16,6 +16,9 @@
      <source>https://github.com/srg70/pvr.puzzle.tv</source>
      <license>GPL-2.0-or-later</license>
      <news>
+         0.9.104
+         - fix: support EPG shift for recordings
+
          0.9.103
          - fix: support chunked XML tag content delivery in XMLTV parser
 
