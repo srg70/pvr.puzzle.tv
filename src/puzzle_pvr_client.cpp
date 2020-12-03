@@ -165,6 +165,7 @@ void PuzzlePVRClient::CreateCore(bool clearEpgCache)
     m_puzzleTV->SetMaxServerRetries(m_maxServerRetries);
     m_puzzleTV->SetEpgParams(EpgType(m_epgType), m_epgUrl, m_epgPort);
     m_puzzleTV->IncludeCurrentEpgToArchive(HowToAddCurrentEpgToArchive());
+    m_puzzleTV->SetEpgCorrectionShift(EpgCorrectionShift());
     m_puzzleTV->InitAsync(clearEpgCache, IsArchiveSupported());
 }
 

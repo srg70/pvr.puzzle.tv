@@ -66,7 +66,8 @@ namespace PvrClient {
         void CallRpcAsync(const std::string & data, std::function<void(rapidjson::Document&)>  parser,
                           ActionQueue::TCompletion completion);
         void IncludeCurrentEpgToArchive(AddCurrentEpgToArchive add) {m_addCurrentEpgToArchive = add;}
-
+        void SetEpgCorrectionShift(int shift) {m_epgCorrectuonShift = shift; }
+        
         static bool ReadFileContent(const char* cacheFile, std::string& buffer);
         // abstract methods
         virtual void UpdateEpgForAllChannels(time_t startTime, time_t endTime, std::function<bool(void)> cancelled) = 0;
@@ -108,6 +109,7 @@ namespace PvrClient {
         const ChannelList & m_channelList;
         const GroupList& m_groupList;
         AddCurrentEpgToArchive m_addCurrentEpgToArchive;
+        int m_epgCorrectuonShift;
 
     private:
         
@@ -115,7 +117,7 @@ namespace PvrClient {
         void OnEpgUpdateDone();
         void _UpdateEpgForAllChannels(time_t startTime, time_t endTime, std::function<bool(void)> cancelled);
         void CallRpcAsyncImpl(const std::string & data, std::function<void(rapidjson::Document&)>  parser, ActionQueue::TCompletion completion);
-
+        inline UniqueBroadcastIdType AddEpgEntryInternal(UniqueBroadcastIdType id, const EpgEntry& entry, EpgEntry** pAddedEntry = nullptr);
 
         ChannelList m_mutableChannelList;
         GroupList m_mutableGroupList;

@@ -117,6 +117,7 @@ namespace PvrClient
         AddonSettingsDictionary& m_addonSettings;
 
         AddCurrentEpgToArchive HowToAddCurrentEpgToArchive() const;
+        int EpgCorrectionShift() const;
         bool UseChannelGroupsForArchive() const;
         
         virtual PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
@@ -190,7 +191,6 @@ namespace PvrClient
         int LivePlaybackDelayForTs() const;
         int LivePlaybackDelayForMulticast() const;
         bool SeekArchivePadding() const;
-        int EpgCorrectionShift() const;
         
         void FillRecording(const EpgEntryList::value_type& epgEntry, PVR_RECORDING& tag, const char* dirPrefix);
         std::string DirectoryForRecording(unsigned int epgId) const;
