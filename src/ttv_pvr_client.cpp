@@ -145,6 +145,7 @@ void TtvPVRClient::CreateCore(bool clearEpgCache)
     cp.epgUrl = m_epgUrl;
     m_clientCore = m_core = new TtvEngine::Core(cp);
     m_core->IncludeCurrentEpgToArchive(HowToAddCurrentEpgToArchive());
+    m_core->SetEpgCorrectionShift(EpgCorrectionShift());
     m_core->InitAsync(clearEpgCache, IsArchiveSupported());
 }
 

@@ -156,6 +156,7 @@ ClientCoreBase::ClientCoreBase(const IClientCore::RecordingsDelegate& didRecordi
 , m_lastEpgRequestEndTime(0)
 , m_rpcWorks(false)
 , m_destructionRequested(false)
+, m_epgCorrectuonShift(0)
 {
     if(nullptr == m_didRecordingsUpadate) {
         auto pvr = PVR;
@@ -423,7 +424,8 @@ void ClientCoreBase::LoadEpgCache(const char* cacheFile)
                 if(difftime(e.EndTime, m_lastEpgRequestEndTime) > 0 ) { // e.EndTime >  m_lastEpgRequestEndTime
                     m_lastEpgRequestEndTime = e.EndTime;
                 }
-                AddEpgEntry(e.Key, e);
+                // Just add cached entry to list without any additional actions
+                AddEpgEntryInternal(e.Key, e);
             return true;
 
         } , &parserError);
@@ -513,24 +515,38 @@ void ClientCoreBase::SaveEpgCache(const char* cacheFile, unsigned int daysToPres
     fclose(fp);
 }
 
-UniqueBroadcastIdType ClientCoreBase::AddEpgEntry(UniqueBroadcastIdType id, const EpgEntry& entry)
+inline UniqueBroadcastIdType ClientCoreBase::AddEpgEntryInternal(UniqueBroadcastIdType id, const EpgEntry& entry, EpgEntry** pAddedEntry)
 {
     bool isUnknownChannel = m_channelList.count(entry.UniqueChannelId) == 0;
     // Do not add EPG for unknown channels
     if(isUnknownChannel)
         return c_UniqueBroadcastIdUnknown;
-    // lock boundary
-    {
-        P8PLATFORM::CLockObject lock(m_epgAccessMutex);
-        while(m_epgEntries.count(id) != 0) {
-            // Check duplicates.
-            if(m_epgEntries[id].UniqueChannelId == entry.UniqueChannelId)
-                return id;
-            ++id;
-        }
-        m_epgEntries[id] =  entry;
+    P8PLATFORM::CLockObject lock(m_epgAccessMutex);
+    while(m_epgEntries.count(id) != 0) {
+        // Check duplicates.
+        if(m_epgEntries[id].UniqueChannelId == entry.UniqueChannelId)
+            return id;
+        ++id;
     }
-    UpdateHasArchive(m_epgEntries[id]);
+    if(nullptr != pAddedEntry)
+        *pAddedEntry = &(m_epgEntries[id] = entry);
+    else
+        m_epgEntries[id] = entry;
+    return id;
+}
+
+
+UniqueBroadcastIdType ClientCoreBase::AddEpgEntry(UniqueBroadcastIdType id, const EpgEntry& entry)
+{
+    EpgEntry* mutableEntry = nullptr;
+    
+    id = AddEpgEntryInternal(id, entry, &mutableEntry);
+    if(c_UniqueBroadcastIdUnknown == id || mutableEntry == nullptr)
+        return c_UniqueBroadcastIdUnknown;
+    
+    mutableEntry->StartTime += m_epgCorrectuonShift;
+    mutableEntry->EndTime += m_epgCorrectuonShift;
+    UpdateHasArchive(*mutableEntry);
 
     return id;
 }
