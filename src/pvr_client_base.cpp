@@ -134,7 +134,7 @@ static void CleanupTimeshiftDirectory(const std::string& path){
     const char* nonEmptyPath = path.c_str();
     if(!XBMC->DirectoryExists(nonEmptyPath))
         if(!XBMC->CreateDirectory(nonEmptyPath))
-            LogError( "Failed to create timeshift folder %s", path.c_str());
+            LogError( "Failed to create timeshift folder %s .", path.c_str());
     // Cleanup chache
     if(XBMC->DirectoryExists(nonEmptyPath))
     {
@@ -159,7 +159,7 @@ static void CheckRecordingsPath(const std::string& path){
     const char* nonEmptyPath = path.c_str();
     if(!XBMC->DirectoryExists(nonEmptyPath))
         if(!XBMC->CreateDirectory(nonEmptyPath))
-            LogError( "Failed to create recordings folder.");
+            LogError( "Failed to create recordings folder %s .", path.c_str());
 }
 
 static bool IsHlsUrl(const std::string& url)
