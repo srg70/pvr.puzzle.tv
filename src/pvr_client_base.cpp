@@ -1617,6 +1617,7 @@ const char* const c_livePlaybackDelayTs = "live_playback_delay_ts";
 const char* const c_livePlaybackDelayUdp = "live_playback_delay_udp";
 const char* const c_seekArchivePadding = "archive_seek_padding_on_start";
 const char* const c_epgCorrectionShift = "epg_correction_shift";
+const char* const c_logosFolderPath = "channel_logos_folder";
 
 void PVRClientBase::InitSettings()
 {
@@ -1649,6 +1650,7 @@ void PVRClientBase::InitSettings()
     .Add(c_rpcPassword, "")
     .Add(c_rpcEnableSsl, false)
     .Add(c_epgCorrectionShift, 0.0f, ADDON_STATUS_NEED_RESTART)
+    .Add(c_logosFolderPath, "", ADDON_STATUS_NEED_RESTART)
     ;
     
     PopulateSettings(m_addonMutableSettings);
@@ -1795,4 +1797,8 @@ int PVRClientBase::EpgCorrectionShift() const
     return m_addonSettings.GetFloat(c_epgCorrectionShift) * 60 * 60 + 0.5;
 }
 
+const std::string& PVRClientBase::LocalLogosFolder() const
+{
+    return m_addonSettings.GetString(c_logosFolderPath);
+}
 

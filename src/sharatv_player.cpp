@@ -77,8 +77,10 @@ namespace SharaTvEngine {
         map<string, GroupId> groups;
     }PlaylistContent;
     
-    static void ParseChannelAndGroup(const std::string& data, const GloabalTags& globalTags, unsigned int plistIndex, PlaylistContent& content, ArchiveInfos& archiveInfo);
-    static void ParsePlaylist(const string& data, const GloabalTags& globalTags, PlaylistContent& content, ArchiveInfos& archiveInfo);
+    typedef std::function<void(Channel&, const string&, unsigned int, const std::string&)> TChannelParserDelegate;
+
+    static void ParseChannelAndGroup(const std::string& data, const GloabalTags& globalTags, unsigned int plistIndex, TChannelParserDelegate onChannelFound);
+    static void ParsePlaylist(const string& data, const GloabalTags& globalTags, TChannelParserDelegate onChannelFound);
     static void GetGlobalTagsFromPlaylist(const string& data, GloabalTags& globalTags);
     static string FindVar(const string& data, string::size_type pos, const char* varTag);
     //    static void LoadPlaylist(const string& plistUrl, string& data);
@@ -148,7 +150,28 @@ namespace SharaTvEngine {
         
         m_archiveInfo.Reset();
         PlaylistContent plistContent;
-        ParsePlaylist(data, m_globalTags, plistContent, m_archiveInfo);
+        
+        ParsePlaylist(data, m_globalTags,
+                      [&](Channel& channel, const string& groupName, unsigned int archiveDays, const std::string& archiveUrl)
+        {
+            // Override channel logo with local icon when set
+            SetLocalPathForLogo(channel);
+            
+            // Get group ID for channel by group name.
+            // Add new group if missing.
+            if(plistContent.groups.count(groupName) == 0) {
+                GroupId newGroupId = plistContent.groups.size() + 1;
+                plistContent.groups[groupName] = newGroupId;
+            }
+
+            plistContent.channels[channel.Name] = PlaylistContent::TChannels::mapped_type(channel, plistContent.groups[groupName]);
+            if(channel.HasArchive) {
+                m_archiveInfo.info.emplace(channel.UniqueId, std::move(ArchiveInfo(archiveDays, archiveUrl)));
+                if(m_archiveInfo.archiveDays < archiveDays)
+                    m_archiveInfo.archiveDays = archiveDays;
+            }
+
+        });
 
         // Verify tvg-id from EPG file
         // For channels with EpgId == UnknownChannelId (no tvg-id tag in playlist)
@@ -435,7 +458,7 @@ namespace SharaTvEngine {
     }
     
     
-    static void ParsePlaylist(const string& data, const GloabalTags& globalTags,  PlaylistContent& content, ArchiveInfos& archiveInfo)
+    static void ParsePlaylist(const string& data, const GloabalTags& globalTags,  TChannelParserDelegate onChannelFound)
     {
         
         try {
@@ -461,10 +484,10 @@ namespace SharaTvEngine {
                 auto pos_end = data.find(c_INF, pos);
                 string::size_type tagLen = (std::string::npos == pos_end) ? std::string::npos : pos_end - pos;
                 string tag = data.substr(pos, tagLen);
-                ParseChannelAndGroup(tag, globalTags, plistIndex++, content, archiveInfo);
+                ParseChannelAndGroup(tag, globalTags, plistIndex++, onChannelFound);
                 pos = pos_end;
             }
-            XBMC->Log(LOG_DEBUG, "SharaTvPlayer: added %d channels from playlist." , content.channels.size());
+            XBMC->Log(LOG_DEBUG, "SharaTvPlayer: added %d channels from playlist." , plistIndex - 1);
             
         } catch (std::exception& ex) {
             XBMC->Log(LOG_ERROR, "SharaTvPlayer: exception during playlist loading: %s", ex.what());
@@ -491,7 +514,7 @@ namespace SharaTvEngine {
         
     }
     
-    static void ParseChannelAndGroup(const string& data, const GloabalTags& globalTags, unsigned int plistIndex, PlaylistContent& content, ArchiveInfos& archiveInfo)
+    static void ParseChannelAndGroup(const string& data, const GloabalTags& globalTags, unsigned int plistIndex, TChannelParserDelegate onChannelFound)
     {
         //#EXTINF:0 audio-track="ru" tvg-id="1147" tvg-name="Первый канал" tvg-logo="https://shara-tv.org/img/images/Chanels/perviy_k.png" group-title="Базовые" catchup="default" catchup-days="3" catchup-source="http://oa5iy59taouocss24ctr.mine.nu:8099/Perviykanal/index-${start}-3600.m3u8?token=oa123456+12345678", Первый канал
         //#EXTGRP:Базовые
@@ -649,19 +672,7 @@ namespace SharaTvEngine {
         channel.TvgShift = tvgShift;
         channel.PreloadingInterval = preloadingInterval;
         
-        // Get group ID for channel by group name.
-        // Add new group if missing.
-        if(content.groups.count(groupName) == 0) {
-            GroupId newGroupId = content.groups.size() + 1;
-            content.groups[groupName] = newGroupId;
-        }
-
-        content.channels[name] = PlaylistContent::TChannels::mapped_type(channel, content.groups[groupName]);
-        if(channel.HasArchive) {
-            archiveInfo.info.emplace(channel.UniqueId, std::move(ArchiveInfo(archiveDays, archiveUrl)));
-            if(archiveInfo.archiveDays < archiveDays)
-                archiveInfo.archiveDays = archiveDays;
-        }
+        onChannelFound(channel, groupName, archiveDays, archiveUrl);
     }
     
     

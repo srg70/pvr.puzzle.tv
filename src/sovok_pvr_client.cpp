@@ -146,6 +146,7 @@ void SovokPVRClient::CreateCore(bool clearEpgCache)
     SetCountryFilter();
     m_sovokTV->IncludeCurrentEpgToArchive(HowToAddCurrentEpgToArchive());
     m_sovokTV->SetEpgCorrectionShift(EpgCorrectionShift());
+    m_sovokTV->SetLocalLogosFolder(LocalLogosFolder());
     m_sovokTV->InitAsync(clearEpgCache, IsArchiveSupported());
 
     

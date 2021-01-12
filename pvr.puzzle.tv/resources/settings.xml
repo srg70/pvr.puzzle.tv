@@ -39,6 +39,7 @@
     <setting id="rpc_enable_ssl" type="bool" label="10028" default="false"/>
    
     <setting label="10097" type="lsep"/>
+    <setting id="channel_logos_folder" type="folder" label="10030" default=""/>
     <setting id="epg_correction_shift" type="slider" label="10029" default="0" range="-12,.5,14" option="float"/>
     <setting id="channel_index_offset" type="number" label="10015" default="0"/>
     <setting id="startup_delay" type="number" label="10021" default="0" option="int"/>
