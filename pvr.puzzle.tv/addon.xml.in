@@ -16,6 +16,10 @@
      <source>https://github.com/srg70/pvr.puzzle.tv</source>
      <license>GPL-2.0-or-later</license>
      <news>
+         0.9.105
+         - fix: set default value for undefined settings.
+         - feat: override channel logo with icon from local folder.
+
          0.9.104
          - fix: support EPG shift for recordings
 
