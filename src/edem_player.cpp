@@ -68,8 +68,11 @@ namespace EdemEngine
     };
 
     typedef map<string, pair<Channel, string>, NoCaseComparator> PlaylistContent;
-    static void ParseChannelAndGroup(const std::string& data, unsigned int plistIndex, PlaylistContent& channels);
-    static void LoadPlaylist(const string& plistUrl, PlaylistContent& channels);
+    
+    typedef std::function<void(Channel&, const string&)> TChannelParserDelegate;
+
+    static void ParseChannelAndGroup(const std::string& data, unsigned int plistIndex, TChannelParserDelegate onChannelFound);
+    static void LoadPlaylist(const string& plistUrl,  TChannelParserDelegate onChannelFound);
 
     
     Core::Core(const std::string &playListUrl,  const std::string &epgUrl, bool enableAdult)
@@ -109,8 +112,11 @@ namespace EdemEngine
     {
         using namespace XMLTV;
         PlaylistContent plistContent;
-        LoadPlaylist(m_playListUrl, plistContent);
-        
+        LoadPlaylist(m_playListUrl, [&](Channel& channel, const string& groupName){
+            // Override channel logo with local icon when set
+            SetLocalPathForLogo(channel);
+            plistContent[channel.Name] = PlaylistContent::mapped_type(channel,groupName);
+        });
         
         ChannelCallback onNewChannel = [&plistContent](const EpgChannel& newChannel){
             for(const auto& epgChannelName : newChannel.displayNames) {
@@ -262,7 +268,7 @@ namespace EdemEngine
     }
     
     
-    static void LoadPlaylist(const string& plistUrl, PlaylistContent& channels)
+    static void LoadPlaylist(const string& plistUrl, TChannelParserDelegate onChannelFound)
     {
         void* f = NULL;
         
@@ -312,10 +318,10 @@ namespace EdemEngine
                 auto pos_end = data.find(c_INF, pos);
                 string::size_type tagLen = (std::string::npos == pos_end) ? std::string::npos : pos_end - pos;
                 string tag = data.substr(pos, tagLen);
-                ParseChannelAndGroup(tag, plistIndex++, channels);
+                ParseChannelAndGroup(tag, plistIndex++, onChannelFound);
                 pos = pos_end;
             }
-            XBMC->Log(LOG_DEBUG, "EdemPlayer: added %d channels from playlist." , channels.size());
+            XBMC->Log(LOG_DEBUG, "EdemPlayer: added %d channels from playlist." , plistIndex - 1);
 
         } catch (std::exception& ex) {
             XBMC->Log(LOG_ERROR, "EdemPlayer: exception during playlist loading: %s", ex.what());
@@ -327,7 +333,7 @@ namespace EdemEngine
         }
     }
     
-    static void ParseChannelAndGroup(const string& data, unsigned int plistIndex, PlaylistContent& channels)
+    static void ParseChannelAndGroup(const string& data, unsigned int plistIndex, TChannelParserDelegate onChannelFound)
     {
         // 0,РБК-ТВ
         // #EXTGRP:новости
@@ -386,7 +392,7 @@ namespace EdemEngine
         channel.HasArchive = hasArchive;
         //channel.IconPath = m_logoUrl + FindVar(vars, 0, c_LOGO);
         channel.IsRadio = false;
-        channels[channel.Name] = PlaylistContent::mapped_type(channel,groupName);
+        onChannelFound(channel,groupName);
     }
     
     

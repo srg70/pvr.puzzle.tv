@@ -141,6 +141,7 @@ void EdemPVRClient::CreateCore(bool clearEpgCache)
     m_clientCore = m_core = new EdemEngine::Core(m_playlistUrl, m_epgUrl, m_enableAdult);
     m_core->IncludeCurrentEpgToArchive(HowToAddCurrentEpgToArchive());
     m_core->SetEpgCorrectionShift(EpgCorrectionShift());
+    m_core->SetLocalLogosFolder(LocalLogosFolder());
     m_core->InitAsync(clearEpgCache, IsArchiveSupported());
 
 }

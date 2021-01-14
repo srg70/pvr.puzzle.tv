@@ -67,6 +67,11 @@ namespace PvrClient {
                           ActionQueue::TCompletion completion);
         void IncludeCurrentEpgToArchive(AddCurrentEpgToArchive add) {m_addCurrentEpgToArchive = add;}
         void SetEpgCorrectionShift(int shift) {m_epgCorrectuonShift = shift; }
+        void SetLocalLogosFolder(const std::string& logosFolder) {
+            m_LocalLogosFolder = logosFolder;
+            if(!m_LocalLogosFolder.empty() && m_LocalLogosFolder[m_LocalLogosFolder.size() - 1] == '/')
+                m_LocalLogosFolder.pop_back();
+        }
         
         static bool ReadFileContent(const char* cacheFile, std::string& buffer);
         // abstract methods
@@ -92,7 +97,8 @@ namespace PvrClient {
         void AddGroup(GroupId groupId, const Group& group);
         void AddChannelToGroup(GroupId groupId, ChannelId channelId);
         void AddChannelToGroup(GroupId groupId, ChannelId channelId, int indexInGroup);
-
+        void SetLocalPathForLogo(Channel& channel) const;
+        
         void ParseJson(const std::string& response, std::function<void(rapidjson::Document&)> parser);
         
         // Should be called from destructor of dirived class
@@ -138,6 +144,7 @@ namespace PvrClient {
         RpcSettings m_rpcSettings;
         bool m_rpcWorks;
         bool m_destructionRequested;
+        std::string m_LocalLogosFolder;
     };
     
     class ExceptionBase : public std::exception

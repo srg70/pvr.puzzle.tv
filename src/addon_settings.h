@@ -95,7 +95,10 @@ protected:
         inline const T& Value() const {return value;}
         inline void Init(const T& v)
         {
-            value = v;
+            if(v == T{})
+                value = defaultValue;
+            else
+                value = v;
             propagator(value);
         }
         inline ADDON_STATUS SetValue(const T& v)

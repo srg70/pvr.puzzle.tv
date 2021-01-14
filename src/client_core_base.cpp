@@ -335,6 +335,15 @@ void ClientCoreBase::AddChannelToGroup(GroupId groupId, ChannelId channelId, int
     m_channelToGroupLut[channelId] = groupId;
 }
 
+void ClientCoreBase::SetLocalPathForLogo(Channel& channel) const
+{
+    if(m_LocalLogosFolder.empty())
+        return;
+    string logoPath = m_LocalLogosFolder + '/' + channel.Name + ".png";
+    if(XBMC->FileExists(logoPath.c_str(),  false))
+        channel.IconPath = logoPath;
+}
+
 #pragma mark - EPG
 string ClientCoreBase::MakeEpgCachePath(const char* cacheFile)
 {

@@ -137,6 +137,10 @@ msgctxt "#10029"
 msgid "EPG Offset Correction"
 msgstr "EPG Offset Correction"
 
+msgctxt "#10030"
+msgid "Channels Logo Folder"
+msgstr "Channels Logo Folder"
+
 msgctxt "#10093"
 msgid "Kodi's Remote Control"
 msgstr "Kodi's Remote Control"

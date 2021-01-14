@@ -294,7 +294,7 @@ namespace TtvEngine
         PlaylistContent plistContent;
         unsigned int plistIndex = 1;
         
-        bool succeded = LoadPlaylist([&plistIndex, &plistContent] (const TTVChanel& ch)
+        bool succeded = LoadPlaylist([&] (const TTVChanel& ch)
         {
             Channel channel;
             channel.UniqueId = plistIndex;
@@ -303,6 +303,10 @@ namespace TtvEngine
             channel.Urls.push_back(ch.infohash);
             channel.HasArchive = false;
             channel.IsRadio = false;
+            
+            // Override channel logo with local icon when set
+            SetLocalPathForLogo(channel);
+
             plistContent[channel.Name] = PlaylistContent::mapped_type(channel,ch.cats);
             return true;
         });

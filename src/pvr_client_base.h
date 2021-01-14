@@ -123,6 +123,7 @@ namespace PvrClient
 
         AddCurrentEpgToArchive HowToAddCurrentEpgToArchive() const;
         int EpgCorrectionShift() const;
+        const std::string& LocalLogosFolder() const;
         bool UseChannelGroupsForArchive() const;
         
         virtual PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
