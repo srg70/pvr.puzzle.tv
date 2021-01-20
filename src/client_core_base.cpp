@@ -339,7 +339,7 @@ void ClientCoreBase::SetLocalPathForLogo(Channel& channel) const
 {
     if(m_LocalLogosFolder.empty())
         return;
-    string logoPath = m_LocalLogosFolder + '/' + channel.Name + ".png";
+    string logoPath = m_LocalLogosFolder + PATH_SEPARATOR_CHAR + channel.Name + ".png";
     if(XBMC->FileExists(logoPath.c_str(),  false))
         channel.IconPath = logoPath;
 }
