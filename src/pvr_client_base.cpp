@@ -1621,6 +1621,9 @@ const char* const c_logosFolderPath = "channel_logos_folder";
 
 void PVRClientBase::InitSettings()
 {
+    // NOTE: where default type value (i.e. T{}) is a valid value
+    // do not set default setting value other then T{} (use setting XML instead)
+    // OTherwise T{} will be replaced with default vaue on AddonSettings.Init()
     m_addonMutableSettings
     .Add(c_curlTimeout, 15, CurlUtils::SetCurlTimeout)
     .Add(c_channelReloadTimeout, 5)
@@ -1636,12 +1639,12 @@ void PVRClientBase::InitSettings()
     .Add(c_addCurrentEpgToArchive, (int)k_AddCurrentEpgToArchive_No, ADDON_STATUS_NEED_RESTART)
     .Add(c_useChannelGroupsForArchive, false, ADDON_STATUS_NEED_RESTART)
     .Add(c_waitForInternetTimeout, 0)
-    .Add(c_startupDelay,0)
+    .Add(c_startupDelay, 0)
     .Add(c_startRecordingPadding, 0)
     .Add(c_endRecordingPadding, 0)
     .Add(c_supportArchive, false, ADDON_STATUS_NEED_RESTART)
     .Add(c_loadArchiveAfterEpg, false, ADDON_STATUS_NEED_RESTART)
-    .Add(c_archiveRefreshInterval, 3)
+    .Add(c_archiveRefreshInterval, 0) // default 3 (see notes abouve!)
     .Add(c_livePlaybackDelayHls, 0)
     .Add(c_livePlaybackDelayTs, 0)
     .Add(c_livePlaybackDelayUdp, 0)
