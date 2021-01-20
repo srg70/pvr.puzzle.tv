@@ -1,3 +1,7 @@
+0.9.107
+- fix: default settings value was wrongly set in  some cases
+- fix: path to channel logos folder on Windows
+
 0.9.105
 - fix: set default value for undefined settings.
 - feat: override channel logo with icon from local folder.
