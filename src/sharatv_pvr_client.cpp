@@ -315,6 +315,9 @@ static void NotifyClearPvrData(std::function<const T&()>) {
 
 void SharaTvPVRClient::PopulateSettings(AddonSettingsMutableDictionary& settings)
 {
+    // NOTE: where default type value (i.e. T{}) is a valid value
+    // do not set default setting value other then T{} (use setting XML instead)
+    // OTherwise T{} will be replaced with default vaue on AddonSettings.Init()
     settings
     .Add(c_epg_path, "", ADDON_STATUS_NEED_RESTART)
     .Add(c_data_source_type, (int)c_DataSourceType_Login,  NotifyClearPvrData<int>, ADDON_STATUS_NEED_RESTART)
@@ -322,12 +325,12 @@ void SharaTvPVRClient::PopulateSettings(AddonSettingsMutableDictionary& settings
     .Add(c_playlist_path_type, (int)c_PathType_Url, NotifyClearPvrData<int>, ADDON_STATUS_NEED_RESTART)
     .Add(c_playlist_url, "", NotifyClearPvrData<std::string>, ADDON_STATUS_NEED_RESTART)
     .Add(c_playlist_path, "", NotifyClearPvrData<std::string>, ADDON_STATUS_NEED_RESTART)
-    .Add(c_plist_provider, (int)c_PlistProvider_SharaTv, NotifyClearPvrData<int>, ADDON_STATUS_NEED_RESTART)
+    .Add(c_plist_provider, (int)c_PlistProvider_Other, NotifyClearPvrData<int>, ADDON_STATUS_NEED_RESTART)
     .Add(c_sharatv_login, "", ADDON_STATUS_NEED_RESTART)
     .Add(c_sharatv_password, "", ADDON_STATUS_NEED_RESTART)
     .Add(c_ottg_login, "", ADDON_STATUS_NEED_RESTART)
     .Add(c_ottg_password, "", ADDON_STATUS_NEED_RESTART)
-    .Add(c_prefer_hls, true, NotifyClearPvrData<bool>, ADDON_STATUS_NEED_RESTART)
+    .Add(c_prefer_hls, false, NotifyClearPvrData<bool>, ADDON_STATUS_NEED_RESTART) // default should be true, but see note above
     .Add(c_suppotMulticastUrls, false, NotifyClearPvrData<bool>, ADDON_STATUS_NEED_RESTART)
     .Add(c_udpProxyHost, "", NotifyClearPvrData<std::string>, ADDON_STATUS_NEED_RESTART)
     .Add(c_udpProxyPort, 0, NotifyClearPvrData<int>, ADDON_STATUS_NEED_RESTART);
