@@ -342,8 +342,11 @@ void ClientCoreBase::SetLocalPathForLogo(Channel& channel) const
     if(m_LocalLogosFolder.empty())
         return;
     string logoPath = m_LocalLogosFolder + PATH_SEPARATOR_CHAR + channel.Name + ".png";
-    if(XBMC->FileExists(logoPath.c_str(),  false))
+    if(XBMC->FileExists(logoPath.c_str(),  false)) {
         channel.IconPath = logoPath;
+    } else {
+        LogDebug("Local logo for %s not found at %s", channel.Name.c_str() , logoPath.c_str());
+    }
 }
 
 void ClientCoreBase::TranslateMulticastUrl(Channel& channel) const

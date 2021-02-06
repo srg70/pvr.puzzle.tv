@@ -69,7 +69,7 @@ namespace PvrClient {
         void SetEpgCorrectionShift(int shift) {m_epgCorrectuonShift = shift; }
         void SetLocalLogosFolder(const std::string& logosFolder) {
             m_LocalLogosFolder = logosFolder;
-            if(!m_LocalLogosFolder.empty() && m_LocalLogosFolder[m_LocalLogosFolder.size() - 1] == '/')
+            if(!m_LocalLogosFolder.empty() && m_LocalLogosFolder[m_LocalLogosFolder.size() - 1] == PATH_SEPARATOR_CHAR)
                 m_LocalLogosFolder.pop_back();
         }
         void SupportMuticastUrls(bool shouldSupport, const std::string& udpProxyHost = std::string(), uint32_t udpProxyPort = 0) {
