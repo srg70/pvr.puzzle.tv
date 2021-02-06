@@ -16,7 +16,12 @@
      <source>https://github.com/srg70/pvr.puzzle.tv</source>
      <license>GPL-2.0-or-later</license>
      <news>
-         0.9.107
+         0.9.108
+         - feat: make UDP proxy available for all providers.
+         - fix: register context menu only for PVR-specific categories.
+         - fix: path to channel logos folder on Windows
+        
+        0.9.107
          - fix: default settings value was wrongly set in  some cases
          - fix: path to channel logos folder on Windows
 
