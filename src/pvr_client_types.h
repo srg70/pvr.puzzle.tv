@@ -157,6 +157,7 @@ namespace PvrClient {
         virtual int UpdateArchiveInfoAndCount() = 0;
         virtual void SetRpcSettings(const RpcSettings& settings) = 0;
         virtual void CheckRpcConnection() = 0;
+        virtual void SupportMuticastUrls(bool shouldSupport, const std::string& udpProxyHost = std::string(), uint32_t udpProxyPort = 0) = 0;
         virtual void CallRpcAsync(const std::string & data, std::function<void(rapidjson::Document&)>  parser,
                                   ActionQueue::TCompletion completion) = 0;
         

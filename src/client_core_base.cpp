@@ -157,6 +157,7 @@ ClientCoreBase::ClientCoreBase(const IClientCore::RecordingsDelegate& didRecordi
 , m_rpcWorks(false)
 , m_destructionRequested(false)
 , m_epgCorrectuonShift(0)
+, m_supportMulticastUrls(false)
 {
     if(nullptr == m_didRecordingsUpadate) {
         auto pvr = PVR;
@@ -335,6 +336,7 @@ void ClientCoreBase::AddChannelToGroup(GroupId groupId, ChannelId channelId, int
     m_channelToGroupLut[channelId] = groupId;
 }
 
+
 void ClientCoreBase::SetLocalPathForLogo(Channel& channel) const
 {
     if(m_LocalLogosFolder.empty())
@@ -342,6 +344,33 @@ void ClientCoreBase::SetLocalPathForLogo(Channel& channel) const
     string logoPath = m_LocalLogosFolder + PATH_SEPARATOR_CHAR + channel.Name + ".png";
     if(XBMC->FileExists(logoPath.c_str(),  false))
         channel.IconPath = logoPath;
+}
+
+void ClientCoreBase::TranslateMulticastUrl(Channel& channel) const
+{
+    if (m_supportMulticastUrls) {
+        decltype(channel.Urls) urls;
+        for (auto& url : channel.Urls) {
+            urls.push_back(TransformMultucastUrl(url));
+        }
+        channel.Urls = urls;
+    }
+}
+
+std::string ClientCoreBase::TransformMultucastUrl(const std::string& url) const {
+    static const std::string UDP_MULTICAST_PREFIX = "udp://@";
+    static const std::string RTP_MULTICAST_PREFIX = "rtp://@";
+            
+    auto pos = url.find(UDP_MULTICAST_PREFIX);
+    if(StringUtils::StartsWith(url, UDP_MULTICAST_PREFIX))
+    {
+        return m_multicastProxyAddress + "/udp/" + url.substr(UDP_MULTICAST_PREFIX.length());
+    }
+    if(StringUtils::StartsWith(url, RTP_MULTICAST_PREFIX))
+    {
+        return m_multicastProxyAddress + "/rtp/" + url.substr(RTP_MULTICAST_PREFIX.length());
+    }
+    return url;
 }
 
 #pragma mark - EPG

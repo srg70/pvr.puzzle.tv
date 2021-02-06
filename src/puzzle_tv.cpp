@@ -245,6 +245,7 @@ void PuzzleTV::BuildChannelAndGroupList()
         {
             const auto& channel = channelWithGroup.second.first;
             
+            //TranslateMulticastUrl(channel);
             AddChannel(channel);
             
             for (const auto& groupWithIndex : channelWithGroup.second.second) {
@@ -797,6 +798,7 @@ void PuzzleTV::UpdateUrlsForChannel(PvrClient::ChannelId channelId)
                                 });
             }
             
+            TranslateMulticastUrl(ch);
             AddChannel(ch);
         } catch (ServerErrorException& ex) {
             XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32006), ex.reason.c_str());

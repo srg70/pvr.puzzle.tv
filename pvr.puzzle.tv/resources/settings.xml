@@ -37,7 +37,12 @@
     <setting id="rpc_user" type="text" label="60005" default="kodi"/>
     <setting id="rpc_password" type="text" label="60006" option="hidden" default=""/>
     <setting id="rpc_enable_ssl" type="bool" label="10028" default="false"/>
-   
+
+    <setting label="70013" type="lsep"/>
+    <setting id="playlist_support_multicast_urls" type="bool" label="70014" default="false" subsetting="true"/>
+    <setting id="playlist_udp_proxy_host" type="text" label="60009" default="127.0.0.1" visible="eq(-1,true)" subsetting="true" />
+    <setting id="playlist_udp_proxy_port" type="number" label="60011" default="4022" visible="eq(-2,true)" subsetting="true" />
+    
     <setting label="10097" type="lsep"/>
     <setting id="channel_logos_folder" type="folder" label="10030" default=""/>
     <setting id="epg_correction_shift" type="slider" label="10029" default="0" range="-12,.5,14" option="float"/>
@@ -72,10 +77,6 @@
     <setting id="sharatv_playlist_path_local" type="file" label="10002" default="" visible="eq(-8,1) + eq(-2,1)" subsetting="true"/>
     <setting id="sharatv_epg_path" type="text" label="50001" default="" visible="eq(-9,1)"/>
     <setting id="sharatv_adult" type="bool" label="30003" default="false"/>
-    <setting label="70013" type="lsep"/>
-    <setting id="playlist_support_multicast_urls" type="bool" label="70014" default="false" subsetting="true"/>
-    <setting id="playlist_udp_proxy_host" type="text" label="60009" default="127.0.0.1" visible="eq(-1,true)" subsetting="true" />
-    <setting id="playlist_udp_proxy_port" type="number" label="60011" default="4022" visible="eq(-2,true)" subsetting="true" />
   </category>
   
 <!-- OTT Player -->

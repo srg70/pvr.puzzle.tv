@@ -72,8 +72,13 @@ namespace PvrClient {
             if(!m_LocalLogosFolder.empty() && m_LocalLogosFolder[m_LocalLogosFolder.size() - 1] == '/')
                 m_LocalLogosFolder.pop_back();
         }
-        
+        void SupportMuticastUrls(bool shouldSupport, const std::string& udpProxyHost = std::string(), uint32_t udpProxyPort = 0) {
+            m_supportMulticastUrls = shouldSupport;
+            m_multicastProxyAddress = std::string("http://") + udpProxyHost + ':' + std::to_string(udpProxyPort);
+        }
+
         static bool ReadFileContent(const char* cacheFile, std::string& buffer);
+        
         // abstract methods
         virtual void UpdateEpgForAllChannels(time_t startTime, time_t endTime, std::function<bool(void)> cancelled) = 0;
         virtual std::string GetUrl(ChannelId channelId) = 0;
@@ -98,7 +103,7 @@ namespace PvrClient {
         void AddChannelToGroup(GroupId groupId, ChannelId channelId);
         void AddChannelToGroup(GroupId groupId, ChannelId channelId, int indexInGroup);
         void SetLocalPathForLogo(Channel& channel) const;
-        
+        void TranslateMulticastUrl(Channel& channel) const;
         void ParseJson(const std::string& response, std::function<void(rapidjson::Document&)> parser);
         
         // Should be called from destructor of dirived class
@@ -118,6 +123,8 @@ namespace PvrClient {
         int m_epgCorrectuonShift;
 
     private:
+        // Multicast URL
+        std::string TransformMultucastUrl(const std::string& url) const;
         
         // Recordings
         void OnEpgUpdateDone();
@@ -145,6 +152,8 @@ namespace PvrClient {
         bool m_rpcWorks;
         bool m_destructionRequested;
         std::string m_LocalLogosFolder;
+        bool m_supportMulticastUrls;
+        std::string m_multicastProxyAddress;
     };
     
     class ExceptionBase : public std::exception

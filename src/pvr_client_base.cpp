@@ -233,6 +233,7 @@ void PVRClientBase::OnCoreCreated() {
     rpc.is_secure = RpcEnableSsl();
     
     m_clientCore->SetRpcSettings(rpc);
+    m_clientCore->SupportMuticastUrls(SuppotMulticastUrls(), UdpProxyHost(), UdpProxyPort());
     m_clientCore->CheckRpcConnection();
 
     // We may be here when core is re-creating
@@ -1589,35 +1590,44 @@ const char * PVRClientBase::GetLiveStreamURL(const PVR_CHANNEL &channel)  {
 
 #pragma mark - Settings
 
-const char* const c_curlTimeout = "curl_timeout";
-const char* const c_channelReloadTimeout = "channel_reload_timeout";
-const char* const c_numOfHlsThreads = "num_of_hls_threads";
-const char* const c_enableTimeshift = "enable_timeshift";
-const char* const c_timeshiftPath = "timeshift_path";
-const char* const c_recordingPath = "recordings_path";
-const char* const c_timeshiftSize = "timeshift_size";
-const char* const c_cacheSizeLimit = "timeshift_off_cache_limit";
-const char* const c_timeshiftType = "timeshift_type";
-const char* const c_rpcLocalPort = "rpc_local_port";
-const char* const c_rpcUser = "rpc_user";
-const char* const c_rpcPassword = "rpc_password";
-const char* const c_rpcEnableSsl = "rpc_enable_ssl";
-const char* const c_channelIndexOffset = "channel_index_offset";
-const char* const c_addCurrentEpgToArchive = "archive_for_current_epg_item";
-const char* const c_useChannelGroupsForArchive = "archive_use_channel_groups";
-const char* const c_waitForInternetTimeout = "wait_for_inet";
-const char* const c_startupDelay = "startup_delay";
-const char* const c_startRecordingPadding = "archive_start_padding";
-const char* const c_endRecordingPadding = "archive_end_padding";
-const char* const c_supportArchive = "archive_support";
-const char* const c_loadArchiveAfterEpg = "archive_wait_for_epg";
-const char* const c_archiveRefreshInterval = "archive_refresh_interval";
-const char* const c_livePlaybackDelayHls = "live_playback_delay_hls";
-const char* const c_livePlaybackDelayTs = "live_playback_delay_ts";
-const char* const c_livePlaybackDelayUdp = "live_playback_delay_udp";
-const char* const c_seekArchivePadding = "archive_seek_padding_on_start";
-const char* const c_epgCorrectionShift = "epg_correction_shift";
-const char* const c_logosFolderPath = "channel_logos_folder";
+template<typename T>
+static void NotifyClearPvrData(std::function<const T&()>) {
+    XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32016));
+}
+
+static const std::string c_curlTimeout = "curl_timeout";
+static const std::string c_channelReloadTimeout = "channel_reload_timeout";
+static const std::string c_numOfHlsThreads = "num_of_hls_threads";
+static const std::string c_enableTimeshift = "enable_timeshift";
+static const std::string c_timeshiftPath = "timeshift_path";
+static const std::string c_recordingPath = "recordings_path";
+static const std::string c_timeshiftSize = "timeshift_size";
+static const std::string c_cacheSizeLimit = "timeshift_off_cache_limit";
+static const std::string c_timeshiftType = "timeshift_type";
+static const std::string c_rpcLocalPort = "rpc_local_port";
+static const std::string c_rpcUser = "rpc_user";
+static const std::string c_rpcPassword = "rpc_password";
+static const std::string c_rpcEnableSsl = "rpc_enable_ssl";
+static const std::string c_channelIndexOffset = "channel_index_offset";
+static const std::string c_addCurrentEpgToArchive = "archive_for_current_epg_item";
+static const std::string c_useChannelGroupsForArchive = "archive_use_channel_groups";
+static const std::string c_waitForInternetTimeout = "wait_for_inet";
+static const std::string c_startupDelay = "startup_delay";
+static const std::string c_startRecordingPadding = "archive_start_padding";
+static const std::string c_endRecordingPadding = "archive_end_padding";
+static const std::string c_supportArchive = "archive_support";
+static const std::string c_loadArchiveAfterEpg = "archive_wait_for_epg";
+static const std::string c_archiveRefreshInterval = "archive_refresh_interval";
+static const std::string c_livePlaybackDelayHls = "live_playback_delay_hls";
+static const std::string c_livePlaybackDelayTs = "live_playback_delay_ts";
+static const std::string c_livePlaybackDelayUdp = "live_playback_delay_udp";
+static const std::string c_seekArchivePadding = "archive_seek_padding_on_start";
+static const std::string c_epgCorrectionShift = "epg_correction_shift";
+static const std::string c_logosFolderPath = "channel_logos_folder";
+static const std::string c_suppotMulticastUrls("playlist_support_multicast_urls");
+static const std::string c_udpProxyHost("playlist_udp_proxy_host");
+static const std::string c_udpProxyPort("playlist_udp_proxy_port");
+
 
 void PVRClientBase::InitSettings()
 {
@@ -1654,6 +1664,9 @@ void PVRClientBase::InitSettings()
     .Add(c_rpcEnableSsl, false)
     .Add(c_epgCorrectionShift, 0.0f, ADDON_STATUS_NEED_RESTART)
     .Add(c_logosFolderPath, "", ADDON_STATUS_NEED_RESTART)
+    .Add(c_suppotMulticastUrls, false, NotifyClearPvrData<bool>, ADDON_STATUS_NEED_RESTART)
+    .Add(c_udpProxyHost, "", NotifyClearPvrData<std::string>, ADDON_STATUS_NEED_RESTART)
+    .Add(c_udpProxyPort, 0, NotifyClearPvrData<int>, ADDON_STATUS_NEED_RESTART)
     ;
     
     PopulateSettings(m_addonMutableSettings);
@@ -1661,6 +1674,25 @@ void PVRClientBase::InitSettings()
     m_addonMutableSettings.Init();
     m_addonMutableSettings.Print();
 }
+
+uint32_t PVRClientBase::UdpProxyPort() const
+{
+    int port = m_addonSettings.GetInt(c_udpProxyPort);
+    if(port < 0)
+        port = 0;
+    return port;
+}
+
+const std::string& PVRClientBase::UdpProxyHost() const
+{
+    return m_addonSettings.GetString(c_udpProxyHost);
+}
+
+bool PVRClientBase::SuppotMulticastUrls() const
+{
+    return m_addonSettings.GetBool(c_suppotMulticastUrls);
+}
+
 bool PVRClientBase::RpcEnableSsl() const
 {
     return m_addonSettings.GetBool(c_rpcEnableSsl);
