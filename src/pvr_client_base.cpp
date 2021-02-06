@@ -181,6 +181,18 @@ PVRClientBase::PVRClientBase()
     
 }
 
+static void RegisterMenuHook(unsigned int hookId, unsigned int localizedStringId)
+{
+    PVR_MENUHOOK hook = {hookId,  localizedStringId, PVR_MENUHOOK_CHANNEL};
+    PVR->AddMenuHook(&hook);
+    hook.category = PVR_MENUHOOK_EPG;
+    PVR->AddMenuHook(&hook);
+    hook.category = PVR_MENUHOOK_RECORDING;
+    PVR->AddMenuHook(&hook);
+    hook.category = PVR_MENUHOOK_SETTING;
+    PVR->AddMenuHook(&hook);
+}
+
 ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
 {
     m_clientCore = NULL;
@@ -202,12 +214,8 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     
     DelayStartup(StartupDelay() - CheckForInetConnection(WaitForInetTimeout()));
     
-    
-    PVR_MENUHOOK hook = {RELOAD_EPG_MENU_HOOK, 32050, PVR_MENUHOOK_ALL};
-    PVR->AddMenuHook(&hook);
-
-    hook = {RELOAD_RECORDINGS_MENU_HOOK, 32051, PVR_MENUHOOK_ALL};
-    PVR->AddMenuHook(&hook);
+    RegisterMenuHook(RELOAD_EPG_MENU_HOOK, 32050);
+    RegisterMenuHook(RELOAD_RECORDINGS_MENU_HOOK, 32051);
 
     // Local recordings path prefix
     s_LocalRecPrefix = XBMC_Message(32014);
