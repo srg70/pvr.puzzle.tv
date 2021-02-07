@@ -562,8 +562,8 @@ msgid "Reload Recordings"
 msgstr "Reload Recordings"
 
 msgctxt "#32052"
-msgid "Streams"
-msgstr "Streams"
+msgid "Streams..."
+msgstr "Streams..."
 
 msgctxt "#32053"
 msgid "Update channels list"

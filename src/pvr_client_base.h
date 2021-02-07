@@ -43,7 +43,6 @@ namespace ActionQueue {
 
 namespace PvrClient
 {
-    
     class PVRClientBase: public IPvrIptvDataSource
     {
     public:
@@ -197,6 +196,9 @@ namespace PvrClient
         int LivePlaybackDelayForTs() const;
         int LivePlaybackDelayForMulticast() const;
         bool SeekArchivePadding() const;
+        bool SuppotMulticastUrls() const;
+        const std::string& UdpProxyHost() const;
+        uint32_t UdpProxyPort() const;
         
         void FillRecording(const EpgEntryList::value_type& epgEntry, PVR_RECORDING& tag, const char* dirPrefix);
         std::string DirectoryForRecording(unsigned int epgId) const;

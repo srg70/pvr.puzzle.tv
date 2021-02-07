@@ -152,7 +152,6 @@ void SharaTvPVRClient::CreateCore(bool clearEpgCache)
     m_core->IncludeCurrentEpgToArchive(HowToAddCurrentEpgToArchive());
     m_core->SetEpgCorrectionShift(EpgCorrectionShift());
     m_core->SetLocalLogosFolder(LocalLogosFolder());
-    m_core->SupportMuticastUrls(SuppotMulticastUrls(), UdpProxyHost(), UdpProxyPort());
     if(c_PlistProvider_SharaTv == ProviderType()) {
         // Shara TV supports archive length up to 2 hours
         // Split EPG items longer than 120 min to avoid this limitation
@@ -290,6 +289,11 @@ PVR_ERROR SharaTvPVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
 
 #pragma mark - Settings
 
+template<typename T>
+static void NotifyClearPvrData(std::function<const T&()>) {
+    XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32016));
+}
+
 static const std::string c_adult_setting("sharatv_adult");
 static const std::string c_prefer_hls("playlist_prefer_hls");
 static const std::string c_data_source_type("sharatv_data_source");
@@ -303,15 +307,6 @@ static const std::string c_sharatv_login("sharatv_login");
 static const std::string c_sharatv_password("sharatv_password");
 static const std::string c_ottg_login("ottg_login");
 static const std::string c_ottg_password("ottg_password");
-
-static const std::string c_suppotMulticastUrls("playlist_support_multicast_urls");
-static const std::string c_udpProxyHost("playlist_udp_proxy_host");
-static const std::string c_udpProxyPort("playlist_udp_proxy_port");
-
-template<typename T>
-static void NotifyClearPvrData(std::function<const T&()>) {
-    XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32016));
-}
 
 void SharaTvPVRClient::PopulateSettings(AddonSettingsMutableDictionary& settings)
 {
@@ -331,27 +326,7 @@ void SharaTvPVRClient::PopulateSettings(AddonSettingsMutableDictionary& settings
     .Add(c_ottg_login, "", ADDON_STATUS_NEED_RESTART)
     .Add(c_ottg_password, "", ADDON_STATUS_NEED_RESTART)
     .Add(c_prefer_hls, false, NotifyClearPvrData<bool>, ADDON_STATUS_NEED_RESTART) // default should be true, but see note above
-    .Add(c_suppotMulticastUrls, false, NotifyClearPvrData<bool>, ADDON_STATUS_NEED_RESTART)
-    .Add(c_udpProxyHost, "", NotifyClearPvrData<std::string>, ADDON_STATUS_NEED_RESTART)
-    .Add(c_udpProxyPort, 0, NotifyClearPvrData<int>, ADDON_STATUS_NEED_RESTART);
-}
-
-uint32_t SharaTvPVRClient::UdpProxyPort() const
-{
-    int port = m_addonSettings.GetInt(c_udpProxyPort);
-    if(port < 0)
-        port = 0;
-    return port;
-}
-
-const std::string& SharaTvPVRClient::UdpProxyHost() const
-{
-    return m_addonSettings.GetString(c_udpProxyHost);
-}
-
-bool SharaTvPVRClient::SuppotMulticastUrls() const
-{
-    return m_addonSettings.GetBool(c_suppotMulticastUrls);
+    ;
 }
 
 bool SharaTvPVRClient::PreferHls() const

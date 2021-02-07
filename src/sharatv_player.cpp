@@ -87,7 +87,6 @@ namespace SharaTvEngine {
     
     Core::Core(const std::string &playlistUrl,  const std::string &epgUrl, bool enableAdult)
     : m_enableAdult(enableAdult)
-    , m_supportMulticastUrls(false)
     , m_playListUrl(playlistUrl)
     , m_epgUrl(epgUrl)
     , m_maxArchiveDuration(-1)
@@ -230,37 +229,13 @@ namespace SharaTvEngine {
             
             if(!m_enableAdult && adultChannelsGroupId == groupId)
                 continue;
-            
-            if (m_supportMulticastUrls) {
-                decltype(channel.Urls) urls;
-                for (auto& url : channel.Urls) {
-                    urls.push_back(TransformMultucastUrl(url));
-                }
-                channel.Urls = urls;
-            }
-            
+                     
+            TranslateMulticastUrl(channel);
             AddChannel(channel);
             AddChannelToGroup(groupId, channel.UniqueId);
         }
      }
     
-    std::string Core::TransformMultucastUrl(const std::string& url) const {
-        static const std::string UDP_MULTICAST_PREFIX = "udp://@";
-        static const std::string RTP_MULTICAST_PREFIX = "rtp://@";
-                
-        auto pos = url.find(UDP_MULTICAST_PREFIX);
-        if(StringUtils::StartsWith(url, UDP_MULTICAST_PREFIX))
-        {
-            return m_multicastProxyAddress + "/udp/" + url.substr(UDP_MULTICAST_PREFIX.length());
-
-        }
-        if(StringUtils::StartsWith(url, RTP_MULTICAST_PREFIX))
-        {
-            
-            return m_multicastProxyAddress + "/rtp/" + url.substr(RTP_MULTICAST_PREFIX.length());
-        }
-        return url;
-    }
 
     std::string Core::GetArchiveUrl(ChannelId channelId, time_t startTime, time_t duration)
     {
