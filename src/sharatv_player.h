@@ -115,7 +115,6 @@ namespace SharaTvEngine
         virtual void BuildChannelAndGroupList();
 
     private:
-        std::string TransformMultucastUrl(const std::string& url) const;
         void LoadEpg(std::function<bool(void)> cancelled);
 //        bool AddEpgEntry(const XMLTV::EpgEntry& xmlEpgEntry);
 

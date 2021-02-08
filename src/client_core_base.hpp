@@ -103,7 +103,8 @@ namespace PvrClient {
         void AddChannelToGroup(GroupId groupId, ChannelId channelId);
         void AddChannelToGroup(GroupId groupId, ChannelId channelId, int indexInGroup);
         void SetLocalPathForLogo(Channel& channel) const;
-        void TranslateMulticastUrl(Channel& channel) const;
+        void TranslateMulticastUrls(Channel::UrlList& urls) const;
+        std::string TranslateMultucastUrl(const std::string& url) const;
         void ParseJson(const std::string& response, std::function<void(rapidjson::Document&)> parser);
         
         // Should be called from destructor of dirived class

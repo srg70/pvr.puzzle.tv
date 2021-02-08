@@ -245,7 +245,7 @@ void PuzzleTV::BuildChannelAndGroupList()
         {
             const auto& channel = channelWithGroup.second.first;
             
-            //TranslateMulticastUrl(channel);
+            //TranslateMulticastUrls(channel);
             AddChannel(channel);
             
             for (const auto& groupWithIndex : channelWithGroup.second.second) {
@@ -748,19 +748,20 @@ void PuzzleTV::UpdateUrlsForChannel(PvrClient::ChannelId channelId)
     {
         urls.clear();
         try {
+            auto pThis = this;
             const string  strId = ToPuzzleChannelId(channelId);
             if(m_serverVersion == c_PuzzleServer2){
                 std::string cmd = string("/get/streams/") + strId;
                 ApiFunctionData apiParams(cmd.c_str(), m_serverPort);
-                CallApiFunction(apiParams, [&urls] (Document& jsonRoot)
+                CallApiFunction(apiParams, [&urls, pThis] (Document& jsonRoot)
                                 {
                                     if(!jsonRoot.IsArray())
                                         return;
                                     std::for_each(jsonRoot.Begin(), jsonRoot.End(), [&]  (const Value & i) mutable
                                                   {
-                                                      auto url = i.GetString();
+                                                      auto url = pThis->TranslateMultucastUrl(i.GetString());
                                                       urls.push_back(url);
-                                                      LogDebug(" >>>>  URL: %s <<<<<",  url);
+                                                      LogDebug(" >>>>  URL: %s <<<<<",  url.c_str());
                                                       
                                                   });
                                 });
@@ -768,7 +769,7 @@ void PuzzleTV::UpdateUrlsForChannel(PvrClient::ChannelId channelId)
                 auto& cacheSources = m_sources[channelId];
                 std::string cmd = string("/streams/json_ds/") + strId;
                 ApiFunctionData apiParams(cmd.c_str(), m_serverPort);
-                CallApiFunction(apiParams, [&urls, &cacheSources] (Document& jsonRoot)
+                CallApiFunction(apiParams, [&urls, &cacheSources, pThis] (Document& jsonRoot)
                                 {
                                     if(!jsonRoot.IsArray())
                                         return;
@@ -789,7 +790,7 @@ void PuzzleTV::UpdateUrlsForChannel(PvrClient::ChannelId channelId)
  
                                                       auto streams = s["streams"].GetArray();
                                                       std::for_each(streams.Begin(), streams.End(), [&]  (const Value & st){
-                                                          auto url = st.GetString();
+                                                          auto url = pThis->TranslateMultucastUrl(st.GetString());
                                                           urls.push_back(url);
                                                           source.Streams[url] = true;
                                                           //LogDebug("URL %s: %s",  source.Server.c_str(), url);
@@ -798,7 +799,6 @@ void PuzzleTV::UpdateUrlsForChannel(PvrClient::ChannelId channelId)
                                 });
             }
             
-            TranslateMulticastUrl(ch);
             AddChannel(ch);
         } catch (ServerErrorException& ex) {
             XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32006), ex.reason.c_str());
