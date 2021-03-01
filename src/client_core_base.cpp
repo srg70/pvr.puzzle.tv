@@ -349,15 +349,24 @@ void ClientCoreBase::SetLocalPathForLogo(Channel& channel) const
     }
 }
 
-void ClientCoreBase::TranslateMulticastUrl(Channel& channel) const
+void ClientCoreBase::TranslateMulticastUrls(Channel::UrlList& urls) const
 {
     if (m_supportMulticastUrls) {
-        decltype(channel.Urls) urls;
-        for (auto& url : channel.Urls) {
+        Channel::UrlList localUrls(urls);
+        urls.clear();
+        for (auto& url : localUrls) {
             urls.push_back(TransformMultucastUrl(url));
         }
-        channel.Urls = urls;
     }
+}
+
+std::string ClientCoreBase::TranslateMultucastUrl(const std::string& url) const
+{
+    if (!m_supportMulticastUrls) {
+        return url;
+    }
+
+    return TransformMultucastUrl(url);
 }
 
 std::string ClientCoreBase::TransformMultucastUrl(const std::string& url) const {

@@ -230,7 +230,7 @@ namespace SharaTvEngine {
             if(!m_enableAdult && adultChannelsGroupId == groupId)
                 continue;
                      
-            TranslateMulticastUrl(channel);
+            TranslateMulticastUrls(channel.Urls);
             AddChannel(channel);
             AddChannelToGroup(groupId, channel.UniqueId);
         }
