@@ -42,7 +42,7 @@
       allowLocationSimulation = "YES">
       <PathRunnable
          runnableDebuggingMode = "0"
-         FilePath = "/Users/ssh/Code/Other/Kodi-Lea/kodi-build/Debug/kodi.app">
+         FilePath = "/Users/ssh/Code/Other/Kodi-Matrix/kodi-build/Debug/kodi.app">
       </PathRunnable>
    </LaunchAction>
    <ProfileAction

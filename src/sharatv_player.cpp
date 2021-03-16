@@ -47,7 +47,6 @@ namespace SharaTvEngine {
 
     using namespace Globals;
     using namespace std;
-    using namespace ADDON;
     using namespace rapidjson;
     using namespace PvrClient;
     using namespace Helpers;
@@ -437,7 +436,7 @@ namespace SharaTvEngine {
     {
         
         try {
-            XBMC->Log(LOG_DEBUG, "SharaTvPlayer: parsing playlist.");
+            LogDebug("SharaTvPlayer: parsing playlist.");
             // Parse gloabal variables
             //#EXTM3U
             const char* c_M3U = "#EXTM3U";
@@ -462,10 +461,10 @@ namespace SharaTvEngine {
                 ParseChannelAndGroup(tag, globalTags, plistIndex++, onChannelFound);
                 pos = pos_end;
             }
-            XBMC->Log(LOG_DEBUG, "SharaTvPlayer: added %d channels from playlist." , plistIndex - 1);
+            LogDebug("SharaTvPlayer: added %d channels from playlist." , plistIndex - 1);
             
         } catch (std::exception& ex) {
-            XBMC->Log(LOG_ERROR, "SharaTvPlayer: exception during playlist loading: %s", ex.what());
+            LogError("SharaTvPlayer: exception during playlist loading: %s", ex.what());
         }
     }
     
@@ -632,7 +631,7 @@ namespace SharaTvEngine {
                 archiveUrl = url + "?utc=" + c_START +"&lutc=" + c_LUTC;
         }
         if(!archiveUrl.empty())
-            LogDebug("SharaTvPlayer: %s channe's archive url %s", name.c_str(), archiveUrl.c_str());
+            ;//LogDebug("SharaTvPlayer: %s channe's archive url %s", name.c_str(), archiveUrl.c_str());
                 
         Channel channel;
         channel.UniqueId = XMLTV::ChannelIdForChannelName(name);

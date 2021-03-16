@@ -28,6 +28,7 @@
 #include <rapidjson/error/en.h>
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
+#include "kodi/General.h"
 
 #include <assert.h>
 #include <algorithm>
@@ -47,7 +48,6 @@ namespace EdemEngine
 {
     using namespace Globals;
     using namespace std;
-    using namespace ADDON;
     using namespace rapidjson;
     using namespace PvrClient;
     using namespace Helpers;
@@ -270,31 +270,32 @@ namespace EdemEngine
     
     static void LoadPlaylist(const string& plistUrl, TChannelParserDelegate onChannelFound)
     {
-        void* f = NULL;
+        kodi::vfs::CFile* f = NULL;
         
         try {
             char buffer[1024];
             string data;
             
             // Download playlist
-            XBMC->Log(LOG_DEBUG, "EdemPlayer: loading playlist: %s", plistUrl.c_str());
+            LogDebug("EdemPlayer: loading playlist: %s", plistUrl.c_str());
 
-            auto f = XBMC_OpenFile(plistUrl);
+            f = XBMC_OpenFile(plistUrl);
             if (!f)
                 throw BadPlaylistFormatException("Failed to obtain playlist from server.");
             bool isEof = false;
             do{
-                auto bytesRead = XBMC->ReadFile(f, buffer, sizeof(buffer));
+                auto bytesRead = f->Read(buffer, sizeof(buffer));
                 isEof = bytesRead <= 0;
                 if(!isEof)
                     data.append(&buffer[0], bytesRead);
             }while(!isEof);
-            XBMC->CloseFile(f);
+            f->Close();
+            delete f;
             f = NULL;
             
-            //XBMC->Log(LOG_ERROR, ">>> DUMP M3U : \n %s", data.c_str() );
+            //LogError(">>> DUMP M3U : \n %s", data.c_str() );
             
-            XBMC->Log(LOG_DEBUG, "EdemPlayer: parsing playlist.");
+            LogDebug("EdemPlayer: parsing playlist.");
 
             // Parse gloabal variables
             //#EXTM3U
@@ -321,12 +322,13 @@ namespace EdemEngine
                 ParseChannelAndGroup(tag, plistIndex++, onChannelFound);
                 pos = pos_end;
             }
-            XBMC->Log(LOG_DEBUG, "EdemPlayer: added %d channels from playlist." , plistIndex - 1);
+            LogDebug("EdemPlayer: added %d channels from playlist." , plistIndex - 1);
 
         } catch (std::exception& ex) {
-            XBMC->Log(LOG_ERROR, "EdemPlayer: exception during playlist loading: %s", ex.what());
+            LogError("EdemPlayer: exception during playlist loading: %s", ex.what());
             if(NULL != f) {
-                XBMC->CloseFile(f);
+                f->Close();
+                delete f;
                 f = NULL;
             }
             

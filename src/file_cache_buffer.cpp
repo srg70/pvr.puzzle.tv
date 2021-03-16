@@ -30,22 +30,10 @@
 #endif
 
 #include <algorithm>
-#include "kodi/libXBMC_addon.h"
 #include "kodi/Filesystem.h"
-// Patch for Kodi buggy VFSDirEntry declaration
-struct VFSDirEntry_Patch
-{
-    char* label;             //!< item label
-    char* title;             //!< item title
-    char* path;              //!< item path
-    unsigned int num_props;  //!< Number of properties attached to item
-    VFSProperty* properties; //!< Properties
-    //    time_t date_time;        //!< file creation date & time
-    bool folder;             //!< Item is a folder
-    uint64_t size;           //!< Size of file represented by item
-};
+#include "globals.hpp"
+
 #include "file_cache_buffer.hpp"
-#include "libXBMC_addon.h"
 #include "helpers.h"
 #include "globals.hpp"
 #include "neutral_sorting.h"
@@ -53,7 +41,6 @@ struct VFSDirEntry_Patch
 namespace Buffers
 {
     using namespace P8PLATFORM;
-    using namespace ADDON;
     using namespace Globals;
     using namespace Helpers;
 
@@ -70,8 +57,8 @@ namespace Buffers
         bool IsOpened() const;
         ~CGenericFile();
     protected:
-        CGenericFile(void* m_handler);
-        void* m_handler;
+        CGenericFile();
+        kodi::vfs::CFile m_handler;
         void Close();
     private:
         CGenericFile(const CGenericFile&) = delete ;                    //disable copy-constructor
@@ -120,28 +107,25 @@ namespace Buffers
     //              CGenericFile
     //////////////////////////////////////////
     
-    CGenericFile::CGenericFile(void* handler)
-    : m_handler(handler)
+    CGenericFile::CGenericFile()
     {
-        if(NULL == m_handler)
-        throw CacheBufferException("Failed to open timeshift buffer chunk file.");
     }
     int64_t CGenericFile::Seek(int64_t iFilePosition, int iWhence)
     {
-        auto s = XBMC->SeekFile(m_handler, iFilePosition, iWhence);
+        auto s = m_handler.Seek(iFilePosition, iWhence);
 //        LogDebug("SEEK to %lld. Result %lld" , iFilePosition, s);
         return s;
     }
     
     int64_t CGenericFile::Length()
     {
-        auto l = XBMC->GetFileLength(m_handler);
+        auto l = m_handler.GetLength();
         //    LogDebug(">>> LENGHT= %lld", l);
         return l;
     }
     int64_t CGenericFile::Position()
     {
-        auto p = XBMC->GetFilePosition(m_handler);
+        auto p = m_handler.GetPosition();
           //    LogDebug(">>> POSITION= %lld", p);
         
         return p;
@@ -154,17 +138,17 @@ namespace Buffers
     
     bool CGenericFile::IsOpened() const
     {
-        return m_handler != NULL;
+        return m_handler.IsOpen();
     }
     
     void CGenericFile::Close()
     {
-        XBMC->CloseFile(m_handler);
-        m_handler = NULL;
+        m_handler.Close();
     }
     CGenericFile::~CGenericFile()
     {
-        if(m_handler) Close();
+        if(m_handler.IsOpen())
+            Close();
     }
     
     
@@ -177,12 +161,16 @@ namespace Buffers
     
     
     CFileForWrite::CFileForWrite(const std::string &pathToFile)
-    : CGenericFile(XBMC->OpenFileForWrite(pathToFile.c_str(), false))
+    : CGenericFile()
     {
+        m_handler.OpenFileForWrite(pathToFile, false);
+        if(!m_handler.IsOpen())
+            throw CacheBufferException("Failed to open timeshift buffer chunk file.");
+
     }
     ssize_t CFileForWrite::Write(const void* lpBuf, size_t uiBufSize)
     {
-        return XBMC->WriteFile(m_handler, lpBuf, uiBufSize);
+        return m_handler.Write(lpBuf, uiBufSize);
         
     }
     
@@ -194,13 +182,16 @@ namespace Buffers
     
     
     CFileForRead::CFileForRead(const std::string &pathToFile)
-    : CGenericFile(XBMC_OpenFile(pathToFile, XFILE::READ_AUDIO_VIDEO | XFILE::READ_AFTER_WRITE))
     {
+        m_handler.OpenFile(pathToFile, ADDON_READ_AUDIO_VIDEO | ADDON_READ_AFTER_WRITE);
+        if(!m_handler.IsOpen())
+            throw CacheBufferException("Failed to open timeshift buffer chunk file.");
+
     }
     
     ssize_t CFileForRead::Read(void* lpBuf, size_t uiBufSize)
     {
-        return XBMC->ReadFile(m_handler, lpBuf, uiBufSize);
+        return m_handler.Read(lpBuf, uiBufSize);
     }
     
 #pragma mark - CAddonFile
@@ -235,7 +226,7 @@ namespace Buffers
         m_reader.Close();
         m_writer.Close();
         if(m_autoDelete)
-            XBMC->DeleteFile(m_path.c_str());
+            kodi::vfs::DeleteFile(m_path.c_str());
     }
     
     
@@ -257,8 +248,8 @@ namespace Buffers
     , m_endTime(0)
     , m_chunkForLock(new uint8_t[STREAM_READ_BUFFER_SIZE])
     {
-        if(!XBMC->DirectoryExists(m_bufferDir.c_str())) {
-            if(!XBMC->CreateDirectory(m_bufferDir.c_str())) {
+        if(!kodi::vfs::DirectoryExists(m_bufferDir)) {
+            if(!kodi::vfs::CreateDirectory(m_bufferDir)) {
                 throw CacheBufferException("Failed to create cahche  directory for timeshift buffer.");
             }
         }
@@ -268,16 +259,13 @@ namespace Buffers
     static int64_t CalculateDataSize(const std::string& bufferCacheDir)
     {
         int64_t result = 0;
-        VFSDirEntry* files;
-        unsigned int num_files;
-        if(XBMC->GetDirectory(bufferCacheDir.c_str(), "*.bin", &files, &num_files)) {
-            VFSDirEntry_Patch* patched_files = (VFSDirEntry_Patch*) files;
-            for (int i = 0; i < num_files; ++i) {
-                const VFSDirEntry_Patch& f = patched_files[i];
-                if(!f.folder)
-                    result += f.size;
+        std::vector<kodi::vfs::CDirEntry> files;
+
+        if(kodi::vfs::GetDirectory(bufferCacheDir, "*.bin", files)) {
+            for (const auto& f : files) {
+                if(!f.IsFolder())
+                    result += f.Size();
             }
-            XBMC->FreeDirectory(files, num_files);
         } else {
             LogError( "Failed obtain content of FileCacheBuffer folder %s", bufferCacheDir.c_str());
         }
@@ -290,40 +278,34 @@ namespace Buffers
     , m_autoDelete(false)
     , m_isReadOnly(true)
     {
-        if(!XBMC->DirectoryExists(m_bufferDir.c_str())) {
+        if(!kodi::vfs::DirectoryExists(m_bufferDir)) {
             throw CacheBufferException("Directory for timeshift buffer (read mode) does not exist.");
         }
         Init();
         // Load *.bin files
-        VFSDirEntry* files;
-        std::vector<const VFSDirEntry_Patch*> binFiles;
-        unsigned int num_files;
-        if(XBMC->GetDirectory(bufferCacheDir.c_str(), "*.bin", &files, &num_files)) {
-            VFSDirEntry_Patch* patched_files = (VFSDirEntry_Patch*) files;
-            for (int i = 0; i < num_files; ++i) {
-                const VFSDirEntry_Patch& f = patched_files[i];
-                if(!f.folder)
-                    binFiles.push_back(&f);
+        std::vector<kodi::vfs::CDirEntry> binFiles;
+        std::vector<kodi::vfs::CDirEntry> files;
+        if(kodi::vfs::GetDirectory(bufferCacheDir, "*.bin", files)) {
+            for (const auto& f : files) {
+                if(!f.IsFolder())
+                    binFiles.push_back(f);
             }
             // run "neutral sorting" on files list
             struct cvf_alphanum_less : public std::binary_function<const VFSDirEntry*, const VFSDirEntry*, bool>
             {
-                bool operator()(const VFSDirEntry_Patch*& left, const VFSDirEntry_Patch*& right) const
+                bool operator()(const kodi::vfs::CDirEntry& left, const kodi::vfs::CDirEntry& right) const
                 {
-                    return doj::alphanum_comp(left->path, right->path) < 0;
+                    return doj::alphanum_comp(left.Path(), right.Path()) < 0;
                 }
             } neutral_sorter;
             std::sort(binFiles.begin(), binFiles.end(), neutral_sorter);
-            for (auto& f : binFiles) {
-                if(!f->folder) {
-                    ChunkFilePtr newChunk = new CAddonFile(f->path, m_autoDelete);
-                    m_length += f->size;
-                    m_ChunkFileSwarm.push_back(ChunkFileSwarm::value_type(newChunk));
-                    m_ReadChunks.push_back(newChunk);
-                }
+            for (const auto& f : binFiles) {
+                ChunkFilePtr newChunk = new CAddonFile(f.Path(), m_autoDelete);
+                m_length += f.Size();
+                m_ChunkFileSwarm.push_back(ChunkFileSwarm::value_type(newChunk));
+                m_ReadChunks.push_back(newChunk);
             }
             
-            XBMC->FreeDirectory(files, num_files);
         } else {
             LogError( "Failed obtain content of FileCacheBuffer folder %s", bufferCacheDir.c_str());
         }
@@ -572,7 +554,7 @@ namespace Buffers
             candidate +="TimeshiftBuffer-";
             candidate +=n_to_string(cnt++);
             candidate += ".bin";
-        }while(XBMC->FileExists(candidate.c_str(), false));
+        }while(kodi::vfs::FileExists(candidate, false));
         return candidate;
     }
     

@@ -34,6 +34,7 @@
 #include <algorithm>
 #include <ctime>
 #include "p8-platform/util/util.h"
+#include <kodi/General.h>
 
 #include "timeshift_buffer.h"
 #include "direct_buffer.h"
@@ -43,7 +44,6 @@
 #include "globals.hpp"
 
 using namespace std;
-using namespace ADDON;
 using namespace PvrClient;
 using namespace Globals;
 using namespace Helpers;
@@ -53,35 +53,27 @@ static CountryFilterMap& GetCountryFilterMap();
 static SovokTV::CountryFilter& GetCountryFilter();
 
 
-ADDON_STATUS SovokPVRClient::Init(PVR_PROPERTIES* pvrprops)
+ADDON_STATUS SovokPVRClient::Init(const std::string& clientPath, const std::string& userPath)
 {
-    ADDON_STATUS retVal = PVRClientBase::Init(pvrprops);
+    ADDON_STATUS retVal = PVRClientBase::Init(clientPath, userPath);
     if(ADDON_STATUS_OK != retVal)
        return retVal;
-    
-    char buffer[1024];
-    
-    if (XBMC->GetSetting("login", &buffer))
-        m_login = buffer;
-    if (XBMC->GetSetting("password", &buffer))
-        m_password = buffer;
+        
+    m_login = kodi::GetSettingString("login");
+    m_password = kodi::GetSettingString("password");
 
-    XBMC->GetSetting("filter_by_country", &GetCountryFilter().IsOn);
+    GetCountryFilter().IsOn = kodi::GetSettingBoolean("filter_by_country", false);
     for(auto& f : GetCountryFilterMap())
-        XBMC->GetSetting(f.first.c_str(), &f.second->Hidden);
+        f.second->Hidden = kodi::GetSettingBoolean(f.first, false);
     
-    XBMC->GetSetting("enable_adult", &m_enableAdult);
-    if(m_enableAdult && XBMC->GetSetting("pin_code", &buffer))
-        m_pinCode = buffer;
-
-    std::string streamer;
-    if (XBMC->GetSetting("streamer", &buffer))
-        m_strimmer = buffer;
+    m_enableAdult = kodi::GetSettingBoolean("enable_adult", false);
+    if(m_enableAdult)
+        m_pinCode = kodi::GetSettingString("pin_code");
+    
+    m_strimmer = kodi::GetSettingString("streamer");
     
     retVal = CreateCoreSafe(false);
     
-    //    PVR_MENUHOOK hook = {1, 30020, PVR_MENUHOOK_EPG};
-    //    m_pvr->AddMenuHook(&hook);
     return retVal;
 }
 
@@ -110,17 +102,17 @@ ADDON_STATUS SovokPVRClient::CreateCoreSafe(bool clearEpgCache)
         OnCoreCreated();
     }
     catch (AuthFailedException &) {
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32007), "Sovok TV");
+        kodi::QueueFormattedNotification(QUEUE_ERROR, kodi::GetLocalizedString(32007).c_str(), "Sovok TV");
     }
     catch (MissingHttpsSupportException &) {
-        XBMC->QueueNotification(QUEUE_ERROR, "Missing HTTPS support.");
+        kodi::QueueFormattedNotification(QUEUE_ERROR, "Missing HTTPS support.");
         retVal = ADDON_STATUS_PERMANENT_FAILURE;
     }
     catch(MissingApiException & ex) {
-        XBMC->QueueNotification(QUEUE_WARNING, (std::string("Missing Sovok API: ") + ex.reason).c_str());
+        kodi::QueueFormattedNotification(QUEUE_WARNING, (std::string("Missing Sovok API: ") + ex.reason).c_str());
     }
     catch(...) {
-        XBMC->QueueNotification(QUEUE_ERROR, "Sovok TV: unhandeled exception");
+        kodi::QueueFormattedNotification(QUEUE_ERROR, "Sovok TV: unhandeled exception");
         retVal = ADDON_STATUS_PERMANENT_FAILURE;
     }
     return retVal;
@@ -153,8 +145,8 @@ void SovokPVRClient::CreateCore(bool clearEpgCache)
     auto streamersList = m_sovokTV->GetStreamersList();
     string strimmersPath = GetClientPath();
     strimmersPath.append("/").append("resources/").append("streamers/");
-    if(!XBMC->DirectoryExists(strimmersPath.c_str()))
-        XBMC->CreateDirectory(strimmersPath.c_str());
+    if(!kodi::vfs::DirectoryExists(strimmersPath))
+        kodi::vfs::CreateDirectory(strimmersPath);
     // Cleanup streamers list
 //    if(XBMC->DirectoryExists(strimmersPath.c_str()))
 //    {
@@ -170,29 +162,30 @@ void SovokPVRClient::CreateCore(bool clearEpgCache)
                   {
                       
                       auto filename = strimmersPath+s;
-                      if(!XBMC->FileExists(filename.c_str(), true))
+                      if(!kodi::vfs::FileExists(filename, true))
                       {
-                          void* f = XBMC->OpenFileForWrite(filename.c_str(), true);
-                          if(f) XBMC->CloseFile(f);
+                          kodi::vfs::CFile f;
+                          f.OpenFileForWrite(filename, true);
                       }
                   });
 
     auto current = streamersList[GetStreamerId()];
     if (current != m_strimmer)
     {
-        XBMC->QueueNotification(QUEUE_WARNING, XBMC_Message(32008));
+        kodi::QueueFormattedNotification(QUEUE_WARNING, kodi::GetLocalizedString(32008).c_str());
     }
 
     
 }
 
-ADDON_STATUS SovokPVRClient::SetSetting(const char *settingName, const void *settingValue)
+ADDON_STATUS SovokPVRClient::SetSetting(const std::string& settingName, const kodi::CSettingValue& settingValue)
 {
     ADDON_STATUS result = ADDON_STATUS_OK ;
     
-    if (strcmp(settingName, "login") == 0) {
-        if(strcmp((const char*) settingValue, m_login.c_str()) != 0) {
-            m_login = (const char*) settingValue;
+    if ("login" == settingName) {
+        auto v = settingValue.GetString();
+        if(v != m_login) {
+            m_login = v;
             if (!m_login.empty() && !m_password.empty()) {
 //                if(!HasCore()) {
 //                    XBMC->Log(LOG_ERROR, " Failed to create core aftrer login changes");
@@ -201,9 +194,10 @@ ADDON_STATUS SovokPVRClient::SetSetting(const char *settingName, const void *set
             result = ADDON_STATUS_NEED_RESTART;
         }
     }
-    else if (strcmp(settingName, "password") == 0) {
-        if(strcmp((const char*) settingValue, m_password.c_str()) != 0){
-            m_password = (const char*) settingValue;
+    else if ("password" == settingName) {
+        auto v = settingValue.GetString();
+        if(v != m_password){
+            m_password = v;
             if (!m_login.empty() && !m_password.empty()) {
 //                if(!HasCore()) {
 //                    XBMC->Log(LOG_ERROR, " Failed to create core aftrer password changes");
@@ -212,9 +206,9 @@ ADDON_STATUS SovokPVRClient::SetSetting(const char *settingName, const void *set
             result = ADDON_STATUS_NEED_RESTART;
         }
     }
-    else if (strcmp(settingName, "streamer") == 0)
+    else if ("streamer" == settingName)
     {
-        m_strimmer = (const char*)settingValue;
+        m_strimmer = settingValue.GetString();
         if(m_sovokTV != NULL) {
             auto streamersList = m_sovokTV->GetStreamersList();
             int currentId = 0;
@@ -226,46 +220,46 @@ ADDON_STATUS SovokPVRClient::SetSetting(const char *settingName, const void *set
             });
             if(currentId != GetStreamerId()) {
                 if(currentId == streamersList.size() ) {
-                    XBMC->QueueNotification(QUEUE_WARNING, XBMC_Message(32008));
+                    kodi::QueueFormattedNotification(QUEUE_WARNING, kodi::GetLocalizedString(32008).c_str());
                 }
                 SetStreamerId(currentId);
                 result = ADDON_STATUS_NEED_RESTART;
             }
         }
     }
-    else if (strcmp(settingName, "enable_adult") == 0)
+    else if ("enable_adult" == settingName)
     {
-        bool newValue = *(bool*)settingValue;
+        bool newValue = settingValue.GetBoolean();
         if(newValue != m_enableAdult) {
             m_enableAdult = newValue;
             SetPinCode(m_enableAdult? m_pinCode : "");
-            PVR->TriggerChannelUpdate();
+            PVR->Addon_TriggerChannelUpdate();
 
             result = ADDON_STATUS_OK;
         }
     }
-    else if (strcmp(settingName, "pin_code") == 0)
+    else if ("pin_code" == settingName)
     {
-        const char* newValue = m_enableAdult? (const char*) settingValue : "";
+        auto newValue = m_enableAdult ? settingValue.GetString() : "";
         if(m_pinCode != newValue) {
             m_pinCode = newValue;
             SetPinCode(m_pinCode);
             
-            PVR->TriggerChannelGroupsUpdate();
-            PVR->TriggerChannelUpdate();
+            PVR->Addon_TriggerChannelGroupsUpdate();
+            PVR->Addon_TriggerChannelUpdate();
             result = ADDON_STATUS_OK;
         }
     }
-    else if (strcmp(settingName, "filter_by_country") == 0)
+    else if ("filter_by_country" == settingName)
     {
-        bool newValue = *(bool*)settingValue;
+        bool newValue = settingValue.GetBoolean();
         if(newValue != GetCountryFilter().IsOn) {
-            GetCountryFilter().IsOn = (*(bool *)(settingValue));
+            GetCountryFilter().IsOn = newValue;
             SetCountryFilter();
             m_sovokTV->RebuildChannelAndGroupList();
             
-            PVR->TriggerChannelGroupsUpdate();
-            PVR->TriggerChannelUpdate();
+            PVR->Addon_TriggerChannelGroupsUpdate();
+            PVR->Addon_TriggerChannelUpdate();
             result = ADDON_STATUS_OK;
         }
     }
@@ -275,7 +269,7 @@ ADDON_STATUS SovokPVRClient::SetSetting(const char *settingName, const void *set
         auto it = filters.find(settingName);
         if (it != filters.end())
         {
-            bool newValue = *(bool*)settingValue;
+            bool newValue = settingValue.GetBoolean();
             if(it->second->Hidden == newValue) {
                 result = ADDON_STATUS_OK;
             }
@@ -283,8 +277,8 @@ ADDON_STATUS SovokPVRClient::SetSetting(const char *settingName, const void *set
                 it->second->Hidden = newValue;
                 SetCountryFilter();
                 m_sovokTV->RebuildChannelAndGroupList();
-                PVR->TriggerChannelGroupsUpdate();
-                PVR->TriggerChannelUpdate();
+                PVR->Addon_TriggerChannelGroupsUpdate();
+                PVR->Addon_TriggerChannelUpdate();
                 result = ADDON_STATUS_OK;
             }
         } else {
@@ -308,36 +302,31 @@ bool SovokPVRClient::HasCore()
     return result;
 }
 
-PVR_ERROR SovokPVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabilities)
+PVR_ERROR SovokPVRClient::GetAddonCapabilities(kodi::addon::PVRCapabilities& capabilities)
 {
-    pCapabilities->bSupportsEPG = true;
-    pCapabilities->bSupportsTV = true;
-    pCapabilities->bSupportsRadio = true;
-    pCapabilities->bSupportsChannelGroups = true;
-    pCapabilities->bHandlesInputStream = true;
-//    pCapabilities->bSupportsRecordings = true;
+    capabilities.SetSupportsEPG(true);
+    capabilities.SetSupportsTV(true);
+    capabilities.SetSupportsRadio(true);
+    capabilities.SetSupportsChannelGroups(true);
+    capabilities.SetHandlesInputStream(true);
+//    capabilities.SetSupportsRecordings(true);
     
-    pCapabilities->bSupportsTimers = false;
-    pCapabilities->bSupportsChannelScan = false;
-    pCapabilities->bHandlesDemuxing = false;
-    pCapabilities->bSupportsRecordingPlayCount = false;
-    pCapabilities->bSupportsLastPlayedPosition = false;
-    pCapabilities->bSupportsRecordingEdl = false;
+    capabilities.SetSupportsTimers(false);
+    capabilities.SetSupportsChannelScan(false);
+    capabilities.SetHandlesDemuxing(false);
+    capabilities.SetSupportsRecordingPlayCount(false);
+    capabilities.SetSupportsLastPlayedPosition(false);
+    capabilities.SetSupportsRecordingEdl(false);
     
-    return PVRClientBase::GetAddonCapabilities(pCapabilities);
+    return PVRClientBase::GetAddonCapabilities(capabilities);
 }
 
-PVR_ERROR  SovokPVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
-{
-    return PVRClientBase::MenuHook(menuhook, item);
-    
-}
 ADDON_STATUS SovokPVRClient::OnReloadEpg()
 {
    return CreateCoreSafe(true);
 }
 
-bool SovokPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
+bool SovokPVRClient::OpenRecordedStream(const kodi::addon::PVRRecording& recording)
 {
     if(!HasCore())
         return false;
@@ -349,18 +338,18 @@ bool SovokPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     // Worrkaround: use EPG entry
     
     EpgEntry epgTag;
-    if(!m_sovokTV->GetEpgEntry(stoi(recording.strRecordingId), epgTag))
+    if(!m_sovokTV->GetEpgEntry(stoi(recording.GetRecordingId().c_str()), epgTag))
         return false;
     
-    string url = m_sovokTV->GetArchiveUrl(epgTag.UniqueChannelId, recording.recordingTime);
+    string url = m_sovokTV->GetArchiveUrl(epgTag.UniqueChannelId, recording.GetRecordingTime());
     return PVRClientBase::OpenRecordedStream(url, nullptr, IsSeekSupported() ? SupportVodSeek : NoRecordingFlags);
 }
 
-PVR_ERROR SovokPVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
+PVR_ERROR SovokPVRClient::SignalStatus(int /*channelUid*/, kodi::addon::PVRSignalStatus& signalStatus)
 {
-    snprintf(signalStatus.strAdapterName, sizeof(signalStatus.strAdapterName), "IPTV Sovok TV");
-    snprintf(signalStatus.strAdapterStatus, sizeof(signalStatus.strAdapterStatus), (!HasCore()) ? "Not connected" :"OK");
-    return this->PVRClientBase::SignalStatus(signalStatus);
+    signalStatus.SetAdapterName("IPTV Sovok TV");
+    signalStatus.SetAdapterStatus((!HasCore()) ? "Not connected" :"OK");
+    return PVR_ERROR_NO_ERROR;
 }
 
 void SovokPVRClient::SetStreamerId(int streamerIdx)

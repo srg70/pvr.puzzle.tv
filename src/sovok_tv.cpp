@@ -28,6 +28,7 @@
 #include <rapidjson/error/en.h>
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
+#include "kodi/General.h"
 
 #include <assert.h>
 #include <algorithm>
@@ -44,16 +45,15 @@
 
 using namespace Globals;
 using namespace std;
-using namespace ADDON;
 using namespace rapidjson;
 using namespace PvrClient;
 using namespace Helpers;
 
 #define CATCH_API_CALL(msg) \
     catch (ServerErrorException& ex) { \
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32009), ex.reason.c_str() ); \
+        kodi::QueueFormattedNotification(QUEUE_ERROR, kodi::GetLocalizedString(32009).c_str(), ex.reason.c_str() ); \
     } catch(CurlErrorException& ex) { \
-        XBMC->QueueNotification(QUEUE_ERROR, "CURL fatal error: %s", ex.reason.c_str() ); \
+        kodi::QueueFormattedNotification(QUEUE_ERROR, "CURL fatal error: %s", ex.reason.c_str() ); \
     } catch (...) { \
         LogError(msg); \
     }
@@ -114,14 +114,14 @@ SovokTV::~SovokTV()
 
 void SovokTV::Cleanup()
 {
-    XBMC->Log(LOG_NOTICE, "SovokTV stopping...");
+    LogNotice("SovokTV stopping...");
 
     if(m_httpEngine)
         m_httpEngine->CancelAllRequests();
     
     Logout();
 
-    XBMC->Log(LOG_NOTICE, "SovokTV stopped.");
+    LogNotice("SovokTV stopped.");
 }
 
 const StreamerNamesList& SovokTV::GetStreamersList() const
@@ -350,7 +350,7 @@ void SovokTV::GetEpgForAllChannelsForNHours(time_t startTime, short numberOfHour
             }
         });
     } catch (ServerErrorException& ex) {
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32009), ex.reason.c_str() );
+        kodi::QueueFormattedNotification(QUEUE_ERROR, kodi::GetLocalizedString(32009).c_str(), ex.reason.c_str() );
     } catch (...) {
         LogError(" >>>>  FAILED receive EPG for N hours<<<<<");
     }
@@ -457,10 +457,10 @@ bool SovokTV::Login(bool wait)
             ApiFunctionData apiParams("login", params);
             CallApiFunction(apiParams, parser);
         } catch (ServerErrorException& ex) {
-            XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32009), ex.reason.c_str() );
+            kodi::QueueFormattedNotification(QUEUE_ERROR, kodi::GetLocalizedString(32009).c_str(), ex.reason.c_str() );
             return false;
         } catch(CurlErrorException& ex) {
-            XBMC->QueueNotification(QUEUE_ERROR, "CURL fatal error: %s", ex.reason.c_str() );
+            kodi::QueueFormattedNotification(QUEUE_ERROR, "CURL fatal error: %s", ex.reason.c_str() );
             return false;
         } catch (...) {
             LogError(" >>>>  FAILED to LOGIN!!! <<<<<");
@@ -546,8 +546,8 @@ void SovokTV::CallApiAsync(const ApiFunctionData& data, TParser parser, TApiCall
                       auto err = errObj["message"].GetString();
                       const Value & errCode = errObj["code"];
                       auto code = errCode.IsInt() ? errCode.GetInt() : errCode.IsString() ? atoi(errCode.GetString()) : -100;
-                      XBMC->Log(LOG_ERROR, "Sovok TV server responses error:");
-                      XBMC->Log(LOG_ERROR, err);
+                      LogError("Sovok TV server responses error:");
+                      LogError(err);
                       throw ServerErrorException(err,code);
                   });
     };
@@ -592,9 +592,9 @@ bool SovokTV::LoadStreamers()
             }
         });
     } catch (ServerErrorException& ex) {
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32009), ex.reason.c_str() );
+        kodi::QueueFormattedNotification(QUEUE_ERROR, kodi::GetLocalizedString(32009).c_str(), ex.reason.c_str() );
     } catch(CurlErrorException& ex) {
-        XBMC->QueueNotification(QUEUE_ERROR, "CURL fatal error: %s", ex.reason.c_str() );
+        kodi::QueueFormattedNotification(QUEUE_ERROR, "CURL fatal error: %s", ex.reason.c_str() );
         return false;
     } catch (...) {
         LogError(" >>>>  FAILED to load streamers <<<<<");

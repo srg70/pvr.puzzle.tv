@@ -28,71 +28,78 @@
 #ifndef __Iptv_Pvr_Addoin_h__
 #define __Iptv_Pvr_Addoin_h__
 
-#include "kodi/AddonBase.h"
-#include "xbmc_addon_types.h"
-#include "xbmc_pvr_types.h"
+#include <kodi/addon-instance/PVR.h>
 
 class ITimersEngineDelegate{
 public:
-    virtual bool StartRecordingFor(const PVR_TIMER &timer) = 0;
-    virtual bool StopRecordingFor(const PVR_TIMER &timer) = 0;
-    virtual bool FindEpgFor(const PVR_TIMER &timer) = 0;
+    virtual bool StartRecordingFor(kodi::addon::PVRTimer &timer) = 0;
+    virtual bool StopRecordingFor(kodi::addon::PVRTimer &timer) = 0;
+    virtual bool FindEpgFor(kodi::addon::PVRTimer &timer) = 0;
 protected:
     virtual ~ITimersEngineDelegate() {}
+};
+
+class IAddonDelegate{
+public:
+    virtual void Addon_TriggerRecordingUpdate() = 0;
+    virtual void Addon_AddMenuHook(const kodi::addon::PVRMenuhook& hook) = 0;
+    virtual void Addon_TriggerChannelUpdate() = 0;
+    virtual void Addon_TriggerChannelGroupsUpdate() = 0;
+    virtual void Addon_TriggerEpgUpdate(unsigned int channelUid) = 0;
+    virtual void Addon_TriggerTimerUpdate() = 0;
 };
 
 class IPvrIptvDataSource : public ITimersEngineDelegate
 {
 public:
-    virtual ADDON_STATUS Init(PVR_PROPERTIES* pvrprops) = 0;
+    virtual ADDON_STATUS Init(const std::string& clientPath, const std::string& userPath) = 0;
     virtual ADDON_STATUS GetStatus() = 0;
 
-    virtual ADDON_STATUS SetSetting(const char *settingName, const void *settingValue) = 0;
+    virtual ADDON_STATUS SetSetting(const std::string& settingName, const kodi::CSettingValue& settingValue) = 0;
 
-//    virtual const char *GetBackendName(void) = 0;
-    virtual PVR_ERROR GetAddonCapabilities(PVR_ADDON_CAPABILITIES* pCapabilities) = 0;
-    virtual PVR_ERROR SignalStatus(PVR_SIGNAL_STATUS &signalStatus) = 0;
+//    virtual const char *GetBackendName() = 0;
+    virtual PVR_ERROR GetAddonCapabilities(kodi::addon::PVRCapabilities& capabilities) = 0;
+    virtual PVR_ERROR SignalStatus(int channelUid, kodi::addon::PVRSignalStatus& signalStatus) = 0;
     
-    virtual PVR_ERROR GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL &channel, time_t iStart, time_t iEnd) = 0;
-    virtual int GetChannelsAmount(void) = 0;
-    virtual PVR_ERROR GetChannels(ADDON_HANDLE handle, bool bRadio) = 0;
-    virtual bool OpenLiveStream(const PVR_CHANNEL &channel) = 0;
-    virtual void CloseLiveStream(void) = 0;
+    virtual PVR_ERROR GetEPGForChannel(int channelUid, time_t start, time_t end, kodi::addon::PVREPGTagsResultSet& results) = 0;
+    virtual int GetChannelsAmount() = 0;
+    virtual PVR_ERROR GetChannels(bool radio, kodi::addon::PVRChannelsResultSet& results) = 0;
+    virtual bool OpenLiveStream(const kodi::addon::PVRChannel& channel) = 0;
+    virtual void CloseLiveStream() = 0;
     virtual bool SwitchChannel(const PVR_CHANNEL &channel) = 0;
-    virtual int GetChannelGroupsAmount(void) = 0;
-    virtual PVR_ERROR GetChannelGroups(ADDON_HANDLE handle, bool bRadio) = 0;
-    virtual PVR_ERROR GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_CHANNEL_GROUP &group) = 0;
+    virtual int GetChannelGroupsAmount() = 0;
+    virtual PVR_ERROR GetChannelGroups(bool radio, kodi::addon::PVRChannelGroupsResultSet& results) = 0;
+    virtual PVR_ERROR GetChannelGroupMembers(const kodi::addon::PVRChannelGroup& group, kodi::addon::PVRChannelGroupMembersResultSet& results) = 0;
 
-    virtual bool CanPauseStream(void) = 0;
-    virtual bool CanSeekStream(void) = 0;
-    virtual bool IsRealTimeStream(void) = 0;
-    virtual PVR_ERROR GetStreamTimes(PVR_STREAM_TIMES *times) = 0;
-    virtual long long SeekLiveStream(long long iPosition, int iWhence) = 0;
-    virtual long long PositionLiveStream(void) = 0;
-    virtual long long LengthLiveStream(void)  = 0;
+    virtual bool CanPauseStream() = 0;
+    virtual bool CanSeekStream() = 0;
+    virtual bool IsRealTimeStream() = 0;
+    virtual PVR_ERROR GetStreamTimes(kodi::addon::PVRStreamTimes& times) = 0;
+    virtual int64_t SeekLiveStream(int64_t position, int whence) = 0;
+    virtual int64_t PositionLiveStream() = 0;
+    virtual int64_t LengthLiveStream()  = 0;
     virtual int ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize) = 0;
     
     
-    virtual int GetRecordingsAmount(bool deleted) = 0;
-    virtual PVR_ERROR GetRecordings(ADDON_HANDLE handle, bool deleted) = 0;
-    virtual PVR_ERROR DeleteRecording(const PVR_RECORDING &recording) = 0;
-    virtual bool OpenRecordedStream(const PVR_RECORDING &recording) = 0;
-    virtual void CloseRecordedStream(void) = 0;
-    virtual PVR_ERROR GetStreamReadChunkSize(int* chunksize) = 0;
-    virtual int ReadRecordedStream(unsigned char *pBuffer, unsigned int iBufferSize) = 0;
-    virtual long long SeekRecordedStream(long long iPosition, int iWhence /* = SEEK_SET */) = 0;
-    virtual long long PositionRecordedStream(void) = 0;
-    virtual long long LengthRecordedStream(void) = 0;
-    virtual PVR_ERROR IsEPGTagRecordable(const EPG_TAG* tag, bool* bIsRecordable) = 0;
+    virtual PVR_ERROR GetRecordingsAmount(bool deleted, int& amount) = 0;
+    virtual PVR_ERROR GetRecordings(bool deleted, kodi::addon::PVRRecordingsResultSet& results) = 0;
+    virtual PVR_ERROR DeleteRecording(const kodi::addon::PVRRecording& recording) = 0;
+    virtual bool OpenRecordedStream(const kodi::addon::PVRRecording& recording) = 0;
+    virtual void CloseRecordedStream() = 0;
+    virtual PVR_ERROR GetStreamReadChunkSize(int& chunksize) = 0;
+    virtual int ReadRecordedStream(unsigned char* buffer, unsigned int size) = 0;
+    virtual int64_t SeekRecordedStream(int64_t position, int whence) = 0;
+    virtual int64_t LengthRecordedStream() = 0;
+    virtual PVR_ERROR IsEPGTagRecordable(const kodi::addon::PVREPGTag& tag, bool& isRecordable) = 0;
 
-    virtual PVR_ERROR CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item) = 0;
-    
+    virtual PVR_ERROR CallSettingsMenuHook(const kodi::addon::PVRMenuhook& menuhook) = 0;
+    virtual PVR_ERROR CallChannelMenuHook(const kodi::addon::PVRMenuhook& menuhook, const kodi::addon::PVRChannel& item) = 0;
+    virtual PVR_ERROR CallEPGMenuHook(const kodi::addon::PVRMenuhook& menuhook, const kodi::addon::PVREPGTag& tag) = 0;
+    virtual PVR_ERROR CallRecordingMenuHook(const kodi::addon::PVRMenuhook& menuhook, const kodi::addon::PVRRecording& item) = 0;
+    virtual PVR_ERROR CallTimerMenuHook(const kodi::addon::PVRMenuhook& menuhook, const kodi::addon::PVRTimer& item) = 0;
+
     virtual  void OnSystemSleep() = 0;
     virtual void OnSystemWake() = 0;
-    
-    virtual PVR_ERROR GetChannelStreamProperties(const PVR_CHANNEL* channel, PVR_NAMED_VALUE* properties, unsigned int* iPropertiesCount) = 0;
-    virtual const char * GetLiveStreamURL(const PVR_CHANNEL &channel) = 0;
-
     
     virtual ~IPvrIptvDataSource(){}
 };
@@ -100,27 +107,13 @@ public:
 class ITimersEngine
 {
 public:
-    virtual int GetTimersAmount(void) = 0;
-    virtual PVR_ERROR AddTimer(const PVR_TIMER &timer) = 0;
-    virtual PVR_ERROR GetTimers(ADDON_HANDLE handle) = 0;
-    virtual PVR_ERROR DeleteTimer(const PVR_TIMER &timer, bool bForceDelete) = 0;
-    virtual PVR_ERROR UpdateTimer(const PVR_TIMER &timer) = 0;
+    virtual int GetTimersAmount() = 0;
+    virtual PVR_ERROR AddTimer(const kodi::addon::PVRTimer& timer) = 0;
+    virtual PVR_ERROR GetTimers(kodi::addon::PVRTimersResultSet& results) = 0;
+    virtual PVR_ERROR DeleteTimer(const kodi::addon::PVRTimer& timer, bool forceDelete) = 0;
+    virtual PVR_ERROR UpdateTimer(const kodi::addon::PVRTimer& timer) = 0;
     virtual ~ITimersEngine() {}
 
 };
-
-//class PuzzleTvAddon : public ::kodi::addon::CAddonBase
-//{
-//public:
-//    virtual ~PuzzleTvAddon() override;
-//    
-//    virtual ADDON_STATUS Create() override;
-//    
-//    virtual ADDON_STATUS GetStatus() override;
-//    
-//    virtual ADDON_STATUS SetSetting(const std::string& settingName, const ::kodi::CSettingValue& settingValue) override;
-//
-//    
-//};
 
 #endif /* __Iptv_Pvr_Addoin_h__ */

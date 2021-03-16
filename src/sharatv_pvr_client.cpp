@@ -34,6 +34,7 @@
 #include <algorithm>
 #include <ctime>
 #include "p8-platform/util/util.h"
+#include "kodi/General.h"
 
 #include "timeshift_buffer.h"
 #include "direct_buffer.h"
@@ -46,14 +47,13 @@
 
 using namespace Globals;
 using namespace std;
-using namespace ADDON;
 using namespace SharaTvEngine;
 using namespace PvrClient;
 using namespace Helpers;
 
-ADDON_STATUS SharaTvPVRClient::Init(PVR_PROPERTIES* pvrprops)
+ADDON_STATUS SharaTvPVRClient::Init(const std::string& clientPath, const std::string& userPath)
 {
-    ADDON_STATUS retVal = PVRClientBase::Init(pvrprops);
+    ADDON_STATUS retVal = PVRClientBase::Init(clientPath, userPath);
     if(ADDON_STATUS_OK != retVal)
         return retVal;
      
@@ -79,7 +79,7 @@ void SharaTvPVRClient::NotifyAccessDenied() const
         providerName = "OTTG";
     }
      
-    XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32007), providerName);
+    kodi::QueueFormattedNotification(QUEUE_ERROR, kodi::GetLocalizedString(32007).c_str(), providerName);
 }
 
 ADDON_STATUS SharaTvPVRClient::CreateCoreSafe(bool clearEpgCache)
@@ -100,7 +100,7 @@ ADDON_STATUS SharaTvPVRClient::CreateCoreSafe(bool clearEpgCache)
     }
     catch(...)
     {
-        XBMC->QueueNotification(QUEUE_ERROR, "Shara TV: unhandeled exception on core creation.");
+        kodi::QueueFormattedNotification(QUEUE_ERROR, "Shara TV: unhandeled exception on core creation.");
         retVal = ADDON_STATUS_PERMANENT_FAILURE;
     }
     return retVal;
@@ -160,28 +160,23 @@ void SharaTvPVRClient::CreateCore(bool clearEpgCache)
     m_core->InitAsync(clearEpgCache, IsArchiveSupported());
 }
 
-PVR_ERROR SharaTvPVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabilities)
+PVR_ERROR SharaTvPVRClient::GetAddonCapabilities(kodi::addon::PVRCapabilities& capabilities)
 {
-    pCapabilities->bSupportsEPG = true;
-    pCapabilities->bSupportsTV = true;
-    pCapabilities->bSupportsRadio = false;
-    pCapabilities->bSupportsChannelGroups = true;
-    pCapabilities->bHandlesInputStream = true;
-//    pCapabilities->bSupportsRecordings = true;
+    capabilities.SetSupportsEPG(true);
+    capabilities.SetSupportsTV(true);
+    capabilities.SetSupportsRadio(false);
+    capabilities.SetSupportsChannelGroups(true);
+    capabilities.SetHandlesInputStream(true);
+//    capabilities.SetSupportsRecordings(true);
     
-    pCapabilities->bSupportsTimers = false;
-    pCapabilities->bSupportsChannelScan = false;
-    pCapabilities->bHandlesDemuxing = false;
-    pCapabilities->bSupportsRecordingPlayCount = false;
-    pCapabilities->bSupportsLastPlayedPosition = false;
-    pCapabilities->bSupportsRecordingEdl = false;
+    capabilities.SetSupportsTimers(false);
+    capabilities.SetSupportsChannelScan(false);
+    capabilities.SetHandlesDemuxing(false);
+    capabilities.SetSupportsRecordingPlayCount(false);
+    capabilities.SetSupportsLastPlayedPosition(false);
+    capabilities.SetSupportsRecordingEdl(false);
     
-    return PVRClientBase::GetAddonCapabilities(pCapabilities);
-}
-
-PVR_ERROR  SharaTvPVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
-{
-    return PVRClientBase::MenuHook(menuhook, item);
+    return PVRClientBase::GetAddonCapabilities(capabilities);
 }
 
 ADDON_STATUS SharaTvPVRClient::OnReloadEpg()
@@ -205,9 +200,9 @@ ADDON_STATUS SharaTvPVRClient::OnReloadEpg()
 class SharaTvArchiveDelegate : public Buffers::IPlaylistBufferDelegate
 {
 public:
-    SharaTvArchiveDelegate(SharaTvEngine::Core* core, const PVR_RECORDING &recording, uint32_t startPadding, uint32_t endPadding)
-    : _duration(recording.iDuration + startPadding + endPadding)
-    , _recordingTime(recording.recordingTime - startPadding)
+    SharaTvArchiveDelegate(SharaTvEngine::Core* core, const kodi::addon::PVRRecording& recording, uint32_t startPadding, uint32_t endPadding)
+    : _duration(recording.GetDuration() + startPadding + endPadding)
+    , _recordingTime(recording.GetRecordingTime() - startPadding)
     , _core(core)
     {
         _channelId = 1;
@@ -215,7 +210,7 @@ public:
         // NOTE: Kodi does NOT provide recording.iChannelUid for unknown reason
         // Worrkaround: use EPG entry
         EpgEntry epgTag;
-        int recId = stoi(recording.strRecordingId);
+        int recId = stoi(recording.GetRecordingId().c_str());
         if(!_core->GetEpgEntry(recId, epgTag)){
             LogError("Failed to obtain EPG tag for record ID %d. First channel ID will be used", recId);
             return;
@@ -251,7 +246,7 @@ private:
     SharaTvEngine::Core* _core;
 };
 
-bool SharaTvPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
+bool SharaTvPVRClient::OpenRecordedStream(const kodi::addon::PVRRecording& recording)
 {
     if(NULL == m_core)
         return false;
@@ -271,27 +266,27 @@ bool SharaTvPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     return PVRClientBase::OpenRecordedStream(url, delegate, flags);
 }
 
-PVR_ERROR SharaTvPVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
+PVR_ERROR SharaTvPVRClient::SignalStatus(int channelUid, kodi::addon::PVRSignalStatus& signalStatus)
 {
-    snprintf(signalStatus.strAdapterName, sizeof(signalStatus.strAdapterName), "IPTV Playlist");
-    snprintf(signalStatus.strAdapterStatus, sizeof(signalStatus.strAdapterStatus), (m_core == NULL) ? "Not connected" :"OK");
+    signalStatus.SetAdapterName("IPTV Playlist");
+    signalStatus.SetAdapterStatus((m_core == NULL) ? "Not connected" :"OK");
     //const static int providerNames[] = {32023, 70008,70009,70011};
     const char* const providerNames[] = {"Other", "Shara TV", "OTTG"};
     int provideType = ProviderType();
     if(provideType > sizeof(providerNames) / sizeof(providerNames[0]))
         provideType = sizeof(providerNames) / sizeof(providerNames[0]) - 1;
     
-    //const char* test = XBMC_Message(providerNames[provideType]);
-    snprintf(signalStatus.strProviderName, sizeof(signalStatus.strProviderName), "%s",  providerNames[provideType]);
+    //const char* test = kodi::GetLocalizedString(providerNames[provideType]);
+    signalStatus.SetProviderName(providerNames[provideType]);
     
-    return this->PVRClientBase::SignalStatus(signalStatus);
+    return this->PVRClientBase::SignalStatus(channelUid, signalStatus);
 }
 
 #pragma mark - Settings
 
 template<typename T>
 static void NotifyClearPvrData(std::function<const T&()>) {
-    XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32016));
+    kodi::QueueFormattedNotification(QUEUE_INFO, kodi::GetLocalizedString(32016).c_str());
 }
 
 static const std::string c_adult_setting("sharatv_adult");

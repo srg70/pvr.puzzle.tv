@@ -36,13 +36,11 @@
 #include "helpers.h"
 #include <sstream>
 #include <functional>
-#include "libXBMC_addon.h"
 #include "globals.hpp"
 
 namespace Buffers {
     
     using namespace std;
-    using namespace ADDON;
     using namespace P8PLATFORM;
     using namespace Globals;
     

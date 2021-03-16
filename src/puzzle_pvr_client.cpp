@@ -33,6 +33,8 @@
 
 #include <ctime>
 #include "p8-platform/util/util.h"
+#include "kodi/General.h"
+#include "kodi/gui/dialogs/Select.h"
 
 #include "timeshift_buffer.h"
 #include "direct_buffer.h"
@@ -43,7 +45,6 @@
 
 using namespace Globals;
 using namespace std;
-using namespace ADDON;
 using namespace PuzzleEngine;
 using namespace PvrClient;
 using namespace Helpers;
@@ -62,54 +63,38 @@ const unsigned int UPDATE_CHANNEL_STREAMS_MENU_HOOK = PVRClientBase::s_lastCommo
 const unsigned int UPDATE_CHANNELS_MENU_HOOK = UPDATE_CHANNEL_STREAMS_MENU_HOOK + 1;
 
 
-ADDON_STATUS PuzzlePVRClient::Init(PVR_PROPERTIES* pvrprops)
+ADDON_STATUS PuzzlePVRClient::Init(const std::string& clientPath, const std::string& userPath)
 {
-    ADDON_STATUS retVal = PVRClientBase::Init(pvrprops);
+    ADDON_STATUS retVal = PVRClientBase::Init(clientPath, userPath);
     if(ADDON_STATUS_OK != retVal)
        return retVal;
     
-    char buffer[1024];
     m_currentChannelStreamIdx = -1;
-    int serverPort = 8089;
-    m_maxServerRetries = 4;
+    
+    m_serverPort = kodi::GetSettingInt(c_server_port_setting, 8089);
+    m_serverUri = kodi::GetSettingString(c_server_url_setting);
+    m_maxServerRetries = kodi::GetSettingInt(c_server_retries_setting, 4);
 
-    XBMC->GetSetting(c_server_port_setting, &m_serverPort);
-    if(XBMC->GetSetting(c_server_url_setting, &buffer))
-        m_serverUri = buffer;
-    XBMC->GetSetting(c_server_retries_setting, &m_maxServerRetries);
-    if(m_maxServerRetries < 4)
-        m_maxServerRetries = 4;
-    if (XBMC->GetSetting(c_epg_url_setting, &buffer))
-        m_epgUrl = buffer;
-    XBMC->GetSetting(c_epg_provider_setting, &m_epgType);
+    m_epgUrl = kodi::GetSettingString(c_epg_url_setting);
+    m_epgType = kodi::GetSettingEnum<EpgType>(c_epg_provider_setting, c_EpgType_File);
+    
     if(m_epgType != c_EpgType_Server){
         m_epgType = c_EpgType_File;
     }
     
-    if(!XBMC->GetSetting(c_epg_port_setting, &m_epgPort)){
-        m_epgPort = 8085;
-    }
-    XBMC->GetSetting(c_server_version_setting, &m_serverVersion);
-    if(m_serverVersion != c_PuzzleServer3){
-        m_serverVersion = c_PuzzleServer2;
-    }
-    bool supportSeek = false;
-    XBMC->GetSetting(c_seek_archives, &supportSeek);
+    m_epgPort = kodi::GetSettingInt(c_epg_port_setting, 8085);
+    m_serverVersion = kodi::GetSettingEnum<ServerVersion>(c_server_version_setting, c_PuzzleServer3);
+    
+    bool supportSeek = kodi::GetSettingBoolean(c_seek_archives,false);
     SetSeekSupported(supportSeek);
     
-    m_blockDeadStreams = true;
-    XBMC->GetSetting(c_block_dead_streams, &m_blockDeadStreams);
+    m_blockDeadStreams = kodi::GetSettingBoolean(c_block_dead_streams, true);
     
-    PVR_MENUHOOK hook = {UPDATE_CHANNEL_STREAMS_MENU_HOOK, 32052, PVR_MENUHOOK_CHANNEL};
-    PVR->AddMenuHook(&hook);
-
-    hook = {UPDATE_CHANNELS_MENU_HOOK, 32053, PVR_MENUHOOK_CHANNEL};
-    PVR->AddMenuHook(&hook);
+    PVR->Addon_AddMenuHook(kodi::addon::PVRMenuhook(UPDATE_CHANNEL_STREAMS_MENU_HOOK, 32052, PVR_MENUHOOK_CHANNEL));
+    PVR->Addon_AddMenuHook(kodi::addon::PVRMenuhook (UPDATE_CHANNELS_MENU_HOOK, 32053, PVR_MENUHOOK_CHANNEL));
 
     retVal = CreateCoreSafe(false);
     
-    //    PVR_MENUHOOK hook = {1, 30020, PVR_MENUHOOK_EPG};
-    //    m_pvr->AddMenuHook(&hook);
     return retVal;
 
 }
@@ -137,13 +122,13 @@ ADDON_STATUS PuzzlePVRClient::CreateCoreSafe(bool clearEpgCache)
     }
     catch (std::exception& ex)
     {
-        XBMC->QueueNotification(QUEUE_ERROR,  XBMC_Message(32005));
+        kodi::QueueFormattedNotification(QUEUE_ERROR,  kodi::GetLocalizedString(32005).c_str());
         LogError("PuzzlePVRClient:: Can't create Puzzle Server core. Exeption: [%s].", ex.what());
         retVal = ADDON_STATUS_LOST_CONNECTION;
     }
     catch(...)
     {
-        XBMC->QueueNotification(QUEUE_ERROR, "Puzzle Server: unhandeled exception on reload EPG.");
+        kodi::QueueFormattedNotification(QUEUE_ERROR, "Puzzle Server: unhandeled exception on reload EPG.");
         retVal = ADDON_STATUS_PERMANENT_FAILURE;
     }
     return retVal;
@@ -169,40 +154,40 @@ void PuzzlePVRClient::CreateCore(bool clearEpgCache)
     m_puzzleTV->InitAsync(clearEpgCache, IsArchiveSupported());
 }
 
-ADDON_STATUS PuzzlePVRClient::SetSetting(const char *settingName, const void *settingValue)
+ADDON_STATUS PuzzlePVRClient::SetSetting(const std::string& settingName, const kodi::CSettingValue& settingValue)
 {
     ADDON_STATUS result = ADDON_STATUS_OK ;
 
-    if (strcmp(settingName, c_server_port_setting) == 0)
+    if (c_server_port_setting == settingName)
     {
         result = ADDON_STATUS_NEED_RESTART;
     }
-    else if (strcmp(settingName, c_server_url_setting) == 0 )
+    else if (c_server_url_setting == settingName)
     {
         result = ADDON_STATUS_NEED_RESTART;
     }
-    else if (strcmp(settingName, c_server_retries_setting) == 0 )
+    else if (c_server_retries_setting == settingName)
     {
         result = ADDON_STATUS_NEED_RESTART;
     }
-    else if(strcmp(settingName,  c_epg_url_setting) == 0) {
+    else if(c_epg_url_setting == settingName) {
         result = ADDON_STATUS_NEED_RESTART;
     }
-    else if(strcmp(settingName,  c_epg_provider_setting) == 0) {
+    else if(c_epg_provider_setting == settingName) {
         result = ADDON_STATUS_NEED_RESTART;
     }
-    else if(strcmp(settingName,  c_server_version_setting) == 0) {
+    else if(c_server_version_setting == settingName) {
         result = ADDON_STATUS_NEED_RESTART;
     }
-    else if(strcmp(settingName,  c_epg_port_setting) == 0) {
+    else if(c_epg_port_setting == settingName) {
         result = ADDON_STATUS_NEED_RESTART;
     }
-    else if(strcmp(settingName,  c_seek_archives) == 0) {
-        SetSeekSupported(*(const bool*) settingValue);
+    else if(c_seek_archives == settingName) {
+        SetSeekSupported(settingValue.GetBoolean());
         result = ADDON_STATUS_NEED_RESTART;
     }
-    else if(strcmp(settingName,  c_block_dead_streams) == 0) {
-        m_blockDeadStreams = *(const bool*) settingValue;
+    else if(c_block_dead_streams == settingName) {
+        m_blockDeadStreams = settingValue.GetBoolean();
     }
     else {
         result = PVRClientBase::SetSetting(settingName, settingValue);
@@ -210,48 +195,48 @@ ADDON_STATUS PuzzlePVRClient::SetSetting(const char *settingName, const void *se
     return result;
 }
 
-PVR_ERROR PuzzlePVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabilities)
+PVR_ERROR PuzzlePVRClient::GetAddonCapabilities(kodi::addon::PVRCapabilities& capabilities)
 {
-    pCapabilities->bSupportsEPG = true;
-    pCapabilities->bSupportsTV = true;
-    pCapabilities->bSupportsRadio = true;
-    pCapabilities->bSupportsChannelGroups = true;
-    pCapabilities->bHandlesInputStream = true;
-//    pCapabilities->bSupportsRecordings = true;
+    capabilities.SetSupportsEPG(true);
+    capabilities.SetSupportsTV(true);
+    capabilities.SetSupportsRadio(true);
+    capabilities.SetSupportsChannelGroups(true);
+    capabilities.SetHandlesInputStream(true);
+//    capabilities.SetSupportsRecordings(true);
 
-    pCapabilities->bSupportsTimers = false;
-    pCapabilities->bSupportsChannelScan = false;
-    pCapabilities->bHandlesDemuxing = false;
-    pCapabilities->bSupportsRecordingPlayCount = false;
-    pCapabilities->bSupportsLastPlayedPosition = false;
-    pCapabilities->bSupportsRecordingEdl = false;
+    capabilities.SetSupportsTimers(false);
+    capabilities.SetSupportsChannelScan(false);
+    capabilities.SetHandlesDemuxing(false);
+    capabilities.SetSupportsRecordingPlayCount(false);
+    capabilities.SetSupportsLastPlayedPosition(false);
+    capabilities.SetSupportsRecordingEdl(false);
     
-    return PVRClientBase::GetAddonCapabilities(pCapabilities);
+    return PVRClientBase::GetAddonCapabilities(capabilities);
 }
 
-PVR_ERROR  PuzzlePVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
+PVR_ERROR PuzzlePVRClient::CallChannelMenuHook(const kodi::addon::PVRMenuhook& menuhook, const kodi::addon::PVRChannel& item)
 {
-    if(menuhook.iHookId <= PVRClientBase::s_lastCommonMenuHookId)
-        return PVRClientBase::MenuHook(menuhook, item);
     if(m_puzzleTV == nullptr)
         return PVR_ERROR_SERVER_ERROR;
-    if(UPDATE_CHANNEL_STREAMS_MENU_HOOK == menuhook.iHookId) {
-        HandleStreamsMenuHook(ChannelIdForBrodcastId(item.data.channel.iUniqueId));
-    } else if (UPDATE_CHANNELS_MENU_HOOK == menuhook.iHookId) {
+    
+    if(UPDATE_CHANNEL_STREAMS_MENU_HOOK == menuhook.GetHookId()) {
+        HandleStreamsMenuHook(ChannelIdForBrodcastId(item.GetUniqueId()));
+        return PVR_ERROR_NO_ERROR;
+    } else if (UPDATE_CHANNELS_MENU_HOOK == menuhook.GetHookId()) {
         CreateCoreSafe(false);
-        PVR->TriggerChannelUpdate();
+        PVR->Addon_TriggerChannelUpdate();
         m_clientCore->CallRpcAsync("{\"jsonrpc\": \"2.0\", \"method\": \"GUI.ActivateWindow\", \"params\": {\"window\": \"pvrsettings\"},\"id\": 1}",
                                    [&] (rapidjson::Document& jsonRoot) {
-                                       XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32016));
+                                        kodi::QueueFormattedNotification(QUEUE_INFO, kodi::GetLocalizedString(32016).c_str());
                                    },
                                    [&](const ActionQueue::ActionResult& s) {});
-
+        return PVR_ERROR_NO_ERROR;
     }
-    return PVR_ERROR_NO_ERROR;
+    return PVRClientBase::CallChannelMenuHook(menuhook, item);
 }
 
 struct StreamMenuItem{
-    StreamMenuItem(const char* title = "", bool isEnabled = false)
+    StreamMenuItem(const string& title, bool isEnabled = false)
     {
         IsEnabled = isEnabled;
         Title = title;
@@ -260,19 +245,19 @@ struct StreamMenuItem{
     bool IsEnabled;
 };
 
-static int ShowStreamsMenu(const char * title, std::vector<StreamMenuItem>& items )
+static int ShowStreamsMenu(const string& title, std::vector<StreamMenuItem>& items )
 {
  
-    std::vector<const char*> menu;
+    std::vector<string> menu;
     std::vector<int> lut;
     for (int i = 0; i <  items.size(); ++i)
     {
         if(items[i].IsEnabled) {
-            menu.push_back(items[i].Title.c_str());
+            menu.push_back(items[i].Title);
             lut.push_back(i);
         }
     }
-    int selected = GUI->Dialog_Select(title, &menu[0], menu.size());
+    int selected = kodi::gui::dialogs::Select::Show(title, menu, -1);
     if(selected < 0)
         return selected;
     return lut[selected];
@@ -288,10 +273,10 @@ static void FillStreamTitle(const PuzzleTV::PuzzleSource& stream,  std::string& 
 void PuzzlePVRClient::HandleStreamsMenuHook(ChannelId channelId)
 {
     int selected;
-    XBMC_Message enableStreamLable(32054);
-    XBMC_Message disableStreamLable(32055);
-    XBMC_Message emptyStreamLable(32060);
-    XBMC_Message updateStreamsLable(32056);
+    std::string enableStreamLable(kodi::GetLocalizedString(32054));
+    std::string disableStreamLable(kodi::GetLocalizedString(32055));
+    std::string emptyStreamLable(kodi::GetLocalizedString(32060));
+    std::string updateStreamsLable(kodi::GetLocalizedString(32056));
     do {
         PuzzleTV::TPrioritizedSources sources = m_puzzleTV->GetSourcesForChannel(channelId);
         
@@ -333,13 +318,13 @@ void PuzzlePVRClient::HandleStreamsMenuHook(ChannelId channelId)
         rootItems.push_back(emptyItem);
         rootItems.push_back(StreamMenuItem(updateStreamsLable, true));
 
-        selected = ShowStreamsMenu(XBMC_Message(32057), rootItems);
+        selected = ShowStreamsMenu(kodi::GetLocalizedString(32057), rootItems);
         switch (selected)
         {
             // Disable stream
             case 0:
             {
-                int selectedSource = ShowStreamsMenu(XBMC_Message(32058), disableMenu);
+                int selectedSource = ShowStreamsMenu(kodi::GetLocalizedString(32058), disableMenu);
                 if(selectedSource >= 0) {
                     m_puzzleTV->DisableSource(channelId, cacheUrls[selectedSource]);
                 }
@@ -348,7 +333,7 @@ void PuzzlePVRClient::HandleStreamsMenuHook(ChannelId channelId)
             // Enable stream
             case 1:
             {
-                int selectedSource = ShowStreamsMenu(XBMC_Message(32059), enableMenu);
+                int selectedSource = ShowStreamsMenu(kodi::GetLocalizedString(32059), enableMenu);
                 if(selectedSource >= 0){
                     m_puzzleTV->EnableSource(channelId, cacheUrls[selectedSource]);
                 }
@@ -357,7 +342,7 @@ void PuzzlePVRClient::HandleStreamsMenuHook(ChannelId channelId)
             // Disable empty stream
             case 2:
             {
-                int selectedSource = ShowStreamsMenu(XBMC_Message(32058), emptyMenu);
+                int selectedSource = ShowStreamsMenu(kodi::GetLocalizedString(32058), emptyMenu);
                 if(selectedSource >= 0){
                     m_puzzleTV->DisableSource(channelId, cacheUrls[selectedSource]);
                 }
@@ -419,7 +404,7 @@ void PuzzlePVRClient::OnOpenStremFailed(ChannelId channelId, const std::string& 
     // Expe
 }
 
-bool PuzzlePVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
+bool PuzzlePVRClient::OpenRecordedStream(const kodi::addon::PVRRecording& recording)
 {
     if(NULL == m_puzzleTV)
         return false;
@@ -431,18 +416,18 @@ bool PuzzlePVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     // Worrkaround: use EPG entry
     
     EpgEntry epgTag;
-    if(!m_puzzleTV->GetEpgEntry(stoi(recording.strRecordingId), epgTag))
+    if(!m_puzzleTV->GetEpgEntry(stoi(recording.GetRecordingId().c_str()), epgTag))
         return false;
     
-    string url = m_puzzleTV->GetArchiveUrl(epgTag.UniqueChannelId, recording.recordingTime);
+    string url = m_puzzleTV->GetArchiveUrl(epgTag.UniqueChannelId, recording.GetRecordingTime());
 
     return PVRClientBase::OpenRecordedStream(url, nullptr, IsSeekSupported() ? SupportVodSeek : NoRecordingFlags);
 }
 
-PVR_ERROR PuzzlePVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
+PVR_ERROR PuzzlePVRClient::SignalStatus(int channelUid, kodi::addon::PVRSignalStatus& signalStatus)
 {
-    snprintf(signalStatus.strAdapterName, sizeof(signalStatus.strAdapterName), "IPTV Puzzle Server");
-    snprintf(signalStatus.strAdapterStatus, sizeof(signalStatus.strAdapterStatus), (m_puzzleTV == NULL) ? "Not connected" :"OK");
+    signalStatus.SetAdapterName("IPTV Puzzle Server");
+    signalStatus.SetAdapterStatus((m_puzzleTV == NULL) ? "Not connected" :"OK");
     string liveUrl = GetLiveUrl();
     string serviceName;
     if(!liveUrl.empty()) {
@@ -461,10 +446,10 @@ PVR_ERROR PuzzlePVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
                 break;
             }
         }
-        snprintf(signalStatus.strProviderName, sizeof(signalStatus.strProviderName), "%s", serviceName.c_str());
+        signalStatus.SetProviderName(serviceName);
         
     }
-    return this->PVRClientBase::SignalStatus(signalStatus);
+    return this->PVRClientBase::SignalStatus(channelUid, signalStatus);
 }
        
 

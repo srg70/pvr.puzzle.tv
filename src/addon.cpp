@@ -25,7 +25,7 @@
  *
  */
 
-
+#include <kodi/General.h>
 #include "addon.h"
 #include "globals.hpp"
 #include "sovok_pvr_client.h"
@@ -34,7 +34,6 @@
 #include "edem_pvr_client.h"
 #include "ttv_pvr_client.h"
 #include "sharatv_pvr_client.h"
-#include "xbmc_pvr_dll.h"
 #include "p8-platform/util/util.h"
 #include "TimersEngine.hpp"
 
@@ -47,73 +46,69 @@ static IPvrIptvDataSource* m_DataSource = NULL;
 static int m_clientType = 1;
 
 namespace Globals {
-    bool CreateWithHandle(void* hdl);
+    void CreateWithHandle(IAddonDelegate* pvr);
     void Cleanup();
 }
 
-extern "C" {
+//extern "C" {
     
-    static IPvrIptvDataSource* CreateDataSourceWithType(int type)
-    {
-        IPvrIptvDataSource* dataSource = NULL;
-        switch (type) {
-            case 0:
-                dataSource = new PuzzlePVRClient();
-                break;
-            case 1:
-                dataSource = new SovokPVRClient();
-                break;
-            case 2:
-                dataSource = new OttPVRClient();
-                break;
-            case 3:
-                dataSource = new EdemPVRClient();
-                break;
-            case 4:
-                dataSource = new TtvPVRClient();
-                break;
-            case 5:
-                dataSource = new SharaTvPVRClient();
-                break;
+static IPvrIptvDataSource* CreateDataSourceWithType(int type)
+{
+    IPvrIptvDataSource* dataSource = NULL;
+    switch (type) {
+        case 0:
+            dataSource = new PuzzlePVRClient();
+            break;
+        case 1:
+            dataSource = new SovokPVRClient();
+            break;
+        case 2:
+            dataSource = new OttPVRClient();
+            break;
+        case 3:
+            dataSource = new EdemPVRClient();
+            break;
+        case 4:
+            dataSource = new TtvPVRClient();
+            break;
+        case 5:
+            dataSource = new SharaTvPVRClient();
+            break;
 
-            default:
-                dataSource = NULL;
-                break;
-        }
-        return dataSource;
+        default:
+            dataSource = NULL;
+            break;
     }
+    return dataSource;
+}
     
-    ADDON_STATUS ADDON_Create(void* hdl, void* props)
+class ATTRIBUTE_HIDDEN PVRPuzzleTv
+  : public kodi::addon::CAddonBase,
+    public kodi::addon::CInstancePVRClient,
+    public IAddonDelegate
+{
+public:
+    
+    void Addon_TriggerRecordingUpdate() override {TriggerRecordingUpdate();}
+    void Addon_AddMenuHook(const kodi::addon::PVRMenuhook& hook) override {AddMenuHook(hook);}
+    void Addon_TriggerChannelUpdate() override {TriggerChannelUpdate();}
+    void Addon_TriggerChannelGroupsUpdate() override {TriggerChannelGroupsUpdate();}
+    void Addon_TriggerEpgUpdate(unsigned int channelUid) override {TriggerEpgUpdate(channelUid);}
+    void Addon_TriggerTimerUpdate() override {TriggerTimerUpdate();}
+    
+    ADDON_STATUS Create() override
     {
-        using namespace ADDON;
-        using namespace Globals;
         
-        //    struct TEST
-        //    {
-        //        const char* libPath;
-        //    };
-        //    std::string libBasePath;
-        //    libBasePath  = ((TEST*)hdl)->libPath;
-        //    libBasePath += ADDON_DLL;
-        
-        //#pragma message "_KODI_DLL_PATH_ =" ADDON_DLL
-        
-        if(!Globals::CreateWithHandle(hdl)){
-            return ADDON_STATUS_PERMANENT_FAILURE;
-        }
-        
+        Globals::CreateWithHandle(this);
+        m_clientType = kodi::GetSettingInt("provider_type");
     
-        PVR_PROPERTIES* pvrprops = (PVR_PROPERTIES*)props;
-        
-        XBMC->GetSetting("provider_type", &m_clientType);
-        
         m_DataSource = CreateDataSourceWithType(m_clientType);
         if (NULL == m_DataSource) {
-            XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32001));
+            kodi::QueueFormattedNotification(QUEUE_ERROR, kodi::GetLocalizedString(32001).c_str());
             return ADDON_STATUS_NEED_SETTINGS;
         }
         
-        ADDON_STATUS result = m_DataSource->Init(pvrprops);
+        ADDON_STATUS result = m_DataSource->Init(kodi::GetBaseUserPath(), kodi::GetAddonPath());
         m_timersEngine = new Engines::TimersEngine(m_DataSource);
         return result;
     }
@@ -133,11 +128,11 @@ extern "C" {
         Globals::Cleanup();
     }
     
-    ADDON_STATUS ADDON_SetSetting(const char *settingName, const void *settingValue)
+    ADDON_STATUS SetSetting(const std::string& settingName, const kodi::CSettingValue& settingValue) override
     {
-        if (strcmp(settingName, "provider_type") == 0) {
+        if (settingName == "provider_type") {
             
-            int newValue = *(int*) settingValue;
+            int newValue = settingValue.GetInt();
             if(m_clientType != newValue) {
                 m_clientType = newValue;
                 return ADDON_STATUS_NEED_RESTART;
@@ -153,7 +148,7 @@ extern "C" {
      * PVR Client AddOn specific public library functions
      ***********************************************************/
     
-    void OnSystemSleep()
+    PVR_ERROR OnSystemSleep() override
     {
         Globals::LogDebug("Energy: OnSystemSleep() called.");
         if(m_timersEngine){
@@ -162,295 +157,284 @@ extern "C" {
         if(m_DataSource){
             m_DataSource->OnSystemSleep();
         }
+        return PVR_ERROR_NO_ERROR;
     }
     
-    void OnSystemWake()
+    PVR_ERROR OnSystemWake() override
     {
         Globals::LogDebug("Energy: OnSystemWake() called.");
         if(m_DataSource) {
             m_DataSource->OnSystemWake();
             m_timersEngine = new Engines::TimersEngine(m_DataSource);
         }
-    }
-    
-    void OnPowerSavingActivated()
-    {
-    }
-    
-    void OnPowerSavingDeactivated()
-    {
-    }
-    
-    PVR_ERROR GetAddonCapabilities(PVR_ADDON_CAPABILITIES* pCapabilities)
-    {
-        return m_DataSource->GetAddonCapabilities(pCapabilities);
-    }
-    
-    const char *GetBackendName(void)
-    {
-        static const char *strBackendName = "Puzzle TV PVR Add-on";
-        return strBackendName;
-    }
-    
-    const char *GetBackendVersion(void)
-    {
-        static std::string strBackendVersion = STR(IPTV_VERSION);
-        return strBackendVersion.c_str();
-    }
-    
-    const char *GetConnectionString(void)
-    {
-        static std::string strConnectionString = "connected";
-        return strConnectionString.c_str();
-    }
-    
-    const char *GetBackendHostname(void)
-    {
-        return "";
-    }
-    
-    PVR_ERROR GetDriveSpace(long long *iTotal, long long *iUsed)
-    {
-        *iTotal = 0;
-        *iUsed  = 0;
         return PVR_ERROR_NO_ERROR;
     }
     
-    PVR_ERROR GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL &channel, time_t iStart, time_t iEnd)
+    PVR_ERROR OnPowerSavingActivated() override {
+        return PVR_ERROR_NO_ERROR;
+    }
+    PVR_ERROR OnPowerSavingDeactivated() override {
+        return PVR_ERROR_NO_ERROR;
+    }
+
+    PVR_ERROR GetCapabilities(kodi::addon::PVRCapabilities& capabilities) override
     {
-        return m_DataSource->GetEPGForChannel(handle, channel, iStart, iEnd);
+        return m_DataSource->GetAddonCapabilities(capabilities);
     }
     
-    int GetChannelsAmount(void)
+    PVR_ERROR GetBackendName(std::string& name) override
     {
-        return m_DataSource->GetChannelsAmount();
+        name = "Puzzle TV PVR Add-on";
+        return PVR_ERROR_NO_ERROR;
     }
     
-    PVR_ERROR GetChannels(ADDON_HANDLE handle, bool bRadio)
+    PVR_ERROR GetBackendVersion(std::string& version) override
     {
-        return m_DataSource->GetChannels(handle, bRadio);
+        version = STR(IPTV_VERSION);
+        return PVR_ERROR_NO_ERROR;
     }
     
-    bool OpenLiveStream(const PVR_CHANNEL &channel)
+    PVR_ERROR GetConnectionString(std::string& connection) override
+    {
+        connection = "connected";
+        return PVR_ERROR_NO_ERROR;
+    }
+    
+    PVR_ERROR GetBackendHostname(std::string& hostname) override
+    {
+        hostname = "";
+        return PVR_ERROR_NO_ERROR;
+    }
+    
+//    PVR_ERROR GetDriveSpace(long long *iTotal, long long *iUsed)
+//    {
+//        *iTotal = 0;
+//        *iUsed  = 0;
+//        return PVR_ERROR_NO_ERROR;
+//    }
+#pragma mark - EPG
+    PVR_ERROR GetEPGForChannel(int channelUid, time_t start, time_t end, kodi::addon::PVREPGTagsResultSet& results) override
+    {
+        return m_DataSource->GetEPGForChannel(channelUid, start, end, results);
+    }
+    
+//    PVR_ERROR GetEPGTagStreamProperties(const kodi::addon::PVREPGTag& tag, std::vector<kodi::addon::PVRStreamProperty>& properties)  override
+//    {
+//
+//    }
+    
+    
+//    PVR_ERROR IsEPGTagPlayable(const kodi::addon::PVREPGTag& tag, bool& bIsPlayable) override
+//    {
+//    }
+    PVR_ERROR SetEPGMaxPastDays(int epgMaxPastDays) override
+    {
+        return PVR_ERROR_NO_ERROR;
+    }
+    PVR_ERROR SetEPGMaxFutureDays(int epgMaxFutureDays) override
+    {
+        return PVR_ERROR_NO_ERROR;
+    }
+
+#pragma mark - Channels and Groups
+    PVR_ERROR GetChannelsAmount(int& amount) override
+    {
+        amount = m_DataSource->GetChannelsAmount();
+        return PVR_ERROR_NO_ERROR;
+    }
+    
+    PVR_ERROR GetChannels(bool radio, kodi::addon::PVRChannelsResultSet& results) override
+    {
+        return m_DataSource->GetChannels(radio, results);
+    }
+    
+//    PVR_ERROR GetChannelStreamProperties(const kodi::addon::PVRChannel& channel, std::vector<kodi::addon::PVRStreamProperty>& properties) override
+//    {
+//
+//    }
+
+    PVR_ERROR GetChannelGroupsAmount(int& amount) override
+    {
+        amount = m_DataSource->GetChannelGroupsAmount();
+        return PVR_ERROR_NO_ERROR;
+    }
+    
+    PVR_ERROR GetChannelGroups(bool radio, kodi::addon::PVRChannelGroupsResultSet& results) override
+    {
+        return m_DataSource->GetChannelGroups(radio, results);
+    }
+    
+    PVR_ERROR GetChannelGroupMembers(const kodi::addon::PVRChannelGroup& group, kodi::addon::PVRChannelGroupMembersResultSet& results) override
+    {
+        return m_DataSource->GetChannelGroupMembers(group, results);
+    }
+    
+    PVR_ERROR GetSignalStatus(int channelUid, kodi::addon::PVRSignalStatus& signalStatus) override
+    {
+        return m_DataSource->SignalStatus(channelUid, signalStatus);
+    }
+    
+#pragma mark - Live Stream
+    // ******* MENU ******/
+    bool OpenLiveStream(const kodi::addon::PVRChannel& channel) override
     {
         return m_DataSource->OpenLiveStream(channel);
     }
     
-    void CloseLiveStream(void)
+    void CloseLiveStream(void) override
     {
         m_DataSource->CloseLiveStream();
     }
     
-    bool SwitchChannel(const PVR_CHANNEL &channel)
-    {
-        return m_DataSource->SwitchChannel(channel);
-    }
-    
-    int GetChannelGroupsAmount(void)
-    {
-        return m_DataSource->GetChannelGroupsAmount();
-    }
-    
-    PVR_ERROR GetChannelGroups(ADDON_HANDLE handle, bool bRadio)
-    {
-        return m_DataSource->GetChannelGroups(handle, bRadio);
-    }
-    
-    PVR_ERROR GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_CHANNEL_GROUP &group)
-    {
-        return m_DataSource->GetChannelGroupMembers(handle, group);
-    }
-    
-    PVR_ERROR SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
-    {
-        return m_DataSource->SignalStatus(signalStatus);
-    }
-    
-    bool CanPauseStream(void)
+    bool CanPauseStream(void) override
     {
         return m_DataSource->CanPauseStream();
     }
     
-    bool CanSeekStream(void)
+    bool CanSeekStream(void) override
     {
         return m_DataSource->CanSeekStream();
     }
     
-    long long SeekLiveStream(long long iPosition, int iWhence /* = SEEK_SET */)
+    int64_t SeekLiveStream(int64_t position, int whence) override
     {
-        return m_DataSource->SeekLiveStream(iPosition, iWhence);
+        return m_DataSource->SeekLiveStream(position, whence);
     }
-    
-    long long PositionLiveStream(void)
-    {
-        return m_DataSource->PositionLiveStream();
-    }
-    
-    long long LengthLiveStream(void)
+        
+    int64_t LengthLiveStream(void) override
     {
         return m_DataSource->LengthLiveStream();
     }
     
-    int ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize)
+    int ReadLiveStream(unsigned char* buffer, unsigned int size) override
     {
-        return m_DataSource->ReadLiveStream(pBuffer, iBufferSize);
+        return m_DataSource->ReadLiveStream(buffer, size);
     }
-    PVR_ERROR CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
+#pragma mark - Menu
+    // ******* MENU ******/
+    PVR_ERROR CallSettingsMenuHook(const kodi::addon::PVRMenuhook& menuhook) override
     {
-        return m_DataSource->CallMenuHook(menuhook, item);
+      return m_DataSource->CallSettingsMenuHook(menuhook);
+    }
+    PVR_ERROR CallChannelMenuHook(const kodi::addon::PVRMenuhook& menuhook, const kodi::addon::PVRChannel& item) override
+    {
+        return m_DataSource->CallChannelMenuHook(menuhook, item);
+    }
+    PVR_ERROR CallEPGMenuHook(const kodi::addon::PVRMenuhook& menuhook, const kodi::addon::PVREPGTag& tag) override
+    {
+        return m_DataSource->CallEPGMenuHook(menuhook, tag);
+    }
+    PVR_ERROR CallRecordingMenuHook(const kodi::addon::PVRMenuhook& menuhook, const kodi::addon::PVRRecording& item) override
+    {
+        return m_DataSource->CallRecordingMenuHook(menuhook, item);
+    }
+    PVR_ERROR CallTimerMenuHook(const kodi::addon::PVRMenuhook& menuhook, const kodi::addon::PVRTimer& item) override
+    {
+        return m_DataSource->CallTimerMenuHook(menuhook, item);
     }
     
+#pragma mark - Recordings
     // ******* RECORDING ******/
     
-    PVR_ERROR GetStreamReadChunkSize(int* chunksize)
+    PVR_ERROR GetStreamReadChunkSize(int& chunksize) override
     {
         return m_DataSource->GetStreamReadChunkSize(chunksize);
     }
-    int GetRecordingsAmount(bool deleted)
+    PVR_ERROR GetRecordingsAmount(bool deleted, int& amount) override
     {
-        return m_DataSource->GetRecordingsAmount(deleted);
+        return m_DataSource->GetRecordingsAmount(deleted, amount);
     }
     
-    PVR_ERROR GetRecordings(ADDON_HANDLE handle, bool deleted)
+    PVR_ERROR GetRecordings(bool deleted, kodi::addon::PVRRecordingsResultSet& results) override
     {
-        return m_DataSource->GetRecordings(handle,  deleted);
+        return m_DataSource->GetRecordings(deleted,  results);
     }
     
-    PVR_ERROR DeleteRecording(const PVR_RECORDING &recording)
+    PVR_ERROR DeleteRecording(const kodi::addon::PVRRecording& recording) override
     {
         return m_DataSource->DeleteRecording(recording);
     }
 
-    bool OpenRecordedStream(const PVR_RECORDING &recording)
+    bool OpenRecordedStream(const kodi::addon::PVRRecording& recording) override
     {
         return m_DataSource->OpenRecordedStream(recording);
     }
     
-    void CloseRecordedStream(void)
+    void CloseRecordedStream(void) override
     {
         return m_DataSource->CloseRecordedStream();
     }
-    int ReadRecordedStream(unsigned char *pBuffer, unsigned int iBufferSize)
+    int ReadRecordedStream(unsigned char* buffer, unsigned int size) override
     {
-        return m_DataSource->ReadRecordedStream(pBuffer, iBufferSize);
+        return m_DataSource->ReadRecordedStream(buffer, size);
     }
     
-    long long SeekRecordedStream(long long iPosition, int iWhence)
+    int64_t SeekRecordedStream(int64_t position, int whence) override
     {
-        return m_DataSource->SeekRecordedStream(iPosition, iWhence);
+        return m_DataSource->SeekRecordedStream(position, whence);
     }
-    long long PositionRecordedStream(void)
-    {
-        return m_DataSource->PositionRecordedStream();
-    }
-    
-    long long LengthRecordedStream(void)
+   
+    int64_t LengthRecordedStream() override
     {
         return m_DataSource->LengthRecordedStream();
     }
     
-    PVR_ERROR IsEPGTagRecordable(const EPG_TAG* tag, bool* bIsRecordable)
+    PVR_ERROR IsEPGTagRecordable(const kodi::addon::PVREPGTag& tag, bool& isRecordable) override
     {
-        return m_DataSource->IsEPGTagRecordable(tag, bIsRecordable);
+        return m_DataSource->IsEPGTagRecordable(tag, isRecordable);
     }
-    
+
+#pragma mark - Timers
     /********************************************************************************/
     /********************************* T I M E R S **********************************/
     /********************************************************************************/
     
-    PVR_ERROR AddTimer(const PVR_TIMER &timer)
+    PVR_ERROR AddTimer(const kodi::addon::PVRTimer& timer) override
     {
         return m_timersEngine ? m_timersEngine->AddTimer (timer) : PVR_ERROR_FAILED;
     }
     
-    PVR_ERROR DeleteTimer(const PVR_TIMER &timer, bool bForceDelete)
+    PVR_ERROR DeleteTimer(const kodi::addon::PVRTimer& timer, bool forceDelete) override
     {
-        return m_timersEngine ? m_timersEngine->DeleteTimer (timer,bForceDelete) : PVR_ERROR_FAILED;
+        return m_timersEngine ? m_timersEngine->DeleteTimer (timer,forceDelete) : PVR_ERROR_FAILED;
     }
     
-    PVR_ERROR UpdateTimer(const PVR_TIMER &timer)
+    PVR_ERROR UpdateTimer(const kodi::addon::PVRTimer& timer) override
     {
         return m_timersEngine ? m_timersEngine->UpdateTimer (timer) : PVR_ERROR_FAILED;
     }
     
-    PVR_ERROR GetTimers(ADDON_HANDLE handle)
+    PVR_ERROR GetTimers(kodi::addon::PVRTimersResultSet& results) override
     {
-        return m_timersEngine ? m_timersEngine->GetTimers(handle) : PVR_ERROR_FAILED;
+        return m_timersEngine ? m_timersEngine->GetTimers(results) : PVR_ERROR_FAILED;
     }
     
-    int GetTimersAmount(void)
+    PVR_ERROR GetTimersAmount(int& amount) override
     {
-        return  m_timersEngine ? m_timersEngine->GetTimersAmount() : PVR_ERROR_FAILED;
+        amount =  m_timersEngine ? m_timersEngine->GetTimersAmount() : -1;
+        return  -1 == amount ? PVR_ERROR_FAILED : PVR_ERROR_NO_ERROR;
     }
 
-    PVR_ERROR GetTimerTypes(PVR_TIMER_TYPE types[], int *size) { return PVR_ERROR_NOT_IMPLEMENTED; }
+//    PVR_ERROR GetTimerTypes(std::vector<kodi::addon::PVRTimerType>& types) override {
+//        return PVR_ERROR_NOT_IMPLEMENTED;
+//    }
 
+#pragma mark - Timeshift
     /********************************************************************************/
     /**************************** TIMESHIFT API FUNCTIONS ***************************/
     /********************************************************************************/
     
-    PVR_ERROR GetStreamTimes(PVR_STREAM_TIMES *times)
+    PVR_ERROR GetStreamTimes(kodi::addon::PVRStreamTimes& times) override
     {
         return m_DataSource->GetStreamTimes(times);
     }
-    
-    bool IsTimeshifting(void)
-    {
-        return m_DataSource->CanSeekStream();
-    }
-    
-    bool IsRealTimeStream(void)
+       
+    bool IsRealTimeStream() override
     {
         return m_DataSource->IsRealTimeStream();        
     }
-    /**********************************************************************************/
-     /**************** STREAM PROPERTIES API FUNCTIONS ***************/
-     /*********************************************************************************/
+};
 
-    PVR_ERROR GetChannelStreamProperties(const PVR_CHANNEL* channel, PVR_NAMED_VALUE* properties, unsigned int* iPropertiesCount)
-    {
-        return m_DataSource->GetChannelStreamProperties(channel, properties, iPropertiesCount);
-    }
-    const char * GetLiveStreamURL(const PVR_CHANNEL &channel)
-    {
-        return m_DataSource->GetLiveStreamURL(channel);
-    }
+ADDONCREATOR(PVRPuzzleTv)
 
-    /**********************************************************************************/
-    /*********************** UNUSED API FUNCTIONS **************************/
-    /**********************************************************************************/
-
-    PVR_ERROR GetStreamProperties(PVR_STREAM_PROPERTIES* pProperties) { return PVR_ERROR_NOT_IMPLEMENTED; }
-
-    PVR_ERROR OpenDialogChannelScan(void) { return PVR_ERROR_NOT_IMPLEMENTED; }
-        PVR_ERROR DeleteChannel(const PVR_CHANNEL &channel) { return PVR_ERROR_NOT_IMPLEMENTED; }
-    PVR_ERROR RenameChannel(const PVR_CHANNEL &channel) { return PVR_ERROR_NOT_IMPLEMENTED; }
-    PVR_ERROR MoveChannel(const PVR_CHANNEL &channel) { return PVR_ERROR_NOT_IMPLEMENTED; }
-    PVR_ERROR OpenDialogChannelSettings(const PVR_CHANNEL &channel) { return PVR_ERROR_NOT_IMPLEMENTED; }
-    PVR_ERROR OpenDialogChannelAdd(const PVR_CHANNEL &channel) { return PVR_ERROR_NOT_IMPLEMENTED; }
-    void DemuxReset(void) {}
-    void DemuxFlush(void) {}
-    PVR_ERROR RenameRecording(const PVR_RECORDING &recording) { return PVR_ERROR_NOT_IMPLEMENTED; }
-    PVR_ERROR SetRecordingPlayCount(const PVR_RECORDING &recording, int count) { return PVR_ERROR_NOT_IMPLEMENTED; }
-    PVR_ERROR SetRecordingLastPlayedPosition(const PVR_RECORDING &recording, int lastplayedposition) { return PVR_ERROR_NOT_IMPLEMENTED; }
-    int GetRecordingLastPlayedPosition(const PVR_RECORDING &recording) { return -1; }
-    PVR_ERROR GetRecordingEdl(const PVR_RECORDING&, PVR_EDL_ENTRY[], int*) { return PVR_ERROR_NOT_IMPLEMENTED; };
-    void DemuxAbort(void) {}
-    DemuxPacket* DemuxRead(void) { return NULL; }
-    void PauseStream(bool bPaused) {}
-    bool SeekTime(double,bool,double*) { return false; }
-    void SetSpeed(int) {};
-    time_t GetPlayingTime() { return 0; }
-    time_t GetBufferTimeStart() { return 0; }
-    time_t GetBufferTimeEnd() { return 0; }
-    PVR_ERROR UndeleteRecording(const PVR_RECORDING& recording) { return PVR_ERROR_NOT_IMPLEMENTED; }
-    PVR_ERROR DeleteAllRecordingsFromTrash() { return PVR_ERROR_NOT_IMPLEMENTED; }
-    PVR_ERROR SetEPGTimeFrame(int) { return PVR_ERROR_NOT_IMPLEMENTED; }
-    PVR_ERROR GetDescrambleInfo(PVR_DESCRAMBLE_INFO*) { return PVR_ERROR_NOT_IMPLEMENTED; }
-    PVR_ERROR SetRecordingLifetime(const PVR_RECORDING*) { return PVR_ERROR_NOT_IMPLEMENTED; }
-//    PVR_ERROR GetStreamTimes(PVR_STREAM_TIMES *times) { return PVR_ERROR_NOT_IMPLEMENTED; }
-    PVR_ERROR GetEPGTagEdl(const EPG_TAG* epgTag, PVR_EDL_ENTRY edl[], int *size) { return PVR_ERROR_NOT_IMPLEMENTED; }
-    PVR_ERROR GetEPGTagStreamProperties(const EPG_TAG* tag, PVR_NAMED_VALUE* properties, unsigned int* iPropertiesCount) { return PVR_ERROR_NOT_IMPLEMENTED; }
-    PVR_ERROR GetRecordingStreamProperties(const PVR_RECORDING* recording, PVR_NAMED_VALUE* properties, unsigned int* iPropertiesCount){ return PVR_ERROR_NOT_IMPLEMENTED; }
-    PVR_ERROR IsEPGTagPlayable(const EPG_TAG* tag, bool* bIsPlayable) { return PVR_ERROR_NOT_IMPLEMENTED; }
-}
+//}

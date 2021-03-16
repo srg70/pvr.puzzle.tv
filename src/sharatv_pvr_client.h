@@ -23,7 +23,6 @@
 #ifndef  __sahra_tv_pvr_client_h__
 #define __sahra_tv_pvr_client_h__
 
-#include "xbmc_pvr_types.h"
 #include <string>
 #include "addon.h"
 #include "pvr_client_base.h"
@@ -36,20 +35,19 @@ namespace SharaTvEngine {
 class SharaTvPVRClient: public PvrClient::PVRClientBase
 {
 public:
-    ADDON_STATUS Init(PVR_PROPERTIES* pvrprops);
+    ADDON_STATUS Init(const std::string& clientPath, const std::string& userPath) override;
     ~SharaTvPVRClient();
 
-    PVR_ERROR GetAddonCapabilities(PVR_ADDON_CAPABILITIES* pCapabilities);
-    PVR_ERROR SignalStatus(PVR_SIGNAL_STATUS &signalStatus);
-    bool OpenRecordedStream(const PVR_RECORDING &recording);
+    PVR_ERROR GetAddonCapabilities(kodi::addon::PVRCapabilities& capabilities) override;
+    PVR_ERROR SignalStatus(int /*channelUid*/, kodi::addon::PVRSignalStatus& signalStatus) override;
+    bool OpenRecordedStream(const kodi::addon::PVRRecording& recording) override;
 
 protected:
-    PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
-    ADDON_STATUS OnReloadEpg();
+    ADDON_STATUS OnReloadEpg() override;
 
-    ADDON_STATUS CreateCoreSafe(bool clearEpgCache);
-    void DestroyCoreSafe();
-    void PopulateSettings(PvrClient::AddonSettingsMutableDictionary& settings);
+    ADDON_STATUS CreateCoreSafe(bool clearEpgCache) override;
+    void DestroyCoreSafe() override;
+    void PopulateSettings(PvrClient::AddonSettingsMutableDictionary& settings) override;
 
 private:
     

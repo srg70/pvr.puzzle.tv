@@ -34,14 +34,13 @@
 #include "ThreadPool.h"
 #include "helpers.h"
 #include "plist_buffer.h"
-#include "libXBMC_addon.h"
 #include "globals.hpp"
 #include "playlist_cache.hpp"
 #include "p8-platform/util/util.h"
 #include "httplib.h"
+#include "kodi/General.h"
 
 using namespace P8PLATFORM;
-using namespace ADDON;
 using namespace Globals;
 using namespace Helpers;
 
@@ -86,7 +85,7 @@ namespace Buffers {
             try {
                 m_cache = new PlaylistCache(playlistUrl, m_delegate, m_seekForVod);
             } catch (PlaylistException ex) {
-                XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32024));
+                kodi::QueueFormattedNotification(QUEUE_ERROR, kodi::GetLocalizedString(32024).c_str());
                 throw PlistBufferException((std::string("Playlist exception: ") + ex.what()).c_str());
             }
             m_position = 0;
@@ -105,19 +104,22 @@ namespace Buffers {
         bool isCanceled = false;
         SegmentInfo info;
         while(plist.NextSegment(info, hasMoreSegments)) {
-            void* f = XBMC_OpenFile(info.url, XFILE::READ_NO_CACHE | XFILE::READ_CHUNKED); //XFILE::READ_AUDIO_VIDEO);
+            auto f = XBMC_OpenFile(info.url, ADDON_READ_NO_CACHE | ADDON_READ_CHUNKED); //ADDON_READ_AUDIO_VIDEO);
             if(!f)
                 throw PlistBufferException("Failed to open media segment of sub-playlist.");
 
             unsigned char buffer[8196];
             ssize_t  bytesRead;
             do {
-                bytesRead = XBMC->ReadFile(f, buffer, sizeof(buffer));
+                bytesRead = f->Read(buffer, sizeof(buffer));
                 segment->Push(buffer, bytesRead);
                 isCanceled = IsCanceled(*segment);
             }while (bytesRead > 0 && !isCanceled);
             
-            XBMC->CloseFile(f);
+            f->Close();
+            delete f;
+            f = nullptr;
+            
             if(!hasMoreSegments || isCanceled)
                 break;
         }
@@ -148,23 +150,22 @@ namespace Buffers {
             if(isCanceled)
                 break;
             
-            void* f = XBMC_OpenFile(segment->info.url, XFILE::READ_NO_CACHE | XFILE::READ_CHUNKED | XFILE::READ_TRUNCATED); //XFILE::READ_AUDIO_VIDEO);
+            auto f = XBMC_OpenFile(segment->info.url, ADDON_READ_NO_CACHE | ADDON_READ_CHUNKED | ADDON_READ_TRUNCATED); //ADDON_READ_AUDIO_VIDEO);
             if(!f)
                 throw PlistBufferException("Failed to download playlist media segment.");
             
             // Some content type should be treated as playlist
             // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.1
-            char* contentType = XBMC->GetFilePropertyValue(f, XFILE::FILE_PROPERTY_CONTENT_TYPE, "");
-            const bool contentIsPlaylist =  NULL != contentType && ( 0 == strcmp("application/vnd.apple.mpegurl", contentType)  || 0 == strcmp("audio/mpegurl", contentType));
-            XBMC->FreeString(contentType);
+            auto contentType = f->GetPropertyValue(ADDON_FILE_PROPERTY_CONTENT_TYPE, "");
+            const bool contentIsPlaylist =  "application/vnd.apple.mpegurl" == contentType  || "audio/mpegurl" == contentType;
             
             unsigned char buffer[8196];
             std::string contentForPlaylist;
             ssize_t  bytesRead;
             do {
-                bytesRead = XBMC->ReadFile(f, buffer, sizeof(buffer));
+                bytesRead = f->Read(buffer, sizeof(buffer));
                 if(contentIsPlaylist) {
-                    contentForPlaylist.append ((char *) buffer, bytesRead);
+                    contentForPlaylist.append((char *) buffer, bytesRead);
                 } else{
                     segment->Push(buffer, bytesRead);
                 }
@@ -172,7 +173,9 @@ namespace Buffers {
                 //        LogDebug(">>> Write: %d", bytesRead);
             }while (bytesRead > 0 && !isCanceled);
             
-            XBMC->CloseFile(f);
+            f->Close();
+            delete f;
+            f = nullptr;
             
             if(contentIsPlaylist && !isCanceled) {
                 result = FillSegmentFromPlaylist(segment, contentForPlaylist, [&isCanceled, &IsCanceled](const MutableSegment& seg){
@@ -258,8 +261,8 @@ namespace Buffers {
                         if(!isStopped) {
                             LogDebug("PlaylistBuffer: waiting for space in cache...");
                             if(nullptr != segment) {
-                                struct __stat64 stat;
-                                XBMC->StatFile(httplib::detail::encode_get_url(segment->info.url).c_str(), &stat);
+                                kodi::vfs::FileStatus stat;
+                                kodi::vfs::StatFile(httplib::detail::encode_get_url(segment->info.url), stat);
                                 LogDebug("Stat segment #%" PRIu64 ".", segment->info.index);
                             }
                         }
@@ -424,7 +427,7 @@ namespace Buffers {
             Init(newUrl);
             succeeded = true;
         } catch (const InputBufferException& ex) {
-            XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32004), ex.what());
+            kodi::QueueFormattedNotification(QUEUE_ERROR, kodi::GetLocalizedString(32004).c_str(), ex.what());
             LogError("PlaylistBuffer: Failed to switch streams to %s.\n Error: %s", newUrl.c_str(), ex.what());
         }
         

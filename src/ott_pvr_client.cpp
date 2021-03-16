@@ -33,6 +33,7 @@
 
 #include <algorithm>
 #include <ctime>
+#include "kodi/General.h"
 #include "p8-platform/util/util.h"
 
 #include "timeshift_buffer.h"
@@ -45,30 +46,24 @@
 
 using namespace Globals;
 using namespace std;
-using namespace ADDON;
 using namespace PvrClient;
 using namespace Helpers;
 
 static const char* c_playlist_setting = "ott_playlist_url";
 static const char* c_key_setting = "ott_key";
 
-ADDON_STATUS OttPVRClient::Init(PVR_PROPERTIES* pvrprops)
+ADDON_STATUS OttPVRClient::Init(const std::string& clientPath, const std::string& userPath)
 {
-    ADDON_STATUS retVal = PVRClientBase::Init(pvrprops);
+    ADDON_STATUS retVal = PVRClientBase::Init(clientPath, userPath);
     if(ADDON_STATUS_OK != retVal)
        return retVal;
-    
-    char buffer[1024];
-    
-    if (XBMC->GetSetting(c_playlist_setting, &buffer))
-        m_playlistUrl = buffer;
-    if (XBMC->GetSetting(c_key_setting, &buffer))
-        m_key = buffer;
+       
+    m_playlistUrl = kodi::GetSettingString(c_playlist_setting);
+    m_key = kodi::GetSettingString(c_key_setting);
+
     SetSeekSupported(true);
     retVal = CreateCoreSafe(false);
-    
-    //    PVR_MENUHOOK hook = {1, 30020, PVR_MENUHOOK_EPG};
-    //    m_pvr->AddMenuHook(&hook);
+
     return retVal;
 
 }
@@ -97,11 +92,11 @@ ADDON_STATUS OttPVRClient::CreateCoreSafe(bool clearEpgCache)
     }
     catch (OttEngine::AuthFailedException &)
     {
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32007), "OTT");
+        kodi::QueueFormattedNotification(QUEUE_ERROR, kodi::GetLocalizedString(32007).c_str(), "OTT");
     }
     catch(...)
     {
-        XBMC->QueueNotification(QUEUE_ERROR, "OTT club: unhandeled exception on reload EPG.");
+        kodi::QueueFormattedNotification(QUEUE_ERROR, "OTT club: unhandeled exception on reload EPG.");
         retVal = ADDON_STATUS_PERMANENT_FAILURE;
     }
     return retVal;
@@ -130,18 +125,18 @@ void OttPVRClient::CreateCore(bool clearEpgCache)
 
 }
 
-ADDON_STATUS OttPVRClient::SetSetting(const char *settingName, const void *settingValue)
+ADDON_STATUS OttPVRClient::SetSetting(const std::string& settingName, const kodi::CSettingValue& settingValue)
 {
-    if (strcmp(settingName,  c_playlist_setting) == 0 && strcmp((const char*) settingValue, m_playlistUrl.c_str()) != 0)
+    if (c_playlist_setting == settingName && settingValue.GetString() != m_playlistUrl)
     {
-        m_playlistUrl = (const char*) settingValue;
+        m_playlistUrl = settingValue.GetString();
         if (!m_playlistUrl.empty() && !m_key.empty() && m_core == NULL){
             CreateCoreSafe(false);
         }
     }
-    else if (strcmp(settingName,  c_key_setting) == 0  && strcmp((const char*) settingValue, m_key.c_str()) != 0)
+    else if (c_key_setting == settingName  && settingValue.GetString() != m_key)
     {
-        m_key = (const char*) settingValue;
+        m_key = settingValue.GetString();
         if (!m_playlistUrl.empty() && !m_key.empty() && m_core == NULL){
             CreateCoreSafe(false);
         }
@@ -152,30 +147,25 @@ ADDON_STATUS OttPVRClient::SetSetting(const char *settingName, const void *setti
     return ADDON_STATUS_NEED_RESTART;
 }
 
-PVR_ERROR OttPVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabilities)
+PVR_ERROR OttPVRClient::GetAddonCapabilities(kodi::addon::PVRCapabilities& capabilities)
 {
-    pCapabilities->bSupportsEPG = true;
-    pCapabilities->bSupportsTV = true;
-    pCapabilities->bSupportsRadio = false;
-    pCapabilities->bSupportsChannelGroups = true;
-    pCapabilities->bHandlesInputStream = true;
-//    pCapabilities->bSupportsRecordings = true;
+    capabilities.SetSupportsEPG(true);
+    capabilities.SetSupportsTV(true);
+    capabilities.SetSupportsRadio(false);
+    capabilities.SetSupportsChannelGroups(true);
+    capabilities.SetHandlesInputStream(true);
+//    capabilities.SetSupportsRecordings(true)(true);
     
-    pCapabilities->bSupportsTimers = false;
-    pCapabilities->bSupportsChannelScan = false;
-    pCapabilities->bHandlesDemuxing = false;
-    pCapabilities->bSupportsRecordingPlayCount = false;
-    pCapabilities->bSupportsLastPlayedPosition = false;
-    pCapabilities->bSupportsRecordingEdl = false;
+    capabilities.SetSupportsTimers(false);
+    capabilities.SetSupportsChannelScan(false);
+    capabilities.SetHandlesDemuxing(false);
+    capabilities.SetSupportsRecordingPlayCount(false);
+    capabilities.SetSupportsLastPlayedPosition(false);
+    capabilities.SetSupportsRecordingEdl(false);
     
-    return PVRClientBase::GetAddonCapabilities(pCapabilities);
+    return PVRClientBase::GetAddonCapabilities(capabilities);
 }
 
-PVR_ERROR  OttPVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
-{
-    return PVRClientBase::MenuHook(menuhook, item);
-    
-}
 ADDON_STATUS OttPVRClient::OnReloadEpg()
 {
     ADDON_STATUS retVal = CreateCoreSafe(true);
@@ -196,9 +186,9 @@ ADDON_STATUS OttPVRClient::OnReloadEpg()
 class OttArchiveDelegate : public Buffers::IPlaylistBufferDelegate
 {
 public:
-    OttArchiveDelegate(OttEngine::Core* core, const PVR_RECORDING &recording, uint32_t startPadding, uint32_t endPadding)
-    : _duration(recording.iDuration + startPadding + endPadding)
-    , _recordingTime(recording.recordingTime - startPadding)
+    OttArchiveDelegate(OttEngine::Core* core, const kodi::addon::PVRRecording& recording, uint32_t startPadding, uint32_t endPadding)
+    : _duration(recording.GetDuration() + startPadding + endPadding)
+    , _recordingTime(recording.GetRecordingTime() - startPadding)
     , _core(core)
     {
         _channelId = 1;
@@ -206,7 +196,7 @@ public:
         // NOTE: Kodi does NOT provide recording.iChannelUid for unknown reason
         // Worrkaround: use EPG entry
         EpgEntry epgTag;
-        int recId = stoi(recording.strRecordingId);
+        int recId = stoi(recording.GetRecordingId().c_str());
         if(!_core->GetEpgEntry(recId, epgTag)){
             LogError("Failed to obtain EPG tag for record ID %d. First channel ID will be used", recId);
             return;
@@ -244,7 +234,7 @@ private:
 };
 
 
-bool OttPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
+bool OttPVRClient::OpenRecordedStream(const kodi::addon::PVRRecording& recording)
 {
     if(NULL == m_core)
         return false;
@@ -259,11 +249,11 @@ bool OttPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     return PVRClientBase::OpenRecordedStream(url, delegate, IsSeekSupported() ? SupportVodSeek : NoRecordingFlags);
 }
 
-PVR_ERROR OttPVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
+PVR_ERROR OttPVRClient::SignalStatus(int channelUid, kodi::addon::PVRSignalStatus& signalStatus)
 {
-    snprintf(signalStatus.strAdapterName, sizeof(signalStatus.strAdapterName), "IPTV OTT Club");
-    snprintf(signalStatus.strAdapterStatus, sizeof(signalStatus.strAdapterStatus), (m_core == NULL) ? "Not connected" :"OK");
-    return this->PVRClientBase::SignalStatus(signalStatus);
+    signalStatus.SetAdapterName("IPTV OTT Club");
+    signalStatus.SetAdapterStatus((m_core == NULL) ? "Not connected" :"OK");
+    return this->PVRClientBase::SignalStatus(channelUid, signalStatus);
 }
 
 

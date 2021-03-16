@@ -25,7 +25,6 @@
 
 #include <string>
 #include "pvr_client_types.h"
-#include "xbmc_pvr_types.h"
 #include "p8-platform/threads/mutex.h"
 #include "addon.h"
 #include "addon_settings.h"
@@ -54,35 +53,35 @@ namespace PvrClient
         }TimeshiftBufferType;
         
         PVRClientBase();
-        ADDON_STATUS Init(PVR_PROPERTIES* pvrprops);
+        ADDON_STATUS Init(const std::string& clientPath, const std::string& userPath) override;
         virtual ~PVRClientBase();
         
-        ADDON_STATUS SetSetting(const char *settingName, const void *settingValue);
+        ADDON_STATUS SetSetting(const std::string& settingName, const kodi::CSettingValue& settingValue) override;
         
-        PVR_ERROR GetAddonCapabilities(PVR_ADDON_CAPABILITIES* pCapabilities) = 0;
+        PVR_ERROR GetAddonCapabilities(kodi::addon::PVRCapabilities& capabilities) override = 0;
         
-        bool CanPauseStream();
-        bool CanSeekStream();
-        bool IsRealTimeStream(void);
-        PVR_ERROR GetStreamTimes(PVR_STREAM_TIMES *times);
+        bool CanPauseStream() override;
+        bool CanSeekStream() override;
+        bool IsRealTimeStream(void) override;
+        PVR_ERROR GetStreamTimes(kodi::addon::PVRStreamTimes& times) override;
 
-        int GetChannelsAmount();
-        PVR_ERROR GetChannels(ADDON_HANDLE handle, bool bRadio);
+        int GetChannelsAmount() override;
+        PVR_ERROR GetChannels(bool radio, kodi::addon::PVRChannelsResultSet& results) override;
 
-        int GetChannelGroupsAmount();
-        PVR_ERROR GetChannelGroups(ADDON_HANDLE handle, bool bRadio);
-        PVR_ERROR GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_CHANNEL_GROUP& group);
+        int GetChannelGroupsAmount() override;
+        PVR_ERROR GetChannelGroups(bool radio, kodi::addon::PVRChannelGroupsResultSet& result) override;
+        PVR_ERROR GetChannelGroupMembers(const kodi::addon::PVRChannelGroup& group, kodi::addon::PVRChannelGroupMembersResultSet& results) override;
         
-        PVR_ERROR GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL& channel, time_t iStart, time_t iEnd);
-        ADDON_STATUS GetStatus();
+        PVR_ERROR GetEPGForChannel(int channelUid, time_t start, time_t end, kodi::addon::PVREPGTagsResultSet& results) override;
+        ADDON_STATUS GetStatus() override;
         
-        bool OpenLiveStream(const PVR_CHANNEL& channel);
-        void CloseLiveStream();
-        int ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize);
-        long long SeekLiveStream(long long iPosition, int iWhence);
-        long long PositionLiveStream();
-        long long LengthLiveStream();
-        bool SwitchChannel(const PVR_CHANNEL& channel);
+        bool OpenLiveStream(const kodi::addon::PVRChannel& channel) override;
+        void CloseLiveStream() override;
+        int ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize) override;
+        long long SeekLiveStream(long long iPosition, int iWhence) override;
+        long long PositionLiveStream() override;
+        long long LengthLiveStream() override;
+        bool SwitchChannel(const PVR_CHANNEL& channel) override;
 
         
         uint64_t TimeshiftBufferSize() const;
@@ -90,32 +89,32 @@ namespace PvrClient
         const std::string& TimeshiftPath() const;
         const std::string& RecordingsPath() const;
 
-        int GetRecordingsAmount(bool deleted);
-        PVR_ERROR GetRecordings(ADDON_HANDLE handle, bool deleted);
-        PVR_ERROR DeleteRecording(const PVR_RECORDING &recording);
-        void CloseRecordedStream(void);
-        PVR_ERROR GetStreamReadChunkSize(int* chunksize);
-        int ReadRecordedStream(unsigned char *pBuffer, unsigned int iBufferSize);
-        long long SeekRecordedStream(long long iPosition, int iWhence);
+        PVR_ERROR GetRecordingsAmount(bool deleted, int& amount) override;
+        PVR_ERROR GetRecordings(bool deleted, kodi::addon::PVRRecordingsResultSet& results) override;
+        PVR_ERROR DeleteRecording(const kodi::addon::PVRRecording& recording) override;
+        void CloseRecordedStream(void) override;
+        PVR_ERROR GetStreamReadChunkSize(int& chunksize) override;
+        int ReadRecordedStream(unsigned char *pBuffer, unsigned int iBufferSize) override;
+        long long SeekRecordedStream(long long iPosition, int iWhence) override;
         long long PositionRecordedStream(void);
-        long long LengthRecordedStream(void);
-        PVR_ERROR IsEPGTagRecordable(const EPG_TAG* tag, bool* bIsRecordable);
+        long long LengthRecordedStream(void) override;
+        PVR_ERROR IsEPGTagRecordable(const kodi::addon::PVREPGTag& tag, bool& isRecordable) override;
 
-        bool StartRecordingFor(const PVR_TIMER &timer);
-        bool StopRecordingFor(const PVR_TIMER &timer);
-        bool FindEpgFor(const PVR_TIMER &timer);
+        bool StartRecordingFor(kodi::addon::PVRTimer &timer) override;
+        bool StopRecordingFor(kodi::addon::PVRTimer &timer) override;
+        bool FindEpgFor(kodi::addon::PVRTimer &timer) override;
 
         
-        PVR_ERROR CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
-        
-        void OnSystemSleep();
-        void OnSystemWake();
-        PVR_ERROR SignalStatus(PVR_SIGNAL_STATUS &signalStatus);
-        
-        PVR_ERROR GetChannelStreamProperties(const PVR_CHANNEL* channel, PVR_NAMED_VALUE* properties, unsigned int* iPropertiesCount);
-        const char * GetLiveStreamURL(const PVR_CHANNEL &channel);
+        PVR_ERROR CallSettingsMenuHook(const kodi::addon::PVRMenuhook& menuhook) override;
+        PVR_ERROR CallChannelMenuHook(const kodi::addon::PVRMenuhook& menuhook, const kodi::addon::PVRChannel& item) override;
+        PVR_ERROR CallEPGMenuHook(const kodi::addon::PVRMenuhook& menuhook, const kodi::addon::PVREPGTag& tag) override;
+        PVR_ERROR CallRecordingMenuHook(const kodi::addon::PVRMenuhook& menuhook, const kodi::addon::PVRRecording& item) override;
+        PVR_ERROR CallTimerMenuHook(const kodi::addon::PVRMenuhook& menuhook, const kodi::addon::PVRTimer& item) override;
 
-
+        void OnSystemSleep() override;
+        void OnSystemWake() override;
+        PVR_ERROR SignalStatus(int /*channelUid*/, kodi::addon::PVRSignalStatus& signalStatus) override;
+        
     protected:
         IClientCore* m_clientCore;
         AddonSettingsDictionary& m_addonSettings;
@@ -125,7 +124,6 @@ namespace PvrClient
         const std::string& LocalLogosFolder() const;
         bool UseChannelGroupsForArchive() const;
         
-        virtual PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
         virtual ADDON_STATUS OnReloadEpg();
         virtual ADDON_STATUS OnReloadRecordings();
 
@@ -143,9 +141,9 @@ namespace PvrClient
             ForcePlaylist = 0x0002
         };
         bool OpenRecordedStream(const std::string& url, Buffers::IPlaylistBufferDelegate* delegate, RecordingStreamFlags flags);
-        bool IsLocalRecording(const PVR_RECORDING &recording) const;
+        bool IsLocalRecording(const kodi::addon::PVRRecording& recording) const;
         // Implemented for local recordings. Should be defined by derived class
-        virtual bool OpenRecordedStream(const PVR_RECORDING &recording) = 0;
+        virtual bool OpenRecordedStream(const kodi::addon::PVRRecording& recording) override = 0;
         
         // Recordingd
         uint32_t StartRecordingPadding() const;
@@ -180,6 +178,9 @@ namespace PvrClient
         const ChannelList& GetChannelListWhenLutsReady();
         void Cleanup();
         
+        PVR_ERROR HandleCommonMenuHook(const kodi::addon::PVRMenuhook &menuhook);
+        void RegisterCommonMenuHook(unsigned int hookId, unsigned int localizedStringId);
+
         uint64_t CacheSizeLimit() const;
         int ChannelReloadTimeout() const;
         bool IsTimeshiftEnabled() const;
@@ -200,7 +201,7 @@ namespace PvrClient
         const std::string& UdpProxyHost() const;
         uint32_t UdpProxyPort() const;
         
-        void FillRecording(const EpgEntryList::value_type& epgEntry, PVR_RECORDING& tag, const char* dirPrefix);
+        void FillRecording(const EpgEntryList::value_type& epgEntry, kodi::addon::PVRRecording& tag, const char* dirPrefix);
         std::string DirectoryForRecording(unsigned int epgId) const;
         std::string PathForRecordingInfo(unsigned int epgId) const;
         static Buffers::InputBuffer*  BufferForUrl(const std::string& url );

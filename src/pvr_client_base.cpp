@@ -36,22 +36,9 @@
 #include <chrono>
 #include <list>
 #include <map>
-#include "kodi/libXBMC_addon.h"
 #include "kodi/Filesystem.h"
+#include "kodi/General.h"
 #include "XMLTV_loader.hpp"
-
-// Patch for Kodi buggy VFSDirEntry declaration
-struct VFSDirEntry_Patch
-{
-    char* label;             //!< item label
-    char* title;             //!< item title
-    char* path;              //!< item path
-    unsigned int num_props;  //!< Number of properties attached to item
-    VFSProperty* properties; //!< Properties
-    //    time_t date_time;        //!< file creation date & time
-    bool folder;             //!< Item is a folder
-    uint64_t size;           //!< Size of file represented by item
-};
 
 #include "p8-platform/util/util.h"
 #include "p8-platform/util/timeutils.h"
@@ -74,7 +61,6 @@ struct VFSDirEntry_Patch
 #include "addon_settings.h"
 
 using namespace std;
-using namespace ADDON;
 using namespace Buffers;
 using namespace PvrClient;
 using namespace Globals;
@@ -86,6 +72,7 @@ namespace CurlUtils
 {
     extern void SetCurlTimeout(long timeout);
 }
+
 // NOTE: avoid '.' (dot) char in path. Causes to deadlock in Kodi code.
 static const char* const s_DefaultCacheDir = "special://temp/pvr-puzzle-tv";
 static const char* const s_DefaultRecordingsDir = "special://temp/pvr-puzzle-tv/recordings";
@@ -102,16 +89,15 @@ static void DelayStartup(int delayInSec) {
     if(delayInSec <= 0){
         return;
     }
-    XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32027), delayInSec);
+    kodi::QueueFormattedNotification(QUEUE_INFO, kodi::GetLocalizedString(32027).c_str(), delayInSec);
     P8PLATFORM::CEvent::Sleep(delayInSec * 1000);
 }
-
 
 static int CheckForInetConnection(int waitForInetTimeout)
 {
     int waitingTimeInSec = 0;
     if(waitForInetTimeout > 0){
-        XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32022));
+        kodi::QueueFormattedNotification(QUEUE_INFO, kodi::GetLocalizedString(32022).c_str());
         
         P8PLATFORM::CTimeout waitForInet(waitForInetTimeout * 1000);
         bool connected = false;
@@ -123,7 +109,7 @@ static int CheckForInetConnection(int waitForInetTimeout)
                 P8PLATFORM::CEvent::Sleep(1000);
         }while(!connected && timeLeft > 0);
         if(!connected) {
-            XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32023));
+            kodi::QueueFormattedNotification(QUEUE_ERROR, kodi::GetLocalizedString(32023).c_str());
         }
         waitingTimeInSec = waitForInetTimeout - waitForInet.TimeLeft()/1000;
     }
@@ -131,34 +117,31 @@ static int CheckForInetConnection(int waitForInetTimeout)
 }
 
 static void CleanupTimeshiftDirectory(const std::string& path){
-    const char* nonEmptyPath = path.c_str();
-    if(!XBMC->DirectoryExists(nonEmptyPath))
-        if(!XBMC->CreateDirectory(nonEmptyPath))
+    
+    if(!kodi::vfs::DirectoryExists(path))
+        if(!kodi::vfs::CreateDirectory(path))
             LogError( "Failed to create timeshift folder %s .", path.c_str());
     // Cleanup chache
-    if(XBMC->DirectoryExists(nonEmptyPath))
+    if(kodi::vfs::DirectoryExists(path))
     {
-        VFSDirEntry* files;
-        unsigned int num_files;
-        if(XBMC->GetDirectory(nonEmptyPath, "*.bin", &files, &num_files)) {
-            VFSDirEntry_Patch* patched_files = (VFSDirEntry_Patch*) files;
-            for (int i = 0; i < num_files; ++i) {
-                const VFSDirEntry_Patch& f = patched_files[i];
-                if(!f.folder)
-                    if(!XBMC->DeleteFile(f.path))
-                        LogError( "Failed to delete timeshift folder entry %s", f.path);
+        std::vector<kodi::vfs::CDirEntry> files;
+        if(kodi::vfs::GetDirectory(path, "*.bin", files)) {
+            for (const auto& f : files) {
+                if(!f.IsFolder()){
+                    if(!kodi::vfs::DeleteFile(f.Path())){
+                        LogError( "Failed to delete timeshift folder entry %s", f.Path().c_str());
+                    }
+                }
             }
-            XBMC->FreeDirectory(files, num_files);
         } else {
-            LogError( "Failed obtain content of timeshift folder %s", nonEmptyPath);
+            LogError( "Failed obtain content of timeshift folder %s", path.c_str());
         }
     }
 }
 
 static void CheckRecordingsPath(const std::string& path){
-    const char* nonEmptyPath = path.c_str();
-    if(!XBMC->DirectoryExists(nonEmptyPath))
-        if(!XBMC->CreateDirectory(nonEmptyPath))
+    if(!kodi::vfs::DirectoryExists(path))
+        if(!kodi::vfs::CreateDirectory(path))
             LogError( "Failed to create recordings folder %s .", path.c_str());
 }
 
@@ -181,19 +164,7 @@ PVRClientBase::PVRClientBase()
     
 }
 
-static void RegisterMenuHook(unsigned int hookId, unsigned int localizedStringId)
-{
-    PVR_MENUHOOK hook = {hookId,  localizedStringId, PVR_MENUHOOK_CHANNEL};
-    PVR->AddMenuHook(&hook);
-    hook.category = PVR_MENUHOOK_EPG;
-    PVR->AddMenuHook(&hook);
-    hook.category = PVR_MENUHOOK_RECORDING;
-    PVR->AddMenuHook(&hook);
-    hook.category = PVR_MENUHOOK_SETTING;
-    PVR->AddMenuHook(&hook);
-}
-
-ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
+ADDON_STATUS PVRClientBase::Init(const std::string& clientPath, const std::string& userPath)
 {
     m_clientCore = NULL;
     m_inputBuffer = NULL;
@@ -204,23 +175,23 @@ ADDON_STATUS PVRClientBase::Init(PVR_PROPERTIES* pvrprops)
     m_localRecordBuffer = NULL;
     m_supportSeek = false;
     
-    LogDebug( "User path: %s", pvrprops->strUserPath);
-    LogDebug( "Client path: %s", pvrprops->strClientPath);
+    m_clientPath = clientPath;
+    m_userPath = userPath;
+    LogDebug( "User path: %s", m_userPath.c_str());
+    LogDebug( "Client path: %s", m_clientPath.c_str());
     //auto g_strUserPath   = pvrprops->strUserPath;
-    m_clientPath = pvrprops->strClientPath;
-    m_userPath = pvrprops->strUserPath;
-    
+
     InitSettings();
     
     DelayStartup(StartupDelay() - CheckForInetConnection(WaitForInetTimeout()));
     
-    RegisterMenuHook(RELOAD_EPG_MENU_HOOK, 32050);
-    RegisterMenuHook(RELOAD_RECORDINGS_MENU_HOOK, 32051);
+    RegisterCommonMenuHook(RELOAD_EPG_MENU_HOOK, 32050);
+    RegisterCommonMenuHook(RELOAD_RECORDINGS_MENU_HOOK, 32051);
 
     // Local recordings path prefix
-    s_LocalRecPrefix = XBMC_Message(32014);
+    s_LocalRecPrefix = kodi::GetLocalizedString(32014);
     // Remote recordings path prefix
-    s_RemoteRecPrefix = XBMC_Message(32015);
+    s_RemoteRecPrefix = kodi::GetLocalizedString(32015);
     
     m_liveChannelId =  m_localRecordChannelId = UnknownChannelId;
     m_lastBytesRead = c_InitialLastByteRead;
@@ -348,7 +319,7 @@ void PVRClientBase::OnSystemWake()
     //CreateCoreSafe(false);
 }
 
-ADDON_STATUS PVRClientBase::SetSetting(const char *settingName, const void *settingValue)
+ADDON_STATUS PVRClientBase::SetSetting(const std::string& settingName, const kodi::CSettingValue& settingValue)
 {
     try {
         return m_addonSettings.Set(settingName, settingValue);
@@ -360,27 +331,26 @@ ADDON_STATUS PVRClientBase::SetSetting(const char *settingName, const void *sett
     return ADDON_STATUS_OK;
 }
 
-PVR_ERROR PVRClientBase::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabilities)
+PVR_ERROR PVRClientBase::GetAddonCapabilities(kodi::addon::PVRCapabilities& capabilities)
 {
     //pCapabilities->bSupportsEPG = true;
-    pCapabilities->bSupportsTV = true;
-    //pCapabilities->bSupportsRadio = true;
-    //pCapabilities->bSupportsChannelGroups = true;
-    //pCapabilities->bHandlesInputStream = true;
-    pCapabilities->bSupportsRecordings = true; //For local recordings
-;
-    pCapabilities->bSupportsTimers = true;
+    capabilities.SetSupportsTV(true);
+    //capabilitiesbSupportsRadio(true);
+    //pCapabilities->bSupportsChannelGroups(true);
+    //pCapabilities->bHandlesInputStream(true);
+    capabilities.SetSupportsRecordings(true); //For local recordings
+    capabilities.SetSupportsTimers(true);
 
-//    pCapabilities->bSupportsChannelScan = false;
-//    pCapabilities->bHandlesDemuxing = false;
-//    pCapabilities->bSupportsRecordingPlayCount = false;
-//    pCapabilities->bSupportsLastPlayedPosition = false;
-//    pCapabilities->bSupportsRecordingEdl = false;
+//    pCapabilities->bSupportsChannelScan(false);
+//    pCapabilities->bHandlesDemuxing)false);
+//    pCapabilities->bSupportsRecordingPlayCount(false);
+//    pCapabilities->bSupportsLastPlayedPosition(false);
+//    pCapabilities->bSupportsRecordingEdl(false);
 
     // Kodi 18
-    pCapabilities->bSupportsRecordingsRename = false;
-    pCapabilities->bSupportsRecordingsLifetimeChange = false;
-    pCapabilities->bSupportsDescrambleInfo = false;
+    capabilities.SetSupportsRecordingsRename(false);
+    capabilities.SetSupportsRecordingsLifetimeChange(false);
+    capabilities.SetSupportsDescrambleInfo(false);
 
     return PVR_ERROR_NO_ERROR;
 }
@@ -416,14 +386,9 @@ bool PVRClientBase::IsRealTimeStream(void)
     return isRTS;
 }
 
-PVR_ERROR PVRClientBase::GetStreamTimes(PVR_STREAM_TIMES *times)
+PVR_ERROR PVRClientBase::GetStreamTimes(kodi::addon::PVRStreamTimes& times)
 {
 
-    if (!times)
-        return PVR_ERROR_INVALID_PARAMETERS;
-//    if(!IsTimeshiftEnabled())
-//        return PVR_ERROR_NOT_IMPLEMENTED;
-    
     int64_t timeStart = 0;
     int64_t  timeEnd = 0;
 
@@ -443,39 +408,17 @@ PVR_ERROR PVRClientBase::GetStreamTimes(PVR_STREAM_TIMES *times)
         else
             return PVR_ERROR_NOT_IMPLEMENTED;
     }
-    
-    times->startTime = timeStart;
-    times->ptsStart  = 0;
-    times->ptsBegin  = 0;
-    times->ptsEnd    = (timeEnd - timeStart) * DVD_TIME_BASE;
+    const uint DVD_TIME_BASE = 1000*1000; // to micro seconds factor
+    times.SetStartTime(timeStart);
+    times.SetPTSStart(0);
+    times.SetPTSBegin(0);
+    times.SetPTSEnd((timeEnd - timeStart) * DVD_TIME_BASE);
     return PVR_ERROR_NO_ERROR;
 }
 
 ADDON_STATUS PVRClientBase::GetStatus()
 {
     return  /*(m_sovokTV == NULL)? ADDON_STATUS_LOST_CONNECTION : */ADDON_STATUS_OK;
-}
-
-PVR_ERROR  PVRClientBase::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
-{
-    
-    if(menuhook.iHookId == RELOAD_EPG_MENU_HOOK ) {
-        XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32012));
-        OnReloadEpg();
-        m_clientCore->CallRpcAsync("{\"jsonrpc\": \"2.0\", \"method\": \"GUI.ActivateWindow\", \"params\": {\"window\": \"pvrsettings\"},\"id\": 1}",
-                     [&] (rapidjson::Document& jsonRoot) {
-                         XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32016));
-                     },
-                     [&](const ActionQueue::ActionResult& s) {});
-
-    } else if(RELOAD_RECORDINGS_MENU_HOOK == menuhook.iHookId) {
-//        char* message = XBMC->GetLocalizedString(32012);
-//        XBMC->QueueNotification(QUEUE_INFO, message);
-//        XBMC->FreeString(message);
-        OnReloadRecordings();
-    }
-    return PVR_ERROR_NO_ERROR;
-    
 }
 
 ADDON_STATUS PVRClientBase::OnReloadEpg()
@@ -493,10 +436,10 @@ ADDON_STATUS PVRClientBase::OnReloadRecordings()
     return retVal;
 }
 
-PVR_ERROR PVRClientBase::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
+PVR_ERROR PVRClientBase::SignalStatus(int /*channelUid*/, kodi::addon::PVRSignalStatus& signalStatus)
 {
     if(nullptr != m_inputBuffer) {
-        signalStatus.iSignal = m_inputBuffer->FillingRatio() * 	0xFFFF;
+        signalStatus.SetSignal(m_inputBuffer->FillingRatio() * 	0xFFFF);
 //        signalStatus.iSNR = m_inputBuffer->GetSpeedRatio() * 0xFFFF;
     }
     return PVR_ERROR_NO_ERROR;
@@ -512,7 +455,7 @@ const ChannelList& PVRClientBase::GetChannelListWhenLutsReady()
     return m_clientCore->GetChannelList();
 }
 
-PVR_ERROR PVRClientBase::GetChannels(ADDON_HANDLE handle, bool bRadio)
+PVR_ERROR PVRClientBase::GetChannels(bool radio, kodi::addon::PVRChannelsResultSet& results)
 {
     if(NULL == m_clientCore)
         return PVR_ERROR_SERVER_ERROR;
@@ -521,18 +464,18 @@ PVR_ERROR PVRClientBase::GetChannels(ADDON_HANDLE handle, bool bRadio)
     for(auto& itChannel : GetChannelListWhenLutsReady())
     {
         auto & channel = itChannel.second;
-        if (bRadio == channel.IsRadio)
+        if (radio == channel.IsRadio)
         {
-            PVR_CHANNEL pvrChannel = { 0 };
-            pvrChannel.iUniqueId = m_pluginToKodiLut.at(channel.UniqueId) ;
-            pvrChannel.iChannelNumber = channel.Number + channelIndexOffset;
-            pvrChannel.bIsRadio = channel.IsRadio;
-            strncpy(pvrChannel.strChannelName, channel.Name.c_str(), sizeof(pvrChannel.strChannelName));
-            strncpy(pvrChannel.strIconPath, channel.IconPath.c_str(), sizeof(pvrChannel.strIconPath));
+            kodi::addon::PVRChannel pvrChannel;
+            pvrChannel.SetUniqueId (m_pluginToKodiLut.at(channel.UniqueId));
+            pvrChannel.SetChannelNumber(channel.Number + channelIndexOffset);
+            pvrChannel.SetIsRadio(channel.IsRadio);
+            pvrChannel.SetChannelName(channel.Name);
+            pvrChannel.SetIconPath(channel.IconPath);
             
-            LogDebug("==> CH %-5d - %-40s", pvrChannel.iChannelNumber, channel.Name.c_str());
+            LogDebug("==> CH %-5d - %-40s", pvrChannel.GetChannelNumber(), channel.Name.c_str());
             
-            PVR->TransferChannelEntry(handle, &pvrChannel);
+            results.Add(pvrChannel);
         }
     }
     
@@ -557,45 +500,46 @@ int PVRClientBase::GetChannelGroupsAmount()
     return numberOfGroups;
 }
 
-PVR_ERROR PVRClientBase::GetChannelGroups(ADDON_HANDLE handle, bool bRadio)
+PVR_ERROR PVRClientBase::GetChannelGroups(bool radio, kodi::addon::PVRChannelGroupsResultSet& result)
 {
     if(NULL == m_clientCore)
         return PVR_ERROR_SERVER_ERROR;
     
-    if (!bRadio)
+    if (!radio)
     {
-        PVR_CHANNEL_GROUP pvrGroup = { 0 };
-        pvrGroup.bIsRadio = false;
+        kodi::addon::PVRChannelGroup pvrGroup;
+        pvrGroup.SetIsRadio(false);
         for (auto& itGroup : m_clientCore->GetGroupList())
         {
-            pvrGroup.iPosition = itGroup.first;
-            strncpy(pvrGroup.strGroupName, itGroup.second.Name.c_str(), sizeof(pvrGroup.strGroupName));
-            PVR->TransferChannelGroup(handle, &pvrGroup);
-            LogDebug("Group %d: %s", pvrGroup.iPosition, pvrGroup.strGroupName);
+            pvrGroup.SetPosition(itGroup.first);
+            pvrGroup.SetGroupName(itGroup.second.Name);
+            result.Add(pvrGroup);
+            LogDebug("Group %d: %s", pvrGroup.GetPosition(), pvrGroup.GetGroupName().c_str());
         }
     }
     
     return PVR_ERROR_NO_ERROR;
 }
 
-PVR_ERROR PVRClientBase::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_CHANNEL_GROUP& group)
+PVR_ERROR PVRClientBase::GetChannelGroupMembers(const kodi::addon::PVRChannelGroup& group, kodi::addon::PVRChannelGroupMembersResultSet& results)
 {
     if(NULL == m_clientCore)
         return PVR_ERROR_SERVER_ERROR;
     
     auto& groups = m_clientCore->GetGroupList();
-    auto itGroup =  std::find_if(groups.begin(), groups.end(), [&](const GroupList::value_type& v ){
-        return strcmp(group.strGroupName, v.second.Name.c_str()) == 0;
+    auto groupName = group.GetGroupName();
+    auto itGroup =  std::find_if(groups.begin(), groups.end(), [&groupName](const GroupList::value_type& v ){
+        return groupName == v.second.Name;
     });
     if (itGroup != groups.end())
     {
         for (auto it : itGroup->second.Channels)
         {
-            PVR_CHANNEL_GROUP_MEMBER pvrGroupMember = { 0 };
-            strncpy(pvrGroupMember.strGroupName, itGroup->second.Name.c_str(), sizeof(pvrGroupMember.strGroupName));
-            pvrGroupMember.iChannelUniqueId = m_pluginToKodiLut.at(it.second);
-            pvrGroupMember.iChannelNumber = it.first;
-            PVR->TransferChannelGroupMember(handle, &pvrGroupMember);
+            kodi::addon::PVRChannelGroupMember pvrGroupMember;
+            pvrGroupMember.SetGroupName(itGroup->second.Name);
+            pvrGroupMember.SetChannelUniqueId(m_pluginToKodiLut.at(it.second));
+            pvrGroupMember.SetChannelNumber(it.first);
+            results.Add(pvrGroupMember);
         }
     }
    
@@ -604,34 +548,34 @@ PVR_ERROR PVRClientBase::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_C
 
 #pragma mark - EPG
 
-PVR_ERROR PVRClientBase::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL& channel, time_t iStart, time_t iEnd)
+PVR_ERROR PVRClientBase::GetEPGForChannel(int channelUid, time_t start, time_t end, kodi::addon::PVREPGTagsResultSet& results)
 {
     if(NULL == m_clientCore)
         return PVR_ERROR_SERVER_ERROR;
     
     m_clientCore->GetPhase(IClientCore::k_EpgCacheLoadingPhase)->Wait();
    
-    if(m_kodiToPluginLut.count(channel.iUniqueId) == 0){
-        LogError("PVRClientBase: EPG request for unknown channel ID %d", channel.iUniqueId);
+    if(m_kodiToPluginLut.count(channelUid) == 0){
+        LogError("PVRClientBase: EPG request for unknown channel ID %d", channelUid);
         return PVR_ERROR_NO_ERROR;
     }
     
-    ChannelId chUniqueId = m_kodiToPluginLut.at(channel.iUniqueId);
+    ChannelId chUniqueId = m_kodiToPluginLut.at(channelUid);
     const auto& ch = GetChannelListWhenLutsReady().at(chUniqueId);
     
-    IClientCore::EpgEntryAction onEpgEntry = [&channel, &handle, ch](const EpgEntryList::value_type& epgEntry)
+    IClientCore::EpgEntryAction onEpgEntry = [&channelUid, &results, ch](const EpgEntryList::value_type& epgEntry)
     {
-        EPG_TAG tag = { 0 };
-        tag.iUniqueBroadcastId = epgEntry.first;
+        kodi::addon::PVREPGTag tag;
+        tag.SetUniqueBroadcastId(epgEntry.first);
         epgEntry.second.FillEpgTag(tag);
-        tag.iUniqueChannelId = channel.iUniqueId;//m_pluginToKodiLut.at(itEpgEntry->second.ChannelId);
-        tag.startTime += ch.TvgShift;
-        tag.endTime += ch.TvgShift;
-        PVR->TransferEpgEntry(handle, &tag);
+        tag.SetUniqueChannelId(channelUid);//m_pluginToKodiLut.at(itEpgEntry->second.ChannelId);
+        tag.SetStartTime(tag.GetStartTime() + ch.TvgShift);
+        tag.SetEndTime(tag.GetEndTime() + ch.TvgShift);
+        results.Add(tag);
         return true;// always continue enumeration...
     };
     
-    m_clientCore->GetEpg(chUniqueId, iStart, iEnd, onEpgEntry);
+    m_clientCore->GetEpg(chUniqueId, start, end, onEpgEntry);
     
     return PVR_ERROR_NO_ERROR;
 }
@@ -660,30 +604,31 @@ std::string PVRClientBase::GetStreamUrl(ChannelId channel)
     return  m_clientCore->GetUrl(channel);
 }
 
-bool PVRClientBase::OpenLiveStream(const PVR_CHANNEL& channel)
+bool PVRClientBase::OpenLiveStream(const kodi::addon::PVRChannel& channel)
 {
     auto phase =  m_clientCore->GetPhase(IClientCore::k_ChannelsLoadingPhase);
     if(phase) {
         phase->Wait();
     }
 
-    if(m_kodiToPluginLut.count(channel.iUniqueId) == 0){
-        LogError("PVRClientBase: open stream request for unknown channel ID %d", channel.iUniqueId);
+    const auto channelId =  channel.GetUniqueId();
+    if(m_kodiToPluginLut.count(channelId) == 0){
+        LogError("PVRClientBase: open stream request for unknown channel ID %d", channelId);
         return false;
     }
     
     m_lastBytesRead = c_InitialLastByteRead;
-    const ChannelId chId = m_kodiToPluginLut.at(channel.iUniqueId);
+    const ChannelId chId = m_kodiToPluginLut.at(channelId);
     bool succeeded = OpenLiveStream(chId, GetStreamUrl(chId));
     bool tryToRecover = !succeeded;
     while(tryToRecover) {
         string url = GetNextStreamUrl(chId);
         if(url.empty()) {// no more streams
             LogDebug("No alternative stream found.");
-            XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32026));
+            kodi::QueueFormattedNotification(QUEUE_INFO, kodi::GetLocalizedString(32026).c_str());
             break;
         }
-        XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32025));
+        kodi::QueueFormattedNotification(QUEUE_INFO, kodi::GetLocalizedString(32025).c_str());
         succeeded = OpenLiveStream(chId, url);
         tryToRecover = !succeeded;
     }
@@ -832,7 +777,7 @@ int PVRClientBase::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSi
             inputBuffer = nullptr;
             string  url = m_inputBuffer->GetUrl();
             if(!url.empty()){
-                XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32000));
+                kodi::QueueFormattedNotification(QUEUE_INFO, kodi::GetLocalizedString(32000).c_str());
                 if(SwitchChannel(chId, url))
                     inputBuffer = m_inputBuffer;
             }
@@ -894,13 +839,17 @@ bool PVRClientBase::SwitchChannel(ChannelId channelId, const std::string& url)
 
 #pragma mark - Recordings
 
-int PVRClientBase::GetRecordingsAmount(bool deleted)
+PVR_ERROR PVRClientBase::GetRecordingsAmount(bool deleted, int& amount)
 {
-    if(NULL == m_clientCore)
-        return -1;
+    if(NULL == m_clientCore){
+        amount = -1;
+        return PVR_ERROR_SERVER_ERROR;
+    }
     
-    if(deleted)
-        return -1;
+    if(deleted) {
+        amount = -1;
+        return PVR_ERROR_NOT_IMPLEMENTED;
+    }
     
     int size = 0;
     
@@ -909,35 +858,35 @@ int PVRClientBase::GetRecordingsAmount(bool deleted)
     if(LoadArchiveAfterEpg()) {
         auto phase =  m_clientCore->GetPhase(IClientCore::k_EpgLoadingPhase);
          if(!phase) {
-             return 0;
+             amount = 0;
+             return PVR_ERROR_NO_ERROR;
          }
-        if(!phase->IsDone())
-            return 0;
+        
+        if(!phase->IsDone()){
+            amount = 0;
+            return PVR_ERROR_NO_ERROR;
+        }
     }
     
     // Add remote archive (if enabled)
     if(IsArchiveSupported()) {
         auto phase =  m_clientCore->GetPhase(IClientCore::k_EpgCacheLoadingPhase);
         if(!phase) {
-            return 0;
+            amount = 0;
+            return PVR_ERROR_NO_ERROR;
         }
         phase->Wait();
         size = m_clientCore->UpdateArchiveInfoAndCount();
     }
     // Add local recordings
-    if(XBMC->DirectoryExists(RecordingsPath().c_str()))
+    if(kodi::vfs::DirectoryExists(RecordingsPath()))
     {
-        VFSDirEntry* files;
-        unsigned int num_files;
-        if(XBMC->GetDirectory(RecordingsPath().c_str(), "", &files, &num_files)) {
-            VFSDirEntry_Patch* patched_files = (VFSDirEntry_Patch*) files;
-            for (int i = 0; i < num_files; ++i) {
-                const VFSDirEntry_Patch& f = patched_files[i];
-                if(f.folder)
+        std::vector<kodi::vfs::CDirEntry> files;
+        if(kodi::vfs::GetDirectory(RecordingsPath().c_str(), "", files)) {
+            for (const auto& f : files) {
+                if(f.IsFolder())
                     ++size;
-
             }
-            XBMC->FreeDirectory(files, num_files);
         } else {
             LogError( "Failed obtain content of local recordings folder (amount) %s", RecordingsPath().c_str());
         }
@@ -946,29 +895,29 @@ int PVRClientBase::GetRecordingsAmount(bool deleted)
 
     LogDebug("PVRClientBase: found %d recordings. Was %d", size, m_lastRecordingsAmount);
 
-    return size;
-    
+    amount = size;
+    return PVR_ERROR_NO_ERROR;
 }
 
-void PVRClientBase::FillRecording(const EpgEntryList::value_type& epgEntry, PVR_RECORDING& tag, const char* dirPrefix)
+void PVRClientBase::FillRecording(const EpgEntryList::value_type& epgEntry, kodi::addon::PVRRecording& tag, const char* dirPrefix)
 {
     const auto& epgTag = epgEntry.second;
     
     const Channel& ch = GetChannelListWhenLutsReady().at(epgTag.UniqueChannelId);
 
-    sprintf(tag.strRecordingId, "%d",  epgEntry.first);
-    strncpy(tag.strTitle, epgTag.Title.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
-    strncpy(tag.strPlot, epgTag.Description.c_str(), PVR_ADDON_DESC_STRING_LENGTH - 1);
-    strncpy(tag.strChannelName, ch.Name.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
-    tag.recordingTime = epgTag.StartTime;
-    tag.iLifetime = 0; /* not implemented */
+    tag.SetRecordingId(to_string(epgEntry.first));
+    tag.SetTitle(epgTag.Title);
+    tag.SetPlot(epgTag.Description);
+    tag.SetChannelName(ch.Name);
+    tag.SetRecordingTime(epgTag.StartTime);
+    tag.SetLifetime(0); /* not implemented */
     
-    tag.iDuration = epgTag.EndTime - epgTag.StartTime;
-    tag.iEpgEventId = epgEntry.first;
-    tag.iChannelUid = m_pluginToKodiLut.at(ch.UniqueId);
-    tag.channelType = PVR_RECORDING_CHANNEL_TYPE_TV;
+    tag.SetDuration(epgTag.EndTime - epgTag.StartTime);
+    tag.SetEPGEventId(epgEntry.first);
+    tag.SetChannelUid(m_pluginToKodiLut.at(ch.UniqueId));
+    tag.SetChannelType(PVR_RECORDING_CHANNEL_TYPE_TV);
     if(!epgTag.IconPath.empty())
-        strncpy(tag.strIconPath, epgTag.IconPath.c_str(), sizeof(tag.strIconPath) -1);
+        tag.SetIconPath(epgTag.IconPath);
     
     string dirName(dirPrefix);
     dirName += '/';
@@ -977,16 +926,16 @@ void PVRClientBase::FillRecording(const EpgEntryList::value_type& epgEntry, PVR_
         dirName += (-1 == groupId) ? "---" : m_clientCore->GetGroupList().at(groupId).Name.c_str();
         dirName += '/';
     }
-    dirName += tag.strChannelName;
+    dirName += tag.GetChannelName();
     char buff[20];
     time_t startTime = epgTag.StartTime;
     strftime(buff, sizeof(buff), "/%d-%m-%y", localtime(&startTime));
     dirName += buff;
-    strncpy(tag.strDirectory, dirName.c_str(), PVR_ADDON_NAME_STRING_LENGTH - 1);
+    tag.SetDirectory(dirName);
 
 }
 
-PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
+PVR_ERROR PVRClientBase::GetRecordings(bool deleted, kodi::addon::PVRRecordingsResultSet& results)
 {
 
     if(NULL == m_clientCore)
@@ -1032,7 +981,7 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
         std::chrono::duration<float> fillTotal(0.0f);
         std::chrono::duration<float> transferTotal(0.0f);
         auto pThis = this;
-        IClientCore::EpgEntryAction action = [pThis ,&result, &handle, &size, &predicate, isFastEpgLoopAvailable, &fillTotal, &transferTotal]
+        IClientCore::EpgEntryAction action = [pThis ,&result, &results, &size, &predicate, isFastEpgLoopAvailable, &fillTotal, &transferTotal]
         (const EpgEntryList::value_type& epgEntry) {
             try {
                 // Optimisation: for first time we'll call ForEachEpgLocked()
@@ -1042,7 +991,7 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
                         return true;
                 }
                 
-                PVR_RECORDING tag = { 0 };
+                kodi::addon::PVRRecording tag;
                 
 //                auto startAt = std::chrono::system_clock::now();
                 
@@ -1052,7 +1001,7 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
 //                fillTotal += endAt-startAt;
 //                startAt = endAt;
 
-                PVR->TransferRecordingEntry(handle, &tag);
+                results.Add(tag);
 
 //                endAt = std::chrono::system_clock::now();
 //                transferTotal += endAt-startAt;
@@ -1084,34 +1033,33 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
 //        LogDebug("PVRClientBase: All Recording = %0.4f", transferTotal.count() + fillTotal.count() );
     }
     // Add local recordings
-    if(XBMC->DirectoryExists(RecordingsPath().c_str()))
+    if(kodi::vfs::DirectoryExists(RecordingsPath().c_str()))
     {
-        VFSDirEntry* files;
-        unsigned int num_files;
-        if(XBMC->GetDirectory(RecordingsPath().c_str(), "", &files, &num_files)) {
-            VFSDirEntry_Patch* patched_files = (VFSDirEntry_Patch*) files;
-            for (int i = 0; i < num_files; ++i) {
-                const VFSDirEntry_Patch& f = patched_files[i];
-                if(!f.folder)
+        std::vector<kodi::vfs::CDirEntry> files;
+        if(kodi::vfs::GetDirectory(RecordingsPath(), "*.bin", files)) {
+            for (const auto& f : files) {
+                if(!f.IsFolder()){
                     continue;
-                std::string infoPath = f.path;
+                }
+                std::string infoPath = f.Path();
                 if(infoPath[infoPath.length() - 1] != PATH_SEPARATOR_CHAR) {
                     infoPath += PATH_SEPARATOR_CHAR;
                 }
                 infoPath += "recording.inf";
-                void* infoFile = XBMC_OpenFile(infoPath);
+                kodi::vfs::CFile* infoFile = XBMC_OpenFile(infoPath);
                 if(nullptr == infoFile)
                     continue;
                 PVR_RECORDING tag = { 0 };
-                bool isValid = XBMC->ReadFile(infoFile, &tag, sizeof(tag)) == sizeof(tag);
-                XBMC->CloseFile(infoFile);
+                bool isValid = infoFile->Read( &tag, sizeof(tag)) == sizeof(tag);
+                infoFile->Close();
+                delete infoFile;
                 if(!isValid)
                     continue;
-                
-                PVR->TransferRecordingEntry(handle, &tag);
+                kodi::addon::PVRRecording data;
+                *(PVR_RECORDING*)data = tag;
+                results.Add(data);
                 ++size;
            }
-            XBMC->FreeDirectory(files, num_files);
         } else {
             LogError( "Failed obtain content of local recordings folder %s", RecordingsPath().c_str());
         }
@@ -1131,40 +1079,36 @@ PVR_ERROR PVRClientBase::GetRecordings(ADDON_HANDLE handle, bool deleted)
     return result;
 }
 
-PVR_ERROR PVRClientBase::DeleteRecording(const PVR_RECORDING &recording)
+PVR_ERROR PVRClientBase::DeleteRecording(const kodi::addon::PVRRecording& recording)
 {
     
     PVR_ERROR result = PVR_ERROR_NO_ERROR;
     // Is recording local?
     if(!IsLocalRecording(recording))
         return PVR_ERROR_REJECTED;
-    std::string dir = DirectoryForRecording(stoul(recording.strRecordingId));
-    if(!XBMC->DirectoryExists(dir.c_str()))
+    std::string dir = DirectoryForRecording(stoul(recording.GetRecordingId()));
+    if(!kodi::vfs::DirectoryExists(dir))
         return PVR_ERROR_INVALID_PARAMETERS;
 
-    
-    if(XBMC->DirectoryExists(RecordingsPath().c_str()))
+    if(kodi::vfs::DirectoryExists(RecordingsPath()))
     {
-        VFSDirEntry* files;
-        unsigned int num_files;
-        if(XBMC->GetDirectory(dir.c_str(), "", &files, &num_files)) {
-            VFSDirEntry_Patch* patched_files = (VFSDirEntry_Patch*) files;
-            for (int i = 0; i < num_files; ++i) {
-                const VFSDirEntry_Patch& f = patched_files[i];
-                if(f.folder)
+        std::vector<kodi::vfs::CDirEntry> files;
+        if(kodi::vfs::GetDirectory(dir, "", files)) {
+            for (const auto& f : files) {
+                if(f.IsFolder()){
                     continue;
-                if(!XBMC->DeleteFile(f.path))
+                }
+                if(kodi::vfs::DeleteFile(f.Path()))
                     return PVR_ERROR_FAILED;
             }
-            XBMC->FreeDirectory(files, num_files);
         } else {
             LogError( "Failed obtain content of local recordings folder (delete) %s", RecordingsPath().c_str());
         }
         
     }
 
-    XBMC->RemoveDirectory(dir.c_str());
-    PVR->TriggerRecordingUpdate();
+    kodi::vfs::RemoveDirectory(dir);
+    PVR->Addon_TriggerRecordingUpdate();
     
     return PVR_ERROR_NO_ERROR;
 }
@@ -1175,22 +1119,22 @@ bool PVRClientBase::IsLiveInRecording() const
 }
 
 
-bool PVRClientBase::IsLocalRecording(const PVR_RECORDING &recording) const
+bool PVRClientBase::IsLocalRecording(const kodi::addon::PVRRecording& recording) const
 {
-    return StringUtils::StartsWith(recording.strDirectory, s_LocalRecPrefix.c_str());
+    return StringUtils::StartsWith(recording.GetDirectory(), s_LocalRecPrefix);
 }
 
-bool PVRClientBase::OpenRecordedStream(const PVR_RECORDING &recording)
+bool PVRClientBase::OpenRecordedStream(const kodi::addon::PVRRecording& recording)
 {
     if(!IsLocalRecording(recording))
         return false;
     try {
-        InputBuffer* buffer = new DirectBuffer(new FileCacheBuffer(DirectoryForRecording(stoul(recording.strRecordingId))));
+        InputBuffer* buffer = new DirectBuffer(new FileCacheBuffer(DirectoryForRecording(stoul(recording.GetRecordingId().c_str()))));
         
         if(m_recordBuffer.buffer)
             SAFE_DELETE(m_recordBuffer.buffer);
         m_recordBuffer.buffer = buffer;
-        m_recordBuffer.duration = recording.iDuration;
+        m_recordBuffer.duration = recording.GetDuration();
         m_recordBuffer.isLocal = true;
         m_recordBuffer.seekToSec = 0;
     } catch (std::exception ex) {
@@ -1242,9 +1186,9 @@ void PVRClientBase::CloseRecordedStream(void)
     
 }
 
-PVR_ERROR PVRClientBase::GetStreamReadChunkSize(int* chunksize) {
+PVR_ERROR PVRClientBase::GetStreamReadChunkSize(int& chunksize) {
     // TODO: obtain from buffer...
-    *chunksize = 32 * 1024; // 32K chunk.
+    chunksize = 32 * 1024; // 32K chunk.
     return PVR_ERROR_NO_ERROR;
 }
 
@@ -1380,10 +1324,10 @@ long long PVRClientBase::LengthRecordedStream(void)
     return (m_recordBuffer.buffer == NULL) ? -1 : m_recordBuffer.buffer->GetLength();
 }
 
-PVR_ERROR PVRClientBase::IsEPGTagRecordable(const EPG_TAG*, bool* bIsRecordable)
+PVR_ERROR PVRClientBase::IsEPGTagRecordable(const kodi::addon::PVREPGTag& tag, bool& isRecordable)
 {
     // Seems we can record all tags
-    *bIsRecordable = true;
+    isRecordable = true;
     return PVR_ERROR_NO_ERROR;
 }
 
@@ -1406,23 +1350,23 @@ std::string PVRClientBase::PathForRecordingInfo(unsigned int epgId) const
     return infoPath;
 }
 
-bool PVRClientBase::StartRecordingFor(const PVR_TIMER &timer)
+bool PVRClientBase::StartRecordingFor(kodi::addon::PVRTimer &timer)
 {
     if(NULL == m_clientCore)
         return false;
 
     bool hasEpg = false;
     auto pThis = this;
-    PVR_RECORDING tag = { 0 };
+    kodi::addon::PVRRecording tag;
     IClientCore::EpgEntryAction action = [pThis ,&tag, timer, &hasEpg](const EpgEntryList::value_type& epgEntry)
     {
         try {
-            if(epgEntry.first != timer.iEpgUid)
+            if(epgEntry.first != timer.GetEPGUid())
                 return true;
            
             pThis->FillRecording(epgEntry, tag, s_LocalRecPrefix.c_str());
-            tag.recordingTime = time(nullptr);
-            tag.iDuration = timer.endTime - tag.recordingTime;
+            tag.SetRecordingTime(time(nullptr));
+            tag.SetDuration(timer.GetEndTime() - tag.GetRecordingTime());
             hasEpg = true;
             return false;
         }
@@ -1440,27 +1384,29 @@ bool PVRClientBase::StartRecordingFor(const PVR_TIMER &timer)
         return false;
     }
     
-    std::string recordingDir = DirectoryForRecording(timer.iEpgUid);
+    std::string recordingDir = DirectoryForRecording(timer.GetEPGUid());
     
-    if(!XBMC->CreateDirectory(recordingDir.c_str())) {
+    if(!kodi::vfs::CreateDirectory(recordingDir)) {
         LogError("StartRecordingFor(): failed to create recording directory %s ", recordingDir.c_str());
         return false;
     }
 
-    std::string infoPath = PathForRecordingInfo(timer.iEpgUid);
-    void* infoFile = XBMC->OpenFileForWrite(infoPath.c_str() , true);
-    if(nullptr == infoFile){
+    std::string infoPath = PathForRecordingInfo(timer.GetEPGUid());
+    kodi::vfs::CFile infoFile;
+    
+    if(!infoFile.OpenFileForWrite(infoPath, true)){
         LogError("StartRecordingFor(): failed to create recording info file %s ", infoPath.c_str());
         return false;
     }
-    if(XBMC->WriteFile(infoFile, &tag, sizeof(tag))  != sizeof(tag)){
+    const PVR_RECORDING* data = tag.GetCStructure();
+    if(infoFile.Write(data, sizeof(*data))  != sizeof(*data)){
         LogError("StartRecordingFor(): failed to write recording info file %s ", infoPath.c_str());
-        XBMC->CloseFile(infoFile);
+        infoFile.Close();
         return false;
     }
-    XBMC->CloseFile(infoFile);
+    infoFile.Close();
     
-    KodiChannelId kodiChannelId = timer.iClientChannelUid;
+    KodiChannelId kodiChannelId = timer.GetClientChannelUid();
     if(m_kodiToPluginLut.count(kodiChannelId) == 0){
         LogError("StartRecordingFor(): recording request for unknown channel ID %d", kodiChannelId);
         return false;
@@ -1486,35 +1432,33 @@ bool PVRClientBase::StartRecordingFor(const PVR_TIMER &timer)
     return true;
 }
 
-bool PVRClientBase::StopRecordingFor(const PVR_TIMER &timer)
+bool PVRClientBase::StopRecordingFor(kodi::addon::PVRTimer &timer)
 {
     void* infoFile = nullptr;
     // Update recording duration
     do {
-        std::string infoPath = PathForRecordingInfo(timer.iEpgUid);
-        void* infoFile = XBMC->OpenFileForWrite(infoPath.c_str() , false);
-        if(nullptr == infoFile){
+        std::string infoPath = PathForRecordingInfo(timer.GetEPGUid());
+        kodi::vfs::CFile infoFile;
+        if(!infoFile.OpenFileForWrite(infoPath, false)){
             LogError("StopRecordingFor(): failed to open recording info file %s ", infoPath.c_str());
             break;
         }
         PVR_RECORDING tag = {0};
-        XBMC->SeekFile(infoFile, 0, SEEK_SET);
-        if(XBMC->ReadFile(infoFile, &tag, sizeof(tag))  != sizeof(tag)){
+        infoFile.Seek(0, SEEK_SET);
+        if(infoFile.Read(&tag, sizeof(tag))  != sizeof(tag)){
             LogError("StopRecordingFor(): failed to read from recording info file %s ", infoPath.c_str());
             break;
         }
         tag.iDuration = time(nullptr) - tag.recordingTime;
-        XBMC->SeekFile(infoFile, 0, SEEK_SET);
-        if(XBMC->WriteFile(infoFile, &tag, sizeof(tag))  != sizeof(tag)){
+        infoFile.Seek(0, SEEK_SET);
+        if(infoFile.Write(&tag, sizeof(tag))  != sizeof(tag)){
             LogError("StopRecordingFor(): failed to write recording info file %s ", infoPath.c_str());
-            XBMC->CloseFile(infoFile);
+            infoFile.Close();
             break;
         }
     } while(false);
-    if(nullptr != infoFile)
-        XBMC->CloseFile(infoFile);
     
-    KodiChannelId kodiChannelId = timer.iClientChannelUid;
+    KodiChannelId kodiChannelId = timer.GetClientChannelUid();
     ChannelId channelId = UnknownChannelId;
     if(m_kodiToPluginLut.count(kodiChannelId) != 0){
        channelId = m_kodiToPluginLut.at(kodiChannelId);
@@ -1537,11 +1481,11 @@ bool PVRClientBase::StopRecordingFor(const PVR_TIMER &timer)
     }
     
     // trigger Kodi recordings update
-    PVR->TriggerRecordingUpdate();
+    PVR->Addon_TriggerRecordingUpdate();
     return true;
     
 }
-bool PVRClientBase::FindEpgFor(const PVR_TIMER &timer)
+bool PVRClientBase::FindEpgFor(kodi::addon::PVRTimer &timer)
 {
     return true;
 }
@@ -1550,11 +1494,64 @@ bool PVRClientBase::FindEpgFor(const PVR_TIMER &timer)
 
 #pragma mark - Menus
 
-PVR_ERROR PVRClientBase::CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
+void PVRClientBase::RegisterCommonMenuHook(unsigned int hookId, unsigned int localizedStringId)
 {
-    LogDebug( " >>>> !!!! Menu hook !!!! <<<<<");
-    return MenuHook(menuhook, item);
+    kodi::addon::PVRMenuhook hook(hookId,  localizedStringId, PVR_MENUHOOK_CHANNEL);
+    PVR->Addon_AddMenuHook(hook);
+    hook.SetCategory(PVR_MENUHOOK_EPG);
+    PVR->Addon_AddMenuHook(hook);
+    hook.SetCategory(PVR_MENUHOOK_RECORDING);
+    PVR->Addon_AddMenuHook(hook);
+    hook.SetCategory(PVR_MENUHOOK_SETTING);
+    PVR->Addon_AddMenuHook(hook);
 }
+
+PVR_ERROR  PVRClientBase::HandleCommonMenuHook(const kodi::addon::PVRMenuhook &menuhook)
+{
+    
+    if(RELOAD_EPG_MENU_HOOK == menuhook.GetHookId()) {
+        kodi::QueueFormattedNotification(QUEUE_INFO, kodi::GetLocalizedString(32012).c_str());
+        OnReloadEpg();
+        m_clientCore->CallRpcAsync("{\"jsonrpc\": \"2.0\", \"method\": \"GUI.ActivateWindow\", \"params\": {\"window\": \"pvrsettings\"},\"id\": 1}",
+                     [&] (rapidjson::Document& jsonRoot) {
+                        kodi::QueueFormattedNotification(QUEUE_INFO, kodi::GetLocalizedString(32016).c_str());
+                     },
+                     [&](const ActionQueue::ActionResult& s) {});
+
+    } else if(RELOAD_RECORDINGS_MENU_HOOK == menuhook.GetHookId()) {
+//        char* message = XBMC->GetLocalizedString(32012);
+//        kodi::QueueFormattedNotification(QUEUE_INFO, message);
+//        XBMC->FreeString(message);
+        OnReloadRecordings();
+    }
+    return PVR_ERROR_NO_ERROR;
+    
+}
+
+PVR_ERROR PVRClientBase::CallSettingsMenuHook(const kodi::addon::PVRMenuhook& menuhook)
+{
+    return HandleCommonMenuHook(menuhook);
+}
+PVR_ERROR PVRClientBase::CallChannelMenuHook(const kodi::addon::PVRMenuhook& menuhook, const kodi::addon::PVRChannel&)
+{
+    return HandleCommonMenuHook(menuhook);
+}
+
+PVR_ERROR PVRClientBase::CallEPGMenuHook(const kodi::addon::PVRMenuhook& menuhook, const kodi::addon::PVREPGTag&)
+{
+    return HandleCommonMenuHook(menuhook);
+}
+
+PVR_ERROR PVRClientBase::CallRecordingMenuHook(const kodi::addon::PVRMenuhook& menuhook, const kodi::addon::PVRRecording&)
+{
+    return HandleCommonMenuHook(menuhook);
+}
+
+PVR_ERROR PVRClientBase::CallTimerMenuHook(const kodi::addon::PVRMenuhook&, const kodi::addon::PVRTimer&)
+{
+    return PVR_ERROR_NO_ERROR;
+}
+
 
 #pragma mark - Playlist Utils
 bool PVRClientBase::CheckPlaylistUrl(const std::string& url)
@@ -1562,45 +1559,35 @@ bool PVRClientBase::CheckPlaylistUrl(const std::string& url)
     auto f  = XBMC_OpenFile(url);
     
     if (nullptr == f) {
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32010));
+        kodi::QueueFormattedNotification(QUEUE_ERROR, kodi::GetLocalizedString(32010).c_str());
         return false;
     }
     
-    XBMC->CloseFile(f);
+    f->Close();
+    delete f;
     return true;
 }
 
-void PvrClient::EpgEntry::FillEpgTag(EPG_TAG& tag) const{
+void PvrClient::EpgEntry::FillEpgTag(kodi::addon::PVREPGTag& tag) const{
     // NOTE: internal channel ID is not valid for Kodi's EPG
     // This field should be filled by caller
     //tag.iUniqueChannelId = ChannelId;
-    tag.strTitle = Title.c_str();
-    tag.strPlot = Description.c_str();
-    tag.startTime = StartTime;
-    tag.endTime = EndTime;
-    tag.strIconPath = IconPath.c_str();
+    tag.SetTitle(Title);
+    tag.SetPlot(Description);
+    tag.SetStartTime(StartTime);
+    tag.SetEndTime(EndTime);
+    tag.SetIconPath(IconPath);
     if(!Category.empty()) {
-        tag.iGenreType = EPG_GENRE_USE_STRING;
-        tag.strGenreDescription = Category.c_str();
+        tag.SetGenreType(EPG_GENRE_USE_STRING);
+        tag.SetGenreDescription(Category);
     }
 }
-
-#pragma mark - Stream Properties
-
-PVR_ERROR PVRClientBase::GetChannelStreamProperties(const PVR_CHANNEL* channel, PVR_NAMED_VALUE* properties, unsigned int* iPropertiesCount) {
-    return PVR_ERROR_NOT_IMPLEMENTED;
-}
-
-const char * PVRClientBase::GetLiveStreamURL(const PVR_CHANNEL &channel)  {
-    return "";
-}
-
 
 #pragma mark - Settings
 
 template<typename T>
 static void NotifyClearPvrData(std::function<const T&()>) {
-    XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32016));
+    kodi::QueueFormattedNotification(QUEUE_INFO, kodi::GetLocalizedString(32016).c_str());
 }
 
 static const std::string c_curlTimeout = "curl_timeout";

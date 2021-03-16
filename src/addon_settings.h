@@ -31,7 +31,6 @@
 #include <utility>
 #include <sstream>
 #include "globals.hpp"
-#include "xbmc_pvr_types.h"
 
 namespace PvrClient {
 
@@ -164,24 +163,39 @@ private:
             const ADDON_STATUS status;
         };
         
-        SetSettingsValue(const std:: string& n, const void* v) : name(n), value(v) {}
+        SetSettingsValue(const std::string& n, const kodi::CSettingValue& v)
+        : name(n), value(v) {}
         
         template<typename T>
-        void operator()( std::map<std::string, AddonSetting<T> >& m) const
+        void operator()( std::map<std::string, AddonSetting<T> >& m) const;
+        
+        void operator()( std::map<std::string, AddonSetting<int> >& m) const
         {
             if(m.count(name) == 0)
                 return;
-            throw Found(m.at(name).SetValue(*reinterpret_cast<const T*>(value)));
+            throw Found(m.at(name).SetValue(value.GetInt()));
+        }
+        void operator()( std::map<std::string, AddonSetting<bool> >& m) const
+        {
+            if(m.count(name) == 0)
+                return;
+            throw Found(m.at(name).SetValue(value.GetBoolean()));
+        }
+        void operator()( std::map<std::string, AddonSetting<float> >& m) const
+        {
+            if(m.count(name) == 0)
+                return;
+            throw Found(m.at(name).SetValue(value.GetFloat()));
         }
         //template<>
         void operator()(std::map<std::string, AddonSetting<std::string> >& m) const
         {
             if(m.count(name) == 0)
                 return;
-            throw Found(m.at(name).SetValue((reinterpret_cast<const char*>(value))));
+            throw Found(m.at(name).SetValue(value.GetString()));
         }
         const std::string name;
-        const void * value;
+        const kodi::CSettingValue& value;
     };
 
     template <typename TFunc>
@@ -219,17 +233,26 @@ private:
     struct InitFromGlobals
     {
         template<typename T>
-        void operator()(AddonSetting<T> & t) const
-        {
-            T v;
-            Globals::XBMC->GetSetting(t.name.c_str(), &v);
-            t.Init(v);
-        }
-        //template<>
+        void operator()(AddonSetting<T> & t) const;
+
         void operator()(AddonSetting<std::string> & t) const
         {
-            char v[1024];
-            Globals::XBMC->GetSetting(t.name.c_str(), &v);
+            std::string v = kodi::GetSettingString(t.name);
+            t.Init(v);
+        }
+        void operator()(AddonSetting<int> & t) const
+        {
+            int v = kodi::GetSettingInt(t.name);
+            t.Init(v);
+        }
+        void operator()(AddonSetting<bool> & t) const
+        {
+            bool v = kodi::GetSettingBoolean(t.name);
+            t.Init(v);
+        }
+        void operator()(AddonSetting<float> & t) const
+        {
+            float v = kodi::GetSettingFloat(t.name);
             t.Init(v);
         }
     };
@@ -283,7 +306,7 @@ public:
 //        });
 //    }
     
-    ADDON_STATUS Set(const std::string& n, const void* v)
+    ADDON_STATUS Set(const std::string& n, const kodi::CSettingValue& v)
     {
         try{
             for_each(settings, SetSettingsValue(n, v));

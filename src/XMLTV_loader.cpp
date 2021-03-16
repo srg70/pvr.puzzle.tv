@@ -43,7 +43,6 @@
 using namespace std;
 using namespace rapidxml;
 using namespace Globals;
-using namespace ADDON;
 using namespace Helpers;
 
 namespace XMLTV {
@@ -126,18 +125,20 @@ namespace XMLTV {
     {
         LogDebug("XMLTV: open file %s." , url.c_str());
 
-        void* fileHandle = XBMC_OpenFile(url);
+        auto fileHandle = XBMC_OpenFile(url);
         if (fileHandle)
         {
             char buffer[1024];
             bool isError = false;
-            while (int bytesRead = XBMC->ReadFile(fileHandle, buffer, 1024)) {
+            while (int bytesRead = fileHandle->Read(buffer, 1024)) {
                 if(bytesRead != writer(buffer, bytesRead)) {
                     isError = true;
                     break;
                 }
             }
-            XBMC->CloseFile(fileHandle);
+            fileHandle->Close();
+            delete fileHandle;
+            fileHandle = nullptr;
             if(isError) {
                 LogError("XMLTV: file reading callback failed.");
             } else {
@@ -162,11 +163,10 @@ namespace XMLTV {
         LogDebug("XMLTV: open cached file %s." , filePath.c_str());
         
         // check cached file is exists
-        if (XBMC->FileExists(strCachedPath.c_str(), false))
+        if (kodi::vfs::FileExists(strCachedPath, false))
         {
-            struct __stat64 statCached;
-            
-            XBMC->StatFile(strCachedPath.c_str(), &statCached);
+            kodi::vfs::FileStatus statCached;
+            kodi::vfs::StatFile(strCachedPath.c_str(), statCached);
             
             // Modification time is not provided by some servers.
             // It should be safe to compare file sizes.
@@ -174,15 +174,15 @@ namespace XMLTV {
             using namespace P8PLATFORM;
             struct timeval cur_time = {0};
             if(0 != gettimeofday(&cur_time, nullptr)){
-                cur_time.tv_sec = statCached.st_mtime;//st_mtimespec.tv_sec;
+                cur_time.tv_sec = statCached.GetStatusTime(); //st_mtimespec.tv_sec;
             }
-            bNeedReload = (cur_time.tv_sec - statCached.st_mtime) > 12 * 60 * 60;
+            bNeedReload = (cur_time.tv_sec - statCached.GetStatusTime()) > 12 * 60 * 60;
             if(bNeedReload) {
                 // Check remote file stat only when time check failed
                 // because it may take a time
-                struct __stat64 statOrig;
-                XBMC->StatFile(httplib::detail::encode_get_url(filePath).c_str(), &statOrig);
-                bNeedReload = statOrig.st_size == 0 ||  statOrig.st_size != statCached.st_size;
+                kodi::vfs::FileStatus statOrig;
+                kodi::vfs::StatFile(httplib::detail::encode_get_url(filePath), statOrig);
+                bNeedReload = statOrig.GetSize() == 0 ||  statOrig.GetSize() != statCached.GetSize();
             }
             LogDebug("XMLTV: cached file exists. Reload?  %s." , bNeedReload ? "Yes" : "No");
             
@@ -200,16 +200,17 @@ namespace XMLTV {
     static bool ReloadCachedFile(const std::string &filePath, const std::string& strCachedPath, DataWriter writer)
     {
 
-        void* fileHandle = XBMC->OpenFileForWrite(strCachedPath.c_str(), true);
-        if(!fileHandle) {
-            XBMC->CreateDirectory(c_CacheFolder.c_str());
-            fileHandle = XBMC->OpenFileForWrite(strCachedPath.c_str(), true);
+        kodi::vfs::CFile fileHandle;
+        fileHandle.OpenFileForWrite(strCachedPath, true);
+        if(!fileHandle.IsOpen()) {
+            kodi::vfs::CreateDirectory(c_CacheFolder);
+            fileHandle.OpenFileForWrite(strCachedPath, true);
         }
         DataWriter cacheWriter = writer;
-        if (fileHandle)
+        if (fileHandle.IsOpen())
         {
             cacheWriter = [&fileHandle, &writer](const char* buffer, unsigned int size){
-                auto written = XBMC->WriteFile(fileHandle, buffer, size);
+                auto written = fileHandle.Write(buffer, size);
                 writer(buffer, size);
                 // NOTE: when caching - ignore pareser errors.
                 // We  should write full cache file in any case
@@ -232,9 +233,9 @@ namespace XMLTV {
         };;
 
         succeeded = GetFileContents(filePath, decompressor);
-        if (fileHandle)
+        if (fileHandle.IsOpen())
         {
-           XBMC->CloseFile(fileHandle);
+            fileHandle.Close();
         }
         return succeeded;
     }
