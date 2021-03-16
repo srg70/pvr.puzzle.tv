@@ -78,9 +78,9 @@ namespace PvrClient
         bool OpenLiveStream(const kodi::addon::PVRChannel& channel) override;
         void CloseLiveStream() override;
         int ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize) override;
-        long long SeekLiveStream(long long iPosition, int iWhence) override;
-        long long PositionLiveStream() override;
-        long long LengthLiveStream() override;
+        int64_t SeekLiveStream(int64_t iPosition, int iWhence) override;
+        int64_t PositionLiveStream() override;
+        int64_t LengthLiveStream() override;
         bool SwitchChannel(const PVR_CHANNEL& channel) override;
 
         
@@ -95,9 +95,9 @@ namespace PvrClient
         void CloseRecordedStream(void) override;
         PVR_ERROR GetStreamReadChunkSize(int& chunksize) override;
         int ReadRecordedStream(unsigned char *pBuffer, unsigned int iBufferSize) override;
-        long long SeekRecordedStream(long long iPosition, int iWhence) override;
-        long long PositionRecordedStream(void);
-        long long LengthRecordedStream(void) override;
+        int64_t SeekRecordedStream(int64_t iPosition, int iWhence) override;
+        int64_t PositionRecordedStream(void);
+        int64_t LengthRecordedStream(void) override;
         PVR_ERROR IsEPGTagRecordable(const kodi::addon::PVREPGTag& tag, bool& isRecordable) override;
 
         bool StartRecordingFor(kodi::addon::PVRTimer &timer) override;

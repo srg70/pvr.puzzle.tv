@@ -88,7 +88,7 @@ HttpEngine::HttpEngine()
     }
 
 
-    void HttpEngine::DoCurl(const Request &request, const TCookies &cookie, std::string* response, unsigned long long requestId, std::string* effectiveUrl)
+    void HttpEngine::DoCurl(const Request &request, const TCookies &cookie, std::string* response, uint64_t requestId, std::string* effectiveUrl)
     {
         using namespace Globals;
         kodi::vfs::CFile curl;
@@ -194,7 +194,7 @@ HttpEngine::HttpEngine()
     }
 
 
-    void HttpEngine::DoCurl(const Request &request, const TCookies &cookie, std::string* response, unsigned long long requestId, std::string* effectiveUrl)
+    void HttpEngine::DoCurl(const Request &request, const TCookies &cookie, std::string* response, uint64_t requestId, std::string* effectiveUrl)
     {
         char errorMessage[CURL_ERROR_SIZE];
         CURL *curl = curl_easy_init();
