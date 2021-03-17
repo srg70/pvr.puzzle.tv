@@ -409,7 +409,7 @@ PVR_ERROR PVRClientBase::GetStreamTimes(kodi::addon::PVRStreamTimes& times)
         else
             return PVR_ERROR_NOT_IMPLEMENTED;
     }
-    const uint DVD_TIME_BASE = 1000*1000; // to micro seconds factor
+    const int64_t DVD_TIME_BASE = 1000*1000; // to micro seconds factor
     times.SetStartTime(timeStart);
     times.SetPTSStart(0);
     times.SetPTSBegin(0);
