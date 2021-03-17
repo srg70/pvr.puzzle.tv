@@ -24,9 +24,9 @@
 #define HttpEngine_hpp
 
 #if (defined(_WIN32) || defined(__WIN32__))
-#include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <windows.h>
 #define CURL_STATICLIB 1
 #ifdef GetObject
 #undef GetObject

@@ -23,6 +23,7 @@
 
 #define NOMINMAX
 #if (defined(_WIN32) || defined(__WIN32__))
+#include <WinSock2.h>
 #include <windows.h>
 #ifdef GetObject
 #undef GetObject
