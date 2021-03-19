@@ -1099,7 +1099,7 @@ PVR_ERROR PVRClientBase::DeleteRecording(const kodi::addon::PVRRecording& record
                 if(f.IsFolder()){
                     continue;
                 }
-                if(kodi::vfs::DeleteFile(f.Path()))
+                if(!kodi::vfs::DeleteFile(f.Path()))
                     return PVR_ERROR_FAILED;
             }
         } else {
