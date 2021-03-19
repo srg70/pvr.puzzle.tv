@@ -24,7 +24,6 @@
 #define __puzzle_pvr_client_h__
 
 
-#include "xbmc_pvr_types.h"
 #include <string>
 #include "addon.h"
 #include "pvr_client_base.h"
@@ -38,29 +37,27 @@ namespace PuzzleEngine {
 class PuzzlePVRClient: public PvrClient::PVRClientBase
 {
 public:
-    ADDON_STATUS Init(PVR_PROPERTIES* pvrprops);
+    ADDON_STATUS Init(const std::string& clientPath, const std::string& userPath) override;
     ~PuzzlePVRClient();
 
-    ADDON_STATUS SetSetting(const char *settingName, const void *settingValue);
+    ADDON_STATUS SetSetting(const std::string& settingName, const kodi::CSettingValue& settingValue) override;
     
-    PVR_ERROR GetAddonCapabilities(PVR_ADDON_CAPABILITIES* pCapabilities);
+    PVR_ERROR GetAddonCapabilities(kodi::addon::PVRCapabilities& capabilities) override;
     
-    PVR_ERROR SignalStatus(PVR_SIGNAL_STATUS &signalStatus);
+    PVR_ERROR SignalStatus(int /*channelUid*/, kodi::addon::PVRSignalStatus& signalStatus) override;
     
-    // Override to check for pure quality streams.
-    //nt ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSize);
+    PVR_ERROR CallChannelMenuHook(const kodi::addon::PVRMenuhook& menuhook, const kodi::addon::PVRChannel& item) override;
     
-    bool OpenRecordedStream(const PVR_RECORDING &recording);
+    bool OpenRecordedStream(const kodi::addon::PVRRecording& recording) override;
 protected:
-    virtual void OnOpenStremFailed(PvrClient::ChannelId channelId, const std::string& streamUrl);
-    std::string GetStreamUrl(PvrClient::ChannelId channelId);
-    std::string GetNextStreamUrl(PvrClient::ChannelId channelId);
-    PVR_ERROR  MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item);
-    ADDON_STATUS OnReloadEpg();
+    virtual void OnOpenStremFailed(PvrClient::ChannelId channelId, const std::string& streamUrl) override;
+    std::string GetStreamUrl(PvrClient::ChannelId channelId) override;
+    std::string GetNextStreamUrl(PvrClient::ChannelId channelId) override;
+    ADDON_STATUS OnReloadEpg() override;
     
-    ADDON_STATUS CreateCoreSafe(bool clearEpgCache);
-    void DestroyCoreSafe();
-    void PopulateSettings(PvrClient::AddonSettingsMutableDictionary& settings);
+    ADDON_STATUS CreateCoreSafe(bool clearEpgCache) override;
+    void DestroyCoreSafe() override;
+    void PopulateSettings(PvrClient::AddonSettingsMutableDictionary& settings) override;
 
 private:
     void CreateCore(bool clearEpgCache);

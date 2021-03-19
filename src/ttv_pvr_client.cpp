@@ -25,6 +25,7 @@
  */
 
 #if (defined(_WIN32) || defined(__WIN32__))
+#include <WinSock2.h>
 #include <windows.h>
 #ifdef GetObject
 #undef GetObject
@@ -34,6 +35,7 @@
 #include <algorithm>
 #include <ctime>
 #include "p8-platform/util/util.h"
+#include "kodi/General.h"
 
 #include "timeshift_buffer.h"
 #include "direct_buffer.h"
@@ -45,7 +47,6 @@
 
 using namespace Globals;
 using namespace std;
-using namespace ADDON;
 using namespace TtvEngine;
 using namespace PvrClient;
 using namespace Helpers;
@@ -56,36 +57,23 @@ static const char* c_ttv_ace_server_port = "ttv_ace_server_port";
 static const char* c_ttv_adult = "ttv_adult";
 static const char* c_ttv_filter_by_alexelec = "ttv_filter_by_alexelec";
 
-ADDON_STATUS TtvPVRClient::Init(PVR_PROPERTIES* pvrprops)
+ADDON_STATUS TtvPVRClient::Init(const std::string& clientPath, const std::string& userPath)
 {
-    ADDON_STATUS retVal = PVRClientBase::Init(pvrprops);
+    ADDON_STATUS retVal = PVRClientBase::Init(clientPath, userPath);
     if(ADDON_STATUS_OK != retVal)
         return retVal;
-    
-    char buffer[1024];
-    
-    if (XBMC->GetSetting(c_epg_setting, &buffer))
-        m_epgUrl = buffer;
-    
-    m_enableAdultContent = false;
-    XBMC->GetSetting(c_ttv_adult, &m_enableAdultContent);
 
-    m_aceServerUri = "127.0.0.1";
-    if (XBMC->GetSetting(c_ttv_ace_server_uri, &buffer))
-        m_aceServerUri = buffer;
-    m_aceServerPort = 6878;
-    XBMC->GetSetting(c_ttv_ace_server_port, &m_aceServerPort);
-
-    m_filterByAlexElec = true;
-    XBMC->GetSetting(c_ttv_filter_by_alexelec, &m_filterByAlexElec);
+    m_epgUrl =  kodi::GetSettingString(c_epg_setting);
+    m_enableAdultContent = kodi::GetSettingBoolean(c_ttv_adult, false);
+    m_aceServerUri = kodi::GetSettingString(c_ttv_ace_server_uri, "127.0.0.1");
+    m_aceServerPort = kodi::GetSettingInt(c_ttv_ace_server_port, 6878);
+    m_filterByAlexElec = kodi::GetSettingBoolean(c_ttv_filter_by_alexelec, true);
     
     m_currentChannelStreamIdx = -1;
 
 
     retVal = CreateCoreSafe(false);
     
-    //    PVR_MENUHOOK hook = {1, 30020, PVR_MENUHOOK_EPG};
-    //    m_pvr->AddMenuHook(&hook);
     return retVal;
     
 }
@@ -114,11 +102,11 @@ ADDON_STATUS TtvPVRClient::CreateCoreSafe(bool clearEpgCache)
     catch (exception & ex)
     {
         LogError("Torrent TV: exception on core creation: %s", ex.what());
-        XBMC->QueueNotification(QUEUE_ERROR, "Torrent TV: exception on core creation.");
+        kodi::QueueFormattedNotification(QUEUE_ERROR, "Torrent TV: exception on core creation.");
     }
     catch(...)
     {
-        XBMC->QueueNotification(QUEUE_ERROR, "Torrent TV: unhandeled exception on core creation.");
+        kodi::QueueFormattedNotification(QUEUE_ERROR, "Torrent TV: unhandeled exception on core creation.");
         retVal = ADDON_STATUS_PERMANENT_FAILURE;
     }
     return retVal;
@@ -150,36 +138,36 @@ void TtvPVRClient::CreateCore(bool clearEpgCache)
     m_core->InitAsync(clearEpgCache, IsArchiveSupported());
 }
 
-ADDON_STATUS TtvPVRClient::SetSetting(const char *settingName, const void *settingValue)
+ADDON_STATUS TtvPVRClient::SetSetting(const std::string& settingName, const kodi::CSettingValue& settingValue)
 {
     ADDON_STATUS result = ADDON_STATUS_OK ;
     
-    if(strcmp(settingName,  c_ttv_ace_server_uri) == 0 && strcmp((const char*) settingValue, m_aceServerUri.c_str()) != 0) {
+    if(c_ttv_ace_server_uri == settingName && settingValue.GetString() != m_aceServerUri) {
         result = ADDON_STATUS_NEED_RESTART;
     }
-    else if(strcmp(settingName,  c_epg_setting) == 0 && strcmp((const char*) settingValue, m_epgUrl.c_str()) != 0) {
+    else if(c_epg_setting == settingName && settingValue.GetString() != m_epgUrl) {
         result = ADDON_STATUS_NEED_RESTART;
     }
-    else if (strcmp(settingName,  c_ttv_adult) == 0) {
+    else if (c_ttv_adult == settingName) {
         result = ADDON_STATUS_NEED_RESTART;
-        XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32016));
+        kodi::QueueFormattedNotification(QUEUE_INFO, kodi::GetLocalizedString(32016).c_str());
 //      Doesn't work because of modal dialog "NEED RESSTART" ...
 //        m_clientCore->CallRpcAsync("{\"jsonrpc\": \"2.0\", \"method\": \"GUI.ActivateWindow\", \"params\": {\"window\": \"pvrsettings\"},\"id\": 1}",
 //                                   [&] (rapidjson::Document& jsonRoot) {
-//                                       XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32016));
+//                                       kodi::QueueFormattedNotification(QUEUE_INFO, kodi::GetLocalizedString(32016).c_str());
 //                                   },
 //                                   [&](const ActionQueue::ActionResult& s) {});
     }
-    else if (strcmp(settingName,  c_ttv_ace_server_port) == 0) {
+    else if (c_ttv_ace_server_port == settingName) {
         result = ADDON_STATUS_NEED_RESTART;
     }
-    else if (strcmp(settingName,  c_ttv_filter_by_alexelec) == 0) {
+    else if (c_ttv_filter_by_alexelec == settingName) {
         result = ADDON_STATUS_NEED_RESTART;
-        XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32016));
+        kodi::QueueFormattedNotification(QUEUE_INFO, kodi::GetLocalizedString(32016).c_str());
 //      Doesn't work because of modal dialog "NEED RESSTART" ...
 //        m_clientCore->CallRpcAsync("{\"jsonrpc\": \"2.0\", \"method\": \"GUI.ActivateWindow\", \"params\": {\"window\": \"pvrsettings\"},\"id\": 1}",
 //                                   [&] (rapidjson::Document& jsonRoot) {
-//                                       XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32016));
+//                                       kodi::QueueFormattedNotification(QUEUE_INFO, kodi::GetLocalizedString(32016).c_str());
 //                                   },
 //                                   [&](const ActionQueue::ActionResult& s) {});
     }
@@ -189,28 +177,23 @@ ADDON_STATUS TtvPVRClient::SetSetting(const char *settingName, const void *setti
     return result;
 }
 
-PVR_ERROR TtvPVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabilities)
+PVR_ERROR TtvPVRClient::GetAddonCapabilities(kodi::addon::PVRCapabilities& capabilities)
 {
-    pCapabilities->bSupportsEPG = true;
-    pCapabilities->bSupportsTV = true;
-    pCapabilities->bSupportsRadio = false;
-    pCapabilities->bSupportsChannelGroups = true;
-    pCapabilities->bHandlesInputStream = true;
-//    pCapabilities->bSupportsRecordings = true;
+    capabilities.SetSupportsEPG(true);
+    capabilities.SetSupportsTV(true);
+    capabilities.SetSupportsRadio(false);
+    capabilities.SetSupportsChannelGroups(true);
+    capabilities.SetHandlesInputStream(true);
+//    capabilities.SetSupportsRecordings(true);
     
-    pCapabilities->bSupportsTimers = false;
-    pCapabilities->bSupportsChannelScan = false;
-    pCapabilities->bHandlesDemuxing = false;
-    pCapabilities->bSupportsRecordingPlayCount = false;
-    pCapabilities->bSupportsLastPlayedPosition = false;
-    pCapabilities->bSupportsRecordingEdl = false;
+    capabilities.SetSupportsTimers(false);
+    capabilities.SetSupportsChannelScan(false);
+    capabilities.SetHandlesDemuxing(false);
+    capabilities.SetSupportsRecordingPlayCount(false);
+    capabilities.SetSupportsLastPlayedPosition(false);
+    capabilities.SetSupportsRecordingEdl(false);
     
-    return PVRClientBase::GetAddonCapabilities(pCapabilities);
-}
-
-PVR_ERROR  TtvPVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
-{
-    return PVRClientBase::MenuHook(menuhook, item);
+    return PVRClientBase::GetAddonCapabilities(capabilities);
 }
 
 ADDON_STATUS TtvPVRClient::OnReloadEpg()
@@ -245,7 +228,7 @@ string TtvPVRClient::GetNextStreamUrl(ChannelId channelId)
     return m_core->GetNextStream(channelId, m_currentChannelStreamIdx++);
 }
 
-bool TtvPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
+bool TtvPVRClient::OpenRecordedStream(const kodi::addon::PVRRecording& recording)
 {
     if(IsLocalRecording(recording))
         return PVRClientBase::OpenRecordedStream(recording);
@@ -254,11 +237,11 @@ bool TtvPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
 }
 
 
-PVR_ERROR TtvPVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
+PVR_ERROR TtvPVRClient::SignalStatus(int channelUid, kodi::addon::PVRSignalStatus& signalStatus)
 {
-    snprintf(signalStatus.strAdapterName, sizeof(signalStatus.strAdapterName), "IPTV Torrent TV");
-    snprintf(signalStatus.strAdapterStatus, sizeof(signalStatus.strAdapterStatus), (m_core == NULL) ? "Not connected" :"OK");
-    return this->PVRClientBase::SignalStatus(signalStatus);
+    signalStatus.SetAdapterName("IPTV Torrent TV");
+    signalStatus.SetAdapterStatus((m_core == NULL) ? "Not connected" :"OK");
+    return this->PVRClientBase::SignalStatus(channelUid, signalStatus);
 }
 
 

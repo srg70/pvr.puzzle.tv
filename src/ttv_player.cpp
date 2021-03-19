@@ -28,6 +28,7 @@
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/prettywriter.h"
+#include "kodi/General.h"
 
 #include <assert.h>
 #include <algorithm>
@@ -53,11 +54,11 @@ catch (ServerErrorException& ex) { \
     auto err = ex.what(); \
     LogError("%s. TTV API error: %s", __FUNCTION__,  err); \
     if(strcmp(err, "noepg") != 0) { \
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32019), ex.what() ); \
+        kodi::QueueFormattedNotification(QUEUE_ERROR, kodi::GetLocalizedString(32019).c_str(), ex.what() ); \
     } \
 } catch(CurlErrorException& ex) { \
     LogError("%s. CURL error: %s", __FUNCTION__,  ex.what()); \
-    XBMC->QueueNotification(QUEUE_ERROR, "CURL fatal error: %s", ex.what() ); \
+    kodi::QueueFormattedNotification(QUEUE_ERROR, "CURL fatal error: %s", ex.what() ); \
 } catch(std::exception& ex) { \
     LogError("%s. TTV generic error: %s", __FUNCTION__,  ex.what()); \
 } \
@@ -69,7 +70,6 @@ namespace TtvEngine
 {
     using namespace Globals;
     using namespace std;
-    using namespace ADDON;
     using namespace rapidjson;
     using namespace PvrClient;
     using namespace Helpers;
@@ -103,7 +103,7 @@ namespace TtvEngine
     {
         m_isAceRunning = false;
         if(!CheckAceEngineRunning()) {
-            XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32021));
+            kodi::QueueFormattedNotification(QUEUE_ERROR, kodi::GetLocalizedString(32021).c_str());
         }
 
         if(clearEpgCache)
@@ -157,7 +157,7 @@ namespace TtvEngine
     string Core::GetUrl(ChannelId channelId)
     {
         if(!CheckAceEngineRunning())  {
-            XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32021));
+            kodi::QueueFormattedNotification(QUEUE_ERROR, kodi::GetLocalizedString(32021).c_str());
             return string();
         }
         return m_coreParams.AceServerUrlBase() + c_ACE_ENGINE_HLS_STREAM + /*(m_coreParams.filterByAlexElec ? "infohash=" : */"infohash="/*)*/ + m_channelList.at(channelId).Urls[0] + "&pid=" + m_deviceId;
@@ -311,7 +311,7 @@ namespace TtvEngine
             return true;
         });
         if(!succeded){
-            XBMC->QueueNotification(((plistContent.size() > 0) ? QUEUE_WARNING : QUEUE_ERROR), XBMC_Message(32029));
+            kodi::QueueFormattedNotification(((plistContent.size() > 0) ? QUEUE_WARNING : QUEUE_ERROR), kodi::GetLocalizedString(32029).c_str());
         }
         if(m_coreParams.filterByAlexElec) {
             PlaylistContent alexPlistContent;
@@ -384,7 +384,7 @@ namespace TtvEngine
             string trashUrl("https://api.acestream.me/all?api_version=1.0&api_key=test_api_key");
             const string& plistUrl = trashUrl;
             // Download playlist
-            XBMC->Log(LOG_DEBUG, "TtvPlayer: loading playlist: %s", plistUrl.c_str());
+            LogDebug("TtvPlayer: loading playlist: %s", plistUrl.c_str());
 
             string data;
             XMLTV::GetCachedFileContents(plistUrl, [&data](const char* buffer, unsigned int size){
@@ -401,9 +401,9 @@ namespace TtvEngine
             string parserError;
             bool succeded = ParseJsonStream(data.c_str(), parser, onChannel, &parserError);
             if(succeded){
-                XBMC->Log(LOG_DEBUG, "TtvPlayer: parsing of playlist done.");
+                LogDebug("TtvPlayer: parsing of playlist done.");
             } else {
-                XBMC->Log(LOG_DEBUG, "TtvPlayer: parsing of playlist faled with error %s.", parserError.c_str());
+                LogDebug("TtvPlayer: parsing of playlist faled with error %s.", parserError.c_str());
             }
             return succeded;
 
@@ -420,7 +420,7 @@ namespace TtvEngine
 //            string trashUrl("http://91.92.66.82/trash/ttv-list/acelive.json|encoding=gzip");
 //            const string& plistUrl = trashUrl;
 //            // Download playlist
-//            XBMC->Log(LOG_DEBUG, "TtvPlayer: loading playlist: %s", plistUrl.c_str());
+//            LogDebug("TtvPlayer: loading playlist: %s", plistUrl.c_str());
 //
 //            string zipContent;
 //            string unzipedContent;
@@ -442,9 +442,9 @@ namespace TtvEngine
 //            string parserError;
 //            bool succeded = ParseJsonStream(data.c_str(), parser, onChannel, &parserError);
 //            if(succeded){
-//                XBMC->Log(LOG_DEBUG, "TtvPlayer: parsing of playlist done.");
+//                LogDebug("TtvPlayer: parsing of playlist done.");
 //            } else {
-//                XBMC->Log(LOG_DEBUG, "TtvPlayer: parsing of playlist faled with error %s.", parserError.c_str());
+//                LogDebug("TtvPlayer: parsing of playlist faled with error %s.", parserError.c_str());
 //            }
 //            return succeded;
 //
@@ -459,7 +459,7 @@ namespace TtvEngine
 //            string trashUrl("http://91.92.66.82/trash/ttv-list/acelive.json|encoding=gzip");
 //            const string& plistUrl = trashUrl;
 //            // Download playlist
-//            XBMC->Log(LOG_DEBUG, "TtvPlayer: loading playlist: %s", plistUrl.c_str());
+//            LogDebug("TtvPlayer: loading playlist: %s", plistUrl.c_str());
 //
 //            string zipContent;
 //            string unzipedContent;
@@ -484,7 +484,7 @@ namespace TtvEngine
 //                }
 //            });
 //
-//            XBMC->Log(LOG_DEBUG, "TtvPlayer: parsing of playlist done.");
+//            LogDebug("TtvPlayer: parsing of playlist done.");
 //
 //        } catch (std::exception& ex) {
 //            LogError("TtvPlayer: exception during playlist loading: %s", ex.what());
@@ -543,7 +543,7 @@ namespace TtvEngine
 //                alCh.cid = StringUtils::Trim(tokens[2]);
                 onChannel(alCh);
             }
-            XBMC->Log(LOG_DEBUG, "TtvPlayer: parsing of alexelec playlist done.");
+            LogDebug("TtvPlayer: parsing of alexelec playlist done.");
             
 
         } catch (std::exception& ex) {

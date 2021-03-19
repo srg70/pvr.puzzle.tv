@@ -23,14 +23,12 @@
 #define NOMINMAX
 #include <algorithm>
 #include "memory_cache_buffer.hpp"
-#include "libXBMC_addon.h"
 #include "helpers.h"
 #include "globals.hpp"
 
 namespace Buffers
 {
     using namespace P8PLATFORM;
-    using namespace ADDON;
     using namespace Globals;
     
     class CMemoryBlock

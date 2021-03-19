@@ -26,6 +26,7 @@
 
 #include "p8-platform/os.h"
 #if (defined(_WIN32) || defined(__WIN32__))
+#include <WinSock2.h>
 #include <windows.h>
 #ifdef GetObject
 #undef GetObject
@@ -36,13 +37,11 @@
 #include "helpers.h"
 #include <sstream>
 #include <functional>
-#include "libXBMC_addon.h"
 #include "globals.hpp"
 
 namespace Buffers {
     
     using namespace std;
-    using namespace ADDON;
     using namespace P8PLATFORM;
     using namespace Globals;
     

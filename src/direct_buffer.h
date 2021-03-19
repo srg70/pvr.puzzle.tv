@@ -29,6 +29,7 @@
 
 #include <string>
 #include "input_buffer.h"
+#include "kodi/Filesystem.h"
 
 namespace Buffers {
     
@@ -49,10 +50,10 @@ namespace Buffers {
         void AbortRead();
         
     protected:
-        void *m_streamHandle;
+        kodi::vfs::CFile* m_streamHandle;
     private:
         DirectBuffer();
-        static void* Open(const std::string &path);
+        static kodi::vfs::CFile* Open(const std::string &path);
         
         ICacheBuffer* m_cacheBuffer;
         std::string m_url;

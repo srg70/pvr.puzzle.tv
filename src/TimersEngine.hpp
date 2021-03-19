@@ -36,11 +36,11 @@ namespace Engines {
     {
     public:
         TimersEngine(ITimersEngineDelegate* delegate);
-        int GetTimersAmount(void);
-        PVR_ERROR AddTimer(const PVR_TIMER &timer);
-        PVR_ERROR GetTimers(ADDON_HANDLE handle);
-        PVR_ERROR DeleteTimer(const PVR_TIMER &timer, bool bForceDelete);
-        PVR_ERROR UpdateTimer(const PVR_TIMER &timer);
+        int GetTimersAmount(void) override;
+        PVR_ERROR AddTimer(const kodi::addon::PVRTimer& timer) override;
+        PVR_ERROR GetTimers(kodi::addon::PVRTimersResultSet& results) override;
+        PVR_ERROR DeleteTimer(const kodi::addon::PVRTimer& timer, bool forceDelete) override;
+        PVR_ERROR UpdateTimer(const kodi::addon::PVRTimer& timer) override;
         virtual ~TimersEngine();
     private:
         typedef std::unique_ptr<Timer> TimerPtr;
@@ -50,7 +50,7 @@ namespace Engines {
         void LoadCache();
         void SaveCache() const;
         
-        void *Process();
+        void *Process() override;
         
         P8PLATFORM::CEvent m_checkTimers;
         Timers  m_timers;

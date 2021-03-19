@@ -25,6 +25,7 @@
  */
 
 #if (defined(_WIN32) || defined(__WIN32__))
+#include <WinSock2.h>
 #include <windows.h>
 #ifdef GetObject
 #undef GetObject
@@ -33,7 +34,6 @@
 
 #include "p8-platform/util/timeutils.h"
 #include "direct_buffer.h"
-#include "libXBMC_addon.h"
 #include "globals.hpp"
 #include "cache_buffer.h"
 
@@ -41,14 +41,14 @@ namespace Buffers {
     
     using namespace Globals;
 
-    void* DirectBuffer::Open(const std::string & path){
+    kodi::vfs::CFile* DirectBuffer::Open(const std::string & path){
         return XBMC_OpenFile(path,
-                              XFILE::READ_AUDIO_VIDEO |
-                              XFILE::READ_TRUNCATED |
-                              XFILE::READ_CHUNKED |
-                              XFILE::READ_BITRATE |
-                              XFILE::READ_CACHED); 
-                            //XFILE::READ_NO_CACHE); // XFILE::READ_AFTER_WRITE);
+                             ADDON_READ_AUDIO_VIDEO |
+                             ADDON_READ_TRUNCATED |
+                             ADDON_READ_CHUNKED |
+                             ADDON_READ_BITRATE |
+                             ADDON_READ_CACHED);
+                            //ADDON_READ_NO_CACHE); // ADDON_READ_AFTER_WRITE);
     }
 
     DirectBuffer::DirectBuffer()
@@ -83,7 +83,7 @@ namespace Buffers {
         AbortRead();
         
         if(m_streamHandle)
-            XBMC->CloseFile(m_streamHandle);
+            m_streamHandle->Close();
         if(m_cacheBuffer)
             delete m_cacheBuffer;
     }
@@ -115,7 +115,7 @@ namespace Buffers {
                 result = m_cacheBuffer->Read(buffer, bufferSize);
             }
         } else {
-            result =  XBMC->ReadFile(m_streamHandle, buffer, bufferSize);
+            result =  m_streamHandle->Read(buffer, bufferSize);
         }
         m_isWaitingForRead = false;
         return result;
@@ -131,7 +131,7 @@ namespace Buffers {
         if(m_cacheBuffer)
             return false;
         
-        XBMC->CloseFile(m_streamHandle);
+        m_streamHandle->Close();
         m_streamHandle = Open(newUrl);
         return m_streamHandle != NULL;
     }
@@ -155,19 +155,19 @@ namespace Buffers {
     
     int64_t ArchiveBuffer::GetLength() const
     {
-        auto retVal =  XBMC->GetFileLength(m_streamHandle);
+        auto retVal =  m_streamHandle->GetLength();
         //XBMC->Log(ADDON::LOG_DEBUG, "ArchiveBuffer: length = %d", retVal);
         return retVal;
     }
     int64_t ArchiveBuffer::GetPosition() const
     {
-        auto retVal =  XBMC->GetFilePosition(m_streamHandle);
+        auto retVal =  m_streamHandle->GetPosition();
         //XBMC->Log(ADDON::LOG_DEBUG, "ArchiveBuffer: position = %d", retVal);
         return retVal;
     }
     int64_t ArchiveBuffer::Seek(int64_t iPosition, int iWhence)
     {
-        auto retVal =  XBMC->SeekFile(m_streamHandle, iPosition, iWhence);
+        auto retVal =  m_streamHandle->Seek(iPosition, iWhence);
         //XBMC->Log(ADDON::LOG_DEBUG, "ArchiveBuffer: Seek = %d(requested %d from %d)", retVal, iPosition, iWhence);
         return retVal;
         

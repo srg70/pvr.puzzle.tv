@@ -32,16 +32,7 @@
 #include "rapidjson/document.h"
 #include "globals.hpp"
 
-
 namespace Helpers{ 
-    
-    XBMC_Message:: XBMC_Message(int code) {
-        m_message  = Globals::XBMC->GetLocalizedString(code);
-    }
-    XBMC_Message::~XBMC_Message() {
-        if(m_message)
-            Globals::XBMC->FreeString(m_message);
-    }
     
     std::string n_to_string(int64_t n)
     {

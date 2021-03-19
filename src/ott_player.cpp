@@ -28,6 +28,7 @@
 #include <rapidjson/error/en.h>
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
+#include "kodi/General.h"
 
 #include <assert.h>
 #include <algorithm>
@@ -47,7 +48,6 @@ namespace OttEngine
     
     using namespace Globals;
     using namespace std;
-    using namespace ADDON;
     using namespace rapidjson;
     using namespace PvrClient;
     using namespace Helpers;
@@ -123,7 +123,7 @@ namespace OttEngine
     
     void Core::BuildChannelAndGroupList()
     {
-        void* f = NULL;
+        kodi::vfs::CFile* f = NULL;
 
         try {
             char buffer[1024];
@@ -131,17 +131,18 @@ namespace OttEngine
 
             // Download playlist
             string playlistUrl = m_baseUrl + "/ottplayer/playlist.m3u";
-            auto f = XBMC_OpenFile(playlistUrl);
+            f = XBMC_OpenFile(playlistUrl);
             if (!f)
                 throw BadPlaylistFormatException("Failed to obtain playlist from server.");
             bool isEof = false;
             do{
-                auto bytesRead = XBMC->ReadFile(f, buffer, sizeof(buffer));
+                auto bytesRead = f->Read(buffer, sizeof(buffer));
                 isEof = bytesRead <= 0;
                 if(!isEof)
                     data.append(&buffer[0], bytesRead);
             }while(!isEof);
-            XBMC->CloseFile(f);
+            f->Close();
+            delete f;
             f = NULL;
             
             //LogError(">>> DUMP M3U : \n %s", data.c_str() );
@@ -177,7 +178,8 @@ namespace OttEngine
         } catch (std::exception& ex) {
             LogError("OttPlayer: exception during playlist loading: %s", ex.what());
             if(NULL != f) {
-                XBMC->CloseFile(f);
+                f->Close();
+                delete f;
                 f = NULL;
             }
 
@@ -291,7 +293,7 @@ namespace OttEngine
                          [this, shouldUpdate, channelId, epgActivityCounter](const ActionQueue::ActionResult& s)
                          {
                              if(s.exception == NULL && *shouldUpdate && m_ToPublicChannelId){
-                                 PVR->TriggerEpgUpdate(m_ToPublicChannelId(channelId));
+                                 PVR->Addon_TriggerEpgUpdate(m_ToPublicChannelId(channelId));
                              }
                              delete shouldUpdate;
                              if(epgActivityCounter == m_epgActivityCounter){
@@ -301,7 +303,7 @@ namespace OttEngine
                          });
             
         } catch (ServerErrorException& ex) {
-            XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32002), ex.reason.c_str());
+            kodi::QueueFormattedNotification(QUEUE_ERROR, kodi::GetLocalizedString(32002).c_str(), ex.reason.c_str());
         } catch (...) {
             LogError(" >>>>  FAILED receive EPG <<<<<");
         }

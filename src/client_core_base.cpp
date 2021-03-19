@@ -25,6 +25,7 @@
 #include <rapidjson/error/en.h>
 #include "rapidjson/writer.h"
 #include "rapidjson/filewritestream.h"
+#include "kodi/General.h"
 
 #include "p8-platform/util/StringUtils.h"
 #include "p8-platform/threads/mutex.h"
@@ -41,7 +42,6 @@
 namespace PvrClient{
 
 using namespace std;
-using namespace ADDON;
 using namespace rapidjson;
 using namespace Globals;
 using namespace Helpers;
@@ -161,7 +161,7 @@ ClientCoreBase::ClientCoreBase(const IClientCore::RecordingsDelegate& didRecordi
 {
     if(nullptr == m_didRecordingsUpadate) {
         auto pvr = PVR;
-        m_didRecordingsUpadate = [pvr](){ pvr->TriggerRecordingUpdate();};
+        m_didRecordingsUpadate = [pvr](){ pvr->Addon_TriggerRecordingUpdate();};
     }
     m_httpEngine = new HttpEngine();
     m_phases.emplace(k_ChannelsLoadingPhase, std::move(TPhases::mapped_type(new ClientPhase())));
@@ -342,10 +342,10 @@ void ClientCoreBase::SetLocalPathForLogo(Channel& channel) const
     if(m_LocalLogosFolder.empty())
         return;
     string logoPath = m_LocalLogosFolder + PATH_SEPARATOR_CHAR + channel.Name + ".png";
-    if(XBMC->FileExists(logoPath.c_str(),  false)) {
+    if(kodi::vfs::FileExists(logoPath,  false)) {
         channel.IconPath = logoPath;
     } else {
-        LogDebug("Local logo for %s not found at %s", channel.Name.c_str() , logoPath.c_str());
+        ;//LogDebug("Local logo for %s not found at %s", channel.Name.c_str() , logoPath.c_str());
     }
 }
 
@@ -393,29 +393,30 @@ string ClientCoreBase::MakeEpgCachePath(const char* cacheFile)
 void ClientCoreBase::ClearEpgCache(const char* cacheFile, const char* epgUrl)
 {
     string cacheFilePath = MakeEpgCachePath(cacheFile);
-    if(!XBMC->DeleteFile(cacheFilePath.c_str()))
+    if(!kodi::vfs::DeleteFile(cacheFilePath))
        LogError("ClearEpgCache(): failed to delete EPG cache %s", cacheFilePath.c_str());
 
     if(nullptr == epgUrl)
         return;
     
     string compressedFilePath = XMLTV::GetCachedPathFor(epgUrl);
-    if(!XBMC->DeleteFile(compressedFilePath.c_str()))
+    if(!kodi::vfs::DeleteFile(compressedFilePath))
        LogError("ClearEpgCache(): failed to delete compressed EPG cache %s", compressedFilePath.c_str());
 }
 
 bool ClientCoreBase::ReadFileContent(const char* cacheFile, std::string& buffer)
 {
-    void* file = XBMC_OpenFile(cacheFile, 0);
+    auto file = XBMC_OpenFile(cacheFile, 0);
     if(NULL == file)
         return false;
-    int64_t fSize = XBMC->GetFileLength(file);
+    int64_t fSize = file->GetLength();
     
     char* rawBuf = new char[fSize + 1];
     if(0 == rawBuf)
         return false;
-    XBMC->ReadFile(file, rawBuf, fSize);
-    XBMC->CloseFile(file);
+    file->Read(rawBuf, fSize);
+    file->Close();
+    delete file;
     file = NULL;
     
     rawBuf[fSize] = 0;
@@ -455,7 +456,7 @@ void ClientCoreBase::LoadEpgCache(const char* cacheFile)
         using namespace Helpers::Json;
         using namespace epg_cache;
         
-        string cacheFilePath = XBMC->TranslateSpecialProtocol(MakeEpgCachePath(cacheFile).c_str());
+        string cacheFilePath = kodi::vfs::TranslateSpecialProtocol(MakeEpgCachePath(cacheFile));
 
         auto parser = ParserForObject<CachedEpgEntry>()
         .WithField(EpgEntryIdName, &CachedEpgEntry::Key)
@@ -493,8 +494,8 @@ void ClientCoreBase::LoadEpgCache(const char* cacheFile)
 
 void ClientCoreBase::SaveEpgCache(const char* cacheFile, unsigned int daysToPreserve)
 {
-    XBMC->CreateDirectory(c_EpgCacheDirPath);
-    string cacheFilePath = XBMC->TranslateSpecialProtocol(MakeEpgCachePath(cacheFile).c_str());
+    kodi::vfs::CreateDirectory(c_EpgCacheDirPath);
+    string cacheFilePath = kodi::vfs::TranslateSpecialProtocol(MakeEpgCachePath(cacheFile).c_str());
     FILE* fp = fopen(cacheFilePath.c_str(), "w"); // non-Windows use "w"
     if(NULL == fp) {
         LogError("ClientCoreBase: failed to open EPG cashe file for write. Path %s", cacheFilePath.c_str());
@@ -883,7 +884,7 @@ void ClientCoreBase::CheckRpcConnection()
         m_rpcWorks =  s.status == ActionQueue::kActionCompleted;
         LogDebug("ClientCoreBase: JSON-RPC %s.", (m_rpcWorks) ? "works" : "failed");
         if(!m_rpcWorks){
-            XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32028));
+            kodi::QueueFormattedNotification(QUEUE_ERROR, kodi::GetLocalizedString(32028).c_str());
         }
     });
 }

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<addon id="pvr.puzzle.tv" version="0.9.109" name="PVR Puzzle TV" provider-name="srg70">
+<addon id="pvr.puzzle.tv" version="1.0.0" name="PVR Puzzle TV" provider-name="srg70">
     <requires>@ADDON_DEPENDS@</requires>
   <extension
     point="xbmc.pvrclient"
@@ -16,93 +16,8 @@
      <source>https://github.com/srg70/pvr.puzzle.tv</source>
      <license>GPL-2.0-or-later</license>
      <news>
-         0.9.109
-         - fix: UDP links with Puzzle server
- 
-         0.9.108
-         - feat: make UDP proxy available for all providers.
-         - fix: register context menu only for PVR-specific categories.
-         - fix: path to channel logos folder on Windows
-        
-        0.9.107
-         - fix: default settings value was wrongly set in  some cases
-         - fix: path to channel logos folder on Windows
-
-         0.9.105
-         - fix: set default value for undefined settings.
-         - feat: override channel logo with icon from local folder.
-
-         0.9.104
-         - fix: support EPG shift for recordings
-
-         0.9.103
-         - fix: support chunked XML tag content delivery in XMLTV parser
-
-         0.9.101
-         - feat: optimized performance and memory footprint of EPG subsystem
-         - fix: rounding of EPG times
-
-         0.9.100
-         - fixed HLS archives playback
-
-         0.9.99
-         - common setting for manual correction of EPG time offse
-         - speedup HLS stream startup and rewind
-
-         0.9.98
-         - use channel logo URL from EPG when it does not exist in playlist.
-         - trash been replaced by api.acestream.me
-
-         0.9.96
-         - support playlists with unknown tags
-         - fix rewind for all zabaza channels
-
-         0.9.95
-         - unlimited time interval of archive update
-         - support Zabava proxy (slot playlist). No rewind.
-
-         0.9.94
-         - feat: support tvg-rec tag in Playlist and Edem slot.
-         - feat: support value "shift" of global cachup-type tag
-
-         0.9.93
-         - fix: support uncompleted channel list from Trash.
-         - fix: timezone offset detection for Windows.
-
-         0.9.92
-         - fix: startup delay (up to archive reloading timeout) on plugin restart
-         - fix: "playlist" tab. Searching for EPG by tvg-id, than by channel name.
-
-         0.9.91
-         - cleanup download cache on reload EPG
-         - support tgv-name XML TV tag for playlist tab
-
-         0.9.90
-         - Reduced non-debug log size
-         - Faster restore of last played channel after wakeup signal
-
-         0.9.89
-         - RPC authentication
-         - Fixed forward recording padding not working in some scenario
-
-         0.9.87
-         - Added option: forward recording padding
-         - Fixed EPG not loaded issue (Shara TV)
-         - Fixed multithreaded HLS downloading
-         
-         0.9.82
-         - Live playback delay
-         - Signal status visualization (raton of buffer filling)
-         - Fixed cleanup condition of old chunks for memory cache
-
-         0.9.81
-         - Support for multicat URLs
-         - Fixed crash on default Edem settings
-         
-         v0.9.78
-         - Addon settings refactoring
-         - OTTG credentials support
-
+         1.0.0
+         - First Matrix version (migration only)
      </news>
   </extension>
 </addon>

@@ -32,7 +32,10 @@
 #include "ActionQueueTypes.hpp"
 #include <rapidjson/document.h>
 
-struct EPG_TAG;
+namespace kodi {
+namespace addon{
+class PVREPGTag;
+}}
 
 namespace PvrClient {
     
@@ -101,7 +104,7 @@ namespace PvrClient {
         , HasArchive (false)
         {}
         
-        void FillEpgTag(EPG_TAG& tag) const;
+        void FillEpgTag(kodi::addon::PVREPGTag& tag) const;
     };
     
     typedef unsigned int UniqueBroadcastIdType;

@@ -28,61 +28,64 @@
 
 namespace Globals
 {
-    static CHelper_libXBMC_pvr* __pvr = nullptr;
-    static ADDON::CHelper_libXBMC_addon* __xbmc = nullptr;
-    static CHelper_libKODI_guilib* __gui = nullptr;
-    
-    CHelper_libXBMC_pvr* const& PVR(__pvr);
-    ADDON::CHelper_libXBMC_addon* const& XBMC(__xbmc);
-    CHelper_libKODI_guilib* const& GUI(__gui);
+    static IAddonDelegate* __pvr = nullptr;
+//    static ADDON::CHelper_libXBMC_addon* __xbmc = nullptr;
+//    static CHelper_libKODI_guilib* __gui = nullptr;
+//
+    IAddonDelegate* const& PVR(__pvr);
+//    ADDON::CHelper_libXBMC_addon* const& XBMC(__xbmc);
+//    CHelper_libKODI_guilib* const& GUI(__gui);
 
-    static ADDON::addon_log_t  __debugLogLevel = ADDON::LOG_DEBUG;
-    void Cleanup();
-    
-    bool CreateWithHandle(void* hdl)
-    {
-        Cleanup();
-        __xbmc = new ADDON::CHelper_libXBMC_addon();
-        if (!__xbmc->RegisterMe(hdl))
-        {
-            SAFE_DELETE(__xbmc);
-            return false;
-        }
-        
-        __pvr = new CHelper_libXBMC_pvr();
-        if (!__pvr->RegisterMe(hdl))
-        {
-            SAFE_DELETE(__pvr);
-            SAFE_DELETE(__xbmc);
-            return false;
-        }
-        
-        __gui = new CHelper_libKODI_guilib();
-        if (!__gui->RegisterMe(hdl))
-        {
-            SAFE_DELETE(__pvr);
-            SAFE_DELETE(__xbmc);
-            SAFE_DELETE(__gui);
-            return false;
-        }
-        
-        return true;
-    }
-    
+    static AddonLog  __debugLogLevel = ADDON_LOG_DEBUG;
+   
     void Cleanup()
     {
-        if(__pvr)
-            SAFE_DELETE(__pvr);
-        if(__xbmc)
-            SAFE_DELETE(__xbmc);
-        if(__gui)
-            SAFE_DELETE(__gui);
-
+        __pvr = nullptr;
+    //        if(__pvr)
+    //            SAFE_DELETE(__pvr);
+    //        if(__xbmc)
+    //            SAFE_DELETE(__xbmc);
+    //        if(__gui)
+    //            SAFE_DELETE(__gui);
+    //
     }
-    
-    void* XBMC_OpenFile(const std::string& path, unsigned int flags)
+
+    void CreateWithHandle(IAddonDelegate* pvr)
     {
-        return XBMC->OpenFile(httplib::detail::encode_get_url(path).c_str(), flags);
+        Cleanup();
+//        __xbmc = new ADDON::CHelper_libXBMC_addon();
+//        if (!__xbmc->RegisterMe(hdl))
+//        {
+//            SAFE_DELETE(__xbmc);
+//            return false;
+//        }
+//        
+        __pvr = pvr;
+//        if (!__pvr->RegisterMe(hdl))
+//        {
+//            SAFE_DELETE(__pvr);
+//            SAFE_DELETE(__xbmc);
+//            return false;
+//        }
+//        
+//        __gui = new CHelper_libKODI_guilib();
+//        if (!__gui->RegisterMe(hdl))
+//        {
+//            SAFE_DELETE(__pvr);
+//            SAFE_DELETE(__xbmc);
+//            SAFE_DELETE(__gui);
+//            return false;
+//        }
+//        
+    }
+//    
+    
+    kodi::vfs::CFile* XBMC_OpenFile(const std::string& path, unsigned int flags)
+    {
+        auto f = new kodi::vfs::CFile();
+        if(f->OpenFile(httplib::detail::encode_get_url(path).c_str(), flags))
+            return f;
+        return nullptr;
     }
 
 # define PrintToLog(loglevel) \
@@ -92,20 +95,24 @@ va_list va; \
 va_start(va, format); \
 strData = StringUtils::FormatV(format,va); \
 va_end(va); \
-XBMC->Log(loglevel, strData.c_str()); \
+kodi::Log(loglevel, strData.c_str()); \
 
     
+    void LogFatal(const char *format, ... )
+    {
+        PrintToLog(ADDON_LOG_FATAL);
+    }
     void LogError(const char *format, ... )
     {
-        PrintToLog(ADDON::LOG_ERROR);
+        PrintToLog(ADDON_LOG_ERROR);
     }
     void LogInfo(const char *format, ... )
     {
-        PrintToLog(ADDON::LOG_INFO);
+        PrintToLog(ADDON_LOG_INFO);
     }
     void LogNotice(const char *format, ... )
     {
-        PrintToLog(ADDON::LOG_NOTICE);
+        PrintToLog(ADDON_LOG_WARNING);
     }
     void LogDebug(const char *format, ... )
     {

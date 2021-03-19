@@ -25,6 +25,7 @@
  */
 
 #if (defined(_WIN32) || defined(__WIN32__))
+#include <WinSock2.h>
 #include <windows.h>
 #ifdef GetObject
 #undef GetObject
@@ -34,6 +35,7 @@
 #include <algorithm>
 #include <ctime>
 #include "p8-platform/util/util.h"
+#include "kodi/General.h"
 
 #include "timeshift_buffer.h"
 #include "direct_buffer.h"
@@ -45,7 +47,6 @@
 
 using namespace Globals;
 using namespace std;
-using namespace ADDON;
 using namespace EdemEngine;
 using namespace PvrClient;
 using namespace Helpers;
@@ -55,30 +56,21 @@ static const char* c_epg_setting = "edem_epg_url";
 static const char* c_seek_archives = "edem_seek_archives";
 static const char* c_edem_adult = "edem_adult";
 
-ADDON_STATUS EdemPVRClient::Init(PVR_PROPERTIES* pvrprops)
+ADDON_STATUS EdemPVRClient::Init(const std::string& clientPath, const std::string& userPath)
 {
-    ADDON_STATUS retVal = PVRClientBase::Init(pvrprops);
+    ADDON_STATUS retVal = PVRClientBase::Init(clientPath, userPath);
     if(ADDON_STATUS_OK != retVal)
         return retVal;
     
-    char buffer[1024];
+    m_playlistUrl = kodi::GetSettingString(c_playlist_setting);
+    m_epgUrl = kodi::GetSettingString(c_epg_setting);
     
-    if (XBMC->GetSetting(c_playlist_setting, &buffer))
-        m_playlistUrl = buffer;
-    if (XBMC->GetSetting(c_epg_setting, &buffer))
-        m_epgUrl = buffer;
+    SetSeekSupported(kodi::GetSettingBoolean(c_seek_archives, false));
     
-    bool supportSeek = false;
-    XBMC->GetSetting(c_seek_archives, &supportSeek);
-    SetSeekSupported(supportSeek);
-    
-    m_enableAdult = false;
-    XBMC->GetSetting(c_edem_adult, &m_enableAdult);
+    m_enableAdult = kodi::GetSettingBoolean(c_edem_adult, false);
     
     retVal = CreateCoreSafe(false);
     
-    //    PVR_MENUHOOK hook = {1, 30020, PVR_MENUHOOK_EPG};
-    //    m_pvr->AddMenuHook(&hook);
     return retVal;
     
 }
@@ -106,11 +98,11 @@ ADDON_STATUS EdemPVRClient::CreateCoreSafe(bool clearEpgCache)
     }
     catch (AuthFailedException &)
     {
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32011));
+        kodi::QueueFormattedNotification(QUEUE_ERROR, kodi::GetLocalizedString(32011).c_str());
     }
     catch(...)
     {
-        XBMC->QueueNotification(QUEUE_ERROR, "Edem TV: unhandeled exception on core creation.");
+        kodi::QueueFormattedNotification(QUEUE_ERROR, "Edem TV: unhandeled exception on core creation.");
         retVal = ADDON_STATUS_PERMANENT_FAILURE;
     }
     return retVal;
@@ -146,33 +138,33 @@ void EdemPVRClient::CreateCore(bool clearEpgCache)
 
 }
 
-ADDON_STATUS EdemPVRClient::SetSetting(const char *settingName, const void *settingValue)
+ADDON_STATUS EdemPVRClient::SetSetting(const std::string& settingName, const kodi::CSettingValue& settingValue)
 {
     ADDON_STATUS result = ADDON_STATUS_OK ;
     
-    if (strcmp(settingName,  c_playlist_setting) == 0 && strcmp((const char*) settingValue, m_playlistUrl.c_str()) != 0) {
-        m_playlistUrl= (const char*) settingValue;
+    if (c_playlist_setting == settingName && settingValue.GetString() != m_playlistUrl) {
+        m_playlistUrl= settingValue.GetString();
         if(!CheckEdemPlaylistUrl()) {
             return result;
         } else {
             result = CreateCoreSafe(false);
         }
     }
-    else if(strcmp(settingName,  c_epg_setting) == 0 && strcmp((const char*) settingValue, m_epgUrl.c_str()) != 0) {
-        m_epgUrl = (const char*) settingValue;
+    else if(c_epg_setting == settingName && settingValue.GetString() != m_epgUrl) {
+        m_epgUrl = settingValue.GetString();
         result = CreateCoreSafe(false);
     }
-    else if(strcmp(settingName,  c_seek_archives) == 0) {
-        SetSeekSupported(*(const bool*) settingValue);
+    else if(c_seek_archives == settingName) {
+        SetSeekSupported(settingValue.GetBoolean());
     }
-    else if(strcmp(settingName,  c_edem_adult) == 0) {
-        bool newValue = *(const bool*) settingValue;
+    else if(c_edem_adult == settingName) {
+        bool newValue = settingValue.GetBoolean();
         if(newValue != m_enableAdult) {
             m_enableAdult = newValue;
             result = CreateCoreSafe(false);
             m_clientCore->CallRpcAsync("{\"jsonrpc\": \"2.0\", \"method\": \"GUI.ActivateWindow\", \"params\": {\"window\": \"pvrsettings\"},\"id\": 1}",
                                        [&] (rapidjson::Document& jsonRoot) {
-                                           XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32016));
+                                            kodi::QueueFormattedNotification(QUEUE_INFO, kodi::GetLocalizedString(32016).c_str());
                                        },
                                        [&](const ActionQueue::ActionResult& s) {});
         }
@@ -183,28 +175,23 @@ ADDON_STATUS EdemPVRClient::SetSetting(const char *settingName, const void *sett
     return result;
 }
 
-PVR_ERROR EdemPVRClient::GetAddonCapabilities(PVR_ADDON_CAPABILITIES *pCapabilities)
+PVR_ERROR EdemPVRClient::GetAddonCapabilities(kodi::addon::PVRCapabilities& capabilities)
 {
-    pCapabilities->bSupportsEPG = true;
-    pCapabilities->bSupportsTV = true;
-    pCapabilities->bSupportsRadio = false;
-    pCapabilities->bSupportsChannelGroups = true;
-    pCapabilities->bHandlesInputStream = true;
-//    pCapabilities->bSupportsRecordings = true;
+    capabilities.SetSupportsEPG(true);
+    capabilities.SetSupportsTV(true);
+    capabilities.SetSupportsRadio(false);
+    capabilities.SetSupportsChannelGroups(true);
+    capabilities.SetHandlesInputStream(true);
+//    capabilities.SetSupportsRecordings(true);
     
-    pCapabilities->bSupportsTimers = false;
-    pCapabilities->bSupportsChannelScan = false;
-    pCapabilities->bHandlesDemuxing = false;
-    pCapabilities->bSupportsRecordingPlayCount = false;
-    pCapabilities->bSupportsLastPlayedPosition = false;
-    pCapabilities->bSupportsRecordingEdl = false;
+    capabilities.SetSupportsTimers(false);
+    capabilities.SetSupportsChannelScan(false);
+    capabilities.SetHandlesDemuxing(false);
+    capabilities.SetSupportsRecordingPlayCount(false);
+    capabilities.SetSupportsLastPlayedPosition(false);
+    capabilities.SetSupportsRecordingEdl(false);
     
-    return PVRClientBase::GetAddonCapabilities(pCapabilities);
-}
-
-PVR_ERROR  EdemPVRClient::MenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
-{
-    return PVRClientBase::MenuHook(menuhook, item);
+    return PVRClientBase::GetAddonCapabilities(capabilities);
 }
 
 ADDON_STATUS EdemPVRClient::OnReloadEpg()
@@ -216,9 +203,9 @@ ADDON_STATUS EdemPVRClient::OnReloadEpg()
 class EdemArchiveDelegate : public Buffers::IPlaylistBufferDelegate
 {
 public:
-    EdemArchiveDelegate(EdemEngine::Core* core, const PVR_RECORDING &recording, uint32_t startPadding, uint32_t endPadding)
-    : _duration(recording.iDuration + startPadding + endPadding)
-    , _recordingTime(recording.recordingTime - startPadding)
+    EdemArchiveDelegate(EdemEngine::Core* core, const kodi::addon::PVRRecording& recording, uint32_t startPadding, uint32_t endPadding)
+    : _duration(recording.GetDuration() + startPadding + endPadding)
+    , _recordingTime(recording.GetRecordingTime() - startPadding)
     , _core(core)
     {
         _channelId = 1;
@@ -226,7 +213,7 @@ public:
         // NOTE: Kodi does NOT provide recording.iChannelUid for unknown reason
         // Worrkaround: use EPG entry
         EpgEntry epgTag;
-        int recId = stoi(recording.strRecordingId);
+        int recId = stoi(recording.GetRecordingId().c_str());
         if(!_core->GetEpgEntry(recId, epgTag)){
             LogError("Failed to obtain EPG tag for record ID %d. First channel ID will be used", recId);
             return;
@@ -262,7 +249,7 @@ private:
     EdemEngine::Core* _core;
 };
 
-bool EdemPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
+bool EdemPVRClient::OpenRecordedStream(const kodi::addon::PVRRecording& recording)
 {
     if(NULL == m_core)
         return false;
@@ -277,11 +264,11 @@ bool EdemPVRClient::OpenRecordedStream(const PVR_RECORDING &recording)
     return PVRClientBase::OpenRecordedStream(url, delegate, IsSeekSupported() ? SupportVodSeek : NoRecordingFlags);
 }
 
-PVR_ERROR EdemPVRClient::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
+PVR_ERROR EdemPVRClient::SignalStatus(int channelUid, kodi::addon::PVRSignalStatus& signalStatus)
 {
-    snprintf(signalStatus.strAdapterName, sizeof(signalStatus.strAdapterName), "IPTV Edem TV");
-    snprintf(signalStatus.strAdapterStatus, sizeof(signalStatus.strAdapterStatus), (m_core == NULL) ? "Not connected" :"OK");
-    return this->PVRClientBase::SignalStatus(signalStatus);
+    signalStatus.SetAdapterName("IPTV Edem TV");
+    signalStatus.SetAdapterStatus((m_core == NULL) ? "Not connected" :"OK");
+    return this->PVRClientBase::SignalStatus(channelUid, signalStatus);
 }
 
 

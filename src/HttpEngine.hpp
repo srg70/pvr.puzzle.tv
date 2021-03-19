@@ -24,9 +24,9 @@
 #define HttpEngine_hpp
 
 #if (defined(_WIN32) || defined(__WIN32__))
-#include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <windows.h>
 #define CURL_STATICLIB 1
 #ifdef GetObject
 #undef GetObject
@@ -115,18 +115,18 @@ public:
 
     static bool CheckInternetConnection(long timeout);
     
-    static void DoCurl(const Request &request, const TCookies &cookie, std::string* response, unsigned long long requestId = 0, std::string* effectiveUrl = nullptr);
+    static void DoCurl(const Request &request, const TCookies &cookie, std::string* response, uint64_t requestId = 0, std::string* effectiveUrl = nullptr);
     
 private:
     static size_t CurlWriteData(void *buffer, size_t size, size_t nmemb, void *userp);
     static  long c_CurlTimeout;
-    mutable unsigned long long m_DebugRequestId;
+    mutable uint64_t m_DebugRequestId;
 
     template <typename TResultCallback, typename TCompletion>
     void SendHttpRequest(const Request &request, const TCookies &cookie, TResultCallback result, TCompletion completion, RequestPriority priority) const
     {
         std::string* response = new std::string();
-        const unsigned long long requestId = m_DebugRequestId++;
+        const uint64_t requestId = m_DebugRequestId++;
         
         DoCurl(request, cookie, response, requestId);
         

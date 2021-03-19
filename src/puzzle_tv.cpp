@@ -29,6 +29,8 @@
 #include <ctime>
 #include <list>
 #include <time.h>
+#include "kodi/General.h"
+
 #include "p8-platform/threads/mutex.h"
 #include "p8-platform/util/timeutils.h"
 #include "p8-platform/util/util.h"
@@ -42,7 +44,6 @@
 
 using namespace Globals;
 using namespace std;
-using namespace ADDON;
 using namespace rapidjson;
 using namespace PuzzleEngine;
 using namespace PvrClient;
@@ -264,7 +265,7 @@ void PuzzleTV::BuildChannelAndGroupList()
         }
        
     } catch (ServerErrorException& ex) {
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32006), ex.reason.c_str());
+        kodi::QueueFormattedNotification(QUEUE_ERROR, kodi::GetLocalizedString(32006).c_str(), ex.reason.c_str());
     } catch (std::exception& ex) {
         LogError("PuzzleTV: FAILED to build channel list. Exception: %s", ex.what());
     } catch (...) {
@@ -291,7 +292,7 @@ void PuzzleTV::BuildChannelAndGroupList()
 //        });
 //     } catch (ServerErrorException& ex) {
 //        char* message  = XBMC->GetLocalizedString(32006);
-//        XBMC->QueueNotification(QUEUE_ERROR, message), ex.reason.c_str());
+//        kodi::QueueFormattedNotification(QUEUE_ERROR, message), ex.reason.c_str());
 //        XBMC->FreeString(message);
 //     } 	 {
 //         LogError(" >>>>  FAILED receive archive <<<<<");
@@ -325,7 +326,7 @@ void PuzzleTV::UpdateEpgForAllChannels(time_t startTime, time_t endTime, std::fu
         if(!cancelled())
             SaveEpgCache(c_EpgCacheFile);
 //        } catch (ServerErrorException& ex) {
-//            XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32002), ex.reason.c_str() );
+//            kodi::QueueFormattedNotification(QUEUE_ERROR, XBMC->GetLocalizedString(32002), ex.reason.c_str() );
     } catch (std::exception& ex) {
         LogError("PuzzleTV: FAILED receive EPG. Exception: %s", ex.what());
     } catch (...) {
@@ -671,13 +672,13 @@ string PuzzleTV::GetUrl(ChannelId channelId)
     }
     
     if(url.empty()) {
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32017));
+        kodi::QueueFormattedNotification(QUEUE_ERROR, kodi::GetLocalizedString(32017).c_str());
         return url;
     }
     string aceServerUrlBase;
     if(IsAceUrl(url, aceServerUrlBase)){
         if(!CheckAceEngineRunning(aceServerUrlBase.c_str()))  {
-            XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32021));
+            kodi::QueueFormattedNotification(QUEUE_ERROR, kodi::GetLocalizedString(32021).c_str());
             return string();
         }
     }
@@ -801,7 +802,7 @@ void PuzzleTV::UpdateUrlsForChannel(PvrClient::ChannelId channelId)
             
             AddChannel(ch);
         } catch (ServerErrorException& ex) {
-            XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32006), ex.reason.c_str());
+            kodi::QueueFormattedNotification(QUEUE_ERROR, kodi::GetLocalizedString(32006).c_str(), ex.reason.c_str());
         } catch (MissingApiException& ex){
             LogError("PuzzleTV: Bad JSON responce for '/streams/json_ds/': %s", ex.what());
         } catch (std::exception& ex) {
@@ -861,7 +862,7 @@ void PuzzleTV::UpdateChannelSources(ChannelId channelId)
                                           });
                         });
     } catch (ServerErrorException& ex) {
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC_Message(32006), ex.reason.c_str());
+        kodi::QueueFormattedNotification(QUEUE_ERROR, kodi::GetLocalizedString(32006).c_str(), ex.reason.c_str());
     } catch (std::exception& ex) {
         LogError("PuzzleTV: FAILED to get sources list for channel ID=%d. Exception: %s", channelId, ex.what());
     } catch (...) {
@@ -966,7 +967,7 @@ void PuzzleTV::CallApiFunction(const ApiFunctionData& data, TParser parser)
             // Probably server doesn't start yet
             // Wait and retry
             data.attempt += 1;
-            XBMC->QueueNotification(QUEUE_INFO, XBMC_Message(32013), data.attempt);
+            kodi::QueueFormattedNotification(QUEUE_INFO, kodi::GetLocalizedString(32013).c_str(), data.attempt);
             P8PLATFORM::CEvent::Sleep(4000);
            
             CallApiFunction(data, parser);

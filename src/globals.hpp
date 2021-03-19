@@ -23,24 +23,25 @@
 #ifndef __globals_hpp__
 #define __globals_hpp__
 
-#include <string>
-#include "kodi/libXBMC_pvr.h"
-#include "kodi/libXBMC_addon.h"
-#include "kodi/libKODI_guilib.h"
+//#include <string>
+//#include "kodi/libXBMC_pvr.h"
+//#include "kodi/libXBMC_addon.h"
+//#include "kodi/libKODI_guilib.h"
 #include "addon.h"
+#include "kodi/Filesystem.h"
 
 namespace Globals {
 
-    extern CHelper_libXBMC_pvr* const& PVR;
-    extern ADDON::CHelper_libXBMC_addon* const& XBMC;
-    extern CHelper_libKODI_guilib* const& GUI;
+    extern IAddonDelegate* const& PVR;
+//    extern ADDON::CHelper_libXBMC_addon* const& XBMC;
+//    extern CHelper_libKODI_guilib* const& GUI;
     
     void LogError(const char *format, ... );
     void LogInfo(const char *format, ... );
     void LogNotice(const char *format, ... );
     void LogDebug(const char *format, ... );
     
-    void* XBMC_OpenFile(const std::string& path, unsigned int flags = 0);
+    kodi::vfs::CFile* XBMC_OpenFile(const std::string& path, unsigned int flags = 0);
 
 }
 #endif /* __globals_hpp__ */
