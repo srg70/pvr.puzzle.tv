@@ -25,6 +25,7 @@
  */
 
 #if (defined(_WIN32) || defined(__WIN32__))
+#include <WinSock2.h>
 #include <windows.h>
 #ifdef GetObject
 #undef GetObject
@@ -408,7 +409,7 @@ PVR_ERROR PVRClientBase::GetStreamTimes(kodi::addon::PVRStreamTimes& times)
         else
             return PVR_ERROR_NOT_IMPLEMENTED;
     }
-    const uint DVD_TIME_BASE = 1000*1000; // to micro seconds factor
+    const int64_t DVD_TIME_BASE = 1000*1000; // to micro seconds factor
     times.SetStartTime(timeStart);
     times.SetPTSStart(0);
     times.SetPTSBegin(0);
@@ -794,7 +795,7 @@ int PVRClientBase::ReadLiveStream(unsigned char* pBuffer, unsigned int iBufferSi
     return bytesRead;
 }
 
-long long PVRClientBase::SeekLiveStream(long long iPosition, int iWhence)
+int64_t PVRClientBase::SeekLiveStream(int64_t iPosition, int iWhence)
 {
     CLockObject lock(m_mutex);
     if(nullptr == m_inputBuffer){
@@ -803,7 +804,7 @@ long long PVRClientBase::SeekLiveStream(long long iPosition, int iWhence)
     return m_inputBuffer->Seek(iPosition, iWhence);
 }
 
-long long PVRClientBase::PositionLiveStream()
+int64_t PVRClientBase::PositionLiveStream()
 {
     CLockObject lock(m_mutex);
     if(nullptr == m_inputBuffer){
@@ -812,7 +813,7 @@ long long PVRClientBase::PositionLiveStream()
     return m_inputBuffer->GetPosition();
 }
 
-long long PVRClientBase::LengthLiveStream()
+int64_t PVRClientBase::LengthLiveStream()
 {
     CLockObject lock(m_mutex);
     if(nullptr == m_inputBuffer){
@@ -1098,7 +1099,7 @@ PVR_ERROR PVRClientBase::DeleteRecording(const kodi::addon::PVRRecording& record
                 if(f.IsFolder()){
                     continue;
                 }
-                if(kodi::vfs::DeleteFile(f.Path()))
+                if(!kodi::vfs::DeleteFile(f.Path()))
                     return PVR_ERROR_FAILED;
             }
         } else {
@@ -1310,16 +1311,16 @@ int PVRClientBase::ReadRecordedStream(unsigned char *pBuffer, unsigned int iBuff
     return (m_recordBuffer.buffer == NULL) ? -1 : m_recordBuffer.buffer->Read(pBuffer, iBufferSize, (m_recordBuffer.isLocal)? 0 : ChannelReloadTimeout() * 1000);
 }
 
-long long PVRClientBase::SeekRecordedStream(long long iPosition, int iWhence)
+int64_t PVRClientBase::SeekRecordedStream(int64_t iPosition, int iWhence)
 {
     return (m_recordBuffer.buffer == NULL) ? -1 : m_recordBuffer.buffer->Seek(iPosition, iWhence);
 }
 
-long long PVRClientBase::PositionRecordedStream(void)
+int64_t PVRClientBase::PositionRecordedStream(void)
 {
     return (m_recordBuffer.buffer == NULL) ? -1 : m_recordBuffer.buffer->GetPosition();
 }
-long long PVRClientBase::LengthRecordedStream(void)
+int64_t PVRClientBase::LengthRecordedStream(void)
 {
     return (m_recordBuffer.buffer == NULL) ? -1 : m_recordBuffer.buffer->GetLength();
 }
